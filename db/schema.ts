@@ -23,12 +23,11 @@ export const difficultyEnum = pgEnum("difficulty", [
   "advanced",
 ]);
 
-// Users
+// Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: uuid("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: text("password_hash"),
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
