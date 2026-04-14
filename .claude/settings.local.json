@@ -5,7 +5,14 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm dlx:*)",
       "Bash(pnpm db:generate)",
-      "Bash(pnpm typecheck:*)"
+      "Bash(pnpm typecheck:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(node -e ':*)",
+      "Bash(cat C:/Users/Angelo/code/tenplanner/.prettierrc*)",
+      "Bash(cat C:/Users/Angelo/code/tenplanner/prettier.config*)",
+      "Bash(npx prettier:*)"
     ]
   }
 }

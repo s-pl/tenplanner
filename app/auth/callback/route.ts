@@ -18,15 +18,24 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
-        await db
-          .insert(users)
-          .values({
-            id: user.id,
-            name: user.user_metadata.full_name ?? user.email ?? "User",
-            email: user.email!,
-            image: user.user_metadata.avatar_url ?? null,
-          })
-          .onConflictDoNothing();
+        if (!user.email) {
+          return NextResponse.redirect(
+            `${origin}/login?error=missing_email`,
+          );
+        }
+        try {
+          await db
+            .insert(users)
+            .values({
+              id: user.id,
+              name: user.user_metadata.full_name ?? user.email ?? "User",
+              email: user.email,
+              image: user.user_metadata.avatar_url ?? null,
+            })
+            .onConflictDoNothing();
+        } catch {
+          // DB error shouldn't trap the user — session is already set
+        }
       }
 
       return NextResponse.redirect(`${origin}${next}`);

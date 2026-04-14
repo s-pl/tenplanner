@@ -21,7 +21,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -32,12 +37,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Derive email from verified server-side identity, not client payload
+  if (!user.email || parsed.data.email !== user.email) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   await db
     .insert(users)
     .values({
       id: parsed.data.id,
       name: parsed.data.name,
-      email: parsed.data.email,
+      email: user.email,
     })
     .onConflictDoNothing();
 

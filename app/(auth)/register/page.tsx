@@ -66,18 +66,38 @@ export default function RegisterPage() {
 
     if (data.user) {
       // Persist profile in public.users
-      await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: data.user.id,
-          name: values.name,
-          email: values.email,
-        }),
-      });
+      try {
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: data.user.id,
+            name: values.name,
+            email: values.email,
+          }),
+        });
+        if (!response.ok) {
+          setServerError(
+            "Account created, but failed to save your profile. Please try again.",
+          );
+          setLoading(false);
+          return;
+        }
+      } catch {
+        setServerError(
+          "Account created, but failed to save your profile. Please try again.",
+        );
+        setLoading(false);
+        return;
+      }
     }
 
-    window.location.href = "/dashboard";
+    if (data.session) {
+      window.location.href = "/dashboard";
+    } else {
+      // Email confirmation required — no session yet
+      window.location.href = "/login?message=check_email";
+    }
   }
 
   async function signUpWithGoogle() {
