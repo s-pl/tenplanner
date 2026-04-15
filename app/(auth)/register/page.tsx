@@ -64,12 +64,16 @@ export default function RegisterPage() {
       return;
     }
 
-    if (data.user) {
-      // Persist profile in public.users
+    if (data.user && data.session) {
+      // Persist profile in public.users. The session cookies are not yet set
+      // on the server at this point, so we authenticate via the Bearer token.
       try {
         const response = await fetch("/api/users", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
           body: JSON.stringify({
             id: data.user.id,
             name: values.name,
@@ -91,6 +95,8 @@ export default function RegisterPage() {
         return;
       }
     }
+    // If data.session is null, email confirmation is required.
+    // The /auth/callback route will create the profile after the user confirms.
 
     if (data.session) {
       window.location.href = "/dashboard";

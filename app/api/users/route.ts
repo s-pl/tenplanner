@@ -11,11 +11,20 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // Verify the caller is authenticated as this user
   const supabase = await createClient();
+
+  // After signUp() the session cookie is not yet set, so we also accept a
+  // Bearer token that the client passes from the freshly-created session.
+  const authHeader = request.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = bearerToken
+    ? await supabase.auth.getUser(bearerToken)
+    : await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
