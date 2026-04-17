@@ -8,9 +8,9 @@ interface AppShellProps {
 
 export default function AppShell({ children, user }: AppShellProps) {
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="flex flex-col md:flex-row h-dvh overflow-hidden bg-background">
       <SidebarNav user={user} />
-      <div className="flex-1 flex flex-col overflow-hidden md:h-dvh">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

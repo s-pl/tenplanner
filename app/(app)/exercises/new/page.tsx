@@ -4,7 +4,7 @@ import { ExerciseForm } from "@/components/app/exercise-form";
 
 export default function NewExercisePage() {
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6 max-w-2xl">
+    <div className="px-6 md:px-8 py-8 space-y-6">
       <div className="flex items-center gap-4">
         <Link
           href="/exercises"

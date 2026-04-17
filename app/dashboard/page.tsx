@@ -219,7 +219,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <div className="space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <h2 className="font-semibold text-foreground">Acciones rápidas</h2>
           <div className="space-y-2">
             {[

@@ -56,6 +56,22 @@ export const createExerciseSchema = z.object({
     .int()
     .min(1, "Duration must be at least 1 minute")
     .max(300, "Duration must be 300 minutes or fewer"),
+  objectives: descriptionSchema.optional().nullable(),
+  tips: descriptionSchema.optional().nullable(),
+  imageUrl: z.string().max(1000).optional().nullable(),
+  location: z.enum(["indoor", "outdoor", "any"]).optional().nullable(),
+  videoUrl: z.string().max(500).optional().nullable(),
+  steps: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).default(""),
+      })
+    )
+    .max(25)
+    .optional()
+    .nullable(),
+  materials: z.array(z.string().min(1).max(100)).max(30).optional().nullable(),
 });
 
 export const updateExerciseSchema = createExerciseSchema
