@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { exercises as exercisesTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { Plus, Clock, ChevronRight, Search } from "lucide-react";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -150,8 +149,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             const cat = CATEGORY_META[exercise.category as Category];
             const diff = DIFFICULTY_META[exercise.difficulty];
             return (
-              <div
+              <Link
                 key={exercise.id}
+                href={`/exercises/${exercise.id}`}
                 className="group bg-card border border-border rounded-2xl p-5 hover:border-brand/30 transition-colors flex flex-col"
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
@@ -181,11 +181,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     <Clock className="size-3.5" />
                     {exercise.durationMinutes} min
                   </span>
-                  <button className="size-7 rounded-lg bg-muted flex items-center justify-center group-hover:bg-brand/15 transition-colors">
+                  <span className="size-7 rounded-lg bg-muted flex items-center justify-center group-hover:bg-brand/15 transition-colors">
                     <ChevronRight className="size-3.5 text-muted-foreground group-hover:text-brand transition-colors" />
-                  </button>
+                  </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
