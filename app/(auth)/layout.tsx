@@ -56,9 +56,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="w-full max-w-sm">{children}</div>
 
           <p className="mt-8 text-xs text-muted-foreground">
-            By continuing, you agree to our{" "}
+            Al continuar, aceptas nuestros{" "}
             <Link href="/" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              Terms of Service
+              Términos de Servicio
             </Link>
           </p>
         </div>

@@ -32,10 +32,10 @@ export default async function CalendarPage() {
     <div className="px-6 md:px-8 py-8 space-y-6">
       <div>
         <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-          Calendar
+          Calendario
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Plan and visualise your training schedule
+          Planifica y visualiza tu calendario de entrenamiento
         </p>
       </div>
       <CalendarClient sessions={serialized} />

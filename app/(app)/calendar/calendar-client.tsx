@@ -16,10 +16,10 @@ interface CalendarClientProps {
   sessions: SessionData[];
 }
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
 function getDaysInMonth(year: number, month: number) {
@@ -89,7 +89,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
           <button
             onClick={goToPrev}
             className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
-            aria-label="Previous month"
+            aria-label="Mes anterior"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -99,7 +99,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
           <button
             onClick={goToNext}
             className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
-            aria-label="Next month"
+            aria-label="Mes siguiente"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -109,14 +109,14 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
             onClick={goToToday}
             className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
           >
-            Today
+            Hoy
           </button>
           <Link
             href="/sessions/new"
             className="inline-flex items-center gap-1.5 bg-brand text-brand-foreground text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-brand/90 transition-colors"
           >
             <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Add session</span>
+            <span className="hidden sm:inline">Añadir sesión</span>
           </Link>
         </div>
       </div>
@@ -196,7 +196,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                         ))}
                         {daySessions.length > 2 && (
                           <div className="text-[10px] text-muted-foreground px-1.5">
-                            +{daySessions.length - 2} more
+                            +{daySessions.length - 2} más
                           </div>
                         )}
                       </div>
@@ -216,19 +216,19 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
             {MONTHS[viewMonth]} {selectedDay}
             {selectedSessions.length === 0 && (
               <span className="text-muted-foreground font-normal text-sm ml-2">
-                — No sessions
+                — Sin sesiones
               </span>
             )}
           </h3>
           {selectedSessions.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-xl p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-3">No sessions on this day.</p>
+              <p className="text-sm text-muted-foreground mb-3">No hay sesiones este día.</p>
               <Link
                 href="/sessions/new"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand/80 transition-colors"
               >
                 <Plus className="size-4" />
-                Plan a session
+                Planificar una sesión
               </Link>
             </div>
           ) : (
@@ -255,7 +255,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                     href="/sessions"
                     className="text-xs font-medium text-brand hover:text-brand/80 transition-colors"
                   >
-                    View
+                    Ver
                   </Link>
                 </div>
               ))}
