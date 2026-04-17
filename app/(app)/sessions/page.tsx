@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, asc, count } from "drizzle-orm";
 import { Plus, Calendar, Clock, Dumbbell, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 
 type Filter = "upcoming" | "past" | "all";
@@ -56,7 +56,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     .select()
     .from(sessionsTable)
     .where(eq(sessionsTable.userId, user.id))
-    .orderBy(desc(sessionsTable.scheduledAt));
+    .orderBy(asc(sessionsTable.scheduledAt));
 
   // Get exercise counts per session
   const exerciseCounts = await db
@@ -151,9 +151,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             const exerciseCount = exerciseCountMap.get(session.id) ?? 0;
 
             return (
-              <div
+              <Link
                 key={session.id}
-                className="group bg-card border border-border rounded-2xl p-5 hover:border-brand/30 transition-colors"
+                href={`/sessions/${session.id}`}
+                className="group bg-card border border-border rounded-2xl p-5 hover:border-brand/30 transition-colors block"
               >
                 <div className="flex items-start gap-4">
                   {/* Status icon */}
@@ -206,7 +207,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
                   <ChevronRight className="shrink-0 size-4 text-muted-foreground group-hover:text-brand transition-colors mt-0.5" />
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
