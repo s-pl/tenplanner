@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
   User, Mail, Shield, Trash2, CheckCircle2, Palette, Type,
   BarChart3, FileJson, FileText, Loader2, Zap, Star, Trophy,
-  Clock, CalendarDays, Dumbbell, Settings,
+  Clock, CalendarDays, Dumbbell, Settings, Camera,
 } from "lucide-react";
 
 const ROLES = [
@@ -51,6 +51,7 @@ interface ProfileClientProps {
     skill_level: string | null;
     bio: string | null;
     avatar_color: string | null;
+    avatar_url: string | null;
     provider: string;
     created_at: string;
   };
@@ -73,6 +74,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   const [level, setLevel]           = useState(user.skill_level ?? "intermediate");
   const [bio, setBio]               = useState(user.bio ?? "");
   const [avatarColor, setAvatarColor] = useState(user.avatar_color ?? "green");
+  const [avatarUrl, setAvatarUrl]   = useState<string | null>(user.avatar_url ?? null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef              = useRef<HTMLInputElement>(null);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -106,6 +111,27 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     setFontSize(id);
     localStorage.setItem("font-size", id);
     applyFontSize(id);
+  }
+
+  async function handleAvatarUpload(file: File) {
+    if (!file.type.startsWith("image/")) { setAvatarError("Solo se admiten imágenes"); return; }
+    if (file.size > 5 * 1024 * 1024) { setAvatarError("Máximo 5 MB"); return; }
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}.${ext}`;
+      const supabase = createClient();
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      await fetch("/api/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: publicUrl }) });
+      setAvatarUrl(publicUrl);
+    } catch (e: unknown) {
+      setAvatarError(e instanceof Error ? e.message : "Error al subir la foto");
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -185,11 +211,26 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
         {/* Avatar card */}
         <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-3">
-          <div
-            className={`size-20 rounded-2xl ${avatarMeta.bg} flex items-center justify-center transition-all duration-300 hover:scale-105`}
-          >
-            <span className={`text-2xl font-bold ${avatarMeta.text}`}>{initials}</span>
+          <div className="relative group">
+            <div className={`size-20 rounded-2xl ${!avatarUrl ? avatarMeta.bg : ""} flex items-center justify-center transition-all duration-300 hover:scale-105 overflow-hidden`}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className={`text-2xl font-bold ${avatarMeta.text}`}>{initials}</span>
+              )}
+            </div>
+            <button
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+              title="Cambiar foto"
+              className="absolute -bottom-1.5 -right-1.5 size-7 rounded-full bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors shadow-sm"
+            >
+              {avatarUploading ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : <Camera className="size-3.5 text-muted-foreground" />}
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
           </div>
+          {avatarError && <p className="text-xs text-destructive">{avatarError}</p>}
           <div>
             <p className="font-heading font-semibold text-lg text-foreground leading-tight">
               {name || "Tu nombre"}

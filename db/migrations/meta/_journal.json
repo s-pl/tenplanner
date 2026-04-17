@@ -15,6 +15,20 @@
       "when": 1776167756834,
       "tag": "0001_certain_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776466897764,
+      "tag": "0002_omniscient_sinister_six",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776467295089,
+      "tag": "0003_white_sauron",
+      "breakpoints": true
     }
   ]
 }

@@ -49,6 +49,13 @@ export async function GET(request: NextRequest) {
         category: exercises.category,
         difficulty: exercises.difficulty,
         durationMinutes: exercises.durationMinutes,
+        objectives: exercises.objectives,
+        imageUrl: exercises.imageUrl,
+        steps: exercises.steps,
+        materials: exercises.materials,
+        location: exercises.location,
+        videoUrl: exercises.videoUrl,
+        tips: exercises.tips,
         createdBy: exercises.createdBy,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
@@ -61,6 +68,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(exercises.createdAt))
       .limit(limit)
       .offset(offset);
+
 
     const countBaseQuery = db.select({ total: count() }).from(exercises);
     const totalResult = await (whereClause
@@ -141,6 +149,13 @@ export async function POST(request: Request) {
       .values({
         ...parsedBody.data,
         description: parsedBody.data.description ?? null,
+        objectives: parsedBody.data.objectives ?? null,
+        imageUrl: parsedBody.data.imageUrl ?? null,
+        tips: parsedBody.data.tips ?? null,
+        location: parsedBody.data.location ?? null,
+        videoUrl: parsedBody.data.videoUrl ?? null,
+        steps: parsedBody.data.steps ?? null,
+        materials: parsedBody.data.materials ?? null,
         createdBy: user.id,
       })
       .returning();

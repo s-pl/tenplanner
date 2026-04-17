@@ -34,6 +34,13 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         category: exercises.category,
         difficulty: exercises.difficulty,
         durationMinutes: exercises.durationMinutes,
+        objectives: exercises.objectives,
+        imageUrl: exercises.imageUrl,
+        steps: exercises.steps,
+        materials: exercises.materials,
+        location: exercises.location,
+        videoUrl: exercises.videoUrl,
+        tips: exercises.tips,
         createdBy: exercises.createdBy,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
@@ -86,32 +93,19 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
     return zodValidationErrorResponse(parsedBody.error);
   }
 
-  const updateValues: {
-    name?: string;
-    description?: string | null;
-    category?: "technique" | "tactics" | "fitness" | "warm-up";
-    difficulty?: "beginner" | "intermediate" | "advanced";
-    durationMinutes?: number;
-  } = {};
+  const d = parsedBody.data;
+  const updateValues: Partial<typeof d> = {};
 
-  if (parsedBody.data.name !== undefined) {
-    updateValues.name = parsedBody.data.name;
-  }
+  const fields = [
+    "name", "description", "category", "difficulty", "durationMinutes",
+    "objectives", "imageUrl", "tips", "location", "videoUrl", "steps", "materials",
+  ] as const;
 
-  if (parsedBody.data.description !== undefined) {
-    updateValues.description = parsedBody.data.description;
-  }
-
-  if (parsedBody.data.category !== undefined) {
-    updateValues.category = parsedBody.data.category;
-  }
-
-  if (parsedBody.data.difficulty !== undefined) {
-    updateValues.difficulty = parsedBody.data.difficulty;
-  }
-
-  if (parsedBody.data.durationMinutes !== undefined) {
-    updateValues.durationMinutes = parsedBody.data.durationMinutes;
+  for (const field of fields) {
+    if (d[field] !== undefined) {
+      // @ts-expect-error dynamic key assignment
+      updateValues[field] = d[field];
+    }
   }
 
   try {

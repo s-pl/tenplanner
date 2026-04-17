@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable, exercises as exercisesTable } from "@/db/schema";
+import { sessions as sessionsTable, exercises as exercisesTable, users as usersTable } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
 import { ProfileClient } from "./profile-client";
 
@@ -13,11 +13,12 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login");
 
-  const [allSessions, exerciseCount] = await Promise.all([
+  const [allSessions, exerciseCount, dbUser] = await Promise.all([
     db.select({ durationMinutes: sessionsTable.durationMinutes, scheduledAt: sessionsTable.scheduledAt })
       .from(sessionsTable)
       .where(eq(sessionsTable.userId, user.id)),
     db.select({ count: count() }).from(exercisesTable),
+    db.select({ image: usersTable.image }).from(usersTable).where(eq(usersTable.id, user.id)).limit(1),
   ]);
 
   const now = new Date();
@@ -44,6 +45,7 @@ export default async function ProfilePage() {
           skill_level: user.user_metadata?.skill_level ?? null,
           bio: user.user_metadata?.bio ?? null,
           avatar_color: user.user_metadata?.avatar_color ?? null,
+          avatar_url: dbUser[0]?.image ?? user.user_metadata?.avatar_url ?? null,
           provider: user.app_metadata?.provider ?? "email",
           created_at: user.created_at ?? "",
         }}

@@ -114,7 +114,7 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
 
   if (mode === "edit") {
     return (
-      <div className="px-6 md:px-8 py-8 space-y-6 max-w-2xl">
+      <div className="px-4 md:px-8 py-8 space-y-6">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setMode("view")}
@@ -131,35 +131,33 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
             </p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <SessionForm
-            mode="edit"
-            sessionId={session.id}
-            availableExercises={availableExercises}
-            initialData={{
-              title: session.title,
-              description: session.description,
-              scheduledAt: session.scheduledAt,
-              exercises: sessionExercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                name: e.name,
-                category: e.category,
-                durationMinutes: e.durationMinutes,
-              })),
-            }}
-            onSuccess={() => {
-              setMode("view");
-              router.refresh();
-            }}
-            onCancel={() => setMode("view")}
-          />
-        </div>
+        <SessionForm
+          mode="edit"
+          sessionId={session.id}
+          availableExercises={availableExercises}
+          initialData={{
+            title: session.title,
+            description: session.description,
+            scheduledAt: session.scheduledAt,
+            exercises: sessionExercises.map((e) => ({
+              exerciseId: e.exerciseId,
+              name: e.name,
+              category: e.category,
+              durationMinutes: e.durationMinutes,
+            })),
+          }}
+          onSuccess={() => {
+            setMode("view");
+            router.refresh();
+          }}
+          onCancel={() => setMode("view")}
+        />
       </div>
     );
   }
 
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6 max-w-2xl">
+    <div className="px-6 md:px-8 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">

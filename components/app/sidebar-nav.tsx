@@ -13,17 +13,42 @@ import {
   Menu,
   X,
   Zap,
+  Plus,
+  Bot,
+  ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
-const navItems = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/exercises", label: "Ejercicios", icon: Dumbbell },
-  { href: "/sessions", label: "Sesiones", icon: ClipboardList },
-  { href: "/calendar", label: "Calendario", icon: CalendarDays },
-  { href: "/profile", label: "Perfil", icon: UserCircle },
+interface SubItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  accent?: boolean;
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  submenu?: SubItem[];
+}
+
+const navItems: NavItem[] = [
+  { href: "/dashboard",  label: "Inicio",      icon: LayoutDashboard },
+  { href: "/exercises",  label: "Ejercicios",   icon: Dumbbell },
+  {
+    href: "/sessions",
+    label: "Sesiones",
+    icon: ClipboardList,
+    submenu: [
+      { href: "/sessions/new",        label: "Crear sesión", icon: Plus },
+      { href: "/sessions/dr-planner", label: "Dr. Planner",  icon: Bot, accent: true },
+    ],
+  },
+  { href: "/calendar",  label: "Calendario",   icon: CalendarDays },
+  { href: "/profile",   label: "Perfil",       icon: UserCircle },
 ];
 
 interface SidebarNavProps {
@@ -50,15 +75,21 @@ function NavContent({
     .slice(0, 2)
     .toUpperCase();
 
+  // Sessions submenu is open when on any sessions route
+  const sessionsOpen = pathname.startsWith("/sessions");
+  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>({
+    "/sessions": sessionsOpen,
+  });
+
+  function toggleSubmenu(href: string) {
+    setSubmenuOpen(prev => ({ ...prev, [href]: !prev[href] }));
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-sidebar-border">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2.5"
-          onClick={onNavigate}
-        >
+        <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onNavigate}>
           <div className="size-8 rounded-lg bg-brand flex items-center justify-center shrink-0">
             <Zap className="size-4 text-brand-foreground" strokeWidth={2.5} />
           </div>
@@ -70,8 +101,83 @@ function NavContent({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, submenu }) => {
           const isActive = pathname === href || pathname.startsWith(href + "/");
+          const isOpen = !!submenuOpen[href];
+
+          if (submenu) {
+            return (
+              <div key={href}>
+                {/* Parent — clicking toggles submenu, also navigates to base route */}
+                <button
+                  onClick={() => { toggleSubmenu(href); }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-brand/15 text-brand"
+                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("size-4 shrink-0", isActive ? "text-brand" : "text-muted-foreground")} />
+                  {label}
+                  <ChevronRight
+                    className={cn(
+                      "ml-auto size-3.5 transition-transform duration-200",
+                      isActive ? "text-brand" : "text-muted-foreground",
+                      isOpen && "rotate-90"
+                    )}
+                  />
+                </button>
+
+                {/* Submenu */}
+                {isOpen && (
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border/60 pl-3">
+                    {/* Link to parent route too */}
+                    <Link
+                      href={href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors",
+                        pathname === href
+                          ? "text-brand bg-brand/10"
+                          : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                      )}
+                    >
+                      <ClipboardList className="size-3.5 shrink-0" />
+                      Ver sesiones
+                    </Link>
+                    {submenu.map(({ href: subHref, label: subLabel, icon: SubIcon, accent }) => {
+                      const isSubActive = pathname === subHref || pathname.startsWith(subHref + "/");
+                      return (
+                        <Link
+                          key={subHref}
+                          href={subHref}
+                          onClick={onNavigate}
+                          className={cn(
+                            "flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors",
+                            isSubActive
+                              ? accent
+                                ? "text-brand bg-brand/10"
+                                : "text-brand bg-brand/10"
+                              : accent
+                                ? "text-brand/70 hover:text-brand hover:bg-brand/8"
+                                : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                          )}
+                        >
+                          <SubIcon className={cn("size-3.5 shrink-0", accent && !isSubActive ? "text-brand/70" : "")} />
+                          {subLabel}
+                          {accent && (
+                            <span className="ml-auto text-[9px] font-bold text-brand bg-brand/10 px-1.5 py-0.5 rounded-full">IA</span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link
               key={href}
@@ -84,16 +190,9 @@ function NavContent({
                   : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
               )}
             >
-              <Icon
-                className={cn(
-                  "size-4 shrink-0",
-                  isActive ? "text-brand" : "text-muted-foreground"
-                )}
-              />
+              <Icon className={cn("size-4 shrink-0", isActive ? "text-brand" : "text-muted-foreground")} />
               {label}
-              {isActive && (
-                <span className="ml-auto size-1.5 rounded-full bg-brand" />
-              )}
+              {isActive && <span className="ml-auto size-1.5 rounded-full bg-brand" />}
             </Link>
           );
         })}
@@ -106,12 +205,8 @@ function NavContent({
             <span className="text-xs font-semibold text-brand">{initials}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground truncate">
-              {displayName}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.email}
-            </p>
+            <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           </div>
         </div>
         <ThemeToggle />
@@ -141,11 +236,7 @@ export function SidebarNav({ user }: SidebarNavProps) {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 bg-sidebar border-r border-sidebar-border h-dvh sticky top-0">
-        <NavContent
-          pathname={pathname}
-          user={user}
-          onSignOut={handleSignOut}
-        />
+        <NavContent pathname={pathname} user={user} onSignOut={handleSignOut} />
       </aside>
 
       {/* Mobile top bar */}
@@ -173,10 +264,7 @@ export function SidebarNav({ user }: SidebarNavProps) {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-72 bg-sidebar border-r border-sidebar-border h-full flex flex-col overflow-y-auto">
             <div className="absolute top-4 right-4">
               <button
