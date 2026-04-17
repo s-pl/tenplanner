@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,6 +27,7 @@ const registerSchema = z
 type RegisterValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -78,9 +80,9 @@ export default function RegisterPage() {
     }
 
     if (data.session) {
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } else {
-      window.location.href = "/login?message=check_email";
+      router.push("/login?message=check_email");
     }
   }
 
