@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { exercises as exercisesTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { Plus, Clock, ChevronRight, Search } from "lucide-react";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -11,13 +10,13 @@ const CATEGORY_META: Record<
   { label: string; color: string; bg: string; dot: string }
 > = {
   technique: {
-    label: "Technique",
+    label: "Técnica",
     color: "text-blue-400",
     bg: "bg-blue-400/10",
     dot: "bg-blue-400",
   },
   tactics: {
-    label: "Tactics",
+    label: "Táctica",
     color: "text-purple-400",
     bg: "bg-purple-400/10",
     dot: "bg-purple-400",
@@ -29,7 +28,7 @@ const CATEGORY_META: Record<
     dot: "bg-amber-400",
   },
   "warm-up": {
-    label: "Warm-up",
+    label: "Calentamiento",
     color: "text-brand",
     bg: "bg-brand/10",
     dot: "bg-brand",
@@ -37,9 +36,9 @@ const CATEGORY_META: Record<
 };
 
 const DIFFICULTY_META = {
-  beginner: { label: "Beginner", color: "text-brand" },
-  intermediate: { label: "Intermediate", color: "text-amber-400" },
-  advanced: { label: "Advanced", color: "text-red-400" },
+  beginner: { label: "Principiante", color: "text-brand" },
+  intermediate: { label: "Intermedio", color: "text-amber-400" },
+  advanced: { label: "Avanzado", color: "text-red-400" },
 };
 
 const CATEGORIES = ["all", "technique", "tactics", "fitness", "warm-up"] as const;
@@ -67,10 +66,10 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-            Exercise Library
+            Biblioteca de Ejercicios
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {allExercises.length} exercise{allExercises.length !== 1 ? "s" : ""} available
+            {allExercises.length} {allExercises.length !== 1 ? "ejercicios" : "ejercicio"} disponible{allExercises.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -78,7 +77,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors shrink-0"
         >
           <Plus className="size-4" />
-          <span className="hidden sm:inline">Add exercise</span>
+          <span className="hidden sm:inline">Añadir ejercicio</span>
         </Link>
       </div>
 
@@ -90,7 +89,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             const isActive = activeCategory === cat;
             const label =
               cat === "all"
-                ? "All"
+                ? "Todos"
                 : CATEGORY_META[cat as Category].label;
             return (
               <Link
@@ -114,7 +113,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           <input
             type="search"
             name="q"
-            placeholder="Search exercises…"
+            placeholder="Buscar ejercicios…"
             defaultValue={q}
             className="w-full h-9 pl-9 pr-4 text-sm bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground"
           />
@@ -131,17 +130,17 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           <div className="size-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
             <Search className="size-5 text-muted-foreground" />
           </div>
-          <p className="font-medium text-foreground mb-1">No exercises found</p>
+          <p className="font-medium text-foreground mb-1">No se encontraron ejercicios</p>
           <p className="text-sm text-muted-foreground">
             {q
-              ? `No results for "${q}". Try a different search.`
-              : "No exercises in this category yet. Add your first one!"}
+              ? `Sin resultados para "${q}". Prueba otra búsqueda.`
+              : "Aún no hay ejercicios en esta categoría. ¡Añade el primero!"}
           </p>
           <Link
             href="/exercises?category=all"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80 transition-colors mt-4"
           >
-            Clear filters
+            Limpiar filtros
           </Link>
         </div>
       ) : (
@@ -150,8 +149,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             const cat = CATEGORY_META[exercise.category as Category];
             const diff = DIFFICULTY_META[exercise.difficulty];
             return (
-              <div
+              <Link
                 key={exercise.id}
+                href={`/exercises/${exercise.id}`}
                 className="group bg-card border border-border rounded-2xl p-5 hover:border-brand/30 transition-colors flex flex-col"
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
@@ -181,11 +181,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     <Clock className="size-3.5" />
                     {exercise.durationMinutes} min
                   </span>
-                  <button className="size-7 rounded-lg bg-muted flex items-center justify-center group-hover:bg-brand/15 transition-colors">
+                  <span className="size-7 rounded-lg bg-muted flex items-center justify-center group-hover:bg-brand/15 transition-colors">
                     <ChevronRight className="size-3.5 text-muted-foreground group-hover:text-brand transition-colors" />
-                  </button>
+                  </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -194,7 +194,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       {/* Count footer */}
       {filtered.length > 0 && (
         <p className="text-center text-xs text-muted-foreground">
-          Showing {filtered.length} of {allExercises.length} exercises
+          Mostrando {filtered.length} de {allExercises.length} ejercicios
         </p>
       )}
     </div>

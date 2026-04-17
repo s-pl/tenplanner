@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("es-ES", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -24,7 +24,7 @@ function formatDate(date: Date) {
 }
 
 function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
@@ -82,28 +82,28 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "Sessions this week",
+      label: "Sesiones esta semana",
       value: thisWeekSessions.length,
       icon: CalendarDays,
       color: "text-brand",
       bg: "bg-brand/10",
     },
     {
-      label: "Total exercises",
+      label: "Ejercicios totales",
       value: exerciseCount[0]?.count ?? 0,
       icon: Dumbbell,
       color: "text-blue-400",
       bg: "bg-blue-400/10",
     },
     {
-      label: "Hours trained",
+      label: "Horas entrenadas",
       value: totalHours,
       icon: Clock,
       color: "text-amber-400",
       bg: "bg-amber-400/10",
     },
     {
-      label: "Total sessions",
+      label: "Sesiones totales",
       value: allSessions.length,
       icon: TrendingUp,
       color: "text-purple-400",
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
   ];
 
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
 
   return (
     <div className="px-6 md:px-8 py-8 space-y-8">
@@ -126,7 +126,7 @@ export default async function DashboardPage() {
             {displayName} <span className="text-muted-foreground font-normal text-2xl">👋</span>
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {formatDate(now)} — {allSessions.length === 0 ? "Ready to plan your first session?" : `You have ${upcomingSessions.length} upcoming session${upcomingSessions.length !== 1 ? "s" : ""}.`}
+            {formatDate(now)} — {allSessions.length === 0 ? "¿Listo para planificar tu primera sesión?" : `Tienes ${upcomingSessions.length} ${upcomingSessions.length !== 1 ? "sesiones" : "sesión"} próxima${upcomingSessions.length !== 1 ? "s" : ""}.`}
           </p>
         </div>
         <Link
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
           className="hidden sm:inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors shrink-0"
         >
           <Plus className="size-4" />
-          New session
+          Nueva sesión
         </Link>
       </div>
 
@@ -155,22 +155,22 @@ export default async function DashboardPage() {
         {/* Upcoming sessions */}
         <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-foreground">Upcoming sessions</h2>
+            <h2 className="font-semibold text-foreground">Sesiones próximas</h2>
             <Link href="/sessions" className="text-xs text-muted-foreground hover:text-brand transition-colors flex items-center gap-1">
-              View all <ArrowRight className="size-3" />
+              Ver todas <ArrowRight className="size-3" />
             </Link>
           </div>
 
           {upcomingSessions.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
               <CalendarDays className="size-8 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground mb-1">No upcoming sessions</p>
-              <p className="text-xs text-muted-foreground mb-4">Plan your next training session to get started.</p>
+              <p className="text-sm font-medium text-foreground mb-1">No hay sesiones próximas</p>
+              <p className="text-xs text-muted-foreground mb-4">Planifica tu próxima sesión de entrenamiento para empezar.</p>
               <Link
                 href="/sessions"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand/80 transition-colors"
               >
-                <Plus className="size-3.5" /> Create session
+                <Plus className="size-3.5" /> Crear sesión
               </Link>
             </div>
           ) : (
@@ -220,12 +220,12 @@ export default async function DashboardPage() {
 
         {/* Quick actions */}
         <div className="space-y-4">
-          <h2 className="font-semibold text-foreground">Quick actions</h2>
+          <h2 className="font-semibold text-foreground">Acciones rápidas</h2>
           <div className="space-y-2">
             {[
-              { href: "/sessions", icon: Plus, label: "New training session", description: "Schedule a session" },
-              { href: "/exercises", icon: Dumbbell, label: "Browse exercises", description: "Explore the library" },
-              { href: "/calendar", icon: CalendarDays, label: "View calendar", description: "Monthly overview" },
+              { href: "/sessions", icon: Plus, label: "Nueva sesión de entrenamiento", description: "Programa una sesión" },
+              { href: "/exercises", icon: Dumbbell, label: "Explorar ejercicios", description: "Explora la biblioteca" },
+              { href: "/calendar", icon: CalendarDays, label: "Ver calendario", description: "Vista mensual" },
             ].map(({ href, icon: Icon, label, description }) => (
               <Link
                 key={href}
@@ -247,7 +247,7 @@ export default async function DashboardPage() {
           {/* Recent activity */}
           {recentSessions.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Past sessions</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Sesiones pasadas</h3>
               <div className="space-y-2">
                 {recentSessions.slice(0, 3).map((session) => (
                   <div key={session.id} className="flex items-center gap-2.5 py-2 border-b border-border/50 last:border-0">

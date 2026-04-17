@@ -193,11 +193,6 @@ export default function LandingPage() {
 
             {/* Left */}
             <div className="max-w-xl animate-fade-up">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand/20 bg-brand/8 text-brand text-xs font-semibold tracking-wider uppercase mb-10">
-                <span className="size-1.5 rounded-full bg-brand animate-pulse" />
-                Planificador para pádel
-              </div>
-
               <h1
                 className="font-heading font-bold text-foreground mb-7 leading-[1.0]"
                 style={{ fontSize: "clamp(3rem, 6vw, 5.5rem)" }}

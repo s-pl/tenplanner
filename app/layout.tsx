@@ -22,8 +22,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TenPlanner — Padel Training Planner",
-  description: "The intelligent training planner for padel coaches and players.",
+  title: "TenPlanner — Planificador de Entrenamiento de Pádel",
+  description: "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel.",
 };
 
 export default function RootLayout({
