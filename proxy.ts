@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/register", "/auth/callback"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/auth/callback"];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -16,15 +16,15 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
+            request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
   // Refresh session — must not run any code between createServerClient and getUser
@@ -33,7 +33,17 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const authHeader = request.headers.get("authorization");
+  const hasBearerToken =
+    typeof authHeader === "string" && authHeader.startsWith("Bearer ");
+  const isExercisesReadApi =
+    request.method === "GET" && pathname.startsWith("/api/exercises");
+  const isProfileBootstrapApi =
+    pathname === "/api/users" && request.method === "POST" && hasBearerToken;
+  const isPublic =
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    isExercisesReadApi ||
+    isProfileBootstrapApi;
   const isApiRoute = pathname.startsWith("/api/");
 
   if (!user && !isPublic) {
