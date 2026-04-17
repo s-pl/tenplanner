@@ -11,16 +11,16 @@ import {
 } from "lucide-react";
 
 const ROLES = [
-  { id: "coach",  label: "Coach" },
-  { id: "player", label: "Player" },
-  { id: "both",   label: "Coach & Player" },
+  { id: "coach",  label: "Entrenador" },
+  { id: "player", label: "Jugador" },
+  { id: "both",   label: "Entrenador & Jugador" },
 ];
 
 const LEVELS = [
-  { id: "beginner",     label: "Beginner" },
-  { id: "intermediate", label: "Intermediate" },
-  { id: "advanced",     label: "Advanced" },
-  { id: "pro",          label: "Professional" },
+  { id: "beginner",     label: "Principiante" },
+  { id: "intermediate", label: "Intermedio" },
+  { id: "advanced",     label: "Avanzado" },
+  { id: "pro",          label: "Profesional" },
 ];
 
 const AVATAR_COLORS = [
@@ -35,9 +35,9 @@ const AVATAR_COLORS = [
 ];
 
 const FONT_SIZES = [
-  { id: "sm", label: "A",  size: "text-xs", desc: "Compact" },
+  { id: "sm", label: "A",  size: "text-xs", desc: "Compacto" },
   { id: "md", label: "A",  size: "text-sm", desc: "Normal" },
-  { id: "lg", label: "A",  size: "text-base", desc: "Large" },
+  { id: "lg", label: "A",  size: "text-base", desc: "Grande" },
 ];
 
 type Tab = "profile" | "appearance" | "stats" | "data";
@@ -121,7 +121,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) {
-      setProfileError(e instanceof Error ? e.message : "Failed to save.");
+      setProfileError(e instanceof Error ? e.message : "Error al guardar.");
     } finally {
       setSaving(false);
     }
@@ -171,10 +171,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   const currentAccentMeta = ACCENT_COLORS.find((c) => c.id === accent);
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "profile",    label: "Profile",       icon: User },
-    { id: "appearance", label: "Appearance",    icon: Palette },
-    { id: "stats",      label: "Statistics",    icon: BarChart3 },
-    { id: "data",       label: "Data & Privacy", icon: Shield },
+    { id: "profile",    label: "Perfil",           icon: User },
+    { id: "appearance", label: "Apariencia",       icon: Palette },
+    { id: "stats",      label: "Estadísticas",     icon: BarChart3 },
+    { id: "data",       label: "Datos y Privacidad", icon: Shield },
   ];
 
   return (
@@ -192,17 +192,17 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </div>
           <div>
             <p className="font-heading font-semibold text-lg text-foreground leading-tight">
-              {name || "Your name"}
+              {name || "Tu nombre"}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[180px]">{user.email}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-center">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">
               <Zap className="size-3" />
-              {ROLES.find((r) => r.id === role)?.label ?? "Coach"}
+              {ROLES.find((r) => r.id === role)?.label ?? "Entrenador"}
             </span>
             <span className="text-xs text-muted-foreground">
-              {LEVELS.find((l) => l.id === level)?.label ?? "Intermediate"}
+              {LEVELS.find((l) => l.id === level)?.label ?? "Intermedio"}
             </span>
           </div>
           {bio && (
@@ -215,10 +215,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         {/* Mini stats */}
         <div className="bg-card border border-border rounded-2xl p-4 space-y-3 animate-fade-up stagger-1">
           {[
-            { icon: CalendarDays, label: "Sessions",  value: stats.totalSessions, color: "text-brand" },
-            { icon: Clock,        label: "Hours",      value: totalHours,          color: "text-amber-400" },
-            { icon: Dumbbell,     label: "Exercises",  value: stats.totalExercises, color: "text-blue-400" },
-            { icon: Star,         label: "Upcoming",   value: stats.upcomingSessions, color: "text-purple-400" },
+            { icon: CalendarDays, label: "Sesiones",  value: stats.totalSessions, color: "text-brand" },
+            { icon: Clock,        label: "Horas",      value: totalHours,          color: "text-amber-400" },
+            { icon: Dumbbell,     label: "Ejercicios", value: stats.totalExercises, color: "text-blue-400" },
+            { icon: Star,         label: "Próximas",   value: stats.upcomingSessions, color: "text-purple-400" },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -258,7 +258,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             style={{ backgroundColor: currentAccentMeta?.preview ?? "#4ade80" }}
           />
           <span className="text-xs text-muted-foreground">
-            {currentAccentMeta?.label ?? "Padel Green"} theme
+            Tema {currentAccentMeta?.label ?? "Verde Pádel"}
           </span>
         </div>
       </div>
@@ -294,7 +294,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               {/* Avatar colour */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-3">
-                  Avatar colour
+                  Color del avatar
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {AVATAR_COLORS.map((c, i) => (
@@ -320,14 +320,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 {/* Name */}
                 <div className="space-y-1.5">
                   <label htmlFor="name" className="block text-sm font-semibold text-foreground">
-                    Display name
+                    Nombre para mostrar
                   </label>
                   <input
                     id="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Your full name"
+                    placeholder="Tu nombre completo"
                     className="w-full h-10 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
@@ -335,7 +335,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 {/* Email */}
                 <div className="space-y-1.5">
                   <label className="block text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Mail className="size-3.5" /> Email address
+                    <Mail className="size-3.5" /> Correo electrónico
                   </label>
                   <input
                     type="email"
@@ -348,7 +348,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               {/* Role */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-foreground">Role</label>
+                <label className="block text-sm font-semibold text-foreground">Rol</label>
                 <div className="flex gap-2 flex-wrap">
                   {ROLES.map((r) => (
                     <button
@@ -368,7 +368,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               {/* Skill level */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-foreground">Skill level</label>
+                <label className="block text-sm font-semibold text-foreground">Nivel</label>
                 <div className="flex gap-2 flex-wrap">
                   {LEVELS.map((l) => (
                     <button
@@ -392,13 +392,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <div className="space-y-1.5">
                 <label htmlFor="bio" className="block text-sm font-semibold text-foreground">
                   Bio
-                  <span className="font-normal text-muted-foreground ml-2">(optional)</span>
+                  <span className="font-normal text-muted-foreground ml-2">(opcional)</span>
                 </label>
                 <textarea
                   id="bio"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Training philosophy, goals, favourite drills…"
+                  placeholder="Filosofía de entrenamiento, objetivos, ejercicios favoritos…"
                   rows={3}
                   maxLength={300}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
@@ -423,10 +423,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   ) : saved ? (
                     <CheckCircle2 className="size-4 animate-scale-in" />
                   ) : null}
-                  {saving ? "Saving…" : saved ? "Saved!" : "Save changes"}
+                  {saving ? "Guardando…" : saved ? "¡Guardado!" : "Guardar cambios"}
                 </button>
                 {saved && (
-                  <p className="text-sm text-brand animate-fade-in">Changes saved successfully.</p>
+                  <p className="text-sm text-brand animate-fade-in">Cambios guardados correctamente.</p>
                 )}
               </div>
             </div>
@@ -438,9 +438,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               {/* Accent color */}
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Accent colour</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">Color de acento</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Changes buttons, active states, and highlights across the app.
+                  Cambia botones, estados activos y destacados en toda la app.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {ACCENT_COLORS.map((c) => (
@@ -468,8 +468,8 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               {/* Font size */}
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Text size</h3>
-                <p className="text-xs text-muted-foreground mb-4">Adjusts text size across all pages.</p>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">Tamaño del texto</h3>
+                <p className="text-xs text-muted-foreground mb-4">Ajusta el tamaño del texto en todas las páginas.</p>
                 <div className="flex gap-3">
                   {FONT_SIZES.map((f) => (
                     <button
@@ -490,9 +490,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               {/* Theme */}
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Theme</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">Tema</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Dark mode is built for late-night training sessions.
+                  El modo oscuro está diseñado para sesiones de entrenamiento nocturnas.
                 </p>
                 <div className="w-fit">
                   <ThemeToggle />
@@ -506,10 +506,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                 {[
-                  { icon: CalendarDays, label: "Total sessions",    value: stats.totalSessions,   color: "text-brand",     bg: "bg-brand/10" },
-                  { icon: Clock,        label: "Hours trained",      value: totalHours,            color: "text-amber-400", bg: "bg-amber-400/10" },
-                  { icon: Dumbbell,     label: "Exercise library",   value: stats.totalExercises,  color: "text-blue-400",  bg: "bg-blue-400/10" },
-                  { icon: Star,         label: "Upcoming sessions",  value: stats.upcomingSessions, color: "text-purple-400", bg: "bg-purple-400/10" },
+                  { icon: CalendarDays, label: "Sesiones totales",      value: stats.totalSessions,   color: "text-brand",     bg: "bg-brand/10" },
+                  { icon: Clock,        label: "Horas entrenadas",       value: totalHours,            color: "text-amber-400", bg: "bg-amber-400/10" },
+                  { icon: Dumbbell,     label: "Biblioteca de ejercicios", value: stats.totalExercises,  color: "text-blue-400",  bg: "bg-blue-400/10" },
+                  { icon: Star,         label: "Sesiones próximas",     value: stats.upcomingSessions, color: "text-purple-400", bg: "bg-purple-400/10" },
                 ].map(({ icon: Icon, label, value, color, bg }, i) => (
                   <div
                     key={label}
@@ -526,13 +526,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-6">
-                <h3 className="font-semibold text-foreground mb-4">Account details</h3>
+                <h3 className="font-semibold text-foreground mb-4">Detalles de la cuenta</h3>
                 <div className="divide-y divide-border">
                   {[
-                    { icon: Mail,   label: "Email",         value: user.email ?? "—" },
-                    { icon: Shield, label: "Sign-in",       value: user.provider === "google" ? "Google OAuth" : "Email & Password" },
-                    { icon: Zap,    label: "Member since",  value: user.created_at ? new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(user.created_at)) : "—" },
-                    { icon: Settings, label: "Status",      value: "Active" },
+                    { icon: Mail,   label: "Correo electrónico", value: user.email ?? "—" },
+                    { icon: Shield, label: "Inicio de sesión",  value: user.provider === "google" ? "Google OAuth" : "Correo y Contraseña" },
+                    { icon: Zap,    label: "Miembro desde",     value: user.created_at ? new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(user.created_at)) : "—" },
+                    { icon: Settings, label: "Estado",          value: "Activo" },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="flex items-center gap-3 py-3">
                       <Icon className="size-4 text-muted-foreground shrink-0" />
@@ -550,9 +550,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             <div className="space-y-4">
               <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1">Export your data</h3>
+                  <h3 className="font-semibold text-foreground mb-1">Exportar datos</h3>
                   <p className="text-sm text-muted-foreground">
-                    Download a complete copy of all your training data.
+                    Descarga una copia completa de todos tus datos de entrenamiento.
                   </p>
                 </div>
 
@@ -563,7 +563,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     className="inline-flex items-center gap-2 border border-border bg-background text-sm font-medium text-foreground px-4 py-2.5 rounded-xl hover:bg-muted active:scale-95 transition-all duration-150 disabled:opacity-60"
                   >
                     {exportingJson ? <Loader2 className="size-4 animate-spin" /> : <FileJson className="size-4 text-brand" />}
-                    Download as JSON
+                    Descargar como JSON
                   </button>
                   <button
                     onClick={handleExportCsv}
@@ -571,17 +571,17 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     className="inline-flex items-center gap-2 border border-border bg-background text-sm font-medium text-foreground px-4 py-2.5 rounded-xl hover:bg-muted active:scale-95 transition-all duration-150 disabled:opacity-60"
                   >
                     {exportingCsv ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4 text-amber-400" />}
-                    Sessions as CSV
+                    Sesiones como CSV
                   </button>
                 </div>
 
                 <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
-                  <p className="text-xs font-semibold text-foreground">Included in export:</p>
+                  <p className="text-xs font-semibold text-foreground">Incluido en la exportación:</p>
                   {[
-                    "All training sessions with dates and durations",
-                    "Complete exercise library",
-                    "Session–exercise relationships",
-                    "Account metadata",
+                    "Todas las sesiones con fechas y duraciones",
+                    "Biblioteca completa de ejercicios",
+                    "Relaciones sesión-ejercicio",
+                    "Metadatos de la cuenta",
                   ].map((item) => (
                     <p key={item} className="text-xs text-muted-foreground flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-brand shrink-0 mt-0.5" />
@@ -593,19 +593,19 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
               <div className="bg-card border border-destructive/20 rounded-2xl p-6 space-y-4">
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1">Danger zone</h3>
-                  <p className="text-sm text-muted-foreground">Irreversible actions — proceed with caution.</p>
+                  <h3 className="font-semibold text-foreground mb-1">Zona de peligro</h3>
+                  <p className="text-sm text-muted-foreground">Acciones irreversibles — procede con precaución.</p>
                 </div>
                 <div className="flex items-start justify-between gap-4 border border-destructive/20 rounded-xl p-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Delete account</p>
+                    <p className="text-sm font-medium text-foreground">Eliminar cuenta</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Permanently remove your account and all training data.
+                      Elimina permanentemente tu cuenta y todos los datos de entrenamiento.
                     </p>
                   </div>
                   <button className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 active:scale-95 transition-all duration-150">
                     <Trash2 className="size-3.5" />
-                    Delete
+                    Eliminar
                   </button>
                 </div>
               </div>

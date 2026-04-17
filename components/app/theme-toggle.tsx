@@ -29,7 +29,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <button
       onClick={toggle}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
       className={
         compact
           ? "size-8 flex items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors text-muted-foreground hover:text-foreground"
@@ -37,7 +37,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       }
     >
       {isDark ? <Sun className="size-4 shrink-0" /> : <Moon className="size-4 shrink-0" />}
-      {!compact && <span>{isDark ? "Light mode" : "Dark mode"}</span>}
+      {!compact && <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>}
     </button>
   );
 }

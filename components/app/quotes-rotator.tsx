@@ -4,34 +4,34 @@ import { useEffect, useState } from "react";
 
 const QUOTES = [
   {
-    text: "Champions keep playing until they get it right.",
+    text: "Los campeones siguen jugando hasta que lo hacen bien.",
     author: "Rafael Nadal",
-    sport: "Tennis · 22× Grand Slam",
+    sport: "Tenis · 22× Grand Slam",
   },
   {
-    text: "The more difficult the victory, the greater the happiness in winning.",
+    text: "Cuanto más difícil es la victoria, mayor es la felicidad de ganar.",
     author: "Novak Djokovic",
-    sport: "Tennis · 24× Grand Slam",
+    sport: "Tenis · 24× Grand Slam",
   },
   {
-    text: "You have to put in the hours because there's always something you can improve.",
+    text: "Tienes que dedicarle horas porque siempre hay algo que puedes mejorar.",
     author: "Rafael Nadal",
-    sport: "Tennis",
+    sport: "Tenis",
   },
   {
-    text: "I really think a champion is defined not by their wins but by how they can recover when they fall.",
+    text: "Creo que un campeón no se define por sus victorias, sino por cómo se recupera cuando cae.",
     author: "Serena Williams",
-    sport: "Tennis · 23× Grand Slam",
+    sport: "Tenis · 23× Grand Slam",
   },
   {
-    text: "If you want to be the best, you have to do things that other people aren't willing to do.",
+    text: "Si quieres ser el mejor, tienes que hacer cosas que otros no están dispuestos a hacer.",
     author: "Michael Phelps",
-    sport: "Swimming · 23× Olympic Gold",
+    sport: "Natación · 23× Oro Olímpico",
   },
   {
-    text: "The secret of getting ahead is getting started.",
+    text: "El secreto para avanzar es empezar.",
     author: "Roger Federer",
-    sport: "Tennis · 20× Grand Slam",
+    sport: "Tenis · 20× Grand Slam",
   },
 ];
 

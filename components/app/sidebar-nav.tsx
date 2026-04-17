@@ -19,11 +19,11 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/exercises", label: "Exercises", icon: Dumbbell },
-  { href: "/sessions", label: "Sessions", icon: ClipboardList },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/profile", label: "Profile", icon: UserCircle },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/exercises", label: "Ejercicios", icon: Dumbbell },
+  { href: "/sessions", label: "Sesiones", icon: ClipboardList },
+  { href: "/calendar", label: "Calendario", icon: CalendarDays },
+  { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
 interface SidebarNavProps {
@@ -120,7 +120,7 @@ function NavContent({
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
         >
           <LogOut className="size-4 shrink-0" />
-          Sign out
+          Cerrar sesión
         </button>
       </div>
     </div>
@@ -163,7 +163,7 @@ export function SidebarNav({ user }: SidebarNavProps) {
           <button
             onClick={() => setMobileOpen(true)}
             className="size-8 flex items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors"
-            aria-label="Open menu"
+            aria-label="Abrir menú"
           >
             <Menu className="size-5" />
           </button>
@@ -182,7 +182,7 @@ export function SidebarNav({ user }: SidebarNavProps) {
               <button
                 onClick={() => setMobileOpen(false)}
                 className="size-8 flex items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors"
-                aria-label="Close menu"
+                aria-label="Cerrar menú"
               >
                 <X className="size-4" />
               </button>
