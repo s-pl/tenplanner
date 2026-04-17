@@ -21,8 +21,8 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.72.1(react@19.2.4))
       '@nanostores/react':
-        specifier: github:ai/react
-        version: git+https://git@github.com:ai/react.git#9ff3cac2225d4c9ead4c6186f253f791c01f590a(nanostores@1.2.0)(react@19.2.4)
+        specifier: ^1.1.0
+        version: 1.1.0(nanostores@1.2.0)(react@19.2.4)
       '@supabase/ssr':
         specifier: ^0.10.2
         version: 0.10.2(@supabase/supabase-js@2.103.0)
@@ -1077,9 +1077,8 @@ packages:
     resolution: {integrity: sha512-cXu86tF4VQVfwz8W1SPbhoRyHJkti6mjH/XJIxp40jhO4j2k1m4KYrEykxqWPkFF3vrK4rgQppBh//AwyGSXPA==}
     engines: {node: '>=18'}
 
-  '@nanostores/react@git+https://git@github.com:ai/react.git#9ff3cac2225d4c9ead4c6186f253f791c01f590a':
-    resolution: {commit: 9ff3cac2225d4c9ead4c6186f253f791c01f590a, repo: git@github.com:ai/react.git, type: git}
-    version: 1.1.0
+  '@nanostores/react@1.1.0':
+    resolution: {integrity: sha512-MbH35fjhcf7LAubYX5vhOChYUfTLzNLqH/mBGLVsHkcvjy0F8crO1WQwdmQ2xKbAmtpalDa2zBt3Hlg5kqr8iw==}
     engines: {node: ^20.0.0 || >=22.0.0}
     peerDependencies:
       nanostores: ^1.2.0
@@ -4592,7 +4591,7 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
 
-  '@nanostores/react@git+https://git@github.com:ai/react.git#9ff3cac2225d4c9ead4c6186f253f791c01f590a(nanostores@1.2.0)(react@19.2.4)':
+  '@nanostores/react@1.1.0(nanostores@1.2.0)(react@19.2.4)':
     dependencies:
       nanostores: 1.2.0
       react: 19.2.4
