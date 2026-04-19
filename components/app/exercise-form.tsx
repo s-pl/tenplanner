@@ -8,7 +8,7 @@ import { z } from "zod";
 import {
   Loader2, Target, Brain, Dumbbell, Flame, Plus, X,
   GripVertical, MapPin, Video, Lightbulb, ListOrdered,
-  Package, ChevronUp, ChevronDown, ImageIcon,
+  Package, ChevronUp, ChevronDown, ImageIcon, Zap, Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import { MediaUploader } from "@/components/app/media-uploader";
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
 type Location = "indoor" | "outdoor" | "any";
+type Phase = "activation" | "main" | "cooldown";
 
 interface Step { id: string; title: string; description: string }
 
@@ -36,6 +37,9 @@ const formSchema = z.object({
     .int().min(1, "Mínimo 1 minuto").max(300, "Máximo 300 minutos"),
   location: z.enum(["indoor", "outdoor", "any"]).optional().nullable(),
   videoUrl: z.string().max(500).optional().nullable(),
+  phase: z.enum(["activation", "main", "cooldown"]).optional().nullable(),
+  intensity: z.coerce.number().int().min(1).max(5).optional().nullable(),
+  isGlobal: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -70,6 +74,7 @@ const PRESET_MATERIALS = [
 export interface ExerciseFormProps {
   mode: "create" | "edit";
   exerciseId?: string;
+  isAdmin?: boolean;
   initialData?: {
     name?: string;
     description?: string | null;
@@ -83,6 +88,9 @@ export interface ExerciseFormProps {
     steps?: Array<{ title: string; description: string }> | null;
     materials?: string[] | null;
     imageUrl?: string | null;
+    phase?: Phase | null;
+    intensity?: number | null;
+    isGlobal?: boolean;
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -102,7 +110,7 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
   );
 }
 
-export function ExerciseForm({ mode, exerciseId, initialData, onSuccess, onCancel }: ExerciseFormProps) {
+export function ExerciseForm({ mode, exerciseId, isAdmin = false, initialData, onSuccess, onCancel }: ExerciseFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -126,6 +134,9 @@ export function ExerciseForm({ mode, exerciseId, initialData, onSuccess, onCance
       durationMinutes: initialData?.durationMinutes,
       location: initialData?.location ?? null,
       videoUrl: initialData?.videoUrl ?? "",
+      phase: initialData?.phase ?? null,
+      intensity: initialData?.intensity ?? null,
+      isGlobal: initialData?.isGlobal ?? false,
     },
   });
 
@@ -184,6 +195,9 @@ export function ExerciseForm({ mode, exerciseId, initialData, onSuccess, onCance
       tips: values.tips?.trim() || null,
       videoUrl: values.videoUrl?.trim() || null,
       imageUrl: imageUrl || null,
+      phase: values.phase ?? null,
+      intensity: values.intensity ?? null,
+      isGlobal: isAdmin ? (values.isGlobal ?? false) : undefined,
       steps: steps.filter(s => s.title.trim()).map(s => ({ title: s.title.trim(), description: s.description.trim() })),
       materials: materials.filter(Boolean),
     };
@@ -272,6 +286,90 @@ export function ExerciseForm({ mode, exerciseId, initialData, onSuccess, onCance
             </div>
             {errors.durationMinutes && <p className="text-xs text-destructive">{errors.durationMinutes.message}</p>}
           </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Fase del entrenamiento <span className="font-normal text-muted-foreground">(opcional)</span>
+            </label>
+            <Controller name="phase" control={control} render={({ field }) => {
+              const PHASES: { id: Phase | null; label: string }[] = [
+                { id: null, label: "Sin asignar" },
+                { id: "activation", label: "Activación" },
+                { id: "main", label: "Principal" },
+                { id: "cooldown", label: "Vuelta a la calma" },
+              ];
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {PHASES.map(({ id, label }) => {
+                    const isSelected = (field.value ?? null) === id;
+                    return (
+                      <button key={label} type="button" onClick={() => field.onChange(id)}
+                        className={cn(
+                          "px-3 py-2.5 rounded-xl border text-xs font-medium transition-all duration-150",
+                          isSelected
+                            ? "bg-brand/10 border-brand text-brand"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >{label}</button>
+                    );
+                  })}
+                </div>
+              );
+            }} />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              <span className="inline-flex items-center gap-1.5"><Zap className="size-3.5" /> Intensidad</span>
+              <span className="font-normal text-muted-foreground ml-1">(1-5, opcional)</span>
+            </label>
+            <Controller name="intensity" control={control} render={({ field }) => (
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map(n => {
+                  const isSelected = field.value === n;
+                  return (
+                    <button key={n} type="button"
+                      onClick={() => field.onChange(isSelected ? null : n)}
+                      className={cn(
+                        "size-10 rounded-xl border text-sm font-semibold transition-all duration-150",
+                        isSelected
+                          ? "bg-brand text-brand-foreground border-brand"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >{n}</button>
+                  );
+                })}
+                {field.value != null && (
+                  <button type="button" onClick={() => field.onChange(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground ml-2 underline underline-offset-2">
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            )} />
+          </div>
+
+          {isAdmin && (
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <Controller name="isGlobal" control={control} render={({ field }) => (
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input type="checkbox"
+                    checked={!!field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-border text-brand focus:ring-brand/40"
+                  />
+                  <div className="flex-1">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                      <Globe className="size-3.5" /> Ejercicio global
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Disponible para todos los usuarios de TenPlanner.
+                    </p>
+                  </div>
+                </label>
+              )} />
+            </div>
+          )}
         </div>
       </section>
 

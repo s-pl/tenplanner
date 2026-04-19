@@ -29,6 +29,34 @@
       "when": 1776467295089,
       "tag": "0003_white_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776516050623,
+      "tag": "0004_elite_gwen_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776516723440,
+      "tag": "0005_majestic_sharon_ventura",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776517691433,
+      "tag": "0006_purple_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776525907340,
+      "tag": "0007_fancy_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

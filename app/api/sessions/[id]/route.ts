@@ -1,7 +1,13 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exercises, sessionExercises, sessions } from "@/db/schema";
+import {
+  exercises,
+  sessionExercises,
+  sessionStudents,
+  sessions,
+  students,
+} from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
   sessionIdParamsSchema,
@@ -56,6 +62,8 @@ export async function GET(_request: Request, context: RouteContext) {
         orderIndex: sessionExercises.orderIndex,
         durationMinutes: sessionExercises.durationMinutes,
         notes: sessionExercises.notes,
+        phase: sessionExercises.phase,
+        intensity: sessionExercises.intensity,
         exerciseId: exercises.id,
         exerciseName: exercises.name,
         exerciseCategory: exercises.category,
@@ -67,6 +75,12 @@ export async function GET(_request: Request, context: RouteContext) {
       .where(eq(sessionExercises.sessionId, id))
       .orderBy(asc(sessionExercises.orderIndex));
 
+    const studentRows = await db
+      .select({ id: students.id, name: students.name, imageUrl: students.imageUrl })
+      .from(sessionStudents)
+      .innerJoin(students, eq(sessionStudents.studentId, students.id))
+      .where(eq(sessionStudents.sessionId, id));
+
     return NextResponse.json({
       data: {
         id: session.id,
@@ -75,6 +89,10 @@ export async function GET(_request: Request, context: RouteContext) {
         scheduledAt: session.scheduledAt,
         durationMinutes: session.durationMinutes,
         userId: session.userId,
+        objective: session.objective,
+        intensity: session.intensity,
+        tags: session.tags,
+        location: session.location,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
         exercises: exerciseRows.map((e) => ({
@@ -85,7 +103,10 @@ export async function GET(_request: Request, context: RouteContext) {
           orderIndex: e.orderIndex,
           durationMinutes: e.durationMinutes ?? e.exerciseDurationMinutes,
           notes: e.notes,
+          phase: e.phase,
+          intensity: e.intensity,
         })),
+        students: studentRows,
       },
     });
   } catch {
@@ -138,16 +159,49 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { exercises: exerciseItems, ...sessionFields } = parsedBody.data;
+    const {
+      exercises: exerciseItems,
+      studentIds,
+      tags,
+      ...sessionFields
+    } = parsedBody.data;
+
+    if (studentIds !== undefined) {
+      const unique = Array.from(new Set(studentIds));
+      if (unique.length > 0) {
+        const ownedRows = await db
+          .select({ id: students.id })
+          .from(students)
+          .where(
+            and(eq(students.coachId, user.id), inArray(students.id, unique))
+          );
+        if (ownedRows.length !== unique.length) {
+          return NextResponse.json(
+            { error: "Algunos alumnos no pertenecen al entrenador" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     const updateValues: Record<string, unknown> = {};
     if (sessionFields.title !== undefined) updateValues.title = sessionFields.title;
     if (sessionFields.description !== undefined) updateValues.description = sessionFields.description;
     if (sessionFields.scheduledAt !== undefined) updateValues.scheduledAt = new Date(sessionFields.scheduledAt);
+    if (sessionFields.objective !== undefined) updateValues.objective = sessionFields.objective;
+    if (sessionFields.intensity !== undefined) updateValues.intensity = sessionFields.intensity;
+    if (sessionFields.location !== undefined) updateValues.location = sessionFields.location;
+    if (tags !== undefined) {
+      updateValues.tags =
+        tags && tags.length > 0
+          ? Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)))
+          : null;
+    }
 
-    if (exerciseItems !== undefined) {
-      const newDuration = await calculateDuration(exerciseItems);
-      updateValues.durationMinutes = newDuration;
+    if (sessionFields.durationMinutes !== undefined) {
+      updateValues.durationMinutes = sessionFields.durationMinutes;
+    } else if (exerciseItems !== undefined) {
+      updateValues.durationMinutes = await calculateDuration(exerciseItems);
     }
 
     const updatedSession = await db.transaction(async (tx) => {
@@ -170,7 +224,21 @@ export async function PUT(request: Request, context: RouteContext) {
               orderIndex: idx,
               durationMinutes: item.durationMinutes ?? null,
               notes: item.notes ?? null,
+              phase: item.phase ?? null,
+              intensity: item.intensity ?? null,
             }))
+          );
+        }
+      }
+
+      if (studentIds !== undefined) {
+        const unique = Array.from(new Set(studentIds));
+        await tx
+          .delete(sessionStudents)
+          .where(eq(sessionStudents.sessionId, id));
+        if (unique.length > 0) {
+          await tx.insert(sessionStudents).values(
+            unique.map((studentId) => ({ sessionId: id, studentId }))
           );
         }
       }

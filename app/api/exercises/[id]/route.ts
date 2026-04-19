@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exercises } from "@/db/schema";
+import { exercises, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
   exerciseIdParamsSchema,
@@ -62,6 +62,15 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
   }
 }
 
+async function getCurrentUserIsAdmin(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return !!row?.isAdmin;
+}
+
 export async function PUT(request: Request, context: ExerciseRouteContext) {
   const supabase = await createClient();
   const {
@@ -93,22 +102,45 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
     return zodValidationErrorResponse(parsedBody.error);
   }
 
-  const d = parsedBody.data;
-  const updateValues: Partial<typeof d> = {};
-
-  const fields = [
-    "name", "description", "category", "difficulty", "durationMinutes",
-    "objectives", "imageUrl", "tips", "location", "videoUrl", "steps", "materials",
-  ] as const;
-
-  for (const field of fields) {
-    if (d[field] !== undefined) {
-      // @ts-expect-error dynamic key assignment
-      updateValues[field] = d[field];
-    }
-  }
-
   try {
+    const [existing] = await db
+      .select({ id: exercises.id, isGlobal: exercises.isGlobal, createdBy: exercises.createdBy })
+      .from(exercises)
+      .where(eq(exercises.id, parsedParams.data.id))
+      .limit(1);
+
+    if (!existing) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
+    const isAdmin = await getCurrentUserIsAdmin(user.id);
+
+    if (existing.isGlobal && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!existing.isGlobal && existing.createdBy && existing.createdBy !== user.id && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const d = parsedBody.data;
+    const updateValues: Record<string, unknown> = {};
+
+    const fields = [
+      "name", "description", "category", "difficulty", "durationMinutes",
+      "objectives", "imageUrl", "tips", "location", "videoUrl", "steps", "materials",
+      "phase", "intensity",
+    ] as const;
+
+    for (const field of fields) {
+      if (d[field] !== undefined) {
+        updateValues[field] = d[field];
+      }
+    }
+
+    if (isAdmin && d.isGlobal !== undefined) {
+      updateValues.isGlobal = d.isGlobal;
+    }
+
     const [updatedExercise] = await db
       .update(exercises)
       .set(updateValues)
@@ -146,6 +178,25 @@ export async function DELETE(_request: Request, context: ExerciseRouteContext) {
   }
 
   try {
+    const [existing] = await db
+      .select({ id: exercises.id, isGlobal: exercises.isGlobal, createdBy: exercises.createdBy })
+      .from(exercises)
+      .where(eq(exercises.id, parsedParams.data.id))
+      .limit(1);
+
+    if (!existing) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
+    const isAdmin = await getCurrentUserIsAdmin(user.id);
+
+    if (existing.isGlobal && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!existing.isGlobal && existing.createdBy && existing.createdBy !== user.id && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const [deletedExercise] = await db
       .delete(exercises)
       .where(eq(exercises.id, parsedParams.data.id))

@@ -144,18 +144,30 @@ export async function POST(request: Request) {
       })
       .onConflictDoNothing();
 
+    const [dbUser] = await db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+    const isAdmin = !!dbUser?.isAdmin;
+
+    const { isGlobal: requestedIsGlobal, ...rest } = parsedBody.data;
+
     const [createdExercise] = await db
       .insert(exercises)
       .values({
-        ...parsedBody.data,
-        description: parsedBody.data.description ?? null,
-        objectives: parsedBody.data.objectives ?? null,
-        imageUrl: parsedBody.data.imageUrl ?? null,
-        tips: parsedBody.data.tips ?? null,
-        location: parsedBody.data.location ?? null,
-        videoUrl: parsedBody.data.videoUrl ?? null,
-        steps: parsedBody.data.steps ?? null,
-        materials: parsedBody.data.materials ?? null,
+        ...rest,
+        description: rest.description ?? null,
+        objectives: rest.objectives ?? null,
+        imageUrl: rest.imageUrl ?? null,
+        tips: rest.tips ?? null,
+        location: rest.location ?? null,
+        videoUrl: rest.videoUrl ?? null,
+        phase: rest.phase ?? null,
+        intensity: rest.intensity ?? null,
+        steps: rest.steps ?? null,
+        materials: rest.materials ?? null,
+        isGlobal: isAdmin && requestedIsGlobal === true,
         createdBy: user.id,
       })
       .returning();

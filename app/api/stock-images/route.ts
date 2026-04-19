@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Requires PEXELS_API_KEY in .env
-// Get a free key at https://www.pexels.com/api/
+
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim();

@@ -1,0 +1,123 @@
+import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { students } from "@/db/schema";
+import { createClient } from "@/lib/supabase/server";
+import {
+  studentIdParamsSchema,
+  updateStudentSchema,
+  zodValidationErrorResponse,
+} from "../validation";
+
+function internalServerError() {
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
+
+function notFoundResponse() {
+  return NextResponse.json({ error: "Student not found" }, { status: 404 });
+}
+
+type StudentRouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, context: StudentRouteContext) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const params = await context.params;
+  const parsed = studentIdParamsSchema.safeParse(params);
+  if (!parsed.success) return zodValidationErrorResponse(parsed.error);
+
+  try {
+    const [row] = await db
+      .select()
+      .from(students)
+      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .limit(1);
+
+    if (!row) return notFoundResponse();
+    return NextResponse.json({ data: row });
+  } catch {
+    return internalServerError();
+  }
+}
+
+export async function PUT(request: Request, context: StudentRouteContext) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const params = await context.params;
+  const parsed = studentIdParamsSchema.safeParse(params);
+  if (!parsed.success) return zodValidationErrorResponse(parsed.error);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsedBody = updateStudentSchema.safeParse(body);
+  if (!parsedBody.success) return zodValidationErrorResponse(parsedBody.error);
+
+  try {
+    const [existing] = await db
+      .select({ id: students.id })
+      .from(students)
+      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .limit(1);
+    if (!existing) return notFoundResponse();
+
+    const d = parsedBody.data;
+    const updateValues: Record<string, unknown> = {};
+
+    const fields = [
+      "name", "gender", "birthDate", "heightCm", "weightKg",
+      "dominantHand", "playerLevel", "yearsExperience", "notes", "imageUrl",
+    ] as const;
+
+    for (const field of fields) {
+      if (d[field] !== undefined) {
+        updateValues[field] = d[field];
+      }
+    }
+
+    if (d.email !== undefined) {
+      updateValues.email = d.email === "" ? null : d.email;
+    }
+
+    const [updated] = await db
+      .update(students)
+      .set(updateValues)
+      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .returning();
+
+    if (!updated) return notFoundResponse();
+    return NextResponse.json({ data: updated });
+  } catch {
+    return internalServerError();
+  }
+}
+
+export async function DELETE(_request: Request, context: StudentRouteContext) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const params = await context.params;
+  const parsed = studentIdParamsSchema.safeParse(params);
+  if (!parsed.success) return zodValidationErrorResponse(parsed.error);
+
+  try {
+    const [deleted] = await db
+      .delete(students)
+      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .returning({ id: students.id });
+
+    if (!deleted) return notFoundResponse();
+    return NextResponse.json({ ok: true });
+  } catch {
+    return internalServerError();
+  }
+}

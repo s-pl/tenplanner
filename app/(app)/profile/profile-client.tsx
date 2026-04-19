@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { ACCENT_COLORS, applyAccentColor, applyFontSize } from "@/lib/accent-colors";
 import { ThemeToggle } from "@/components/app/theme-toggle";
@@ -212,9 +213,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         {/* Avatar card */}
         <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-3">
           <div className="relative group">
-            <div className={`size-20 rounded-2xl ${!avatarUrl ? avatarMeta.bg : ""} flex items-center justify-center transition-all duration-300 hover:scale-105 overflow-hidden`}>
+            <div className={`size-20 rounded-2xl relative ${!avatarUrl ? avatarMeta.bg : ""} flex items-center justify-center transition-all duration-300 hover:scale-105 overflow-hidden`}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+                <Image src={avatarUrl} alt={name} fill className="object-cover" />
               ) : (
                 <span className={`text-2xl font-bold ${avatarMeta.text}`}>{initials}</span>
               )}

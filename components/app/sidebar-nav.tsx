@@ -8,6 +8,7 @@ import {
   Dumbbell,
   ClipboardList,
   CalendarDays,
+  Users,
   UserCircle,
   LogOut,
   Menu,
@@ -47,6 +48,7 @@ const navItems: NavItem[] = [
       { href: "/sessions/dr-planner", label: "Dr. Planner",  icon: Bot, accent: true },
     ],
   },
+  { href: "/students",  label: "Alumnos",      icon: Users },
   { href: "/calendar",  label: "Calendario",   icon: CalendarDays },
   { href: "/profile",   label: "Perfil",       icon: UserCircle },
 ];

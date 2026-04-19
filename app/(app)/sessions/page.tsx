@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
-import { eq, asc, count } from "drizzle-orm";
+import { eq, asc, count, inArray } from "drizzle-orm";
 import { Plus, Calendar, Clock, Dumbbell, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 
 type Filter = "upcoming" | "past" | "all";
@@ -58,11 +58,14 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     .where(eq(sessionsTable.userId, user.id))
     .orderBy(asc(sessionsTable.scheduledAt));
 
-  // Get exercise counts per session
-  const exerciseCounts = await db
-    .select({ sessionId: sessionExercises.sessionId, count: count() })
-    .from(sessionExercises)
-    .groupBy(sessionExercises.sessionId);
+  const sessionIds = allSessions.map((s) => s.id);
+  const exerciseCounts = sessionIds.length > 0
+    ? await db
+        .select({ sessionId: sessionExercises.sessionId, count: count() })
+        .from(sessionExercises)
+        .where(inArray(sessionExercises.sessionId, sessionIds))
+        .groupBy(sessionExercises.sessionId)
+    : [];
 
   const exerciseCountMap = new Map(
     exerciseCounts.map((r) => [r.sessionId, r.count])
