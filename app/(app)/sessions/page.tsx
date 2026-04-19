@@ -3,13 +3,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
-import { eq, asc, count, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { Plus, Calendar, Clock, Dumbbell, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 
 type Filter = "upcoming" | "past" | "all";
+const PAGE_SIZE = 20;
 
 interface PageProps {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; page?: string }>;
 }
 
 function formatDate(date: Date) {
@@ -44,21 +45,51 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   if (!user) redirect("/login");
 
-  const { filter } = await searchParams;
+  const { filter, page } = await searchParams;
   const activeFilter: Filter =
     filter === "past" || filter === "upcoming" || filter === "all"
       ? filter
       : "all";
 
-  const now = new Date();
+  const parsedPage = Number(page ?? "1");
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0
+    ? Math.floor(parsedPage)
+    : 1;
 
-  const allSessions = await db
+  const whereConditions: SQL[] = [eq(sessionsTable.userId, user.id)];
+  if (activeFilter === "upcoming") {
+    whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
+  } else if (activeFilter === "past") {
+    whereConditions.push(sql`${sessionsTable.scheduledAt} < now()`);
+  }
+  const whereClause = and(...whereConditions) ?? eq(sessionsTable.userId, user.id);
+
+  const [allCountRows, filteredCountRows] = await Promise.all([
+    db
+      .select({ total: count() })
+      .from(sessionsTable)
+      .where(eq(sessionsTable.userId, user.id)),
+    db
+      .select({ total: count() })
+      .from(sessionsTable)
+      .where(whereClause),
+  ]);
+
+  const totalSessions = Number(allCountRows[0]?.total ?? 0);
+  const totalFiltered = Number(filteredCountRows[0]?.total ?? 0);
+  const totalPages = totalFiltered > 0 ? Math.ceil(totalFiltered / PAGE_SIZE) : 0;
+  const safePage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
+  const offset = (safePage - 1) * PAGE_SIZE;
+
+  const sessionRows = await db
     .select()
     .from(sessionsTable)
-    .where(eq(sessionsTable.userId, user.id))
-    .orderBy(asc(sessionsTable.scheduledAt));
+    .where(whereClause)
+    .orderBy(asc(sessionsTable.scheduledAt))
+    .limit(PAGE_SIZE)
+    .offset(offset);
 
-  const sessionIds = allSessions.map((s) => s.id);
+  const sessionIds = sessionRows.map((s) => s.id);
   const exerciseCounts = sessionIds.length > 0
     ? await db
         .select({ sessionId: sessionExercises.sessionId, count: count() })
@@ -71,12 +102,17 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     exerciseCounts.map((r) => [r.sessionId, r.count])
   );
 
-  const filtered = allSessions.filter((s) => {
-    const date = new Date(s.scheduledAt);
-    if (activeFilter === "upcoming") return date >= now;
-    if (activeFilter === "past") return date < now;
-    return true;
-  });
+  const now = new Date();
+
+  function sessionsHref(params: { filter?: Filter; page?: number }) {
+    const p = new URLSearchParams();
+    const f = params.filter ?? activeFilter;
+    if (f !== "all") p.set("filter", f);
+    const nextPage = params.page ?? safePage;
+    if (nextPage > 1) p.set("page", String(nextPage));
+    const q = p.toString();
+    return q ? `/sessions?${q}` : "/sessions";
+  }
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: "Todos" },
@@ -93,7 +129,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             Sesiones de Entrenamiento
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {allSessions.length} {allSessions.length !== 1 ? "sesiones" : "sesión"} planificada{allSessions.length !== 1 ? "s" : ""}
+            {totalSessions} {totalSessions !== 1 ? "sesiones" : "sesión"} planificada{totalSessions !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -110,7 +146,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
         {FILTERS.map(({ key, label }) => (
           <Link
             key={key}
-            href={`/sessions?filter=${key}`}
+            href={sessionsHref({ filter: key, page: 1 })}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               activeFilter === key
                 ? "bg-card text-foreground shadow-sm border border-border"
@@ -123,7 +159,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Sessions list */}
-      {filtered.length === 0 ? (
+      {sessionRows.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center">
           <Calendar className="size-10 text-muted-foreground mx-auto mb-4" />
           <p className="font-medium text-foreground mb-1">
@@ -148,7 +184,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((session) => {
+          {sessionRows.map((session) => {
             const date = new Date(session.scheduledAt);
             const isPast = date < now;
             const exerciseCount = exerciseCountMap.get(session.id) ?? 0;
@@ -213,6 +249,46 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {totalFiltered > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {sessionRows.length} de {totalFiltered} sesiones
+          </p>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              {safePage > 1 ? (
+                <Link
+                  href={sessionsHref({ page: safePage - 1 })}
+                  className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                >
+                  Anterior
+                </Link>
+              ) : (
+                <span className="px-3 py-1.5 rounded-lg border border-border/60 text-xs font-semibold text-muted-foreground/40">
+                  Anterior
+                </span>
+              )}
+
+              <span className="text-xs text-muted-foreground">Página {safePage} de {totalPages}</span>
+
+              {safePage < totalPages ? (
+                <Link
+                  href={sessionsHref({ page: safePage + 1 })}
+                  className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                >
+                  Siguiente
+                </Link>
+              ) : (
+                <span className="px-3 py-1.5 rounded-lg border border-border/60 text-xs font-semibold text-muted-foreground/40">
+                  Siguiente
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

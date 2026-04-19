@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
 
 export default async function CalendarPage() {
@@ -21,7 +21,8 @@ export default async function CalendarPage() {
       durationMinutes: sessionsTable.durationMinutes,
     })
     .from(sessionsTable)
-    .where(eq(sessionsTable.userId, user.id));
+    .where(eq(sessionsTable.userId, user.id))
+    .orderBy(asc(sessionsTable.scheduledAt));
 
   const serialized = sessions.map((s) => ({
     ...s,

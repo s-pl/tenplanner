@@ -57,6 +57,34 @@
       "when": 1776525907340,
       "tag": "0007_fancy_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776598541412,
+      "tag": "0008_gray_the_hood",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776599282753,
+      "tag": "0009_cool_cassandra_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776600343310,
+      "tag": "0010_zippy_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776600771583,
+      "tag": "0011_messy_captain_cross",
+      "breakpoints": true
     }
   ]
 }

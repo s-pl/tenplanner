@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    const totalResult = await db
-      .select({ total: sessions.id })
+    const [totalRow] = await db
+      .select({ total: count() })
       .from(sessions)
       .where(whereClause);
-    const total = totalResult.length;
+    const total = Number(totalRow?.total ?? 0);
 
     if (sessionRows.length === 0) {
       return NextResponse.json({

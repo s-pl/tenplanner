@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { exercises as exercisesTable } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { Plus, Clock, ChevronRight, Search, ImageIcon, ListOrdered, Package, Globe, Sparkles, User } from "lucide-react";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -33,8 +33,10 @@ const TAB_LABELS: Record<Tab, string> = {
   mine: "Míos",
 };
 
+const PAGE_SIZE = 30;
+
 interface PageProps {
-  searchParams: Promise<{ category?: string; difficulty?: string; q?: string; tab?: string }>;
+  searchParams: Promise<{ category?: string; difficulty?: string; q?: string; tab?: string; page?: string }>;
 }
 
 export default async function ExercisesPage({ searchParams }: PageProps) {
@@ -42,46 +44,95 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { category, difficulty, q, tab } = await searchParams;
-  const activeCategory   = (CATEGORIES.includes(category as never)   ? category   : "all") as string;
-  const activeDifficulty = (DIFFICULTIES.includes(difficulty as never) ? difficulty : "all") as string;
+  const { category, difficulty, q, tab, page } = await searchParams;
+  const activeCategory = (CATEGORIES.includes(category as never) ? category : "all") as "all" | Category;
+  const activeDifficulty = (DIFFICULTIES.includes(difficulty as never) ? difficulty : "all") as "all" | Difficulty;
   const activeTab: Tab = (TABS.includes(tab as Tab) ? tab : "all") as Tab;
+  const searchTerm = q?.trim() ?? "";
+  const parsedPage = Number(page ?? "1");
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0
+    ? Math.floor(parsedPage)
+    : 1;
 
-  // Fetch only exercises visible to the user: global OR created by them
-  const visibleExercises = await db
-    .select()
-    .from(exercisesTable)
-    .where(or(eq(exercisesTable.isGlobal, true), eq(exercisesTable.createdBy, user.id)))
-    .orderBy(exercisesTable.name);
+  const allVisibleWhere = or(eq(exercisesTable.isGlobal, true), eq(exercisesTable.createdBy, user.id))
+    ?? eq(exercisesTable.isGlobal, true);
 
-  const filtered = visibleExercises.filter((ex) => {
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "global" && ex.isGlobal) ||
-      (activeTab === "mine" && ex.createdBy === user.id);
-    const matchesCategory   = activeCategory === "all"   || ex.category   === activeCategory;
-    const matchesDifficulty = activeDifficulty === "all" || ex.difficulty  === activeDifficulty;
-    const matchesSearch = !q
-      || ex.name.toLowerCase().includes(q.toLowerCase())
-      || (ex.description?.toLowerCase().includes(q.toLowerCase()) ?? false);
-    return matchesTab && matchesCategory && matchesDifficulty && matchesSearch;
-  });
+  const visibilityWhere = activeTab === "global"
+    ? eq(exercisesTable.isGlobal, true)
+    : activeTab === "mine"
+      ? eq(exercisesTable.createdBy, user.id)
+      : allVisibleWhere;
 
-  // Stats by category (scoped to active tab for relevance)
-  const tabScoped = visibleExercises.filter((ex) => {
-    if (activeTab === "global") return ex.isGlobal;
-    if (activeTab === "mine") return ex.createdBy === user.id;
-    return true;
-  });
-  const byCategory = CATEGORIES.slice(1).map(cat => ({
+  const listConditions: SQL[] = [visibilityWhere];
+  if (activeCategory !== "all") {
+    listConditions.push(eq(exercisesTable.category, activeCategory));
+  }
+  if (activeDifficulty !== "all") {
+    listConditions.push(eq(exercisesTable.difficulty, activeDifficulty));
+  }
+  if (searchTerm) {
+    const searchWhere = or(
+      ilike(exercisesTable.name, `%${searchTerm}%`),
+      ilike(exercisesTable.description, `%${searchTerm}%`)
+    );
+    if (searchWhere) listConditions.push(searchWhere);
+  }
+  const listWhere = and(...listConditions);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const [rowPage, allRows, globalRows, mineRows, categoryRows] = await Promise.all([
+    db
+      .select({
+        id: exercisesTable.id,
+        name: exercisesTable.name,
+        description: exercisesTable.description,
+        category: exercisesTable.category,
+        difficulty: exercisesTable.difficulty,
+        durationMinutes: exercisesTable.durationMinutes,
+        imageUrl: exercisesTable.imageUrl,
+        isAiGenerated: exercisesTable.isAiGenerated,
+        isGlobal: exercisesTable.isGlobal,
+        createdBy: exercisesTable.createdBy,
+        stepsCount: sql<number>`COALESCE(json_array_length(${exercisesTable.steps}), 0)`,
+        materialsCount: sql<number>`COALESCE(json_array_length(${exercisesTable.materials}), 0)`,
+      })
+      .from(exercisesTable)
+      .where(listWhere)
+      .orderBy(asc(exercisesTable.name))
+      .limit(PAGE_SIZE + 1)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(exercisesTable)
+      .where(allVisibleWhere),
+    db
+      .select({ total: count() })
+      .from(exercisesTable)
+      .where(eq(exercisesTable.isGlobal, true)),
+    db
+      .select({ total: count() })
+      .from(exercisesTable)
+      .where(eq(exercisesTable.createdBy, user.id)),
+    db
+      .select({ category: exercisesTable.category, total: count() })
+      .from(exercisesTable)
+      .where(visibilityWhere)
+      .groupBy(exercisesTable.category),
+  ]);
+
+  const hasNextPage = rowPage.length > PAGE_SIZE;
+  const filtered = hasNextPage ? rowPage.slice(0, PAGE_SIZE) : rowPage;
+
+  const byCategoryMap = new Map(categoryRows.map((row) => [row.category, Number(row.total)]));
+  const byCategory = CATEGORIES.slice(1).map((cat) => ({
     cat,
-    count: tabScoped.filter(ex => ex.category === cat).length,
+    count: byCategoryMap.get(cat as Category) ?? 0,
   }));
 
   const tabCounts: Record<Tab, number> = {
-    all: visibleExercises.length,
-    global: visibleExercises.filter(e => e.isGlobal).length,
-    mine: visibleExercises.filter(e => e.createdBy === user.id).length,
+    all: Number(allRows[0]?.total ?? 0),
+    global: Number(globalRows[0]?.total ?? 0),
+    mine: Number(mineRows[0]?.total ?? 0),
   };
 
   function buildHref(params: Record<string, string | undefined>) {
@@ -90,6 +141,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     if (params.difficulty && params.difficulty !== "all") p.set("difficulty", params.difficulty);
     if (params.q) p.set("q", params.q);
     if (params.tab && params.tab !== "all") p.set("tab", params.tab);
+    if (params.page && params.page !== "1") p.set("page", params.page);
     const s = p.toString();
     return `/exercises${s ? `?${s}` : ""}`;
   }
@@ -123,7 +175,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           return (
             <Link
               key={t}
-              href={buildHref({ category: activeCategory, difficulty: activeDifficulty, q, tab: t })}
+              href={buildHref({ category: activeCategory, difficulty: activeDifficulty, q: searchTerm || undefined, tab: t })}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                 isActive
                   ? "bg-card text-foreground shadow-sm border border-border"
@@ -140,14 +192,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       </div>
 
       {/* Category stats strip */}
-      {tabScoped.length > 0 && (
+      {tabCounts[activeTab] > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {byCategory.map(({ cat, count }) => {
             const meta = CATEGORY_META[cat as Category];
             return (
               <Link
                 key={cat}
-                href={buildHref({ category: activeCategory === cat ? "all" : cat, difficulty: activeDifficulty, q, tab: activeTab })}
+                href={buildHref({ category: activeCategory === cat ? "all" : cat, difficulty: activeDifficulty, q: searchTerm || undefined, tab: activeTab })}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
                   activeCategory === cat
                     ? `${meta.bg} ${meta.border} border`
@@ -174,7 +226,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           <input
             type="search" name="q"
             placeholder="Buscar ejercicios…"
-            defaultValue={q}
+            defaultValue={searchTerm}
             className="w-full h-9 pl-9 pr-4 text-sm bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground"
           />
           {activeCategory !== "all" && <input type="hidden" name="category"   value={activeCategory} />}
@@ -188,7 +240,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             const label = diff === "all" ? "Todos" : DIFFICULTY_META[diff as Difficulty].label;
             return (
               <Link key={diff}
-                href={buildHref({ category: activeCategory, difficulty: diff, q, tab: activeTab })}
+                href={buildHref({ category: activeCategory, difficulty: diff, q: searchTerm || undefined, tab: activeTab })}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                   isActive ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -208,7 +260,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           </div>
           <p className="font-medium text-foreground mb-1">No se encontraron ejercicios</p>
           <p className="text-sm text-muted-foreground">
-            {q ? `Sin resultados para "${q}".` : "Nada en este filtro."}
+            {searchTerm ? `Sin resultados para "${searchTerm}".` : "Nada en este filtro."}
           </p>
           <Link href={buildHref({ tab: activeTab })}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80 transition-colors mt-4">
@@ -220,8 +272,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           {filtered.map((exercise) => {
             const cat  = CATEGORY_META[exercise.category as Category];
             const diff = DIFFICULTY_META[exercise.difficulty as Difficulty];
-            const steps    = (exercise.steps    as Array<unknown> | null)?.length ?? 0;
-            const materials = (exercise.materials as Array<unknown> | null)?.length ?? 0;
+            const steps = Number(exercise.stepsCount ?? 0);
+            const materials = Number(exercise.materialsCount ?? 0);
 
             // Badge priority: AI > Global > Mío
             let ownerBadge: { label: string; icon: React.ElementType; color: string; bg: string } | null = null;
@@ -306,6 +358,50 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {(currentPage > 1 || hasNextPage) && (
+        <div className="flex items-center justify-center gap-2">
+          {currentPage > 1 ? (
+            <Link
+              href={buildHref({
+                category: activeCategory,
+                difficulty: activeDifficulty,
+                q: searchTerm || undefined,
+                tab: activeTab,
+                page: String(currentPage - 1),
+              })}
+              className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              Anterior
+            </Link>
+          ) : (
+            <span className="px-3 py-1.5 rounded-lg border border-border/60 text-xs font-semibold text-muted-foreground/40">
+              Anterior
+            </span>
+          )}
+
+          <span className="text-xs text-muted-foreground">Página {currentPage}</span>
+
+          {hasNextPage ? (
+            <Link
+              href={buildHref({
+                category: activeCategory,
+                difficulty: activeDifficulty,
+                q: searchTerm || undefined,
+                tab: activeTab,
+                page: String(currentPage + 1),
+              })}
+              className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              Siguiente
+            </Link>
+          ) : (
+            <span className="px-3 py-1.5 rounded-lg border border-border/60 text-xs font-semibold text-muted-foreground/40">
+              Siguiente
+            </span>
+          )}
         </div>
       )}
 

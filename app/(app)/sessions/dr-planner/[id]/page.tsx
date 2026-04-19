@@ -14,7 +14,10 @@ export default async function DrPlannerChatPage({ params }: PageProps) {
   if (!user) redirect("/login");
 
   const [chat] = await db
-    .select()
+    .select({
+      title: drPlannerChats.title,
+      messages: drPlannerChats.messages,
+    })
     .from(drPlannerChats)
     .where(and(eq(drPlannerChats.id, id), eq(drPlannerChats.userId, user.id)))
     .limit(1);

@@ -595,13 +595,14 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
   }
 
   function confirm() {
-    const parts: string[] = [];
-    if (objective.trim()) parts.push(`objetivo: ${objective.trim()}`);
-    parts.push(`intensidad: ${intensity}`);
-    if (location.trim()) parts.push(`ubicación: ${location.trim()}`);
-    if (tagsInput.trim()) parts.push(`etiquetas: ${tagsInput.trim()}`);
-    if (scheduledAt.trim()) parts.push(`fecha: ${scheduledAt.trim()}`);
-    const text = `Confirmo los datos de la sesión: ${parts.join(", ")}`;
+    const text = [
+      "[FORM_META_CONFIRMED]",
+      `objetivo=${objective.trim()}`,
+      `intensidad=${intensity}`,
+      `ubicacion=${location.trim()}`,
+      `etiquetas=${tagsInput.trim()}`,
+      `fecha=${scheduledAt.trim()}`,
+    ].join(" | ");
     setConfirmed(true);
     onSend(text);
   }

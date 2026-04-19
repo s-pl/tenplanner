@@ -85,7 +85,13 @@ export const exercises = pgTable("exercises", {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
-});
+}, (t) => [
+  index("exercises_created_by_idx").on(t.createdBy),
+  index("exercises_created_by_name_idx").on(t.createdBy, t.name),
+  index("exercises_is_global_idx").on(t.isGlobal),
+  index("exercises_category_created_at_idx").on(t.category, t.createdAt),
+  index("exercises_name_idx").on(t.name),
+]);
 
 // Sessions
 export const sessions = pgTable("sessions", {
@@ -111,6 +117,7 @@ export const sessions = pgTable("sessions", {
 }, (t) => [
   index("sessions_user_id_idx").on(t.userId),
   index("sessions_scheduled_at_idx").on(t.scheduledAt),
+  index("sessions_user_scheduled_at_idx").on(t.userId, t.scheduledAt),
 ]);
 
 // Session Exercises (M:N pivot table)
@@ -129,6 +136,7 @@ export const sessionExercises = pgTable("session_exercises", {
   intensity: integer("intensity"),
 }, (t) => [
   index("session_exercises_session_id_idx").on(t.sessionId),
+  index("session_exercises_session_order_idx").on(t.sessionId, t.orderIndex),
 ]);
 
 // Students (managed by coaches)
@@ -148,6 +156,8 @@ export const students = pgTable("students", {
   yearsExperience: integer("years_experience"),
   notes: text("notes"),
   imageUrl: text("image_url"),
+  profileToken: varchar("profile_token", { length: 128 }).unique(),
+  profileTokenExpiresAt: timestamp("profile_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -157,6 +167,7 @@ export const students = pgTable("students", {
     .$onUpdate(() => new Date()),
 }, (t) => [
   index("students_coach_id_idx").on(t.coachId),
+  index("students_coach_name_idx").on(t.coachId, t.name),
 ]);
 
 // Session ↔ Students pivot
@@ -168,9 +179,14 @@ export const sessionStudents = pgTable("session_students", {
   studentId: uuid("student_id")
     .references(() => students.id, { onDelete: "cascade" })
     .notNull(),
+  attended: boolean("attended"),
+  rating: integer("rating"),
+  feedback: text("feedback"),
+  feedbackAt: timestamp("feedback_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("session_students_session_student_uniq").on(t.sessionId, t.studentId),
   index("session_students_session_id_idx").on(t.sessionId),
+  index("session_students_student_id_idx").on(t.studentId),
 ]);
 
 // Dr. Planner chat history
@@ -184,6 +200,7 @@ export const drPlannerChats = pgTable("dr_planner_chats", {
 }, (t) => [
   index("dr_planner_chats_user_id_idx").on(t.userId),
   index("dr_planner_chats_updated_at_idx").on(t.updatedAt),
+  index("dr_planner_chats_user_updated_at_idx").on(t.userId, t.updatedAt),
 ]);
 
 // Relations
