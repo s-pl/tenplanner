@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft, Check, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Tipos de perfil ───────────────────────────────────────────────────────
@@ -89,13 +89,42 @@ const QUICK_CITIES = ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao", "M
 
 const TOTAL_STEPS = 5;
 
+// ─── Password strength ─────────────────────────────────────────────────────
+
+type StrengthLevel = 0 | 1 | 2 | 3 | 4;
+
+function getPasswordStrength(pw: string): StrengthLevel {
+  if (!pw) return 0;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return 1;
+  if (score === 2) return 2;
+  if (score === 3) return 3;
+  return 4;
+}
+
+const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bars: number }> = {
+  0: { label: "", color: "", bars: 0 },
+  1: { label: "Muy débil", color: "bg-red-500", bars: 1 },
+  2: { label: "Débil", color: "bg-orange-400", bars: 2 },
+  3: { label: "Media", color: "bg-yellow-400", bars: 3 },
+  4: { label: "Fuerte", color: "bg-brand", bars: 4 },
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────
 
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData>({
     city: "", role: null, playerLevel: null,
@@ -103,10 +132,15 @@ export default function RegisterPage() {
   });
 
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [emailSent, setEmailSent] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, getValues } = useForm<AccountValues>({
+  const { register, handleSubmit, formState: { errors }, getValues, watch } = useForm<AccountValues>({
     resolver: zodResolver(accountSchema),
   });
+
+  const passwordValue = watch("password", "");
+  const strength = getPasswordStrength(passwordValue);
+  const strengthCfg = STRENGTH_CONFIG[strength];
 
   function toggleGoal(g: string) {
     setSelectedGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
@@ -123,6 +157,7 @@ export default function RegisterPage() {
   function back() { setStep(s => Math.max(s - 1, 1)); }
 
   async function handleAccountNext() {
+    setEmailExistsError(null);
     const valid = await new Promise<boolean>(resolve => {
       handleSubmit(() => resolve(true), () => resolve(false))();
     });
@@ -145,7 +180,23 @@ export default function RegisterPage() {
       },
     });
 
-    if (error) { setServerError(error.message); setLoading(false); return; }
+    if (error) {
+      const isEmailTaken =
+        error.message.toLowerCase().includes("already registered") ||
+        error.message.toLowerCase().includes("already exists") ||
+        error.message.toLowerCase().includes("user already");
+
+      if (isEmailTaken) {
+        setEmailExistsError(`Ya existe una cuenta con ${values.email}. ¿Quieres iniciar sesión?`);
+        setStep(1);
+        setLoading(false);
+        return;
+      }
+
+      setServerError(error.message);
+      setLoading(false);
+      return;
+    }
 
     if (data.user && data.session) {
       const goalsText = [...selectedGoals, ...(profile.goals.trim() ? [profile.goals.trim()] : [])].join(", ");
@@ -179,12 +230,67 @@ export default function RegisterPage() {
     }
 
     if (data.session) router.push("/dashboard");
-    else router.push("/login?message=check_email");
+    else setEmailSent(values.email);
   }
 
-  const showLevelStep = profile.role === "player" || profile.role === "both" || profile.role === "coach";
   const levelOptions = profile.role === "coach" ? COACH_LEVELS : LEVELS;
   const levelTitle = profile.role === "coach" ? "¿Cuál es tu experiencia como entrenador?" : "¿Cuál es tu nivel de juego?";
+
+  // ─── Pantalla de éxito ────────────────────────────────────────────────────
+
+  if (emailSent) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-16 rounded-2xl bg-brand/15 flex items-center justify-center">
+            <Mail className="size-8 text-brand" />
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+              Revisa tu correo
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Hemos enviado un enlace de verificación a
+            </p>
+            <p className="text-sm font-semibold text-foreground break-all px-2">
+              {emailSent}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/40 px-5 py-4 text-left space-y-2">
+          <p className="text-xs font-semibold text-foreground">¿Qué hacer ahora?</p>
+          <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+            <li className="flex gap-2">
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">1</span>
+              Abre el correo de <span className="font-medium text-foreground ml-0.5">tenplanner</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">2</span>
+              Haz clic en el enlace de verificación
+            </li>
+            <li className="flex gap-2">
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">3</span>
+              Vuelve aquí para iniciar sesión
+            </li>
+          </ol>
+        </div>
+
+        <div className="space-y-2.5">
+          <Button
+            type="button"
+            className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+            onClick={() => router.push(`/login?message=check_email&email=${encodeURIComponent(emailSent)}`)}
+          >
+            Ir a iniciar sesión <ArrowRight className="size-4 ml-1" />
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            ¿No lo encuentras? Revisa la carpeta de spam.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -244,19 +350,102 @@ export default function RegisterPage() {
               <Input id="name" type="text" placeholder="Tu nombre" autoComplete="name" className="h-10" aria-invalid={!!errors.name} {...register("name")} />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="email">Correo electrónico</Label>
-              <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" className="h-10" aria-invalid={!!errors.email} {...register("email")} />
+              <Input
+                id="email" type="email" placeholder="you@example.com"
+                autoComplete="email" className="h-10"
+                aria-invalid={!!errors.email || !!emailExistsError}
+                {...register("email", { onChange: () => setEmailExistsError(null) })}
+              />
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              {emailExistsError && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 flex items-start gap-2">
+                  <p className="text-xs text-destructive leading-relaxed flex-1">{emailExistsError}</p>
+                  <Link href="/login" className="text-xs font-semibold text-destructive underline underline-offset-2 shrink-0">
+                    Iniciar sesión
+                  </Link>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" placeholder="Mín. 8 caracteres" autoComplete="new-password" className="h-10" aria-invalid={!!errors.password} {...register("password")} />
+              <div className="relative">
+                <Input
+                  id="password" type={showPassword ? "text" : "password"}
+                  placeholder="Mín. 8 caracteres" autoComplete="new-password"
+                  className="h-10 pr-10" aria-invalid={!!errors.password}
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+
+              {/* Strength meter */}
+              {passwordValue.length > 0 && (
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map(bar => (
+                      <div
+                        key={bar}
+                        className={cn(
+                          "h-1 flex-1 rounded-full transition-all duration-300",
+                          bar <= strengthCfg.bars ? strengthCfg.color : "bg-muted"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  {strengthCfg.label && (
+                    <p className={cn(
+                      "text-xs font-medium",
+                      strength === 1 && "text-red-500",
+                      strength === 2 && "text-orange-400",
+                      strength === 3 && "text-yellow-500",
+                      strength === 4 && "text-brand",
+                    )}>
+                      {strengthCfg.label}
+                      {strength < 4 && (
+                        <span className="text-muted-foreground font-normal">
+                          {strength === 1 && " — añade mayúsculas, números o símbolos"}
+                          {strength === 2 && " — añade más variedad de caracteres"}
+                          {strength === 3 && " — casi perfecta, añade un símbolo"}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-              <Input id="confirmPassword" type="password" placeholder="••••••••" autoComplete="new-password" className="h-10" aria-invalid={!!errors.confirmPassword} {...register("confirmPassword")} />
+              <div className="relative">
+                <Input
+                  id="confirmPassword" type={showConfirm ? "text" : "password"}
+                  placeholder="••••••••" autoComplete="new-password"
+                  className="h-10 pr-10" aria-invalid={!!errors.confirmPassword}
+                  {...register("confirmPassword")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(v => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                  aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
             </div>
           </div>

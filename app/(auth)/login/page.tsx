@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Eye, EyeOff, Mail, Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Introduce un email válido"),
@@ -19,27 +20,43 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailJustRegistered = searchParams.get("message") === "check_email";
+  const registeredEmail = searchParams.get("email") ?? undefined;
+
   const [serverError, setServerError] = useState<string | null>(null);
+  const [passwordFieldError, setPasswordFieldError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: registeredEmail ?? "" },
+  });
 
   async function onSubmit(values: LoginValues) {
     setLoading(true);
     setServerError(null);
+    setPasswordFieldError(null);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
     if (error) {
-      setServerError(error.message);
+      if (error.message === "Invalid login credentials") {
+        setPasswordFieldError("Contraseña incorrecta. Comprueba que la has escrito bien.");
+      } else if (error.message === "Email not confirmed") {
+        setServerError("Debes verificar tu correo antes de iniciar sesión.");
+      } else {
+        setServerError(error.message);
+      }
       setLoading(false);
       return;
     }
@@ -64,6 +81,29 @@ export default function LoginPage() {
           Inicia sesión en tu cuenta de entrenamiento
         </p>
       </div>
+
+      {/* Email verification notice */}
+      {emailJustRegistered && (
+        <div className="rounded-xl border border-brand/30 bg-brand/8 px-4 py-4">
+          <div className="flex gap-3">
+            <div className="size-9 rounded-lg bg-brand/15 flex items-center justify-center shrink-0">
+              <Mail className="size-4 text-brand" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Revisa tu bandeja de entrada
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Hemos enviado un enlace de verificación
+                {registeredEmail && (
+                  <> a <span className="font-medium text-foreground break-all">{registeredEmail}</span></>
+                )}
+                . Confirma tu cuenta para poder iniciar sesión.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Button
         type="button"
@@ -104,40 +144,74 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Contraseña</Label>
+          <Label htmlFor="password">Contraseña</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="h-10 pr-10"
+              aria-invalid={!!errors.password || !!passwordFieldError}
+              {...register("password", { onChange: () => setPasswordFieldError(null) })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+              tabIndex={-1}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            autoComplete="current-password"
-            className="h-10"
-            aria-invalid={!!errors.password}
-            {...register("password")}
-          />
           {errors.password && (
             <p className="text-xs text-destructive">{errors.password.message}</p>
+          )}
+          {passwordFieldError && (
+            <p className="text-xs text-destructive">{passwordFieldError}</p>
           )}
         </div>
 
         {serverError && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
+          <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
             <p className="text-sm text-destructive">{serverError}</p>
           </div>
         )}
 
-        <Button type="submit" className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold" disabled={loading}>
-          {loading ? "Iniciando sesión…" : "Iniciar sesión"}
+        <Button
+          type="submit"
+          className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="size-4 animate-spin mr-2" />
+              Iniciando sesión…
+            </>
+          ) : (
+            "Iniciar sesión"
+          )}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="text-foreground font-medium hover:text-brand transition-colors">
+        <Link
+          href="/register"
+          className="text-foreground font-medium hover:text-brand transition-colors"
+        >
           Crea una gratis
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
