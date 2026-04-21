@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { SessionForm, type AvailableExercise } from "@/components/app/session-form";
+import { SessionAnalyticsView } from "@/components/app/session-analytics";
+import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
+import { Target, Flame, MapPin, Hash } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -47,6 +50,16 @@ export interface SessionData {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  objective: string | null;
+  intensity: number | null;
+  tags: string[];
+  location: string | null;
+}
+
+export interface SessionStudentData {
+  id: string;
+  name: string;
+  imageUrl: string | null;
 }
 
 export interface SessionExerciseData {
@@ -88,9 +101,208 @@ interface Props {
   session: SessionData;
   sessionExercises: SessionExerciseData[];
   availableExercises: AvailableExercise[];
+  analytics: SessionAnalytics;
+  students: SessionStudentData[];
 }
 
-export function SessionDetailClient({ session, sessionExercises, availableExercises }: Props) {
+function IntensityIndicator({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span
+          key={n}
+          className={cn(
+            "size-1.5 rounded-full",
+            n <= value ? "bg-brand" : "bg-muted-foreground/30",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+function MetadataChips({ session }: { session: SessionData }) {
+  const hasAny =
+    !!session.objective ||
+    typeof session.intensity === "number" ||
+    !!session.location ||
+    session.tags.length > 0;
+  if (!hasAny) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {session.objective && (
+        <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
+          <Target className="size-3 text-muted-foreground" />
+          <span className="truncate max-w-[24ch]">{session.objective}</span>
+        </span>
+      )}
+      {typeof session.intensity === "number" && (
+        <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
+          <Flame className="size-3 text-muted-foreground" />
+          <IntensityIndicator value={session.intensity} />
+          <span className="font-mono text-muted-foreground">
+            {session.intensity}/5
+          </span>
+        </span>
+      )}
+      {session.location && (
+        <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
+          <MapPin className="size-3 text-muted-foreground" />
+          {session.location}
+        </span>
+      )}
+      {session.tags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center gap-1 text-xs text-brand bg-brand/10 border border-brand/20 px-2.5 py-1 rounded-full"
+        >
+          <Hash className="size-3" />
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((p) => p.charAt(0))
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function StudentsSection({ students }: { students: SessionStudentData[] }) {
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="px-6 py-4 border-b border-border/50">
+        <h2 className="font-semibold text-sm text-foreground">Alumnos</h2>
+      </div>
+      <div className="p-6">
+        {students.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Sin alumnos asignados
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {students.map((s) => (
+              <div
+                key={s.id}
+                className="inline-flex items-center gap-2 bg-muted/40 border border-border rounded-full pl-1 pr-3 py-1"
+              >
+                {s.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.imageUrl}
+                    alt={s.name}
+                    className="size-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="size-6 rounded-full bg-brand/20 text-brand text-[10px] font-bold flex items-center justify-center">
+                    {getInitials(s.name)}
+                  </span>
+                )}
+                <span className="text-xs font-medium text-foreground truncate max-w-[14ch]">
+                  {s.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CATEGORY_BAR: Record<string, string> = {
+  technique: "bg-blue-500",
+  tactics: "bg-purple-500",
+  fitness: "bg-amber-500",
+  "warm-up": "bg-brand",
+};
+
+const CATEGORY_BAR_LIGHT: Record<string, string> = {
+  technique: "bg-blue-500/15 border-blue-500/30",
+  tactics: "bg-purple-500/15 border-purple-500/30",
+  fitness: "bg-amber-500/15 border-amber-500/30",
+  "warm-up": "bg-brand/15 border-brand/30",
+};
+
+function SessionRoadmap({ exercises, totalMinutes }: { exercises: SessionExerciseData[]; totalMinutes: number }) {
+  const total = totalMinutes > 0 ? totalMinutes : exercises.reduce((s, e) => s + e.durationMinutes, 0);
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="px-6 py-4 border-b border-border/50">
+        <h2 className="font-semibold text-sm text-foreground">Hoja de ruta</h2>
+      </div>
+      <div className="p-6 space-y-4">
+        {/* Timeline bar */}
+        <div className="flex h-8 rounded-xl overflow-hidden gap-px">
+          {exercises.map((ex) => {
+            const pct = total > 0 ? (ex.durationMinutes / total) * 100 : 100 / exercises.length;
+            return (
+              <div
+                key={ex.exerciseId}
+                className={cn("h-full relative group", CATEGORY_BAR[ex.category] ?? "bg-muted")}
+                style={{ width: `${pct}%`, minWidth: "2px" }}
+                title={`${ex.name} · ${ex.durationMinutes} min`}
+              />
+            );
+          })}
+        </div>
+
+        {/* Step list */}
+        <div className="space-y-2">
+          {exercises.map((ex, idx) => {
+            const pct = total > 0 ? Math.round((ex.durationMinutes / total) * 100) : 0;
+            const elapsed = exercises.slice(0, idx).reduce((s, e) => s + e.durationMinutes, 0);
+            return (
+              <div key={ex.exerciseId} className="flex items-center gap-3">
+                {/* Timeline dot + line */}
+                <div className="flex flex-col items-center shrink-0 w-4">
+                  <div className={cn("size-2.5 rounded-full border-2", CATEGORY_BAR_LIGHT[ex.category] ?? "bg-muted border-muted-foreground/30", "border-current")} />
+                  {idx < exercises.length - 1 && <div className="w-px flex-1 min-h-[1.25rem] bg-border/60 mt-1" />}
+                </div>
+
+                {/* Content */}
+                <div className={cn("flex-1 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border text-xs", CATEGORY_BAR_LIGHT[ex.category] ?? "bg-muted/30 border-border")}>
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground truncate">{ex.name}</p>
+                    <p className="text-muted-foreground mt-0.5">{CATEGORY_LABELS[ex.category] ?? ex.category}</p>
+                  </div>
+                  <div className="text-right shrink-0 text-muted-foreground">
+                    <p className="font-mono">{elapsed}′ – {elapsed + ex.durationMinutes}′</p>
+                    <p className="text-[10px] mt-0.5">{ex.durationMinutes} min · {pct}%</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 pt-1">
+          {(["warm-up", "technique", "tactics", "fitness"] as const).filter(cat =>
+            exercises.some(e => e.category === cat)
+          ).map(cat => (
+            <div key={cat} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <div className={cn("size-2 rounded-sm", CATEGORY_BAR[cat])} />
+              {CATEGORY_LABELS[cat]}
+              <span className="font-mono">
+                {exercises.filter(e => e.category === cat).reduce((s, e) => s + e.durationMinutes, 0)} min
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SessionDetailClient({ session, sessionExercises, availableExercises, analytics, students }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -239,6 +451,8 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
             </span>
           </div>
 
+          <MetadataChips session={session} />
+
           {session.description && (
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
@@ -251,6 +465,17 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
           )}
         </div>
       </div>
+
+      {/* Analytics */}
+      <SessionAnalyticsView analytics={analytics} />
+
+      {/* Students */}
+      <StudentsSection students={students} />
+
+      {/* Roadmap */}
+      {sessionExercises.length > 0 && (
+        <SessionRoadmap exercises={sessionExercises} totalMinutes={session.durationMinutes} />
+      )}
 
       {/* Exercises list */}
       {sessionExercises.length > 0 && (

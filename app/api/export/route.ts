@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable, exercises as exercisesTable, sessionExercises } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 export async function GET() {
   const supabase = await createClient();
@@ -13,11 +13,18 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [userSessions, allExercises, sessionExerciseLinks] = await Promise.all([
+  const [userSessions, allExercises] = await Promise.all([
     db.select().from(sessionsTable).where(eq(sessionsTable.userId, user.id)),
     db.select().from(exercisesTable),
-    db.select().from(sessionExercises),
   ]);
+
+  const sessionIds = userSessions.map((s) => s.id);
+  const sessionExerciseLinks = sessionIds.length > 0
+    ? await db
+        .select()
+        .from(sessionExercises)
+        .where(inArray(sessionExercises.sessionId, sessionIds))
+    : [];
 
   const exportData = {
     exportedAt: new Date().toISOString(),
@@ -28,9 +35,7 @@ export async function GET() {
     },
     sessions: userSessions,
     exercises: allExercises,
-    sessionExercises: sessionExerciseLinks.filter((se) =>
-      userSessions.some((s) => s.id === se.sessionId)
-    ),
+    sessionExercises: sessionExerciseLinks,
   };
 
   return new Response(JSON.stringify(exportData, null, 2), {

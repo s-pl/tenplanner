@@ -1,7 +1,14 @@
-import { and, asc, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { exercises, sessionExercises, sessions, users } from "@/db/schema";
+import {
+  exercises,
+  sessionExercises,
+  sessionStudents,
+  sessions,
+  students,
+  users,
+} from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
   createSessionSchema,
@@ -86,11 +93,11 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    const totalResult = await db
-      .select({ total: sessions.id })
+    const [totalRow] = await db
+      .select({ total: count() })
       .from(sessions)
       .where(whereClause);
-    const total = totalResult.length;
+    const total = Number(totalRow?.total ?? 0);
 
     if (sessionRows.length === 0) {
       return NextResponse.json({
@@ -106,6 +113,8 @@ export async function GET(request: NextRequest) {
         orderIndex: sessionExercises.orderIndex,
         durationMinutes: sessionExercises.durationMinutes,
         notes: sessionExercises.notes,
+        phase: sessionExercises.phase,
+        intensity: sessionExercises.intensity,
         exerciseId: exercises.id,
         exerciseName: exercises.name,
         exerciseCategory: exercises.category,
@@ -131,6 +140,10 @@ export async function GET(request: NextRequest) {
       scheduledAt: session.scheduledAt,
       durationMinutes: session.durationMinutes,
       userId: session.userId,
+      objective: session.objective,
+      intensity: session.intensity,
+      tags: session.tags,
+      location: session.location,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       exercises: (exercisesBySession.get(session.id) ?? []).map((e) => ({
@@ -141,6 +154,8 @@ export async function GET(request: NextRequest) {
         orderIndex: e.orderIndex,
         durationMinutes: e.durationMinutes ?? e.exerciseDurationMinutes,
         notes: e.notes,
+        phase: e.phase,
+        intensity: e.intensity,
       })),
     }));
 
@@ -180,11 +195,47 @@ export async function POST(request: Request) {
     return zodValidationErrorResponse(parsedBody.error);
   }
 
-  const { title, description, scheduledAt, exercises: exerciseItems } = parsedBody.data;
+  const {
+    title,
+    description,
+    scheduledAt,
+    durationMinutes: providedDuration,
+    objective,
+    intensity,
+    tags,
+    location,
+    studentIds,
+    exercises: exerciseItems,
+  } = parsedBody.data;
 
   try {
     await ensureUser(user);
-    const durationMinutes = await calculateDuration(exerciseItems);
+
+    const uniqueStudentIds = Array.from(new Set(studentIds ?? []));
+    if (uniqueStudentIds.length > 0) {
+      const ownedRows = await db
+        .select({ id: students.id })
+        .from(students)
+        .where(
+          and(
+            eq(students.coachId, user.id),
+            inArray(students.id, uniqueStudentIds)
+          )
+        );
+      if (ownedRows.length !== uniqueStudentIds.length) {
+        return NextResponse.json(
+          { error: "Algunos alumnos no pertenecen al entrenador" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const computedDuration = await calculateDuration(exerciseItems);
+    const durationMinutes = providedDuration ?? computedDuration ?? 60;
+
+    const normalizedTags = tags && tags.length > 0
+      ? Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)))
+      : null;
 
     const result = await db.transaction(async (tx) => {
       const [session] = await tx
@@ -195,6 +246,10 @@ export async function POST(request: Request) {
           scheduledAt: new Date(scheduledAt),
           durationMinutes,
           userId: user.id,
+          objective: objective ?? null,
+          intensity: intensity ?? null,
+          tags: normalizedTags,
+          location: location ?? null,
         })
         .returning();
 
@@ -206,6 +261,17 @@ export async function POST(request: Request) {
             orderIndex: idx,
             durationMinutes: item.durationMinutes ?? null,
             notes: item.notes ?? null,
+            phase: item.phase ?? null,
+            intensity: item.intensity ?? null,
+          }))
+        );
+      }
+
+      if (uniqueStudentIds.length > 0) {
+        await tx.insert(sessionStudents).values(
+          uniqueStudentIds.map((studentId) => ({
+            sessionId: session.id,
+            studentId,
           }))
         );
       }

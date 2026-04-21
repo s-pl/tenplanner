@@ -38,7 +38,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Script id="theme-init" strategy="beforeInteractive">{`
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme');
             var isDark = t ? t === 'dark' : true;
@@ -53,7 +53,7 @@ export default function RootLayout({
             var fm = { sm: '13px', md: '15px', lg: '17px' };
             el.style.fontSize = fm[fs] || '15px';
           } catch(e) {}
-        `}</Script>
+        ` }} />
         {children}
       </body>
     </html>

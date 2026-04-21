@@ -29,6 +29,8 @@ export const exerciseIdParamsSchema = z.object({
   id: z.string().uuid("Exercise id must be a valid UUID"),
 });
 
+export const trainingPhaseSchema = z.enum(["activation", "main", "cooldown"]);
+
 export const exercisesListQuerySchema = z.object({
   category: exerciseCategorySchema.optional(),
   search: z
@@ -61,6 +63,15 @@ export const createExerciseSchema = z.object({
   imageUrl: z.string().max(1000).optional().nullable(),
   location: z.enum(["indoor", "outdoor", "any"]).optional().nullable(),
   videoUrl: z.string().max(500).optional().nullable(),
+  phase: trainingPhaseSchema.optional().nullable(),
+  intensity: z
+    .number()
+    .int()
+    .min(1, "La intensidad mínima es 1")
+    .max(5, "La intensidad máxima es 5")
+    .optional()
+    .nullable(),
+  isGlobal: z.boolean().optional(),
   steps: z
     .array(
       z.object({

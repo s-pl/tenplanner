@@ -8,12 +8,15 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { ExerciseForm } from "@/components/app/exercise-form";
 import { cn } from "@/lib/utils";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
 type Location = "indoor" | "outdoor" | "any";
+
+type Phase = "activation" | "main" | "cooldown";
 
 export interface ExerciseData {
   id: string;
@@ -29,6 +32,10 @@ export interface ExerciseData {
   videoUrl: string | null;
   tips: string | null;
   imageUrl: string | null;
+  phase: Phase | null;
+  intensity: number | null;
+  isGlobal: boolean;
+  isAiGenerated: boolean;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -53,7 +60,15 @@ const LOCATION_LABELS: Record<Location, string> = {
   any: "📍 Cualquier lugar",
 };
 
-export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
+export function ExerciseDetailClient({
+  exercise,
+  canEdit = true,
+  isAdmin = false,
+}: {
+  exercise: ExerciseData;
+  canEdit?: boolean;
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -77,7 +92,7 @@ export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
     router.refresh();
   }
 
-  if (mode === "edit") {
+  if (mode === "edit" && canEdit) {
     return (
       <div className="px-4 md:px-8 py-8 space-y-6 max-w-5xl">
         <div className="flex items-center gap-4">
@@ -91,7 +106,7 @@ export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
           </div>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <ExerciseForm mode="edit" exerciseId={exercise.id}
+          <ExerciseForm mode="edit" exerciseId={exercise.id} isAdmin={isAdmin}
             initialData={{
               name: exercise.name,
               description: exercise.description,
@@ -105,6 +120,9 @@ export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
               videoUrl: exercise.videoUrl,
               tips: exercise.tips,
               imageUrl: exercise.imageUrl,
+              phase: exercise.phase,
+              intensity: exercise.intensity,
+              isGlobal: exercise.isGlobal,
             }}
             onSuccess={() => { setMode("view"); router.refresh(); }}
             onCancel={() => setMode("view")}
@@ -125,18 +143,20 @@ export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
           </Link>
           <p className="text-xs text-muted-foreground font-medium truncate">Biblioteca de Ejercicios</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setMode("edit")}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors">
-            <Pencil className="size-3.5" />
-            <span className="hidden sm:inline">Editar</span>
-          </button>
-          <button onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors">
-            <Trash2 className="size-3.5" />
-            <span className="hidden sm:inline">Eliminar</span>
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setMode("edit")}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors">
+              <Pencil className="size-3.5" />
+              <span className="hidden sm:inline">Editar</span>
+            </button>
+            <button onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors">
+              <Trash2 className="size-3.5" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main card */}
@@ -168,8 +188,8 @@ export function ExerciseDetailClient({ exercise }: { exercise: ExerciseData }) {
 
         {/* Hero image */}
         {exercise.imageUrl && (
-          <div className="aspect-video w-full overflow-hidden bg-muted">
-            <img src={exercise.imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
+          <div className="aspect-video w-full overflow-hidden bg-muted relative">
+            <Image src={exercise.imageUrl} alt={exercise.name} fill className="object-cover" />
           </div>
         )}
 
