@@ -85,6 +85,13 @@
       "when": 1776600771583,
       "tag": "0011_messy_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776795258200,
+      "tag": "0012_stormy_pepper_potts",
+      "breakpoints": true
     }
   ]
 }

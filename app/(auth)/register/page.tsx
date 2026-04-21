@@ -11,13 +11,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ChevronRight, ChevronLeft, Check, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
+import {
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Mail,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Tipos de perfil ───────────────────────────────────────────────────────
 
 type Role = "player" | "coach" | "both";
-type Level = "beginner" | "amateur" | "intermediate" | "advanced" | "competitive";
+type Level =
+  | "beginner"
+  | "amateur"
+  | "intermediate"
+  | "advanced"
+  | "competitive";
 type Surface = "crystal" | "turf" | "cement" | "any";
 
 interface ProfileData {
@@ -35,10 +49,12 @@ const accountSchema = z
   .object({
     name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
     email: z.string().email("Introduce un email válido"),
-    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres"),
     confirmPassword: z.string(),
   })
-  .refine(d => d.password === d.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
   });
@@ -48,8 +64,18 @@ type AccountValues = z.infer<typeof accountSchema>;
 // ─── Opciones ─────────────────────────────────────────────────────────────
 
 const ROLES: { id: Role; emoji: string; label: string; desc: string }[] = [
-  { id: "player", emoji: "🎾", label: "Jugador", desc: "Quiero mejorar mi juego" },
-  { id: "coach", emoji: "🏋️", label: "Entrenador", desc: "Planifico sesiones para otros" },
+  {
+    id: "player",
+    emoji: "🎾",
+    label: "Jugador",
+    desc: "Quiero mejorar mi juego",
+  },
+  {
+    id: "coach",
+    emoji: "🏋️",
+    label: "Entrenador",
+    desc: "Planifico sesiones para otros",
+  },
   { id: "both", emoji: "⚡", label: "Ambos", desc: "Juego y entreno a otros" },
 ];
 
@@ -63,8 +89,16 @@ const LEVELS: { id: Level; label: string; desc: string }[] = [
 
 const COACH_LEVELS: { id: Level; label: string; desc: string }[] = [
   { id: "beginner", label: "Novato", desc: "Primeros años como entrenador" },
-  { id: "amateur", label: "En formación", desc: "Algunas temporadas de experiencia" },
-  { id: "intermediate", label: "Consolidado", desc: "Entrenador con experiencia sólida" },
+  {
+    id: "amateur",
+    label: "En formación",
+    desc: "Algunas temporadas de experiencia",
+  },
+  {
+    id: "intermediate",
+    label: "Consolidado",
+    desc: "Entrenador con experiencia sólida",
+  },
   { id: "advanced", label: "Avanzado", desc: "Alta competición o clubes" },
   { id: "competitive", label: "Experto", desc: "Entrenador profesional" },
 ];
@@ -85,7 +119,15 @@ const GOAL_OPTIONS = [
   "Divertirme y socializar",
 ];
 
-const QUICK_CITIES = ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao", "Málaga", "Zaragoza"];
+const QUICK_CITIES = [
+  "Madrid",
+  "Barcelona",
+  "Valencia",
+  "Sevilla",
+  "Bilbao",
+  "Málaga",
+  "Zaragoza",
+];
 
 const TOTAL_STEPS = 5;
 
@@ -107,7 +149,10 @@ function getPasswordStrength(pw: string): StrengthLevel {
   return 4;
 }
 
-const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bars: number }> = {
+const STRENGTH_CONFIG: Record<
+  StrengthLevel,
+  { label: string; color: string; bars: number }
+> = {
   0: { label: "", color: "", bars: 0 },
   1: { label: "Muy débil", color: "bg-red-500", bars: 1 },
   2: { label: "Débil", color: "bg-orange-400", bars: 2 },
@@ -127,14 +172,24 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData>({
-    city: "", role: null, playerLevel: null,
-    yearsExperience: null, surfacePreference: null, goals: "",
+    city: "",
+    role: null,
+    playerLevel: null,
+    yearsExperience: null,
+    surfacePreference: null,
+    goals: "",
   });
 
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [emailSent, setEmailSent] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, getValues, watch } = useForm<AccountValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    getValues,
+    watch,
+  } = useForm<AccountValues>({
     resolver: zodResolver(accountSchema),
   });
 
@@ -143,7 +198,9 @@ export default function RegisterPage() {
   const strengthCfg = STRENGTH_CONFIG[strength];
 
   function toggleGoal(g: string) {
-    setSelectedGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+    setSelectedGoals((prev) =>
+      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]
+    );
   }
 
   function canAdvance(): boolean {
@@ -153,13 +210,20 @@ export default function RegisterPage() {
     return true;
   }
 
-  function next() { if (canAdvance()) setStep(s => Math.min(s + 1, TOTAL_STEPS)); }
-  function back() { setStep(s => Math.max(s - 1, 1)); }
+  function next() {
+    if (canAdvance()) setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  }
+  function back() {
+    setStep((s) => Math.max(s - 1, 1));
+  }
 
   async function handleAccountNext() {
     setEmailExistsError(null);
-    const valid = await new Promise<boolean>(resolve => {
-      handleSubmit(() => resolve(true), () => resolve(false))();
+    const valid = await new Promise<boolean>((resolve) => {
+      handleSubmit(
+        () => resolve(true),
+        () => resolve(false)
+      )();
     });
     if (valid) next();
   }
@@ -187,7 +251,9 @@ export default function RegisterPage() {
         error.message.toLowerCase().includes("user already");
 
       if (isEmailTaken) {
-        setEmailExistsError(`Ya existe una cuenta con ${values.email}. ¿Quieres iniciar sesión?`);
+        setEmailExistsError(
+          `Ya existe una cuenta con ${values.email}. ¿Quieres iniciar sesión?`
+        );
         setStep(1);
         setLoading(false);
         return;
@@ -199,7 +265,10 @@ export default function RegisterPage() {
     }
 
     if (data.user && data.session) {
-      const goalsText = [...selectedGoals, ...(profile.goals.trim() ? [profile.goals.trim()] : [])].join(", ");
+      const goalsText = [
+        ...selectedGoals,
+        ...(profile.goals.trim() ? [profile.goals.trim()] : []),
+      ].join(", ");
       try {
         const res = await fetch("/api/users", {
           method: "POST",
@@ -220,12 +289,18 @@ export default function RegisterPage() {
           }),
         });
         if (!res.ok) {
-          setServerError("Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo.");
-          setLoading(false); return;
+          setServerError(
+            "Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo."
+          );
+          setLoading(false);
+          return;
         }
       } catch {
-        setServerError("Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo.");
-        setLoading(false); return;
+        setServerError(
+          "Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo."
+        );
+        setLoading(false);
+        return;
       }
     }
 
@@ -234,7 +309,10 @@ export default function RegisterPage() {
   }
 
   const levelOptions = profile.role === "coach" ? COACH_LEVELS : LEVELS;
-  const levelTitle = profile.role === "coach" ? "¿Cuál es tu experiencia como entrenador?" : "¿Cuál es tu nivel de juego?";
+  const levelTitle =
+    profile.role === "coach"
+      ? "¿Cuál es tu experiencia como entrenador?"
+      : "¿Cuál es tu nivel de juego?";
 
   // ─── Pantalla de éxito ────────────────────────────────────────────────────
 
@@ -259,18 +337,29 @@ export default function RegisterPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-muted/40 px-5 py-4 text-left space-y-2">
-          <p className="text-xs font-semibold text-foreground">¿Qué hacer ahora?</p>
+          <p className="text-xs font-semibold text-foreground">
+            ¿Qué hacer ahora?
+          </p>
           <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
             <li className="flex gap-2">
-              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">1</span>
-              Abre el correo de <span className="font-medium text-foreground ml-0.5">tenplanner</span>
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">
+                1
+              </span>
+              Abre el correo de{" "}
+              <span className="font-medium text-foreground ml-0.5">
+                tenplanner
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">2</span>
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">
+                2
+              </span>
               Haz clic en el enlace de verificación
             </li>
             <li className="flex gap-2">
-              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">3</span>
+              <span className="size-4 rounded-full bg-brand/20 text-brand flex items-center justify-center shrink-0 font-semibold text-[10px] mt-px">
+                3
+              </span>
               Vuelve aquí para iniciar sesión
             </li>
           </ol>
@@ -280,7 +369,11 @@ export default function RegisterPage() {
           <Button
             type="button"
             className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
-            onClick={() => router.push(`/login?message=check_email&email=${encodeURIComponent(emailSent)}`)}
+            onClick={() =>
+              router.push(
+                `/login?message=check_email&email=${encodeURIComponent(emailSent)}`
+              )
+            }
           >
             Ir a iniciar sesión <ArrowRight className="size-4 ml-1" />
           </Button>
@@ -305,14 +398,19 @@ export default function RegisterPage() {
               {step === 4 && levelTitle}
               {step === 5 && "Tus objetivos"}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Paso {step} de {TOTAL_STEPS}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Paso {step} de {TOTAL_STEPS}
+            </p>
           </div>
           <div className="flex gap-1">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-              <div key={i} className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                i + 1 <= step ? "bg-brand w-6" : "bg-muted w-3"
-              )} />
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i + 1 <= step ? "bg-brand w-6" : "bg-muted w-3"
+                )}
+              />
             ))}
           </div>
         </div>
@@ -321,19 +419,37 @@ export default function RegisterPage() {
       {/* ─── PASO 1: Cuenta ─── */}
       {step === 1 && (
         <div className="space-y-5">
-          <Button type="button" variant="outline" className="w-full h-10"
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-10"
             onClick={async () => {
               const supabase = createClient();
               await supabase.auth.signInWithOAuth({
                 provider: "google",
-                options: { redirectTo: `${window.location.origin}/auth/callback` },
+                options: {
+                  redirectTo: `${window.location.origin}/auth/callback`,
+                },
               });
-            }}>
+            }}
+          >
             <svg className="mr-2 size-4" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
             </svg>
             Continuar con Google
           </Button>
@@ -347,23 +463,49 @@ export default function RegisterPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="name">Nombre completo</Label>
-              <Input id="name" type="text" placeholder="Tu nombre" autoComplete="name" className="h-10" aria-invalid={!!errors.name} {...register("name")} />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              <Input
+                id="name"
+                type="text"
+                placeholder="Tu nombre"
+                autoComplete="name"
+                className="h-10"
+                aria-invalid={!!errors.name}
+                {...register("name")}
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive">
+                  {errors.name.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="email">Correo electrónico</Label>
               <Input
-                id="email" type="email" placeholder="you@example.com"
-                autoComplete="email" className="h-10"
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                className="h-10"
                 aria-invalid={!!errors.email || !!emailExistsError}
-                {...register("email", { onChange: () => setEmailExistsError(null) })}
+                {...register("email", {
+                  onChange: () => setEmailExistsError(null),
+                })}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
               {emailExistsError && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 flex items-start gap-2">
-                  <p className="text-xs text-destructive leading-relaxed flex-1">{emailExistsError}</p>
-                  <Link href="/login" className="text-xs font-semibold text-destructive underline underline-offset-2 shrink-0">
+                  <p className="text-xs text-destructive leading-relaxed flex-1">
+                    {emailExistsError}
+                  </p>
+                  <Link
+                    href="/login"
+                    className="text-xs font-semibold text-destructive underline underline-offset-2 shrink-0"
+                  >
                     Iniciar sesión
                   </Link>
                 </div>
@@ -374,51 +516,71 @@ export default function RegisterPage() {
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
                 <Input
-                  id="password" type={showPassword ? "text" : "password"}
-                  placeholder="Mín. 8 caracteres" autoComplete="new-password"
-                  className="h-10 pr-10" aria-invalid={!!errors.password}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mín. 8 caracteres"
+                  autoComplete="new-password"
+                  className="h-10 pr-10"
+                  aria-invalid={!!errors.password}
                   {...register("password")}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(v => !v)}
+                  onClick={() => setShowPassword((v) => !v)}
                   className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
                 >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              {errors.password && (
+                <p className="text-xs text-destructive">
+                  {errors.password.message}
+                </p>
+              )}
 
               {/* Strength meter */}
               {passwordValue.length > 0 && (
                 <div className="space-y-1.5 pt-0.5">
                   <div className="flex gap-1">
-                    {[1, 2, 3, 4].map(bar => (
+                    {[1, 2, 3, 4].map((bar) => (
                       <div
                         key={bar}
                         className={cn(
                           "h-1 flex-1 rounded-full transition-all duration-300",
-                          bar <= strengthCfg.bars ? strengthCfg.color : "bg-muted"
+                          bar <= strengthCfg.bars
+                            ? strengthCfg.color
+                            : "bg-muted"
                         )}
                       />
                     ))}
                   </div>
                   {strengthCfg.label && (
-                    <p className={cn(
-                      "text-xs font-medium",
-                      strength === 1 && "text-red-500",
-                      strength === 2 && "text-orange-400",
-                      strength === 3 && "text-yellow-500",
-                      strength === 4 && "text-brand",
-                    )}>
+                    <p
+                      className={cn(
+                        "text-xs font-medium",
+                        strength === 1 && "text-red-500",
+                        strength === 2 && "text-orange-400",
+                        strength === 3 && "text-yellow-500",
+                        strength === 4 && "text-brand"
+                      )}
+                    >
                       {strengthCfg.label}
                       {strength < 4 && (
                         <span className="text-muted-foreground font-normal">
-                          {strength === 1 && " — añade mayúsculas, números o símbolos"}
-                          {strength === 2 && " — añade más variedad de caracteres"}
-                          {strength === 3 && " — casi perfecta, añade un símbolo"}
+                          {strength === 1 &&
+                            " — añade mayúsculas, números o símbolos"}
+                          {strength === 2 &&
+                            " — añade más variedad de caracteres"}
+                          {strength === 3 &&
+                            " — casi perfecta, añade un símbolo"}
                         </span>
                       )}
                     </p>
@@ -431,33 +593,52 @@ export default function RegisterPage() {
               <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
               <div className="relative">
                 <Input
-                  id="confirmPassword" type={showConfirm ? "text" : "password"}
-                  placeholder="••••••••" autoComplete="new-password"
-                  className="h-10 pr-10" aria-invalid={!!errors.confirmPassword}
+                  id="confirmPassword"
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  className="h-10 pr-10"
+                  aria-invalid={!!errors.confirmPassword}
                   {...register("confirmPassword")}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirm(v => !v)}
+                  onClick={() => setShowConfirm((v) => !v)}
                   className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
-                  aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-label={
+                    showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
                 >
-                  {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {showConfirm ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
-              {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && (
+                <p className="text-xs text-destructive">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
             </div>
           </div>
 
-          <Button type="button" onClick={handleAccountNext}
-            className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold">
+          <Button
+            type="button"
+            onClick={handleAccountNext}
+            className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+          >
             Continuar <ChevronRight className="size-4 ml-1" />
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{" "}
-            <Link href="/login" className="text-foreground font-medium hover:text-brand transition-colors">
+            <Link
+              href="/login"
+              className="text-foreground font-medium hover:text-brand transition-colors"
+            >
               Iniciar sesión
             </Link>
           </p>
@@ -468,24 +649,32 @@ export default function RegisterPage() {
       {step === 2 && (
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-foreground">¿En qué ciudad juegas o entrenas?</label>
+            <label className="block text-sm font-semibold text-foreground">
+              ¿En qué ciudad juegas o entrenas?
+            </label>
             <Input
-              type="text" placeholder="Escribe tu ciudad o provincia…"
+              type="text"
+              placeholder="Escribe tu ciudad o provincia…"
               value={profile.city}
-              onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+              onChange={(e) =>
+                setProfile((p) => ({ ...p, city: e.target.value }))
+              }
               className="h-10"
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {QUICK_CITIES.map(city => (
-              <button key={city} type="button"
-                onClick={() => setProfile(p => ({ ...p, city }))}
+            {QUICK_CITIES.map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => setProfile((p) => ({ ...p, city }))}
                 className={cn(
                   "text-sm px-3 py-1.5 rounded-lg border transition-colors",
                   profile.city === city
                     ? "bg-brand/10 border-brand text-brand font-medium"
                     : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}>
+                )}
+              >
                 {city}
               </button>
             ))}
@@ -499,20 +688,32 @@ export default function RegisterPage() {
         <div className="space-y-5">
           <div className="grid gap-3">
             {ROLES.map(({ id, emoji, label, desc }) => (
-              <button key={id} type="button"
-                onClick={() => setProfile(p => ({ ...p, role: id }))}
+              <button
+                key={id}
+                type="button"
+                onClick={() => setProfile((p) => ({ ...p, role: id }))}
                 className={cn(
                   "flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-150",
                   profile.role === id
                     ? "bg-brand/10 border-brand ring-1 ring-brand/30"
                     : "border-border hover:bg-muted hover:border-border"
-                )}>
+                )}
+              >
                 <span className="text-3xl shrink-0">{emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("font-semibold text-sm", profile.role === id ? "text-brand" : "text-foreground")}>{label}</p>
+                  <p
+                    className={cn(
+                      "font-semibold text-sm",
+                      profile.role === id ? "text-brand" : "text-foreground"
+                    )}
+                  >
+                    {label}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
                 </div>
-                {profile.role === id && <Check className="size-4 text-brand shrink-0" />}
+                {profile.role === id && (
+                  <Check className="size-4 text-brand shrink-0" />
+                )}
               </button>
             ))}
           </div>
@@ -525,31 +726,59 @@ export default function RegisterPage() {
         <div className="space-y-5">
           <div className="grid gap-2">
             {levelOptions.map(({ id, label, desc }) => (
-              <button key={id} type="button"
-                onClick={() => setProfile(p => ({ ...p, playerLevel: id }))}
+              <button
+                key={id}
+                type="button"
+                onClick={() => setProfile((p) => ({ ...p, playerLevel: id }))}
                 className={cn(
                   "flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150",
                   profile.playerLevel === id
                     ? "bg-brand/10 border-brand"
                     : "border-border hover:bg-muted"
-                )}>
+                )}
+              >
                 <div>
-                  <p className={cn("text-sm font-semibold", profile.playerLevel === id ? "text-brand" : "text-foreground")}>{label}</p>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      profile.playerLevel === id
+                        ? "text-brand"
+                        : "text-foreground"
+                    )}
+                  >
+                    {label}
+                  </p>
                   <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
-                {profile.playerLevel === id && <Check className="size-4 text-brand shrink-0" />}
+                {profile.playerLevel === id && (
+                  <Check className="size-4 text-brand shrink-0" />
+                )}
               </button>
             ))}
           </div>
 
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-foreground">
-              Años de experiencia <span className="font-normal text-muted-foreground">(opcional)</span>
+              Años de experiencia{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional)
+              </span>
             </label>
             <div className="flex items-center gap-3">
-              <input type="number" min={0} max={60} placeholder="0"
+              <input
+                type="number"
+                min={0}
+                max={60}
+                placeholder="0"
                 value={profile.yearsExperience ?? ""}
-                onChange={e => setProfile(p => ({ ...p, yearsExperience: e.target.value ? parseInt(e.target.value) : null }))}
+                onChange={(e) =>
+                  setProfile((p) => ({
+                    ...p,
+                    yearsExperience: e.target.value
+                      ? parseInt(e.target.value)
+                      : null,
+                  }))
+                }
                 className="w-24 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground"
               />
               <span className="text-sm text-muted-foreground">años</span>
@@ -564,23 +793,40 @@ export default function RegisterPage() {
       {step === 5 && (
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-foreground">¿Qué buscas en tenplanner?</label>
+            <label className="block text-sm font-semibold text-foreground">
+              ¿Qué buscas en tenplanner?
+            </label>
             <div className="grid grid-cols-1 gap-2">
-              {GOAL_OPTIONS.map(goal => {
+              {GOAL_OPTIONS.map((goal) => {
                 const selected = selectedGoals.includes(goal);
                 return (
-                  <button key={goal} type="button" onClick={() => toggleGoal(goal)}
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => toggleGoal(goal)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150",
-                      selected ? "bg-brand/10 border-brand" : "border-border hover:bg-muted"
-                    )}>
-                    <div className={cn(
-                      "size-4 rounded-md border flex items-center justify-center shrink-0 transition-colors",
-                      selected ? "bg-brand border-brand" : "border-border"
-                    )}>
+                      selected
+                        ? "bg-brand/10 border-brand"
+                        : "border-border hover:bg-muted"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-4 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                        selected ? "bg-brand border-brand" : "border-border"
+                      )}
+                    >
                       {selected && <Check className="size-3 text-white" />}
                     </div>
-                    <span className={cn("text-sm font-medium", selected ? "text-brand" : "text-foreground")}>{goal}</span>
+                    <span
+                      className={cn(
+                        "text-sm font-medium",
+                        selected ? "text-brand" : "text-foreground"
+                      )}
+                    >
+                      {goal}
+                    </span>
                   </button>
                 );
               })}
@@ -589,20 +835,33 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Superficie preferida <span className="font-normal text-muted-foreground">(opcional)</span>
+              Superficie preferida{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional)
+              </span>
             </label>
             <div className="grid grid-cols-4 gap-2">
               {SURFACES.map(({ id, emoji, label }) => (
-                <button key={id} type="button"
-                  onClick={() => setProfile(p => ({ ...p, surfacePreference: p.surfacePreference === id ? null : id }))}
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() =>
+                    setProfile((p) => ({
+                      ...p,
+                      surfacePreference: p.surfacePreference === id ? null : id,
+                    }))
+                  }
                   className={cn(
                     "flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all duration-150",
                     profile.surfacePreference === id
                       ? "bg-brand/10 border-brand text-brand"
                       : "border-border text-muted-foreground hover:bg-muted"
-                  )}>
+                  )}
+                >
                   <span className="text-lg">{emoji}</span>
-                  <span className="text-xs font-medium text-center leading-tight">{label}</span>
+                  <span className="text-xs font-medium text-center leading-tight">
+                    {label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -615,13 +874,27 @@ export default function RegisterPage() {
           )}
 
           <div className="flex items-center gap-3">
-            <button type="button" onClick={back}
-              className="size-10 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0">
+            <button
+              type="button"
+              onClick={back}
+              className="size-10 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+            >
               <ChevronLeft className="size-4" />
             </button>
-            <Button type="button" onClick={submitAll} disabled={loading}
-              className="flex-1 h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold">
-              {loading ? <><Loader2 className="size-4 animate-spin mr-2" />Creando cuenta…</> : "Crear cuenta y empezar 🎾"}
+            <Button
+              type="button"
+              onClick={submitAll}
+              disabled={loading}
+              className="flex-1 h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Creando cuenta…
+                </>
+              ) : (
+                "Crear cuenta y empezar 🎾"
+              )}
             </Button>
           </div>
         </div>
@@ -630,15 +903,30 @@ export default function RegisterPage() {
   );
 }
 
-function StepNav({ onBack, onNext, canNext }: { onBack: () => void; onNext: () => void; canNext: boolean }) {
+function StepNav({
+  onBack,
+  onNext,
+  canNext,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  canNext: boolean;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={onBack}
-        className="size-10 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0">
+      <button
+        type="button"
+        onClick={onBack}
+        className="size-10 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+      >
         <ChevronLeft className="size-4" />
       </button>
-      <button type="button" onClick={onNext} disabled={!canNext}
-        className="flex-1 h-10 inline-flex items-center justify-center gap-2 bg-brand text-brand-foreground text-sm font-semibold rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!canNext}
+        className="flex-1 h-10 inline-flex items-center justify-center gap-2 bg-brand text-brand-foreground text-sm font-semibold rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
         Continuar <ChevronRight className="size-4" />
       </button>
     </div>

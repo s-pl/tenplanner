@@ -15,17 +15,24 @@ interface PageProps {
 
 function formatDayMonth(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
-    .format(date).replace(".", "").toUpperCase();
+    .format(date)
+    .replace(".", "")
+    .toUpperCase();
 }
 function formatWeekday(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { weekday: "short" })
-    .format(date).replace(".", "").toUpperCase();
+    .format(date)
+    .replace(".", "")
+    .toUpperCase();
 }
 function formatYear(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { year: "numeric" }).format(date);
 }
 function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 function humanDate(date: Date) {
   const now = new Date();
@@ -41,51 +48,85 @@ function humanDate(date: Date) {
 
 export default async function SessionsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { filter, page } = await searchParams;
   const activeFilter: Filter =
-    filter === "past" || filter === "upcoming" || filter === "all" ? filter : "all";
+    filter === "past" || filter === "upcoming" || filter === "all"
+      ? filter
+      : "all";
 
   const parsedPage = Number(page ?? "1");
-  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+  const currentPage =
+    Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
   const whereConditions: SQL[] = [eq(sessionsTable.userId, user.id)];
-  if (activeFilter === "upcoming") whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
-  else if (activeFilter === "past") whereConditions.push(sql`${sessionsTable.scheduledAt} < now()`);
-  const whereClause = and(...whereConditions) ?? eq(sessionsTable.userId, user.id);
+  if (activeFilter === "upcoming")
+    whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
+  else if (activeFilter === "past")
+    whereConditions.push(sql`${sessionsTable.scheduledAt} < now()`);
+  const whereClause =
+    and(...whereConditions) ?? eq(sessionsTable.userId, user.id);
 
-  const [allCountRows, filteredCountRows, upcomingCountRows, pastCountRows] = await Promise.all([
-    db.select({ total: count() }).from(sessionsTable).where(eq(sessionsTable.userId, user.id)),
-    db.select({ total: count() }).from(sessionsTable).where(whereClause),
-    db.select({ total: count() }).from(sessionsTable)
-      .where(and(eq(sessionsTable.userId, user.id), sql`${sessionsTable.scheduledAt} >= now()`)!),
-    db.select({ total: count() }).from(sessionsTable)
-      .where(and(eq(sessionsTable.userId, user.id), sql`${sessionsTable.scheduledAt} < now()`)!),
-  ]);
+  const [allCountRows, filteredCountRows, upcomingCountRows, pastCountRows] =
+    await Promise.all([
+      db
+        .select({ total: count() })
+        .from(sessionsTable)
+        .where(eq(sessionsTable.userId, user.id)),
+      db.select({ total: count() }).from(sessionsTable).where(whereClause),
+      db
+        .select({ total: count() })
+        .from(sessionsTable)
+        .where(
+          and(
+            eq(sessionsTable.userId, user.id),
+            sql`${sessionsTable.scheduledAt} >= now()`
+          )!
+        ),
+      db
+        .select({ total: count() })
+        .from(sessionsTable)
+        .where(
+          and(
+            eq(sessionsTable.userId, user.id),
+            sql`${sessionsTable.scheduledAt} < now()`
+          )!
+        ),
+    ]);
 
   const totalSessions = Number(allCountRows[0]?.total ?? 0);
   const totalFiltered = Number(filteredCountRows[0]?.total ?? 0);
   const upcomingCount = Number(upcomingCountRows[0]?.total ?? 0);
   const pastCount = Number(pastCountRows[0]?.total ?? 0);
-  const totalPages = totalFiltered > 0 ? Math.ceil(totalFiltered / PAGE_SIZE) : 0;
+  const totalPages =
+    totalFiltered > 0 ? Math.ceil(totalFiltered / PAGE_SIZE) : 0;
   const safePage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
   const offset = (safePage - 1) * PAGE_SIZE;
 
   const sessionRows = await db
-    .select().from(sessionsTable).where(whereClause)
-    .orderBy(asc(sessionsTable.scheduledAt)).limit(PAGE_SIZE).offset(offset);
+    .select()
+    .from(sessionsTable)
+    .where(whereClause)
+    .orderBy(asc(sessionsTable.scheduledAt))
+    .limit(PAGE_SIZE)
+    .offset(offset);
 
   const sessionIds = sessionRows.map((s) => s.id);
-  const exerciseCounts = sessionIds.length > 0
-    ? await db
-        .select({ sessionId: sessionExercises.sessionId, count: count() })
-        .from(sessionExercises)
-        .where(inArray(sessionExercises.sessionId, sessionIds))
-        .groupBy(sessionExercises.sessionId)
-    : [];
-  const exerciseCountMap = new Map(exerciseCounts.map((r) => [r.sessionId, r.count]));
+  const exerciseCounts =
+    sessionIds.length > 0
+      ? await db
+          .select({ sessionId: sessionExercises.sessionId, count: count() })
+          .from(sessionExercises)
+          .where(inArray(sessionExercises.sessionId, sessionIds))
+          .groupBy(sessionExercises.sessionId)
+      : [];
+  const exerciseCountMap = new Map(
+    exerciseCounts.map((r) => [r.sessionId, r.count])
+  );
 
   const now = new Date();
 
@@ -100,9 +141,9 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   }
 
   const FILTERS: { key: Filter; label: string; n: number }[] = [
-    { key: "all",      label: "Todas",    n: totalSessions },
+    { key: "all", label: "Todas", n: totalSessions },
     { key: "upcoming", label: "Próximas", n: upcomingCount },
-    { key: "past",     label: "Pasadas",  n: pastCount },
+    { key: "past", label: "Pasadas", n: pastCount },
   ];
 
   return (
@@ -118,7 +159,6 @@ export default async function SessionsPage({ searchParams }: PageProps) {
       />
 
       <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
-
         {/* ─── Masthead ─── */}
         <header className="space-y-6">
           <div className="flex items-center justify-between">
@@ -136,8 +176,9 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 <em className="italic text-brand">Sesiones</em> de entrenamiento
               </h1>
               <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                Cada sesión es una hipótesis: un plan que la pista valida o desmiente.
-                Aquí vives con las que están por venir y las que ya han pasado.
+                Cada sesión es una hipótesis: un plan que la pista valida o
+                desmiente. Aquí vives con las que están por venir y las que ya
+                han pasado.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -166,13 +207,19 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 key={key}
                 href={sessionsHref({ filter: key, page: 1 })}
                 className={`group pb-3 -mb-px flex items-baseline gap-2 border-b-2 transition-colors ${
-                  isActive ? "border-brand" : "border-transparent hover:border-foreground/25"
+                  isActive
+                    ? "border-brand"
+                    : "border-transparent hover:border-foreground/25"
                 }`}
               >
-                <span className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}>
+                <span
+                  className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
+                >
                   {label}
                 </span>
-                <span className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}>
+                <span
+                  className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
+                >
                   ({n.toString().padStart(2, "0")})
                 </span>
               </Link>
@@ -187,8 +234,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               {activeFilter === "upcoming"
                 ? "La agenda está despejada."
                 : activeFilter === "past"
-                ? "Aún no hay archivo que mirar."
-                : "Ninguna sesión registrada."}
+                  ? "Aún no hay archivo que mirar."
+                  : "Ninguna sesión registrada."}
             </p>
             <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-6">
               {activeFilter === "all"
@@ -232,9 +279,11 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <span className={`font-sans text-[9px] uppercase tracking-[0.2em] ${
-                          isPast ? "text-foreground/40" : "text-brand"
-                        }`}>
+                        <span
+                          className={`font-sans text-[9px] uppercase tracking-[0.2em] ${
+                            isPast ? "text-foreground/40" : "text-brand"
+                          }`}
+                        >
                           {isPast ? "Archivada" : "En agenda"}
                         </span>
                         {relative && (
@@ -252,7 +301,11 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                         </p>
                       )}
                       <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.16em] text-foreground/40 tabular-nums">
-                        {session.durationMinutes} min  <span className="text-foreground/20 mx-1.5">·</span>  {count} {count === 1 ? "ejercicio" : "ejercicios"}  <span className="text-foreground/20 mx-1.5">·</span>  {formatYear(date)}
+                        {session.durationMinutes} min{" "}
+                        <span className="text-foreground/20 mx-1.5">·</span>{" "}
+                        {count} {count === 1 ? "ejercicio" : "ejercicios"}{" "}
+                        <span className="text-foreground/20 mx-1.5">·</span>{" "}
+                        {formatYear(date)}
                       </p>
                     </div>
 
@@ -286,7 +339,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </span>
                 )}
                 <span className="font-sans text-[10px] tracking-[0.18em] text-foreground/50 tabular-nums">
-                  {safePage.toString().padStart(2, "0")} / {totalPages.toString().padStart(2, "0")}
+                  {safePage.toString().padStart(2, "0")} /{" "}
+                  {totalPages.toString().padStart(2, "0")}
                 </span>
                 {safePage < totalPages ? (
                   <Link

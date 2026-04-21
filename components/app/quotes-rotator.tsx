@@ -66,11 +66,17 @@ export function QuotesRotator() {
       <div className="flex items-center gap-3">
         <div className="size-9 rounded-full bg-brand/20 flex items-center justify-center shrink-0">
           <span className="text-xs font-bold text-brand">
-            {quote.author.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+            {quote.author
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2)}
           </span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">{quote.author}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {quote.author}
+          </p>
           <p className="text-xs text-muted-foreground">{quote.sport}</p>
         </div>
       </div>

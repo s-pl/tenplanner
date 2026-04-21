@@ -18,7 +18,11 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
   const [visible, setVisible] = useState(PAGE_SIZE);
 
   if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground">Sin sesiones futuras asignadas.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Sin sesiones futuras asignadas.
+      </p>
+    );
   }
 
   const shown = items.slice(0, visible);
@@ -26,7 +30,11 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
 
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat("es-ES", {
-      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(iso));
 
   return (
@@ -41,8 +49,12 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
             <Calendar className="size-4 text-brand" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate group-hover:text-brand transition-colors">{s.title}</p>
-            <p className="text-xs text-muted-foreground">{fmtDate(s.scheduledAt)} · {s.durationMinutes} min</p>
+            <p className="text-sm font-medium text-foreground truncate group-hover:text-brand transition-colors">
+              {s.title}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {fmtDate(s.scheduledAt)} · {s.durationMinutes} min
+            </p>
           </div>
           <ChevronRight className="size-4 text-muted-foreground shrink-0" />
         </Link>
@@ -54,7 +66,8 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
           onClick={() => setVisible((v) => v + PAGE_SIZE)}
           className="w-full text-xs font-semibold text-muted-foreground hover:text-brand border border-border hover:border-brand/30 rounded-lg py-2 transition-colors"
         >
-          Ver {Math.min(PAGE_SIZE, items.length - visible)} más · {items.length - visible} restantes
+          Ver {Math.min(PAGE_SIZE, items.length - visible)} más ·{" "}
+          {items.length - visible} restantes
         </button>
       )}
       {!hasMore && items.length > PAGE_SIZE && (

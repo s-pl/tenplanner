@@ -9,7 +9,12 @@ import { StudentForm } from "@/components/app/student-form";
 
 type Gender = "male" | "female" | "other";
 type DominantHand = "left" | "right";
-type PlayerLevel = "beginner" | "amateur" | "intermediate" | "advanced" | "competitive";
+type PlayerLevel =
+  | "beginner"
+  | "amateur"
+  | "intermediate"
+  | "advanced"
+  | "competitive";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,7 +24,9 @@ export default async function EditStudentPage({ params }: PageProps) {
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const [student] = await db

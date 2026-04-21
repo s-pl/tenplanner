@@ -69,7 +69,6 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-
     const countBaseQuery = db.select({ total: count() }).from(exercises);
     const totalResult = await (whereClause
       ? countBaseQuery.where(whereClause)

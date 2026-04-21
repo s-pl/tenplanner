@@ -18,8 +18,18 @@ interface CalendarClientProps {
 
 const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
 function getDaysInMonth(year: number, month: number) {
@@ -79,7 +89,9 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
     }
   }
 
-  const selectedSessions = selectedDay ? (sessionsByDay.get(selectedDay) ?? []) : [];
+  const selectedSessions = selectedDay
+    ? (sessionsByDay.get(selectedDay) ?? [])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -147,15 +159,25 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
               today.getFullYear() === viewYear;
             const isPast =
               isValid &&
-              new Date(viewYear, viewMonth, dayNum) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              new Date(viewYear, viewMonth, dayNum) <
+                new Date(
+                  today.getFullYear(),
+                  today.getMonth(),
+                  today.getDate()
+                );
             const isSelected = isValid && selectedDay === dayNum;
-            const daySessions = isValid ? sessionsByDay.get(dayNum) ?? [] : [];
+            const daySessions = isValid
+              ? (sessionsByDay.get(dayNum) ?? [])
+              : [];
             const hasSessions = daySessions.length > 0;
 
             return (
               <div
                 key={idx}
-                onClick={() => isValid && setSelectedDay(dayNum === selectedDay ? null : dayNum)}
+                onClick={() =>
+                  isValid &&
+                  setSelectedDay(dayNum === selectedDay ? null : dayNum)
+                }
                 className={cn(
                   "min-h-[72px] p-2 border-b border-r border-border/50 last-of-type:border-r-0 transition-colors",
                   isValid ? "cursor-pointer" : "cursor-default",
@@ -222,7 +244,9 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
           </h3>
           {selectedSessions.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-xl p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-3">No hay sesiones este día.</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                No hay sesiones este día.
+              </p>
               <Link
                 href="/sessions/new"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand/80 transition-colors"
@@ -240,12 +264,17 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                 >
                   <div className="size-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0">
                     <span className="text-brand font-bold text-sm">
-                      {new Date(s.scheduledAt).getHours().toString().padStart(2, "0")}
+                      {new Date(s.scheduledAt)
+                        .getHours()
+                        .toString()
+                        .padStart(2, "0")}
                       <span className="text-brand/60 text-xs">h</span>
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground">{s.title}</p>
+                    <p className="font-medium text-sm text-foreground">
+                      {s.title}
+                    </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Clock className="size-3" />
                       {s.durationMinutes} min

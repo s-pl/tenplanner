@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -37,36 +38,45 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Inicio",      icon: LayoutDashboard, index: "01" },
-  { href: "/exercises", label: "Ejercicios",  icon: Dumbbell,        index: "02" },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, index: "01" },
+  { href: "/exercises", label: "Ejercicios", icon: Dumbbell, index: "02" },
   {
     href: "/sessions",
     label: "Sesiones",
     icon: ClipboardList,
     index: "03",
     submenu: [
-      { href: "/sessions/new",        label: "Nueva sesión", tag: "MAN", icon: Plus },
-      { href: "/sessions/dr-planner", label: "Dr. Planner",  tag: "IA",  icon: Bot, accent: true },
+      { href: "/sessions/new", label: "Nueva sesión", tag: "MAN", icon: Plus },
+      {
+        href: "/sessions/dr-planner",
+        label: "Dr. Planner",
+        tag: "IA",
+        icon: Bot,
+        accent: true,
+      },
     ],
   },
-  { href: "/students",  label: "Alumnos",     icon: Users,        index: "04" },
-  { href: "/calendar",  label: "Calendario",  icon: CalendarDays, index: "05" },
-  { href: "/profile",   label: "Perfil",      icon: UserCircle,   index: "06" },
+  { href: "/students", label: "Alumnos", icon: Users, index: "04" },
+  { href: "/calendar", label: "Calendario", icon: CalendarDays, index: "05" },
+  { href: "/profile", label: "Perfil", icon: UserCircle, index: "06" },
 ];
 
 interface SidebarNavProps {
   user: { email?: string | null; user_metadata?: { full_name?: string } };
+  avatarUrl?: string | null;
 }
 
 function NavContent({
   pathname,
   onNavigate,
   user,
+  avatarUrl,
   onSignOut,
 }: {
   pathname: string;
   onNavigate?: () => void;
   user: SidebarNavProps["user"];
+  avatarUrl?: string | null;
   onSignOut: () => void;
 }) {
   const displayName =
@@ -84,7 +94,7 @@ function NavContent({
   });
 
   function toggleSubmenu(href: string) {
-    setSubmenuOpen(prev => ({ ...prev, [href]: !prev[href] }));
+    setSubmenuOpen((prev) => ({ ...prev, [href]: !prev[href] }));
   }
 
   return (
@@ -108,37 +118,55 @@ function NavContent({
         </p>
         <ul>
           {navItems.map(({ href, label, icon: Icon, submenu, index }) => {
-            const isActive = pathname === href || pathname.startsWith(href + "/");
+            const isActive =
+              pathname === href || pathname.startsWith(href + "/");
             const isOpen = !!submenuOpen[href];
 
             if (submenu) {
               return (
-                <li key={href} className="border-b border-foreground/8 last:border-0">
+                <li
+                  key={href}
+                  className="border-b border-foreground/8 last:border-0"
+                >
                   <button
                     type="button"
                     onClick={() => toggleSubmenu(href)}
                     className={cn(
                       "w-full grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 text-left transition-colors",
-                      isActive ? "text-foreground" : "text-foreground/65 hover:text-foreground"
+                      isActive
+                        ? "text-foreground"
+                        : "text-foreground/65 hover:text-foreground"
                     )}
                   >
-                    <span className={cn(
-                      "font-sans text-[10px] tabular-nums tracking-[0.18em]",
-                      isActive ? "text-brand" : "text-foreground/35"
-                    )}>
+                    <span
+                      className={cn(
+                        "font-sans text-[10px] tabular-nums tracking-[0.18em]",
+                        isActive ? "text-brand" : "text-foreground/35"
+                      )}
+                    >
                       {index}
                     </span>
-                    <Icon className={cn("size-[15px]", isActive ? "text-brand" : "text-foreground/55")} strokeWidth={1.6} />
-                    <span className={cn(
-                      "text-[14px]",
-                      isActive && "font-heading italic text-foreground"
-                    )}>
+                    <Icon
+                      className={cn(
+                        "size-[15px]",
+                        isActive ? "text-brand" : "text-foreground/55"
+                      )}
+                      strokeWidth={1.6}
+                    />
+                    <span
+                      className={cn(
+                        "text-[14px]",
+                        isActive && "font-heading italic text-foreground"
+                      )}
+                    >
                       {label}
                     </span>
-                    <span className={cn(
-                      "font-sans text-[9px] tracking-[0.18em] text-foreground/35 transition-transform",
-                      isOpen && "rotate-90"
-                    )}>
+                    <span
+                      className={cn(
+                        "font-sans text-[9px] tracking-[0.18em] text-foreground/35 transition-transform",
+                        isOpen && "rotate-90"
+                      )}
+                    >
                       ▸
                     </span>
                   </button>
@@ -157,40 +185,55 @@ function NavContent({
                           )}
                         >
                           <span>Ver todas</span>
-                          <span className="font-sans text-[9px] tracking-[0.18em] text-foreground/30">ALL</span>
+                          <span className="font-sans text-[9px] tracking-[0.18em] text-foreground/30">
+                            ALL
+                          </span>
                         </Link>
                       </li>
-                      {submenu.map(({ href: subHref, label: subLabel, tag, accent }) => {
-                        const isSubActive = pathname === subHref || pathname.startsWith(subHref + "/");
-                        return (
-                          <li key={subHref}>
-                            <Link
-                              href={subHref}
-                              onClick={onNavigate}
-                              className={cn(
-                                "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
-                                isSubActive
-                                  ? "text-brand"
-                                  : accent
-                                    ? "text-brand/75 hover:text-brand"
-                                    : "text-foreground/55 hover:text-foreground"
-                              )}
-                            >
-                              <span className={cn(isSubActive && "italic font-heading text-[13px]")}>
-                                {subLabel}
-                              </span>
-                              {tag && (
-                                <span className={cn(
-                                  "font-sans text-[9px] tracking-[0.18em]",
-                                  accent ? "text-brand" : "text-foreground/35"
-                                )}>
-                                  {tag}
+                      {submenu.map(
+                        ({ href: subHref, label: subLabel, tag, accent }) => {
+                          const isSubActive =
+                            pathname === subHref ||
+                            pathname.startsWith(subHref + "/");
+                          return (
+                            <li key={subHref}>
+                              <Link
+                                href={subHref}
+                                onClick={onNavigate}
+                                className={cn(
+                                  "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
+                                  isSubActive
+                                    ? "text-brand"
+                                    : accent
+                                      ? "text-brand/75 hover:text-brand"
+                                      : "text-foreground/55 hover:text-foreground"
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    isSubActive &&
+                                      "italic font-heading text-[13px]"
+                                  )}
+                                >
+                                  {subLabel}
                                 </span>
-                              )}
-                            </Link>
-                          </li>
-                        );
-                      })}
+                                {tag && (
+                                  <span
+                                    className={cn(
+                                      "font-sans text-[9px] tracking-[0.18em]",
+                                      accent
+                                        ? "text-brand"
+                                        : "text-foreground/35"
+                                    )}
+                                  >
+                                    {tag}
+                                  </span>
+                                )}
+                              </Link>
+                            </li>
+                          );
+                        }
+                      )}
                     </ul>
                   )}
                 </li>
@@ -198,32 +241,46 @@ function NavContent({
             }
 
             return (
-              <li key={href} className="border-b border-foreground/8 last:border-0">
+              <li
+                key={href}
+                className="border-b border-foreground/8 last:border-0"
+              >
                 <Link
                   href={href}
                   onClick={onNavigate}
                   className={cn(
                     "grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 transition-colors",
-                    isActive ? "text-foreground" : "text-foreground/65 hover:text-foreground"
+                    isActive
+                      ? "text-foreground"
+                      : "text-foreground/65 hover:text-foreground"
                   )}
                 >
-                  <span className={cn(
-                    "font-sans text-[10px] tabular-nums tracking-[0.18em]",
-                    isActive ? "text-brand" : "text-foreground/35"
-                  )}>
+                  <span
+                    className={cn(
+                      "font-sans text-[10px] tabular-nums tracking-[0.18em]",
+                      isActive ? "text-brand" : "text-foreground/35"
+                    )}
+                  >
                     {index}
                   </span>
                   <Icon
-                    className={cn("size-[15px]", isActive ? "text-brand" : "text-foreground/55")}
+                    className={cn(
+                      "size-[15px]",
+                      isActive ? "text-brand" : "text-foreground/55"
+                    )}
                     strokeWidth={1.6}
                   />
-                  <span className={cn(
-                    "text-[14px]",
-                    isActive && "font-heading italic text-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-[14px]",
+                      isActive && "font-heading italic text-foreground"
+                    )}
+                  >
                     {label}
                   </span>
-                  {isActive && <span className="size-1 rounded-full bg-brand" />}
+                  {isActive && (
+                    <span className="size-1 rounded-full bg-brand" />
+                  )}
                 </Link>
               </li>
             );
@@ -237,17 +294,35 @@ function NavContent({
           <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 px-1 mb-2.5">
             Cuenta
           </p>
-          <div className="grid grid-cols-[auto_1fr] items-center gap-3 px-1 py-1.5">
-            <div className="size-8 rounded-full border border-foreground/20 bg-foreground/[0.03] flex items-center justify-center shrink-0">
-              <span className="font-heading text-[11px] text-foreground/80">{initials}</span>
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            className="grid grid-cols-[auto_1fr] items-center gap-3 px-1 py-1.5 rounded-lg hover:bg-foreground/[0.03] transition-colors group"
+          >
+            <div className="size-8 rounded-full border border-foreground/20 bg-foreground/[0.03] overflow-hidden flex items-center justify-center shrink-0 group-hover:border-brand/60 transition-colors">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={displayName}
+                  width={32}
+                  height={32}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="font-heading text-[11px] text-foreground/80">
+                  {initials}
+                </span>
+              )}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] text-foreground truncate leading-tight">{displayName}</p>
+              <p className="text-[13px] text-foreground truncate leading-tight">
+                {displayName}
+              </p>
               <p className="text-[11px] text-foreground/50 truncate mt-px tabular-nums">
                 {user.email}
               </p>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="px-4 pb-4 grid grid-cols-[1fr_auto] items-center gap-2">
@@ -266,7 +341,7 @@ function NavContent({
   );
 }
 
-export function SidebarNav({ user }: SidebarNavProps) {
+export function SidebarNav({ user, avatarUrl }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -280,13 +355,20 @@ export function SidebarNav({ user }: SidebarNavProps) {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 bg-sidebar border-r border-sidebar-border h-dvh sticky top-0">
-        <NavContent pathname={pathname} user={user} onSignOut={handleSignOut} />
+        <NavContent
+          pathname={pathname}
+          user={user}
+          avatarUrl={avatarUrl}
+          onSignOut={handleSignOut}
+        />
       </aside>
 
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-5 h-14 bg-sidebar border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-baseline gap-1">
-          <span className="font-heading text-lg tracking-tight text-foreground">ten</span>
+          <span className="font-heading text-lg tracking-tight text-foreground">
+            ten
+          </span>
           <em className="font-heading italic text-lg text-brand">planner</em>
         </Link>
         <div className="flex items-center gap-1">
@@ -305,7 +387,10 @@ export function SidebarNav({ user }: SidebarNavProps) {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
           <aside className="relative w-72 bg-sidebar border-r border-sidebar-border h-full flex flex-col overflow-y-auto">
             <div className="absolute top-4 right-4">
               <button
@@ -321,6 +406,7 @@ export function SidebarNav({ user }: SidebarNavProps) {
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
               user={user}
+              avatarUrl={avatarUrl}
               onSignOut={handleSignOut}
             />
           </aside>

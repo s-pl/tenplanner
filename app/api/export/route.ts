@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable, exercises as exercisesTable, sessionExercises } from "@/db/schema";
+import {
+  sessions as sessionsTable,
+  exercises as exercisesTable,
+  sessionExercises,
+} from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 export async function GET() {
@@ -19,12 +23,13 @@ export async function GET() {
   ]);
 
   const sessionIds = userSessions.map((s) => s.id);
-  const sessionExerciseLinks = sessionIds.length > 0
-    ? await db
-        .select()
-        .from(sessionExercises)
-        .where(inArray(sessionExercises.sessionId, sessionIds))
-    : [];
+  const sessionExerciseLinks =
+    sessionIds.length > 0
+      ? await db
+          .select()
+          .from(sessionExercises)
+          .where(inArray(sessionExercises.sessionId, sessionIds))
+      : [];
 
   const exportData = {
     exportedAt: new Date().toISOString(),

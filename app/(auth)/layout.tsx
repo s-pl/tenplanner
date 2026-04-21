@@ -3,7 +3,11 @@ import { Zap } from "lucide-react";
 import { QuotesRotator } from "@/components/app/quotes-rotator";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left branding panel */}
@@ -40,7 +44,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="md:hidden">
             <Link href="/" className="flex items-center gap-2">
               <div className="size-7 rounded-lg bg-brand flex items-center justify-center">
-                <Zap className="size-3.5 text-brand-foreground" strokeWidth={2.5} />
+                <Zap
+                  className="size-3.5 text-brand-foreground"
+                  strokeWidth={2.5}
+                />
               </div>
               <span className="font-heading font-semibold text-lg">
                 ten<span className="text-brand">planner</span>
@@ -57,7 +64,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           <p className="mt-8 text-xs text-muted-foreground">
             Al continuar, aceptas nuestros{" "}
-            <Link href="/" className="underline underline-offset-2 hover:text-foreground transition-colors">
+            <Link
+              href="/"
+              className="underline underline-offset-2 hover:text-foreground transition-colors"
+            >
               Términos de Servicio
             </Link>
           </p>

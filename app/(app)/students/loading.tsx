@@ -16,7 +16,10 @@ export default function StudentsLoading() {
       {/* Student cards grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
+          <div
+            key={i}
+            className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4"
+          >
             <div className="size-12 rounded-full bg-muted/30 shrink-0" />
             <div className="flex-1 space-y-2">
               <div className="h-4 w-32 rounded-lg bg-muted/30" />

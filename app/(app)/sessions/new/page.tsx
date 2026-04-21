@@ -30,7 +30,9 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     .orderBy(exercises.name);
 
   const { exercises: exerciseParam } = await searchParams;
-  const preSelectedIds = new Set((exerciseParam ?? "").split(",").filter(Boolean));
+  const preSelectedIds = new Set(
+    (exerciseParam ?? "").split(",").filter(Boolean)
+  );
   const preSelected: WizardExercise[] = allExercises
     .filter((e) => preSelectedIds.has(e.id))
     .map((e) => ({
@@ -64,7 +66,9 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               >
                 ← Sesiones
               </Link>
-              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">/</span>
+              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">
+                /
+              </span>
               <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
                 Nueva · Manual
               </p>
@@ -87,7 +91,9 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           <Suspense fallback={null}>
             <SessionWizard
               availableExercises={allExercises}
-              initialExercises={preSelected.length > 0 ? preSelected : undefined}
+              initialExercises={
+                preSelected.length > 0 ? preSelected : undefined
+              }
             />
           </Suspense>
         </div>

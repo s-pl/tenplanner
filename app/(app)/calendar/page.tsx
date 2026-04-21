@@ -57,7 +57,9 @@ export default async function CalendarPage() {
             de un vistazo.
           </h1>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {total} sesión{total !== 1 ? "es" : ""} planificada{total !== 1 ? "s" : ""} · navega por semana o mes y revisa qué viene.
+            {total} sesión{total !== 1 ? "es" : ""} planificada
+            {total !== 1 ? "s" : ""} · navega por semana o mes y revisa qué
+            viene.
           </p>
         </header>
         <CalendarClient sessions={serialized} />

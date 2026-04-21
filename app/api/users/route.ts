@@ -11,9 +11,15 @@ const bodySchema = z.object({
   email: z.string().email(),
   city: z.string().max(255).optional().nullable(),
   role: z.enum(["player", "coach", "both"]).optional().nullable(),
-  playerLevel: z.enum(["beginner", "amateur", "intermediate", "advanced", "competitive"]).optional().nullable(),
+  playerLevel: z
+    .enum(["beginner", "amateur", "intermediate", "advanced", "competitive"])
+    .optional()
+    .nullable(),
   yearsExperience: z.number().int().min(0).max(60).optional().nullable(),
-  surfacePreference: z.enum(["crystal", "turf", "cement", "any"]).optional().nullable(),
+  surfacePreference: z
+    .enum(["crystal", "turf", "cement", "any"])
+    .optional()
+    .nullable(),
   goals: z.string().max(2000).optional().nullable(),
 });
 
@@ -82,16 +88,26 @@ const patchSchema = z.object({
 
 export async function PATCH(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: unknown;
-  try { body = await request.json(); }
-  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  await db.update(users).set({ image: parsed.data.image ?? null }).where(eq(users.id, user.id));
+  await db
+    .update(users)
+    .set({ image: parsed.data.image ?? null })
+    .where(eq(users.id, user.id));
   return NextResponse.json({ ok: true });
 }

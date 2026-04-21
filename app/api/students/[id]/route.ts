@@ -21,8 +21,11 @@ type StudentRouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: StudentRouteContext) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const params = await context.params;
   const parsed = studentIdParamsSchema.safeParse(params);
@@ -32,7 +35,9 @@ export async function GET(_request: Request, context: StudentRouteContext) {
     const [row] = await db
       .select()
       .from(students)
-      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .where(
+        and(eq(students.id, parsed.data.id), eq(students.coachId, user.id))
+      )
       .limit(1);
 
     if (!row) return notFoundResponse();
@@ -44,8 +49,11 @@ export async function GET(_request: Request, context: StudentRouteContext) {
 
 export async function PUT(request: Request, context: StudentRouteContext) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const params = await context.params;
   const parsed = studentIdParamsSchema.safeParse(params);
@@ -65,7 +73,9 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     const [existing] = await db
       .select({ id: students.id })
       .from(students)
-      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .where(
+        and(eq(students.id, parsed.data.id), eq(students.coachId, user.id))
+      )
       .limit(1);
     if (!existing) return notFoundResponse();
 
@@ -73,8 +83,16 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     const updateValues: Record<string, unknown> = {};
 
     const fields = [
-      "name", "gender", "birthDate", "heightCm", "weightKg",
-      "dominantHand", "playerLevel", "yearsExperience", "notes", "imageUrl",
+      "name",
+      "gender",
+      "birthDate",
+      "heightCm",
+      "weightKg",
+      "dominantHand",
+      "playerLevel",
+      "yearsExperience",
+      "notes",
+      "imageUrl",
     ] as const;
 
     for (const field of fields) {
@@ -90,7 +108,9 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     const [updated] = await db
       .update(students)
       .set(updateValues)
-      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .where(
+        and(eq(students.id, parsed.data.id), eq(students.coachId, user.id))
+      )
       .returning();
 
     if (!updated) return notFoundResponse();
@@ -102,8 +122,11 @@ export async function PUT(request: Request, context: StudentRouteContext) {
 
 export async function DELETE(_request: Request, context: StudentRouteContext) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const params = await context.params;
   const parsed = studentIdParamsSchema.safeParse(params);
@@ -112,7 +135,9 @@ export async function DELETE(_request: Request, context: StudentRouteContext) {
   try {
     const [deleted] = await db
       .delete(students)
-      .where(and(eq(students.id, parsed.data.id), eq(students.coachId, user.id)))
+      .where(
+        and(eq(students.id, parsed.data.id), eq(students.coachId, user.id))
+      )
       .returning({ id: students.id });
 
     if (!deleted) return notFoundResponse();

@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable, exercises as exercisesTable } from "@/db/schema";
+import {
+  sessions as sessionsTable,
+  exercises as exercisesTable,
+} from "@/db/schema";
 import { eq, desc, count } from "drizzle-orm";
 import {
   ArrowRight,
@@ -22,7 +25,10 @@ function formatDayMonth(date: Date) {
 }
 
 function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function formatWeekday(date: Date) {
@@ -31,7 +37,9 @@ function formatWeekday(date: Date) {
 
 function formatLongDate(date: Date) {
   return new Intl.DateTimeFormat("es-ES", {
-    weekday: "long", day: "numeric", month: "long",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   }).format(date);
 }
 
@@ -78,14 +86,25 @@ export default async function DashboardPage() {
     .filter((s) => !isUpcoming(new Date(s.scheduledAt)))
     .slice(0, 4);
 
-  const totalMinutes = allSessions.reduce((acc, s) => acc + s.durationMinutes, 0);
+  const totalMinutes = allSessions.reduce(
+    (acc, s) => acc + s.durationMinutes,
+    0
+  );
   const totalHours = Math.round(totalMinutes / 60);
 
   const stats = [
-    { label: "Semana en curso",   value: thisWeekSessions.length,       unit: "sesiones" },
-    { label: "Biblioteca",        value: exerciseCount[0]?.count ?? 0,  unit: "ejercicios" },
-    { label: "Tiempo pista",      value: totalHours,                    unit: "horas" },
-    { label: "Histórico",         value: allSessions.length,            unit: "sesiones" },
+    {
+      label: "Semana en curso",
+      value: thisWeekSessions.length,
+      unit: "sesiones",
+    },
+    {
+      label: "Biblioteca",
+      value: exerciseCount[0]?.count ?? 0,
+      unit: "ejercicios",
+    },
+    { label: "Tiempo pista", value: totalHours, unit: "horas" },
+    { label: "Histórico", value: allSessions.length, unit: "sesiones" },
   ];
 
   return (
@@ -102,7 +121,6 @@ export default async function DashboardPage() {
       />
 
       <div className="relative px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-14">
-
         {/* ─── MASTHEAD ─── */}
         <header className="space-y-6">
           <div className="flex items-center justify-between">
@@ -123,8 +141,8 @@ export default async function DashboardPage() {
                 {allSessions.length === 0
                   ? "Aún no hay sesiones planificadas. Empieza por crear la primera — el sistema irá aprendiendo contigo."
                   : upcomingSessions.length === 0
-                  ? "No tienes sesiones próximas en el horizonte. Un buen momento para revisar la biblioteca."
-                  : `${upcomingSessions.length} ${upcomingSessions.length === 1 ? "sesión próxima" : "sesiones próximas"} en agenda.`}
+                    ? "No tienes sesiones próximas en el horizonte. Un buen momento para revisar la biblioteca."
+                    : `${upcomingSessions.length} ${upcomingSessions.length === 1 ? "sesión próxima" : "sesiones próximas"} en agenda.`}
               </p>
             </div>
 
@@ -151,8 +169,13 @@ export default async function DashboardPage() {
         <section aria-labelledby="stats-heading" className="space-y-4">
           <div className="flex items-baseline justify-between">
             <div className="flex items-baseline gap-3">
-              <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">01</span>
-              <h2 id="stats-heading" className="font-heading italic text-[17px] text-foreground/90">
+              <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                01
+              </span>
+              <h2
+                id="stats-heading"
+                className="font-heading italic text-[17px] text-foreground/90"
+              >
                 Panorámica
               </h2>
             </div>
@@ -171,7 +194,9 @@ export default async function DashboardPage() {
                   <span className="font-heading text-5xl text-foreground tabular-nums leading-none">
                     {value}
                   </span>
-                  <span className="font-sans text-[11px] italic text-foreground/50">{unit}</span>
+                  <span className="font-sans text-[11px] italic text-foreground/50">
+                    {unit}
+                  </span>
                 </div>
               </div>
             ))}
@@ -180,12 +205,13 @@ export default async function DashboardPage() {
 
         {/* ─── AGENDA + ACCIONES ─── */}
         <section className="grid lg:grid-cols-12 gap-10 lg:gap-14">
-
           {/* Upcoming — agenda editorial */}
           <div className="lg:col-span-7 space-y-5">
             <div className="flex items-baseline justify-between">
               <div className="flex items-baseline gap-3">
-                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">02</span>
+                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                  02
+                </span>
                 <h2 className="font-heading italic text-[17px] text-foreground/90">
                   En el horizonte
                 </h2>
@@ -205,7 +231,8 @@ export default async function DashboardPage() {
                   Ninguna sesión en el radar.
                 </p>
                 <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
-                  Cuando planifiques entrenamientos aparecerán aquí ordenados por fecha.
+                  Cuando planifiques entrenamientos aparecerán aquí ordenados
+                  por fecha.
                 </p>
                 <Link
                   href="/sessions/new"
@@ -232,7 +259,8 @@ export default async function DashboardPage() {
                             {formatDayMonth(date)}
                           </p>
                           <p className="mt-1 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
-                            {formatWeekday(date).slice(0, 3)} · {formatTime(date)}
+                            {formatWeekday(date).slice(0, 3)} ·{" "}
+                            {formatTime(date)}
                           </p>
                         </div>
                         <div className="min-w-0">
@@ -260,11 +288,12 @@ export default async function DashboardPage() {
 
           {/* Side column — tools + recent */}
           <aside className="lg:col-span-5 space-y-10">
-
             {/* Tools / quick actions */}
             <div className="space-y-4">
               <div className="flex items-baseline gap-3">
-                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">03</span>
+                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                  03
+                </span>
                 <h2 className="font-heading italic text-[17px] text-foreground/90">
                   Herramientas
                 </h2>
@@ -272,26 +301,55 @@ export default async function DashboardPage() {
 
               <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
                 {[
-                  { href: "/sessions/dr-planner", label: "Dr. Planner", desc: "Diseña con IA, tú confirmas", tag: "IA", accent: true },
-                  { href: "/sessions/new",         label: "Nueva sesión", desc: "Plan manual paso a paso",  tag: "MAN" },
-                  { href: "/exercises",            label: "Biblioteca",   desc: "Explora y crea ejercicios", tag: "LIB" },
-                  { href: "/calendar",             label: "Calendario",   desc: "Vista mensual y semanal",   tag: "CAL" },
+                  {
+                    href: "/sessions/dr-planner",
+                    label: "Dr. Planner",
+                    desc: "Diseña con IA, tú confirmas",
+                    tag: "IA",
+                    accent: true,
+                  },
+                  {
+                    href: "/sessions/new",
+                    label: "Nueva sesión",
+                    desc: "Plan manual paso a paso",
+                    tag: "MAN",
+                  },
+                  {
+                    href: "/exercises",
+                    label: "Biblioteca",
+                    desc: "Explora y crea ejercicios",
+                    tag: "LIB",
+                  },
+                  {
+                    href: "/calendar",
+                    label: "Calendario",
+                    desc: "Vista mensual y semanal",
+                    tag: "CAL",
+                  },
                 ].map(({ href, label, desc, tag, accent }) => (
                   <li key={href}>
                     <Link
                       href={href}
                       className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3.5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors"
                     >
-                      <span className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/40"}`}>
+                      <span
+                        className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/40"}`}
+                      >
                         ▸
                       </span>
                       <div className="min-w-0">
-                        <p className={`text-[14px] leading-tight ${accent ? "text-brand" : "text-foreground/90"}`}>
+                        <p
+                          className={`text-[14px] leading-tight ${accent ? "text-brand" : "text-foreground/90"}`}
+                        >
                           {label}
                         </p>
-                        <p className="text-[11px] text-foreground/55 mt-0.5">{desc}</p>
+                        <p className="text-[11px] text-foreground/55 mt-0.5">
+                          {desc}
+                        </p>
                       </div>
-                      <span className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/35"} group-hover:text-brand transition-colors`}>
+                      <span
+                        className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/35"} group-hover:text-brand transition-colors`}
+                      >
                         {tag}
                       </span>
                     </Link>
@@ -304,7 +362,9 @@ export default async function DashboardPage() {
             {recentSessions.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">04</span>
+                  <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                    04
+                  </span>
                   <h2 className="font-heading italic text-[17px] text-foreground/90">
                     Archivo reciente
                   </h2>
@@ -314,7 +374,10 @@ export default async function DashboardPage() {
                   {recentSessions.map((session) => {
                     const date = new Date(session.scheduledAt);
                     return (
-                      <li key={session.id} className="py-3 grid grid-cols-[auto_1fr_auto] items-baseline gap-4">
+                      <li
+                        key={session.id}
+                        className="py-3 grid grid-cols-[auto_1fr_auto] items-baseline gap-4"
+                      >
                         <span className="font-sans text-[10px] tracking-[0.14em] tabular-nums text-foreground/45 uppercase">
                           {formatDayMonth(date)}
                         </span>
@@ -334,8 +397,8 @@ export default async function DashboardPage() {
             {/* Editorial footnote */}
             <div className="pt-6 border-t border-foreground/10">
               <p className="font-heading italic text-[13px] text-foreground/45 leading-relaxed">
-                &ldquo;La repetición no es memoria: es escultura. Cada sesión talla un
-                gesto que acabará siendo instinto.&rdquo;
+                &ldquo;La repetición no es memoria: es escultura. Cada sesión
+                talla un gesto que acabará siendo instinto.&rdquo;
               </p>
               <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/35">
                 Cuaderno · tenplanner

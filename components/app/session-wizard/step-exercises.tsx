@@ -57,10 +57,16 @@ function formatMinutes(minutes: number) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export function StepExercises({ state, update, availableExercises }: StepExercisesProps) {
+export function StepExercises({
+  state,
+  update,
+  availableExercises,
+}: StepExercisesProps) {
   const [search, setSearch] = useState("");
   const [libCategoryFilter, setLibCategoryFilter] = useState<string>("all");
-  const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
+  const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(
+    null
+  );
   const [durationEditValue, setDurationEditValue] = useState("");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const durationInputRef = useRef<HTMLInputElement>(null);
@@ -76,12 +82,15 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
     0
   );
   const selectedIds = new Set(selected.map((e) => e.exerciseId));
-  const availableCategories = Array.from(new Set(availableExercises.map((e) => e.category)));
+  const availableCategories = Array.from(
+    new Set(availableExercises.map((e) => e.category))
+  );
 
   const filteredAvailable = availableExercises.filter((ex) => {
     const notSelected = !selectedIds.has(ex.id);
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = libCategoryFilter === "all" || ex.category === libCategoryFilter;
+    const matchesCategory =
+      libCategoryFilter === "all" || ex.category === libCategoryFilter;
     return notSelected && matchesSearch && matchesCategory;
   });
 
@@ -194,7 +203,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
           <span>
             {selected.length} ejercicio{selected.length !== 1 ? "s" : ""}
           </span>
-          <span className="font-semibold text-foreground">{formatMinutes(totalDuration)}</span>
+          <span className="font-semibold text-foreground">
+            {formatMinutes(totalDuration)}
+          </span>
         </div>
       )}
 
@@ -203,7 +214,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
             <CalendarDays className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">Plan de entrenamiento</span>
+            <span className="text-sm font-semibold text-foreground">
+              Plan de entrenamiento
+            </span>
             {totalDuration > 0 && (
               <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
                 <Clock className="size-3" />
@@ -250,13 +263,15 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                   {isDropZoneActive ? "¡Suelta aquí!" : "Sin ejercicios aún"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Arrastra ejercicios desde la biblioteca o pulsa <Plus className="size-3 inline" />
+                  Arrastra ejercicios desde la biblioteca o pulsa{" "}
+                  <Plus className="size-3 inline" />
                 </p>
               </div>
             ) : (
               <div className="space-y-1">
                 {selected.map((ex, idx) => {
-                  const effectiveDuration = ex.overrideDuration ?? ex.durationMinutes;
+                  const effectiveDuration =
+                    ex.overrideDuration ?? ex.durationMinutes;
                   const isEditingDuration = editingDurationIdx === idx;
                   const isExpanded = expandedIdx === idx;
                   const isDragging = dragSrcIdx === idx;
@@ -271,7 +286,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                       />
                       <div
                         draggable={!isEditingDuration}
-                        onDragStart={(e) => !isEditingDuration && onTimelineDragStart(e, idx)}
+                        onDragStart={(e) =>
+                          !isEditingDuration && onTimelineDragStart(e, idx)
+                        }
                         onDragEnd={() => {
                           setDragSrcIdx(null);
                           setDragOverIdx(null);
@@ -306,7 +323,8 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                               <span
                                 className={cn(
                                   "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                                  CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
+                                  CATEGORY_COLORS[ex.category] ??
+                                    "text-muted-foreground bg-muted"
                                 )}
                               >
                                 {CATEGORY_LABELS[ex.category] ?? ex.category}
@@ -332,18 +350,23 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                                 min={1}
                                 max={300}
                                 value={durationEditValue}
-                                onChange={(e) => setDurationEditValue(e.target.value)}
+                                onChange={(e) =>
+                                  setDurationEditValue(e.target.value)
+                                }
                                 onBlur={() => commitDurationEdit(idx)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
                                     commitDurationEdit(idx);
                                   }
-                                  if (e.key === "Escape") setEditingDurationIdx(null);
+                                  if (e.key === "Escape")
+                                    setEditingDurationIdx(null);
                                 }}
                                 className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
                               />
-                              <span className="text-xs text-muted-foreground">min</span>
+                              <span className="text-xs text-muted-foreground">
+                                min
+                              </span>
                             </div>
                           ) : (
                             <button
@@ -360,11 +383,16 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
 
                           <button
                             type="button"
-                            onClick={() => setExpandedIdx(isExpanded ? null : idx)}
+                            onClick={() =>
+                              setExpandedIdx(isExpanded ? null : idx)
+                            }
                             title="Ajustes"
                             className={cn(
                               "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
-                              isExpanded || ex.notes || ex.phase || ex.intensity !== null
+                              isExpanded ||
+                                ex.notes ||
+                                ex.phase ||
+                                ex.intensity !== null
                                 ? "text-brand bg-brand/10"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100"
                             )}
@@ -390,7 +418,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                               <div className="flex flex-wrap gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => patchItem(idx, { phase: null })}
+                                  onClick={() =>
+                                    patchItem(idx, { phase: null })
+                                  }
                                   className={cn(
                                     "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
                                     ex.phase === null
@@ -400,7 +430,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                                 >
                                   Auto
                                 </button>
-                                {(Object.keys(PHASE_LABELS) as TrainingPhase[]).map((p) => (
+                                {(
+                                  Object.keys(PHASE_LABELS) as TrainingPhase[]
+                                ).map((p) => (
                                   <button
                                     key={p}
                                     type="button"
@@ -425,7 +457,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                               <div className="flex flex-wrap gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => patchItem(idx, { intensity: null })}
+                                  onClick={() =>
+                                    patchItem(idx, { intensity: null })
+                                  }
                                   className={cn(
                                     "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
                                     ex.intensity === null
@@ -439,7 +473,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                                   <button
                                     key={n}
                                     type="button"
-                                    onClick={() => patchItem(idx, { intensity: n })}
+                                    onClick={() =>
+                                      patchItem(idx, { intensity: n })
+                                    }
                                     className={cn(
                                       "size-7 text-[10px] font-bold rounded-full border transition-colors",
                                       ex.intensity === n
@@ -455,7 +491,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
 
                             <textarea
                               value={ex.notes}
-                              onChange={(e) => patchItem(idx, { notes: e.target.value })}
+                              onChange={(e) =>
+                                patchItem(idx, { notes: e.target.value })
+                              }
                               placeholder="Notas para este ejercicio…"
                               rows={2}
                               className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
@@ -472,11 +510,15 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                   onDrop={onDropZoneDrop}
                   className={cn(
                     "h-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-colors mt-2",
-                    isDropZoneActive ? "border-brand bg-brand/5" : "border-border/40"
+                    isDropZoneActive
+                      ? "border-brand bg-brand/5"
+                      : "border-border/40"
                   )}
                 >
                   <p className="text-xs text-muted-foreground">
-                    {isDropZoneActive ? "Suelta aquí" : "Arrastra más ejercicios aquí"}
+                    {isDropZoneActive
+                      ? "Suelta aquí"
+                      : "Arrastra más ejercicios aquí"}
                   </p>
                 </div>
               </div>
@@ -488,7 +530,9 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
             <BookOpen className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">Biblioteca</span>
+            <span className="text-sm font-semibold text-foreground">
+              Biblioteca
+            </span>
             {filteredAvailable.length > 0 && (
               <span className="ml-auto text-xs text-muted-foreground">
                 {filteredAvailable.length} disponibles
@@ -519,7 +563,7 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {cat === "all" ? "Todos" : CATEGORY_LABELS[cat] ?? cat}
+                  {cat === "all" ? "Todos" : (CATEGORY_LABELS[cat] ?? cat)}
                 </button>
               ))}
             </div>
@@ -558,7 +602,8 @@ export function StepExercises({ state, update, availableExercises }: StepExercis
                     <span
                       className={cn(
                         "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                        CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
+                        CATEGORY_COLORS[ex.category] ??
+                          "text-muted-foreground bg-muted"
                       )}
                     >
                       {CATEGORY_LABELS[ex.category] ?? ex.category}

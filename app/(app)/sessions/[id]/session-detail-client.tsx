@@ -15,7 +15,10 @@ import {
   Circle,
 } from "lucide-react";
 import Link from "next/link";
-import { SessionForm, type AvailableExercise } from "@/components/app/session-form";
+import {
+  SessionForm,
+  type AvailableExercise,
+} from "@/components/app/session-form";
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
@@ -113,7 +116,7 @@ function IntensityIndicator({ value }: { value: number }) {
           key={n}
           className={cn(
             "size-1.5 rounded-full",
-            n <= value ? "bg-brand" : "bg-muted-foreground/30",
+            n <= value ? "bg-brand" : "bg-muted-foreground/30"
           )}
         />
       ))}
@@ -183,9 +186,7 @@ function StudentsSection({ students }: { students: SessionStudentData[] }) {
       </div>
       <div className="p-6">
         {students.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Sin alumnos asignados
-          </p>
+          <p className="text-xs text-muted-foreground">Sin alumnos asignados</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {students.map((s) => (
@@ -231,8 +232,17 @@ const CATEGORY_BAR_LIGHT: Record<string, string> = {
   "warm-up": "bg-brand/15 border-brand/30",
 };
 
-function SessionRoadmap({ exercises, totalMinutes }: { exercises: SessionExerciseData[]; totalMinutes: number }) {
-  const total = totalMinutes > 0 ? totalMinutes : exercises.reduce((s, e) => s + e.durationMinutes, 0);
+function SessionRoadmap({
+  exercises,
+  totalMinutes,
+}: {
+  exercises: SessionExerciseData[];
+  totalMinutes: number;
+}) {
+  const total =
+    totalMinutes > 0
+      ? totalMinutes
+      : exercises.reduce((s, e) => s + e.durationMinutes, 0);
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="px-6 py-4 border-b border-border/50">
@@ -242,11 +252,17 @@ function SessionRoadmap({ exercises, totalMinutes }: { exercises: SessionExercis
         {/* Timeline bar */}
         <div className="flex h-8 rounded-xl overflow-hidden gap-px">
           {exercises.map((ex) => {
-            const pct = total > 0 ? (ex.durationMinutes / total) * 100 : 100 / exercises.length;
+            const pct =
+              total > 0
+                ? (ex.durationMinutes / total) * 100
+                : 100 / exercises.length;
             return (
               <div
                 key={ex.exerciseId}
-                className={cn("h-full relative group", CATEGORY_BAR[ex.category] ?? "bg-muted")}
+                className={cn(
+                  "h-full relative group",
+                  CATEGORY_BAR[ex.category] ?? "bg-muted"
+                )}
                 style={{ width: `${pct}%`, minWidth: "2px" }}
                 title={`${ex.name} · ${ex.durationMinutes} min`}
               />
@@ -257,25 +273,51 @@ function SessionRoadmap({ exercises, totalMinutes }: { exercises: SessionExercis
         {/* Step list */}
         <div className="space-y-2">
           {exercises.map((ex, idx) => {
-            const pct = total > 0 ? Math.round((ex.durationMinutes / total) * 100) : 0;
-            const elapsed = exercises.slice(0, idx).reduce((s, e) => s + e.durationMinutes, 0);
+            const pct =
+              total > 0 ? Math.round((ex.durationMinutes / total) * 100) : 0;
+            const elapsed = exercises
+              .slice(0, idx)
+              .reduce((s, e) => s + e.durationMinutes, 0);
             return (
               <div key={ex.exerciseId} className="flex items-center gap-3">
                 {/* Timeline dot + line */}
                 <div className="flex flex-col items-center shrink-0 w-4">
-                  <div className={cn("size-2.5 rounded-full border-2", CATEGORY_BAR_LIGHT[ex.category] ?? "bg-muted border-muted-foreground/30", "border-current")} />
-                  {idx < exercises.length - 1 && <div className="w-px flex-1 min-h-[1.25rem] bg-border/60 mt-1" />}
+                  <div
+                    className={cn(
+                      "size-2.5 rounded-full border-2",
+                      CATEGORY_BAR_LIGHT[ex.category] ??
+                        "bg-muted border-muted-foreground/30",
+                      "border-current"
+                    )}
+                  />
+                  {idx < exercises.length - 1 && (
+                    <div className="w-px flex-1 min-h-[1.25rem] bg-border/60 mt-1" />
+                  )}
                 </div>
 
                 {/* Content */}
-                <div className={cn("flex-1 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border text-xs", CATEGORY_BAR_LIGHT[ex.category] ?? "bg-muted/30 border-border")}>
+                <div
+                  className={cn(
+                    "flex-1 flex items-center justify-between gap-3 px-3 py-2 rounded-xl border text-xs",
+                    CATEGORY_BAR_LIGHT[ex.category] ??
+                      "bg-muted/30 border-border"
+                  )}
+                >
                   <div className="min-w-0">
-                    <p className="font-medium text-foreground truncate">{ex.name}</p>
-                    <p className="text-muted-foreground mt-0.5">{CATEGORY_LABELS[ex.category] ?? ex.category}</p>
+                    <p className="font-medium text-foreground truncate">
+                      {ex.name}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {CATEGORY_LABELS[ex.category] ?? ex.category}
+                    </p>
                   </div>
                   <div className="text-right shrink-0 text-muted-foreground">
-                    <p className="font-mono">{elapsed}′ – {elapsed + ex.durationMinutes}′</p>
-                    <p className="text-[10px] mt-0.5">{ex.durationMinutes} min · {pct}%</p>
+                    <p className="font-mono">
+                      {elapsed}′ – {elapsed + ex.durationMinutes}′
+                    </p>
+                    <p className="text-[10px] mt-0.5">
+                      {ex.durationMinutes} min · {pct}%
+                    </p>
                   </div>
                 </div>
               </div>
@@ -285,24 +327,36 @@ function SessionRoadmap({ exercises, totalMinutes }: { exercises: SessionExercis
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 pt-1">
-          {(["warm-up", "technique", "tactics", "fitness"] as const).filter(cat =>
-            exercises.some(e => e.category === cat)
-          ).map(cat => (
-            <div key={cat} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <div className={cn("size-2 rounded-sm", CATEGORY_BAR[cat])} />
-              {CATEGORY_LABELS[cat]}
-              <span className="font-mono">
-                {exercises.filter(e => e.category === cat).reduce((s, e) => s + e.durationMinutes, 0)} min
-              </span>
-            </div>
-          ))}
+          {(["warm-up", "technique", "tactics", "fitness"] as const)
+            .filter((cat) => exercises.some((e) => e.category === cat))
+            .map((cat) => (
+              <div
+                key={cat}
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+              >
+                <div className={cn("size-2 rounded-sm", CATEGORY_BAR[cat])} />
+                {CATEGORY_LABELS[cat]}
+                <span className="font-mono">
+                  {exercises
+                    .filter((e) => e.category === cat)
+                    .reduce((s, e) => s + e.durationMinutes, 0)}{" "}
+                  min
+                </span>
+              </div>
+            ))}
         </div>
       </div>
     </div>
   );
 }
 
-export function SessionDetailClient({ session, sessionExercises, availableExercises, analytics, students }: Props) {
+export function SessionDetailClient({
+  session,
+  sessionExercises,
+  availableExercises,
+  analytics,
+  students,
+}: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -314,7 +368,9 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
   async function handleDelete() {
     setDeleting(true);
     setDeleteError(null);
-    const res = await fetch(`/api/sessions/${session.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/sessions/${session.id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       setDeleteError("No se pudo eliminar la sesión. Inténtalo de nuevo.");
       setDeleting(false);
@@ -426,7 +482,8 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
                 <div className="flex items-center gap-3 mt-0.5">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="size-3" />
-                    {formatDate(session.scheduledAt)} a las {formatTime(session.scheduledAt)}
+                    {formatDate(session.scheduledAt)} a las{" "}
+                    {formatTime(session.scheduledAt)}
                   </span>
                 </div>
               </div>
@@ -447,7 +504,8 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
             </span>
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Dumbbell className="size-3.5" />
-              {sessionExercises.length} {sessionExercises.length !== 1 ? "ejercicios" : "ejercicio"}
+              {sessionExercises.length}{" "}
+              {sessionExercises.length !== 1 ? "ejercicios" : "ejercicio"}
             </span>
           </div>
 
@@ -474,14 +532,19 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
 
       {/* Roadmap */}
       {sessionExercises.length > 0 && (
-        <SessionRoadmap exercises={sessionExercises} totalMinutes={session.durationMinutes} />
+        <SessionRoadmap
+          exercises={sessionExercises}
+          totalMinutes={session.durationMinutes}
+        />
       )}
 
       {/* Exercises list */}
       {sessionExercises.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-border/50">
-            <h2 className="font-semibold text-sm text-foreground">Ejercicios</h2>
+            <h2 className="font-semibold text-sm text-foreground">
+              Ejercicios
+            </h2>
           </div>
           <div className="divide-y divide-border/60">
             {sessionExercises.map((ex, idx) => {
@@ -503,12 +566,18 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
                       <span
                         className={cn(
                           "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                          CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
+                          CATEGORY_COLORS[ex.category] ??
+                            "text-muted-foreground bg-muted"
                         )}
                       >
                         {CATEGORY_LABELS[ex.category] ?? ex.category}
                       </span>
-                      <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium",
+                          diff?.color ?? "text-muted-foreground"
+                        )}
+                      >
                         {diff?.label ?? ex.difficulty}
                       </span>
                     </div>
@@ -537,10 +606,15 @@ export function SessionDetailClient({ session, sessionExercises, availableExerci
                 <Trash2 className="size-5 text-destructive" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground">Eliminar sesión</h3>
+                <h3 className="font-semibold text-foreground">
+                  Eliminar sesión
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   ¿Seguro que quieres eliminar{" "}
-                  <span className="font-medium text-foreground">{session.title}</span>? Esta acción no se puede deshacer.
+                  <span className="font-medium text-foreground">
+                    {session.title}
+                  </span>
+                  ? Esta acción no se puede deshacer.
                 </p>
               </div>
               <button

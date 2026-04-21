@@ -93,10 +93,11 @@ export default async function SessionPage({ params }: PageProps) {
     orderIndex: e.orderIndex,
     durationMinutes: e.durationMinutes ?? e.defaultDurationMinutes,
     category: e.category,
+    difficulty: e.difficulty,
     resolvedPhase: resolvePhase(e.overridePhase, e.exercisePhase),
     resolvedIntensity: resolveIntensity(
       e.overrideIntensity,
-      e.exerciseIntensity,
+      e.exerciseIntensity
     ),
     name: e.name,
   }));
@@ -106,7 +107,7 @@ export default async function SessionPage({ params }: PageProps) {
   const analytics = computeSessionAnalytics(
     analyticsInput,
     studentRows.length,
-    tags.length,
+    tags.length
   );
 
   return (

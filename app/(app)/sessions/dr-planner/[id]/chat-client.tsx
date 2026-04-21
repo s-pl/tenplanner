@@ -2,13 +2,40 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Send, Loader2, Bot, User, Sparkles, RotateCcw,
-  Check, CheckCircle2, XCircle, Clock, ChevronRight, Plus, X,
-  CalendarCheck, Trash2, UserPlus, MapPin, Tag, Flame,
-  Dumbbell, Calendar, GraduationCap, Brain, ChevronDown,
+  ArrowLeft,
+  Send,
+  Loader2,
+  Bot,
+  User,
+  Sparkles,
+  RotateCcw,
+  Check,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ChevronRight,
+  Plus,
+  X,
+  CalendarCheck,
+  Trash2,
+  UserPlus,
+  MapPin,
+  Tag,
+  Flame,
+  Dumbbell,
+  Calendar,
+  GraduationCap,
+  Brain,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -19,15 +46,28 @@ type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
 
 interface ExerciseItem {
-  id: string; name: string; category: Category; difficulty: Difficulty;
-  durationMinutes: number; description?: string; objectives?: string;
-  isAiGenerated?: boolean; isPersonal?: boolean;
+  id: string;
+  name: string;
+  category: Category;
+  difficulty: Difficulty;
+  durationMinutes: number;
+  description?: string;
+  objectives?: string;
+  isAiGenerated?: boolean;
+  isPersonal?: boolean;
 }
 type PreguntaTipo = "texto" | "numero" | "select";
-interface Pregunta { id: string; label: string; tipo: PreguntaTipo; opciones?: string[]; placeholder?: string; }
+interface Pregunta {
+  id: string;
+  label: string;
+  tipo: PreguntaTipo;
+  opciones?: string[];
+  placeholder?: string;
+}
 
 interface StudentItem {
-  id: string; name: string;
+  id: string;
+  name: string;
   playerLevel?: string | null;
   gender?: string | null;
   dominantHand?: string | null;
@@ -43,9 +83,15 @@ interface SessionMetaInput {
 }
 
 type MentionResult =
-  | { type: "ejercicio"; id: string; name: string; category: string; durationMinutes: number }
+  | {
+      type: "ejercicio";
+      id: string;
+      name: string;
+      category: string;
+      durationMinutes: number;
+    }
   | { type: "sesion"; id: string; title: string; scheduledAt: string }
-  | { type: "alumno"; id: string; name: string; playerLevel: string | null }
+  | { type: "alumno"; id: string; name: string; playerLevel: string | null };
 
 interface BuscarContextoResult {
   tipo: "ejercicio" | "sesion" | "alumno";
@@ -70,32 +116,39 @@ interface BuscarContextoResult {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const CAT: Record<Category, { label: string; code: string }> = {
-  technique: { label: "Técnica",       code: "TÉC" },
-  tactics:   { label: "Táctica",       code: "TÁC" },
-  fitness:   { label: "Fitness",       code: "FÍS" },
+  technique: { label: "Técnica", code: "TÉC" },
+  tactics: { label: "Táctica", code: "TÁC" },
+  fitness: { label: "Fitness", code: "FÍS" },
   "warm-up": { label: "Calentamiento", code: "CAL" },
 };
 const DIFF: Record<Difficulty, { label: string; bars: number }> = {
-  beginner:     { label: "Principiante", bars: 2 },
-  intermediate: { label: "Intermedio",   bars: 3 },
-  advanced:     { label: "Avanzado",     bars: 5 },
+  beginner: { label: "Principiante", bars: 2 },
+  intermediate: { label: "Intermedio", bars: 3 },
+  advanced: { label: "Avanzado", bars: 5 },
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  beginner: "Principiante", amateur: "Amateur", intermediate: "Intermedio",
-  advanced: "Avanzado", competitive: "Competición",
+  beginner: "Principiante",
+  amateur: "Amateur",
+  intermediate: "Intermedio",
+  advanced: "Avanzado",
+  competitive: "Competición",
 };
 
 const LEVEL_CODE: Record<string, string> = {
-  beginner: "L1", amateur: "L2", intermediate: "L3", advanced: "L4", competitive: "L5",
+  beginner: "L1",
+  amateur: "L2",
+  intermediate: "L3",
+  advanced: "L4",
+  competitive: "L5",
 };
 
 // ─── Mention chip (inline in user messages) ──────────────────────────────────
 
 const MENTION_ICONS: Record<string, React.ReactNode> = {
   ejercicio: <Dumbbell className="size-2.5" />,
-  sesion:    <Calendar className="size-2.5" />,
-  alumno:    <GraduationCap className="size-2.5" />,
+  sesion: <Calendar className="size-2.5" />,
+  alumno: <GraduationCap className="size-2.5" />,
 };
 
 // Matches both @[nombre] (new) and @[tipo:nombre] (legacy stored messages)
@@ -111,10 +164,14 @@ function parseMentionName(part: string): string | null {
 
 function MentionBadge({ nombre, dark }: { nombre: string; dark?: boolean }) {
   return (
-    <span className={cn(
-      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-semibold text-[11px] align-middle",
-      dark ? "bg-white/20 text-white border border-white/20" : "bg-brand/15 border border-brand/30 text-brand"
-    )}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-semibold text-[11px] align-middle",
+        dark
+          ? "bg-white/20 text-white border border-white/20"
+          : "bg-brand/15 border border-brand/30 text-brand"
+      )}
+    >
       @ {nombre}
     </span>
   );
@@ -133,20 +190,32 @@ function renderUserContent(content: string): React.ReactNode {
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 
 function renderMarkdown(raw: string): string {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const inline = (s: string) => esc(s)
-    .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code class="font-mono text-[11px] text-brand bg-foreground/[0.04] px-1 py-0.5">$1</code>');
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (s: string) =>
+    esc(s)
+      .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(
+        /`([^`]+)`/g,
+        '<code class="font-mono text-[11px] text-brand bg-foreground/[0.04] px-1 py-0.5">$1</code>'
+      );
 
   const lines = raw.split("\n");
   const out: string[] = [];
-  let ulOpen = false, olOpen = false;
+  let ulOpen = false,
+    olOpen = false;
 
   const closeList = () => {
-    if (ulOpen) { out.push("</ul>"); ulOpen = false; }
-    if (olOpen) { out.push("</ol>"); olOpen = false; }
+    if (ulOpen) {
+      out.push("</ul>");
+      ulOpen = false;
+    }
+    if (olOpen) {
+      out.push("</ol>");
+      olOpen = false;
+    }
   };
 
   let i = 0;
@@ -157,30 +226,85 @@ function renderMarkdown(raw: string): string {
       closeList();
       const code: string[] = [];
       i++;
-      while (i < lines.length && !lines[i].startsWith("```")) { code.push(esc(lines[i])); i++; }
-      out.push(`<pre class="my-2 border-l-2 border-brand/40 bg-foreground/[0.03] p-3 overflow-x-auto text-[11px] font-mono leading-relaxed whitespace-pre"><code>${code.join("\n")}</code></pre>`);
-      i++; continue;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        code.push(esc(lines[i]));
+        i++;
+      }
+      out.push(
+        `<pre class="my-2 border-l-2 border-brand/40 bg-foreground/[0.03] p-3 overflow-x-auto text-[11px] font-mono leading-relaxed whitespace-pre"><code>${code.join("\n")}</code></pre>`
+      );
+      i++;
+      continue;
     }
-    if (/^### /.test(line)) { closeList(); out.push(`<h3 class="font-heading font-semibold text-sm mt-3 mb-0.5 text-foreground">${inline(line.slice(4))}</h3>`); i++; continue; }
-    if (/^## /.test(line))  { closeList(); out.push(`<h2 class="font-heading font-semibold text-base mt-4 mb-1 text-foreground">${inline(line.slice(3))}</h2>`); i++; continue; }
-    if (/^# /.test(line))   { closeList(); out.push(`<h1 class="font-heading font-bold text-lg mt-4 mb-1 text-foreground">${inline(line.slice(2))}</h1>`); i++; continue; }
-    if (line.trim() === "---") { closeList(); out.push('<hr class="border-foreground/15 my-3">'); i++; continue; }
+    if (/^### /.test(line)) {
+      closeList();
+      out.push(
+        `<h3 class="font-heading font-semibold text-sm mt-3 mb-0.5 text-foreground">${inline(line.slice(4))}</h3>`
+      );
+      i++;
+      continue;
+    }
+    if (/^## /.test(line)) {
+      closeList();
+      out.push(
+        `<h2 class="font-heading font-semibold text-base mt-4 mb-1 text-foreground">${inline(line.slice(3))}</h2>`
+      );
+      i++;
+      continue;
+    }
+    if (/^# /.test(line)) {
+      closeList();
+      out.push(
+        `<h1 class="font-heading font-bold text-lg mt-4 mb-1 text-foreground">${inline(line.slice(2))}</h1>`
+      );
+      i++;
+      continue;
+    }
+    if (line.trim() === "---") {
+      closeList();
+      out.push('<hr class="border-foreground/15 my-3">');
+      i++;
+      continue;
+    }
 
     const ul = line.match(/^[*-] (.+)/);
     if (ul) {
-      if (olOpen) { out.push("</ol>"); olOpen = false; }
-      if (!ulOpen) { out.push('<ul class="space-y-0.5 my-1.5">'); ulOpen = true; }
-      out.push(`<li class="flex gap-2 text-sm"><span class="text-brand shrink-0 mt-0.5 leading-5">•</span><span class="leading-5">${inline(ul[1])}</span></li>`);
-      i++; continue;
+      if (olOpen) {
+        out.push("</ol>");
+        olOpen = false;
+      }
+      if (!ulOpen) {
+        out.push('<ul class="space-y-0.5 my-1.5">');
+        ulOpen = true;
+      }
+      out.push(
+        `<li class="flex gap-2 text-sm"><span class="text-brand shrink-0 mt-0.5 leading-5">•</span><span class="leading-5">${inline(ul[1])}</span></li>`
+      );
+      i++;
+      continue;
     }
     const ol = line.match(/^(\d+)\. (.+)/);
     if (ol) {
-      if (ulOpen) { out.push("</ul>"); ulOpen = false; }
-      if (!olOpen) { out.push('<ol class="space-y-0.5 my-1.5">'); olOpen = true; }
-      out.push(`<li class="flex gap-2 text-sm"><span class="text-muted-foreground shrink-0 tabular-nums w-4">${ol[1]}.</span><span class="leading-5">${inline(ol[2])}</span></li>`);
-      i++; continue;
+      if (ulOpen) {
+        out.push("</ul>");
+        ulOpen = false;
+      }
+      if (!olOpen) {
+        out.push('<ol class="space-y-0.5 my-1.5">');
+        olOpen = true;
+      }
+      out.push(
+        `<li class="flex gap-2 text-sm"><span class="text-muted-foreground shrink-0 tabular-nums w-4">${ol[1]}.</span><span class="leading-5">${inline(ol[2])}</span></li>`
+      );
+      i++;
+      continue;
     }
-    if (line.trim() === "") { closeList(); out.push('<div class="h-1.5"></div>'); i++; continue; }
+    if (line.trim() === "") {
+      closeList();
+      out.push('<div class="h-1.5"></div>');
+      i++;
+      continue;
+    }
 
     closeList();
     out.push(`<p class="text-sm leading-relaxed">${inline(line)}</p>`);
@@ -195,16 +319,31 @@ function renderMarkdown(raw: string): string {
 function parseQuestions(content: string): Pregunta[] | null {
   const m = content.match(/<preguntas>([\s\S]*?)<\/preguntas>/);
   if (!m) return null;
-  try { const p = JSON.parse(m[1]); return Array.isArray(p) ? p : null; } catch { return null; }
+  try {
+    const p = JSON.parse(m[1]);
+    return Array.isArray(p) ? p : null;
+  } catch {
+    return null;
+  }
 }
 function stripQuestions(content: string) {
   return content.replace(/<preguntas>[\s\S]*?<\/preguntas>/g, "").trim();
 }
-function getToolParts(parts: Array<{ type: string; [k: string]: unknown }>, name: string) {
-  return parts.filter(p =>
-    p.type === `tool-${name}` ||
-    (p.type === "dynamic-tool" && (p as { toolName?: string }).toolName === name)
-  ) as Array<{ type: string; state: string; input?: unknown; output?: unknown }>;
+function getToolParts(
+  parts: Array<{ type: string; [k: string]: unknown }>,
+  name: string
+) {
+  return parts.filter(
+    (p) =>
+      p.type === `tool-${name}` ||
+      (p.type === "dynamic-tool" &&
+        (p as { toolName?: string }).toolName === name)
+  ) as Array<{
+    type: string;
+    state: string;
+    input?: unknown;
+    output?: unknown;
+  }>;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -220,7 +359,12 @@ const TOOL_LABELS: Record<string, string> = {
   crear_sesion: "Creando sesión",
 };
 
-type AnyPart = { type: string; state?: string; toolName?: string; text?: string };
+type AnyPart = {
+  type: string;
+  state?: string;
+  toolName?: string;
+  text?: string;
+};
 
 function findCurrentActivity(parts: AnyPart[]): string | null {
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -239,19 +383,31 @@ function findCurrentActivity(parts: AnyPart[]): string | null {
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
-function ReasoningBubble({ text, streaming }: { text: string; streaming: boolean }) {
+function ReasoningBubble({
+  text,
+  streaming,
+}: {
+  text: string;
+  streaming: boolean;
+}) {
   const [open, setOpen] = useState(streaming);
-  useEffect(() => { if (!streaming) setOpen(false); }, [streaming]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- collapse when stream ends
+    if (!streaming) setOpen(false);
+  }, [streaming]);
   if (!text.trim()) return null;
   return (
     <div className="flex gap-3 justify-start">
       <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
-        <Brain className={cn("size-3.5 text-brand", streaming && "animate-pulse")} strokeWidth={1.6} />
+        <Brain
+          className={cn("size-3.5 text-brand", streaming && "animate-pulse")}
+          strokeWidth={1.6}
+        />
       </div>
       <div className="max-w-[85%] w-full">
         <button
           type="button"
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
           className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 hover:text-foreground transition-colors"
         >
           {streaming ? (
@@ -265,12 +421,17 @@ function ReasoningBubble({ text, streaming }: { text: string; streaming: boolean
           ) : (
             <span>Razonamiento</span>
           )}
-          <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} strokeWidth={1.6} />
+          <ChevronDown
+            className={cn("size-3 transition-transform", open && "rotate-180")}
+            strokeWidth={1.6}
+          />
         </button>
         {open && (
           <div className="mt-2 border-l-2 border-brand/40 bg-foreground/[0.02] px-3.5 py-2.5 text-[12px] leading-relaxed text-foreground/65 whitespace-pre-wrap italic font-heading">
             {text}
-            {streaming && <span className="inline-block w-1.5 h-3 ml-0.5 bg-brand/60 animate-pulse align-middle" />}
+            {streaming && (
+              <span className="inline-block w-1.5 h-3 ml-0.5 bg-brand/60 animate-pulse align-middle" />
+            )}
           </div>
         )}
       </div>
@@ -283,21 +444,30 @@ function MarkdownBubble({ role, content }: { role: string; content: string }) {
   const clean = isAssistant ? stripQuestions(content) : content;
   if (!clean.trim()) return null;
   return (
-    <div className={cn("flex gap-3", isAssistant ? "justify-start" : "justify-end")}>
+    <div
+      className={cn(
+        "flex gap-3",
+        isAssistant ? "justify-start" : "justify-end"
+      )}
+    >
       {isAssistant && (
         <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
           <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
         </div>
       )}
-      <div className={cn(
-        "max-w-[85%] px-4 py-3",
-        isAssistant
-          ? "border-l-2 border-brand/50 bg-foreground/[0.02] text-foreground"
-          : "bg-brand text-brand-foreground text-[14px] leading-relaxed"
-      )}>
-        {isAssistant
-          ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(clean) }} />
-          : <span>{renderUserContent(clean)}</span>}
+      <div
+        className={cn(
+          "max-w-[85%] px-4 py-3",
+          isAssistant
+            ? "border-l-2 border-brand/50 bg-foreground/[0.02] text-foreground"
+            : "bg-brand text-brand-foreground text-[14px] leading-relaxed"
+        )}
+      >
+        {isAssistant ? (
+          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(clean) }} />
+        ) : (
+          <span>{renderUserContent(clean)}</span>
+        )}
       </div>
       {!isAssistant && (
         <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
@@ -308,18 +478,35 @@ function MarkdownBubble({ role, content }: { role: string; content: string }) {
   );
 }
 
-function ExerciseCard({ exercise, selected, onToggle, onModify }: {
-  exercise: ExerciseItem; selected: boolean;
-  onToggle: () => void; onModify: (ex: ExerciseItem) => void;
+function ExerciseCard({
+  exercise,
+  selected,
+  onToggle,
+  onModify,
+}: {
+  exercise: ExerciseItem;
+  selected: boolean;
+  onToggle: () => void;
+  onModify: (ex: ExerciseItem) => void;
 }) {
   const cat = CAT[exercise.category] ?? CAT.technique;
   const diff = DIFF[exercise.difficulty] ?? DIFF.intermediate;
   return (
-    <div onClick={onToggle} className={cn(
-      "relative flex flex-col gap-2 p-3.5 border cursor-pointer transition-all group pl-4",
-      selected ? "bg-brand/[0.06] border-brand" : "bg-card border-foreground/15 hover:border-foreground/35"
-    )}>
-      <div className={cn("absolute top-0 left-0 w-[2px] h-full", selected ? "bg-brand" : "bg-foreground/15")} />
+    <div
+      onClick={onToggle}
+      className={cn(
+        "relative flex flex-col gap-2 p-3.5 border cursor-pointer transition-all group pl-4",
+        selected
+          ? "bg-brand/[0.06] border-brand"
+          : "bg-card border-foreground/15 hover:border-foreground/35"
+      )}
+    >
+      <div
+        className={cn(
+          "absolute top-0 left-0 w-[2px] h-full",
+          selected ? "bg-brand" : "bg-foreground/15"
+        )}
+      />
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
@@ -331,27 +518,55 @@ function ExerciseCard({ exercise, selected, onToggle, onModify }: {
             </span>
           )}
         </div>
-        <div className={cn("size-4 border flex items-center justify-center shrink-0 transition-all",
-          selected ? "bg-brand border-brand" : "border-foreground/25 group-hover:border-foreground/50")}>
-          {selected && <Check className="size-2.5 text-brand-foreground" strokeWidth={3} />}
+        <div
+          className={cn(
+            "size-4 border flex items-center justify-center shrink-0 transition-all",
+            selected
+              ? "bg-brand border-brand"
+              : "border-foreground/25 group-hover:border-foreground/50"
+          )}
+        >
+          {selected && (
+            <Check className="size-2.5 text-brand-foreground" strokeWidth={3} />
+          )}
         </div>
       </div>
-      <h3 className="font-heading italic text-[15px] text-foreground leading-snug">{exercise.name}</h3>
-      {exercise.description && <p className="text-[12px] text-foreground/55 leading-relaxed line-clamp-2">{exercise.description}</p>}
+      <h3 className="font-heading italic text-[15px] text-foreground leading-snug">
+        {exercise.name}
+      </h3>
+      {exercise.description && (
+        <p className="text-[12px] text-foreground/55 leading-relaxed line-clamp-2">
+          {exercise.description}
+        </p>
+      )}
       <div className="flex items-center justify-between pt-1 border-t border-foreground/10">
         <div className="flex items-center gap-3 text-[11px] text-foreground/55 tabular-nums">
-          <span className="flex items-center gap-1"><Clock className="size-3" strokeWidth={1.6} />{exercise.durationMinutes}′</span>
+          <span className="flex items-center gap-1">
+            <Clock className="size-3" strokeWidth={1.6} />
+            {exercise.durationMinutes}′
+          </span>
           <span className="flex items-center gap-1">
             <span className="flex gap-[2px]">
-              {[1,2,3,4,5].map(n => (
-                <span key={n} className={cn("w-[2px] h-2", n <= diff.bars ? "bg-brand" : "bg-foreground/15")} />
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span
+                  key={n}
+                  className={cn(
+                    "w-[2px] h-2",
+                    n <= diff.bars ? "bg-brand" : "bg-foreground/15"
+                  )}
+                />
               ))}
             </span>
             {diff.label}
           </span>
         </div>
-        <button onClick={e => { e.stopPropagation(); onModify(exercise); }}
-          className="flex items-center gap-1 text-[10px] tracking-[0.18em] uppercase text-foreground/50 hover:text-brand transition-colors">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onModify(exercise);
+          }}
+          className="flex items-center gap-1 text-[10px] tracking-[0.18em] uppercase text-foreground/50 hover:text-brand transition-colors"
+        >
           Modificar →
         </button>
       </div>
@@ -359,100 +574,213 @@ function ExerciseCard({ exercise, selected, onToggle, onModify }: {
   );
 }
 
-function ExerciseGrid({ ejercicios, selectedExercises, onToggle, onModify }: {
-  ejercicios: ExerciseItem[]; selectedExercises: Set<string>;
-  onToggle: (id: string) => void; onModify: (ex: ExerciseItem) => void;
+function ExerciseGrid({
+  ejercicios,
+  selectedExercises,
+  onToggle,
+  onModify,
+}: {
+  ejercicios: ExerciseItem[];
+  selectedExercises: Set<string>;
+  onToggle: (id: string) => void;
+  onModify: (ex: ExerciseItem) => void;
 }) {
   if (!ejercicios.length) return null;
-  const sel = ejercicios.filter(e => selectedExercises.has(e.id)).length;
+  const sel = ejercicios.filter((e) => selectedExercises.has(e.id)).length;
   return (
     <div className="ml-2 sm:ml-10 mt-2 space-y-2">
       <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{ejercicios.length}</span> ejercicio{ejercicios.length !== 1 ? "s" : ""}
-        {sel > 0 && <span className="text-brand ml-1.5">· {sel} seleccionado{sel !== 1 ? "s" : ""}</span>}
+        <span className="font-medium text-foreground">{ejercicios.length}</span>{" "}
+        ejercicio{ejercicios.length !== 1 ? "s" : ""}
+        {sel > 0 && (
+          <span className="text-brand ml-1.5">
+            · {sel} seleccionado{sel !== 1 ? "s" : ""}
+          </span>
+        )}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {ejercicios.map(ex => (
-          <ExerciseCard key={ex.id} exercise={ex} selected={selectedExercises.has(ex.id)}
-            onToggle={() => onToggle(ex.id)} onModify={onModify} />
+        {ejercicios.map((ex) => (
+          <ExerciseCard
+            key={ex.id}
+            exercise={ex}
+            selected={selectedExercises.has(ex.id)}
+            onToggle={() => onToggle(ex.id)}
+            onModify={onModify}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ExerciseToolCard({ part }: { part: { state: string; output?: unknown } }) {
+function ExerciseToolCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Guardando ejercicio…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Guardando ejercicio…
+      </div>
+    );
   if (part.state !== "output-available") return null;
   const r = part.output as { ok: boolean; name?: string; error?: string };
-  return r.ok
-    ? <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-scale-in">
-        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
-        <span className="font-heading italic text-[14px] text-foreground">{r.name}</span>
-        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">guardado</span>
-        <span className="ml-auto font-sans text-[9px] uppercase tracking-[0.22em] text-brand shrink-0 flex items-center gap-1"><Sparkles className="size-2.5" /> IA</span>
-      </div>
-    : <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
-        <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
-      </div>;
+  return r.ok ? (
+    <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-scale-in">
+      <CheckCircle2
+        className="size-3.5 text-brand shrink-0"
+        strokeWidth={1.6}
+      />
+      <span className="font-heading italic text-[14px] text-foreground">
+        {r.name}
+      </span>
+      <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+        guardado
+      </span>
+      <span className="ml-auto font-sans text-[9px] uppercase tracking-[0.22em] text-brand shrink-0 flex items-center gap-1">
+        <Sparkles className="size-2.5" /> IA
+      </span>
+    </div>
+  ) : (
+    <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
+      <XCircle
+        className="size-3.5 text-destructive shrink-0"
+        strokeWidth={1.6}
+      />
+      <span className="text-[12px] text-destructive">{r.error}</span>
+    </div>
+  );
 }
 
-function SessionCreatedCard({ part }: { part: { state: string; output?: unknown } }) {
+function SessionCreatedCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   const router = useRouter();
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Creando sesión…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Creando sesión…
+      </div>
+    );
   if (part.state !== "output-available") return null;
-  const r = part.output as { ok: boolean; sessionId?: string; title?: string; totalDuration?: number; error?: string };
+  const r = part.output as {
+    ok: boolean;
+    sessionId?: string;
+    title?: string;
+    totalDuration?: number;
+    error?: string;
+  };
   if (!r.ok)
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
-      <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
-    </div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
+        <XCircle
+          className="size-3.5 text-destructive shrink-0"
+          strokeWidth={1.6}
+        />
+        <span className="text-[12px] text-destructive">{r.error}</span>
+      </div>
+    );
   return (
     <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-3 max-w-sm animate-scale-in">
       <div className="size-9 border border-foreground/20 flex items-center justify-center shrink-0">
         <CalendarCheck className="size-4 text-brand" strokeWidth={1.6} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">Sesión creada</p>
-        <p className="font-heading italic text-[14px] text-foreground truncate">{r.title}</p>
-        {r.totalDuration ? <p className="font-sans text-[10px] tabular-nums text-foreground/50">{r.totalDuration}′</p> : null}
+        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+          Sesión creada
+        </p>
+        <p className="font-heading italic text-[14px] text-foreground truncate">
+          {r.title}
+        </p>
+        {r.totalDuration ? (
+          <p className="font-sans text-[10px] tabular-nums text-foreground/50">
+            {r.totalDuration}′
+          </p>
+        ) : null}
       </div>
-      <button onClick={() => router.push(`/sessions/${r.sessionId}`)}
-        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0">
+      <button
+        onClick={() => router.push(`/sessions/${r.sessionId}`)}
+        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0"
+      >
         Ver →
       </button>
     </div>
   );
 }
 
-function QuestionForm({ preguntas, onSubmit }: { preguntas: Pregunta[]; onSubmit: (a: Record<string, string>) => void }) {
-  const [values, setValues] = useState<Record<string, string>>(Object.fromEntries(preguntas.map(p => [p.id, ""])));
+function QuestionForm({
+  preguntas,
+  onSubmit,
+}: {
+  preguntas: Pregunta[];
+  onSubmit: (a: Record<string, string>) => void;
+}) {
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(preguntas.map((p) => [p.id, ""]))
+  );
   return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(values); }}
-      className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 space-y-4 max-w-xs bg-foreground/[0.02]">
-      {preguntas.map(p => (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(values);
+      }}
+      className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 space-y-4 max-w-xs bg-foreground/[0.02]"
+    >
+      {preguntas.map((p) => (
         <div key={p.id} className="space-y-1.5">
-          <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">{p.label}</label>
-          {p.tipo === "select" && p.opciones
-            ? <select value={values[p.id]} onChange={e => setValues(v => ({ ...v, [p.id]: e.target.value }))} required
-                className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors">
-                <option value="">Selecciona…</option>
-                {p.opciones.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            : <input type={p.tipo === "numero" ? "number" : "text"} value={values[p.id]}
-                onChange={e => setValues(v => ({ ...v, [p.id]: e.target.value }))}
-                placeholder={p.placeholder ?? ""} required min={p.tipo === "numero" ? 1 : undefined}
-                className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
-          }
+          <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+            {p.label}
+          </label>
+          {p.tipo === "select" && p.opciones ? (
+            <select
+              value={values[p.id]}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, [p.id]: e.target.value }))
+              }
+              required
+              className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors"
+            >
+              <option value="">Selecciona…</option>
+              {p.opciones.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type={p.tipo === "numero" ? "number" : "text"}
+              value={values[p.id]}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, [p.id]: e.target.value }))
+              }
+              placeholder={p.placeholder ?? ""}
+              required
+              min={p.tipo === "numero" ? 1 : undefined}
+              className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30"
+            />
+          )}
         </div>
       ))}
-      <button type="submit" className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">Enviar</button>
+      <button
+        type="submit"
+        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors"
+      >
+        Enviar
+      </button>
     </form>
   );
 }
 
-function StudentPickerCard({ part, onSend }: {
+function StudentPickerCard({
+  part,
+  onSend,
+}: {
   part: { state: string; output?: unknown };
   onSend: (text: string) => void;
 }) {
@@ -460,7 +788,12 @@ function StudentPickerCard({ part, onSend }: {
   const [confirmed, setConfirmed] = useState(false);
 
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Cargando alumnos…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Cargando alumnos…
+      </div>
+    );
   if (part.state !== "output-available") return null;
 
   const r = part.output as { estudiantes: StudentItem[]; pregunta?: string };
@@ -469,8 +802,13 @@ function StudentPickerCard({ part, onSend }: {
   if (confirmed) {
     return (
       <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
-        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
-        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Selección confirmada</span>
+        <CheckCircle2
+          className="size-3.5 text-brand shrink-0"
+          strokeWidth={1.6}
+        />
+        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+          Selección confirmada
+        </span>
       </div>
     );
   }
@@ -478,9 +816,13 @@ function StudentPickerCard({ part, onSend }: {
   if (estudiantes.length === 0) {
     return (
       <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 max-w-sm space-y-3 bg-foreground/[0.02]">
-        <p className="text-[12px] text-foreground/65">Aún no tienes alumnos — puedes crear uno.</p>
-        <Link href="/students/new"
-          className="inline-flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+        <p className="text-[12px] text-foreground/65">
+          Aún no tienes alumnos — puedes crear uno.
+        </p>
+        <Link
+          href="/students/new"
+          className="inline-flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors"
+        >
           <UserPlus className="size-3" strokeWidth={1.6} /> Crear alumno
         </Link>
       </div>
@@ -488,19 +830,26 @@ function StudentPickerCard({ part, onSend }: {
   }
 
   function toggle(id: string) {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   }
 
   function confirm() {
     const names = estudiantes
-      .filter(s => selected.has(s.id))
-      .map(s => {
-        const lvl = s.playerLevel ? ` (${LEVEL_LABEL[s.playerLevel] ?? s.playerLevel})` : "";
+      .filter((s) => selected.has(s.id))
+      .map((s) => {
+        const lvl = s.playerLevel
+          ? ` (${LEVEL_LABEL[s.playerLevel] ?? s.playerLevel})`
+          : "";
         return `${s.name}${lvl}`;
       });
-    const text = names.length > 0
-      ? `He seleccionado a: ${names.join(", ")}`
-      : "Continuar sin seleccionar alumnos específicos";
+    const text =
+      names.length > 0
+        ? `He seleccionado a: ${names.join(", ")}`
+        : "Continuar sin seleccionar alumnos específicos";
     setConfirmed(true);
     onSend(text);
   }
@@ -511,47 +860,82 @@ function StudentPickerCard({ part, onSend }: {
         {r.pregunta ?? "¿Para quién es esta sesión?"}
       </p>
       <div className="space-y-1">
-        {estudiantes.map(s => {
+        {estudiantes.map((s) => {
           const isSelected = selected.has(s.id);
           return (
-            <div key={s.id} onClick={() => toggle(s.id)}
+            <div
+              key={s.id}
+              onClick={() => toggle(s.id)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 border cursor-pointer transition-all",
-                isSelected ? "bg-brand/[0.06] border-brand" : "bg-transparent border-foreground/15 hover:border-foreground/35"
-              )}>
-              <div className={cn("size-4 border flex items-center justify-center shrink-0 transition-all",
-                isSelected ? "bg-brand border-brand" : "border-foreground/30")}>
-                {isSelected && <Check className="size-2.5 text-brand-foreground" strokeWidth={3} />}
+                isSelected
+                  ? "bg-brand/[0.06] border-brand"
+                  : "bg-transparent border-foreground/15 hover:border-foreground/35"
+              )}
+            >
+              <div
+                className={cn(
+                  "size-4 border flex items-center justify-center shrink-0 transition-all",
+                  isSelected ? "bg-brand border-brand" : "border-foreground/30"
+                )}
+              >
+                {isSelected && (
+                  <Check
+                    className="size-2.5 text-brand-foreground"
+                    strokeWidth={3}
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] text-foreground truncate">{s.name}</p>
               </div>
               {s.playerLevel && (
                 <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 shrink-0">
-                  {LEVEL_CODE[s.playerLevel] ?? "—"} · {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
+                  {LEVEL_CODE[s.playerLevel] ?? "—"} ·{" "}
+                  {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
                 </span>
               )}
             </div>
           );
         })}
       </div>
-      <button onClick={confirm}
-        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">
+      <button
+        onClick={confirm}
+        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors"
+      >
         Confirmar selección
       </button>
     </div>
   );
 }
 
-function CrearAlumnoCard({ part }: { part: { state: string; output?: unknown } }) {
+function CrearAlumnoCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Creando alumno…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Creando alumno…
+      </div>
+    );
   if (part.state !== "output-available") return null;
-  const r = part.output as { ok: boolean; id?: string; name?: string; error?: string };
+  const r = part.output as {
+    ok: boolean;
+    id?: string;
+    name?: string;
+    error?: string;
+  };
   if (!r.ok)
     return (
       <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
-        <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
+        <XCircle
+          className="size-3.5 text-destructive shrink-0"
+          strokeWidth={1.6}
+        />
+        <span className="text-[12px] text-destructive">{r.error}</span>
       </div>
     );
   return (
@@ -560,18 +944,27 @@ function CrearAlumnoCard({ part }: { part: { state: string; output?: unknown } }
         <UserPlus className="size-4 text-brand" strokeWidth={1.6} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">Alumno creado</p>
-        <p className="font-heading italic text-[14px] text-foreground truncate">{r.name}</p>
+        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+          Alumno creado
+        </p>
+        <p className="font-heading italic text-[14px] text-foreground truncate">
+          {r.name}
+        </p>
       </div>
-      <Link href={`/students/${r.id}`}
-        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0">
+      <Link
+        href={`/students/${r.id}`}
+        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0"
+      >
         Ver →
       </Link>
     </div>
   );
 }
 
-function ConfigurarSesionMetaCard({ part, onSend }: {
+function ConfigurarSesionMetaCard({
+  part,
+  onSend,
+}: {
   part: { state: string; output?: unknown };
   onSend: (text: string) => void;
 }) {
@@ -585,14 +978,24 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
   const [scheduledAt, setScheduledAt] = useState(output?.scheduledAt ?? "");
 
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Preparando configuración…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Preparando configuración…
+      </div>
+    );
   if (part.state !== "output-available") return null;
 
   if (confirmed) {
     return (
       <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
-        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
-        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Configuración confirmada</span>
+        <CheckCircle2
+          className="size-3.5 text-brand shrink-0"
+          strokeWidth={1.6}
+        />
+        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+          Configuración confirmada
+        </span>
       </div>
     );
   }
@@ -612,13 +1015,21 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
 
   return (
     <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 max-w-sm space-y-4 bg-foreground/[0.02]">
-      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand">Configurar sesión</p>
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand">
+        Configurar sesión
+      </p>
 
       <div className="space-y-1.5">
-        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">Objetivo</label>
-        <textarea value={objective} onChange={e => setObjective(e.target.value)} rows={2}
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+          Objetivo
+        </label>
+        <textarea
+          value={objective}
+          onChange={(e) => setObjective(e.target.value)}
+          rows={2}
           placeholder="Ej. Mejorar la volea de derecha bajo presión"
-          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors resize-none placeholder:text-foreground/30" />
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors resize-none placeholder:text-foreground/30"
+        />
       </div>
 
       <div className="space-y-1.5">
@@ -626,14 +1037,18 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
           <Flame className="size-3" strokeWidth={1.6} /> Intensidad
         </label>
         <div className="flex">
-          {[1, 2, 3, 4, 5].map(n => (
-            <button key={n} type="button" onClick={() => setIntensity(n)}
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setIntensity(n)}
               className={cn(
                 "flex-1 font-sans text-[11px] tabular-nums font-semibold py-2 border transition-all -ml-px first:ml-0",
                 intensity === n
                   ? "bg-brand text-brand-foreground border-brand z-10"
                   : "bg-transparent border-foreground/20 text-foreground/55 hover:border-foreground/50"
-              )}>
+              )}
+            >
               {n}
             </button>
           ))}
@@ -644,66 +1059,131 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
         <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 flex items-center gap-1.5">
           <MapPin className="size-3" strokeWidth={1.6} /> Ubicación
         </label>
-        <input type="text" value={location} onChange={e => setLocation(e.target.value)}
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           placeholder="Ej. Pista 3 · Club Pádel Norte"
-          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30"
+        />
       </div>
 
       <div className="space-y-1.5">
         <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 flex items-center gap-1.5">
           <Tag className="size-3" strokeWidth={1.6} /> Etiquetas
         </label>
-        <input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)}
+        <input
+          type="text"
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
           placeholder="técnica, volea, avanzado"
-          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30"
+        />
       </div>
 
       <div className="space-y-1.5">
-        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">Fecha y hora</label>
-        <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
-          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors" />
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+          Fecha y hora
+        </label>
+        <input
+          type="datetime-local"
+          value={scheduledAt}
+          onChange={(e) => setScheduledAt(e.target.value)}
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors"
+        />
       </div>
 
-      <button onClick={confirm}
-        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">
+      <button
+        onClick={confirm}
+        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors"
+      >
         Confirmar y crear sesión
       </button>
     </div>
   );
 }
 
-function BuscarContextoCard({ part }: { part: { state: string; output?: unknown } }) {
+function BuscarContextoCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Buscando…
+      </div>
+    );
   if (part.state !== "output-available") return null;
   const r = part.output as BuscarContextoResult;
   if (!r?.resultados?.length)
-    return <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">Sin resultados.</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">
+        Sin resultados.
+      </div>
+    );
 
   const iconForTipo = (tipo: string) => {
-    if (tipo === "ejercicio") return <Dumbbell className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
-    if (tipo === "sesion") return <Calendar className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
-    return <GraduationCap className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
+    if (tipo === "ejercicio")
+      return (
+        <Dumbbell
+          className="size-3 text-foreground/60 shrink-0"
+          strokeWidth={1.6}
+        />
+      );
+    if (tipo === "sesion")
+      return (
+        <Calendar
+          className="size-3 text-foreground/60 shrink-0"
+          strokeWidth={1.6}
+        />
+      );
+    return (
+      <GraduationCap
+        className="size-3 text-foreground/60 shrink-0"
+        strokeWidth={1.6}
+      />
+    );
   };
 
-  const labelForTipo: Record<string, string> = { ejercicio: "Ejercicios", sesion: "Sesiones", alumno: "Alumnos" };
+  const labelForTipo: Record<string, string> = {
+    ejercicio: "Ejercicios",
+    sesion: "Sesiones",
+    alumno: "Alumnos",
+  };
 
   return (
     <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-3 max-w-sm bg-foreground/[0.02]">
-      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand mb-2">{labelForTipo[r.tipo] ?? r.tipo}</p>
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand mb-2">
+        {labelForTipo[r.tipo] ?? r.tipo}
+      </p>
       <ul>
         {r.resultados.map((item, idx) => {
           const name = item.name ?? item.title ?? "";
-          const subtitle = item.category ?? (item.scheduledAt ? new Date(item.scheduledAt).toLocaleDateString("es-ES") : null) ?? item.playerLevel ?? null;
+          const subtitle =
+            item.category ??
+            (item.scheduledAt
+              ? new Date(item.scheduledAt).toLocaleDateString("es-ES")
+              : null) ??
+            item.playerLevel ??
+            null;
           return (
-            <li key={item.id} className="flex items-center gap-3 py-2 border-b border-foreground/5 last:border-0">
+            <li
+              key={item.id}
+              className="flex items-center gap-3 py-2 border-b border-foreground/5 last:border-0"
+            >
               <span className="font-sans text-[9px] tabular-nums tracking-[0.18em] text-foreground/40 w-4">
                 {String(idx + 1).padStart(2, "0")}
               </span>
               {iconForTipo(r.tipo)}
               <div className="flex-1 min-w-0">
                 <p className="text-[12px] text-foreground truncate">{name}</p>
-                {subtitle && <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 truncate">{subtitle}</p>}
+                {subtitle && (
+                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 truncate">
+                    {subtitle}
+                  </p>
+                )}
               </div>
             </li>
           );
@@ -713,24 +1193,50 @@ function BuscarContextoCard({ part }: { part: { state: string; output?: unknown 
   );
 }
 
-function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown } }) {
+function AnalizarAlumnoCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Analizando alumno…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Analizando alumno…
+      </div>
+    );
   if (part.state !== "output-available") return null;
 
   type AlumnoData = {
     ok: boolean;
-    student?: { id: string; name: string; playerLevel: string | null; dominantHand: string | null; notes: string | null; yearsExperience: number | null };
+    student?: {
+      id: string;
+      name: string;
+      playerLevel: string | null;
+      dominantHand: string | null;
+      notes: string | null;
+      yearsExperience: number | null;
+    };
     totalSessions?: number;
-    recentSessions?: Array<{ id: string; title: string; scheduledAt: string | Date; durationMinutes: number; objective: string | null; intensity: number | null }>;
+    recentSessions?: Array<{
+      id: string;
+      title: string;
+      scheduledAt: string | Date;
+      durationMinutes: number;
+      objective: string | null;
+      intensity: number | null;
+    }>;
     error?: string;
   };
   const r = part.output as AlumnoData;
 
   if (!r.ok)
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm">
-      <XCircle className="size-4 text-destructive shrink-0" /><span className="text-xs text-destructive">{r.error}</span>
-    </div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm">
+        <XCircle className="size-4 text-destructive shrink-0" />
+        <span className="text-xs text-destructive">{r.error}</span>
+      </div>
+    );
 
   const { student, totalSessions = 0, recentSessions = [] } = r;
   if (!student) return null;
@@ -739,26 +1245,48 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
     <div className="ml-2 sm:ml-10 mt-2 bg-card border border-foreground/15 p-4 max-w-sm space-y-3">
       <div className="flex items-center gap-3 pb-3 border-b border-foreground/10">
         <div className="size-10 border border-foreground/20 flex items-center justify-center shrink-0">
-          <GraduationCap className="size-4 text-foreground/70" strokeWidth={1.6} />
+          <GraduationCap
+            className="size-4 text-foreground/70"
+            strokeWidth={1.6}
+          />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-heading italic text-[15px] text-foreground">{student.name}</p>
+          <p className="font-heading italic text-[15px] text-foreground">
+            {student.name}
+          </p>
           <div className="flex items-center gap-3 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 mt-0.5">
-            {student.playerLevel && <span>{LEVEL_CODE[student.playerLevel] ?? "—"} · {LEVEL_LABEL[student.playerLevel] ?? student.playerLevel}</span>}
-            {student.dominantHand && <span>{student.dominantHand === "right" ? "Diestra" : "Zurda"}</span>}
-            {student.yearsExperience != null && <span>{student.yearsExperience}y exp.</span>}
+            {student.playerLevel && (
+              <span>
+                {LEVEL_CODE[student.playerLevel] ?? "—"} ·{" "}
+                {LEVEL_LABEL[student.playerLevel] ?? student.playerLevel}
+              </span>
+            )}
+            {student.dominantHand && (
+              <span>
+                {student.dominantHand === "right" ? "Diestra" : "Zurda"}
+              </span>
+            )}
+            {student.yearsExperience != null && (
+              <span>{student.yearsExperience}y exp.</span>
+            )}
           </div>
         </div>
       </div>
 
       {student.notes && (
-        <p className="font-heading italic text-[13px] text-foreground/75 border-l-2 border-brand/40 pl-3">{student.notes}</p>
+        <p className="font-heading italic text-[13px] text-foreground/75 border-l-2 border-brand/40 pl-3">
+          {student.notes}
+        </p>
       )}
 
       <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 py-2 border-y border-foreground/10">
-        <p className="font-heading text-3xl tabular-nums text-foreground leading-none">{totalSessions}</p>
+        <p className="font-heading text-3xl tabular-nums text-foreground leading-none">
+          {totalSessions}
+        </p>
         <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
-          sesiones<br />registradas
+          sesiones
+          <br />
+          registradas
         </p>
       </div>
 
@@ -767,21 +1295,33 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
           <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 mb-1.5">
             Últimas sesiones
           </p>
-          {recentSessions.slice(0, 4).map(s => (
-            <div key={s.id} className="flex items-center gap-3 px-0 py-2 border-b border-foreground/5 last:border-0">
+          {recentSessions.slice(0, 4).map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center gap-3 px-0 py-2 border-b border-foreground/5 last:border-0"
+            >
               <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/40 w-4">
                 {String(recentSessions.indexOf(s) + 1).padStart(2, "0")}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-foreground truncate">{s.title}</p>
+                <p className="text-[12px] text-foreground truncate">
+                  {s.title}
+                </p>
                 <p className="text-[10px] text-foreground/50 tabular-nums">
-                  {new Date(s.scheduledAt).toLocaleDateString("es-ES")} · {s.durationMinutes}′
+                  {new Date(s.scheduledAt).toLocaleDateString("es-ES")} ·{" "}
+                  {s.durationMinutes}′
                 </p>
               </div>
               {s.intensity != null && (
                 <div className="flex gap-[2px] shrink-0">
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <span key={n} className={cn("w-[2px] h-2.5", n <= s.intensity! ? "bg-brand" : "bg-foreground/15")} />
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span
+                      key={n}
+                      className={cn(
+                        "w-[2px] h-2.5",
+                        n <= s.intensity! ? "bg-brand" : "bg-foreground/15"
+                      )}
+                    />
                   ))}
                 </div>
               )}
@@ -790,60 +1330,111 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
         </div>
       )}
 
-      <Link href={`/students/${student.id}`}
-        className="flex items-center justify-center gap-1.5 w-full text-[11px] tracking-[0.18em] uppercase text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+      <Link
+        href={`/students/${student.id}`}
+        className="flex items-center justify-center gap-1.5 w-full text-[11px] tracking-[0.18em] uppercase text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors"
+      >
         Ver perfil completo →
       </Link>
     </div>
   );
 }
 
-function SesionesSimilaresCard({ part }: { part: { state: string; output?: unknown } }) {
+function SesionesSimilaresCard({
+  part,
+}: {
+  part: { state: string; output?: unknown };
+}) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando sesiones…</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin text-brand" />
+        Buscando sesiones…
+      </div>
+    );
   if (part.state !== "output-available") return null;
 
-  type SesionItem = { id: string; title: string; scheduledAt: string | Date; durationMinutes: number; objective: string | null; intensity: number | null; tags: string[] | null };
+  type SesionItem = {
+    id: string;
+    title: string;
+    scheduledAt: string | Date;
+    durationMinutes: number;
+    objective: string | null;
+    intensity: number | null;
+    tags: string[] | null;
+  };
   const r = part.output as { sesiones: SesionItem[] };
 
   if (!r.sesiones?.length)
-    return <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">No se encontraron sesiones.</div>;
+    return (
+      <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">
+        No se encontraron sesiones.
+      </div>
+    );
 
   return (
     <div className="ml-2 sm:ml-10 mt-2 space-y-2">
       <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
-        <span className="tabular-nums text-brand">{String(r.sesiones.length).padStart(2, "0")}</span> · sesión{r.sesiones.length !== 1 ? "es" : ""} encontrada{r.sesiones.length !== 1 ? "s" : ""}
+        <span className="tabular-nums text-brand">
+          {String(r.sesiones.length).padStart(2, "0")}
+        </span>{" "}
+        · sesión{r.sesiones.length !== 1 ? "es" : ""} encontrada
+        {r.sesiones.length !== 1 ? "s" : ""}
       </p>
       <ul className="border-y border-foreground/10">
         {r.sesiones.map((s, idx) => (
-          <li key={s.id} className="border-b border-foreground/10 last:border-0">
-            <Link href={`/sessions/${s.id}`}
-              className="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3 hover:bg-foreground/[0.02] transition-colors group">
+          <li
+            key={s.id}
+            className="border-b border-foreground/10 last:border-0"
+          >
+            <Link
+              href={`/sessions/${s.id}`}
+              className="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3 hover:bg-foreground/[0.02] transition-colors group"
+            >
               <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/40 w-6">
                 {String(idx + 1).padStart(2, "0")}
               </span>
               <div className="min-w-0">
-                <p className="font-heading italic text-[14px] text-foreground truncate group-hover:text-brand transition-colors">{s.title}</p>
+                <p className="font-heading italic text-[14px] text-foreground truncate group-hover:text-brand transition-colors">
+                  {s.title}
+                </p>
                 <div className="flex items-center gap-2 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/50 mt-0.5">
-                  <span>{new Date(s.scheduledAt).toLocaleDateString("es-ES")}</span>
+                  <span>
+                    {new Date(s.scheduledAt).toLocaleDateString("es-ES")}
+                  </span>
                   <span>·</span>
                   <span>{s.durationMinutes}′</span>
                   {s.intensity != null && (
                     <span className="flex gap-[2px]">
-                      {[1,2,3,4,5].map(n => (
-                        <span key={n} className={cn("w-[2px] h-2", n <= s.intensity! ? "bg-brand" : "bg-foreground/15")} />
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <span
+                          key={n}
+                          className={cn(
+                            "w-[2px] h-2",
+                            n <= s.intensity! ? "bg-brand" : "bg-foreground/15"
+                          )}
+                        />
                       ))}
                     </span>
                   )}
                 </div>
-                {s.objective && <p className="text-[11px] text-foreground/50 mt-0.5 truncate italic">{s.objective}</p>}
+                {s.objective && (
+                  <p className="text-[11px] text-foreground/50 mt-0.5 truncate italic">
+                    {s.objective}
+                  </p>
+                )}
                 {s.tags && s.tags.length > 0 && (
                   <div className="flex gap-2 mt-1 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
-                    {s.tags.slice(0, 3).map(tag => <span key={tag}>· {tag}</span>)}
+                    {s.tags.slice(0, 3).map((tag) => (
+                      <span key={tag}>· {tag}</span>
+                    ))}
                   </div>
                 )}
               </div>
-              <ChevronRight className="size-3 text-foreground/40 group-hover:text-brand transition-colors shrink-0" strokeWidth={1.6} />
+              <ChevronRight
+                className="size-3 text-foreground/40 group-hover:text-brand transition-colors shrink-0"
+                strokeWidth={1.6}
+              />
             </Link>
           </li>
         ))}
@@ -852,16 +1443,30 @@ function SesionesSimilaresCard({ part }: { part: { state: string; output?: unkno
   );
 }
 
-function MentionPopover({ query, results, loading, onSelect }: {
+function MentionPopover({
+  query,
+  results,
+  loading,
+  onSelect,
+}: {
   query: string;
   results: MentionResult[];
   loading: boolean;
   onSelect: (r: MentionResult) => void;
 }) {
   const grouped = {
-    ejercicio: results.filter(r => r.type === "ejercicio") as Extract<MentionResult, { type: "ejercicio" }>[],
-    sesion: results.filter(r => r.type === "sesion") as Extract<MentionResult, { type: "sesion" }>[],
-    alumno: results.filter(r => r.type === "alumno") as Extract<MentionResult, { type: "alumno" }>[],
+    ejercicio: results.filter((r) => r.type === "ejercicio") as Extract<
+      MentionResult,
+      { type: "ejercicio" }
+    >[],
+    sesion: results.filter((r) => r.type === "sesion") as Extract<
+      MentionResult,
+      { type: "sesion" }
+    >[],
+    alumno: results.filter((r) => r.type === "alumno") as Extract<
+      MentionResult,
+      { type: "alumno" }
+    >[],
   };
   const hasResults = results.length > 0;
 
@@ -869,24 +1474,42 @@ function MentionPopover({ query, results, loading, onSelect }: {
     <div className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-background border border-foreground/20 overflow-hidden max-h-[280px] overflow-y-auto">
       {loading && (
         <div className="flex items-center gap-2 px-3 py-3 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
-          <Loader2 className="size-3 animate-spin text-brand" strokeWidth={1.6} /> Buscando…
+          <Loader2
+            className="size-3 animate-spin text-brand"
+            strokeWidth={1.6}
+          />{" "}
+          Buscando…
         </div>
       )}
       {!loading && !hasResults && (
-        <div className="px-3 py-3 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Sin resultados para &apos;@{query}&apos;</div>
+        <div className="px-3 py-3 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+          Sin resultados para &apos;@{query}&apos;
+        </div>
       )}
       {!loading && hasResults && (
         <div className="py-1">
           {grouped.ejercicio.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-b border-foreground/10">Ejercicios</p>
-              {grouped.ejercicio.map(r => (
-                <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
-                  <Dumbbell className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-b border-foreground/10">
+                Ejercicios
+              </p>
+              {grouped.ejercicio.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelect(r)}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0"
+                >
+                  <Dumbbell
+                    className="size-3 text-foreground/55 shrink-0"
+                    strokeWidth={1.6}
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-foreground truncate">{r.name}</p>
-                    <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/50 truncate">{r.category} · {r.durationMinutes}′</p>
+                    <p className="text-[12px] text-foreground truncate">
+                      {r.name}
+                    </p>
+                    <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/50 truncate">
+                      {r.category} · {r.durationMinutes}′
+                    </p>
                   </div>
                 </button>
               ))}
@@ -894,14 +1517,26 @@ function MentionPopover({ query, results, loading, onSelect }: {
           )}
           {grouped.sesion.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">Sesiones</p>
-              {grouped.sesion.map(r => (
-                <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
-                  <Calendar className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">
+                Sesiones
+              </p>
+              {grouped.sesion.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelect(r)}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0"
+                >
+                  <Calendar
+                    className="size-3 text-foreground/55 shrink-0"
+                    strokeWidth={1.6}
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-foreground truncate">{r.title}</p>
-                    <p className="font-sans text-[9px] tabular-nums tracking-[0.18em] text-foreground/50 truncate">{new Date(r.scheduledAt).toLocaleDateString("es-ES")}</p>
+                    <p className="text-[12px] text-foreground truncate">
+                      {r.title}
+                    </p>
+                    <p className="font-sans text-[9px] tabular-nums tracking-[0.18em] text-foreground/50 truncate">
+                      {new Date(r.scheduledAt).toLocaleDateString("es-ES")}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -909,14 +1544,29 @@ function MentionPopover({ query, results, loading, onSelect }: {
           )}
           {grouped.alumno.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">Alumnos</p>
-              {grouped.alumno.map(r => (
-                <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
-                  <GraduationCap className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">
+                Alumnos
+              </p>
+              {grouped.alumno.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelect(r)}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0"
+                >
+                  <GraduationCap
+                    className="size-3 text-foreground/55 shrink-0"
+                    strokeWidth={1.6}
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-foreground truncate">{r.name}</p>
-                    {r.playerLevel && <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 truncate">{LEVEL_CODE[r.playerLevel] ?? "—"} · {LEVEL_LABEL[r.playerLevel] ?? r.playerLevel}</p>}
+                    <p className="text-[12px] text-foreground truncate">
+                      {r.name}
+                    </p>
+                    {r.playerLevel && (
+                      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 truncate">
+                        {LEVEL_CODE[r.playerLevel] ?? "—"} ·{" "}
+                        {LEVEL_LABEL[r.playerLevel] ?? r.playerLevel}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -930,7 +1580,11 @@ function MentionPopover({ query, results, loading, onSelect }: {
 
 // ─── Main chat component ───────────────────────────────────────────────────────
 
-export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
+export function DrPlannerChat({
+  chatId,
+  initialTitle,
+  initialMessages,
+}: {
   chatId: string;
   initialTitle: string;
   initialMessages: Record<string, unknown>[];
@@ -943,7 +1597,9 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
 
   const [input, setInput] = useState("");
   const [title, setTitle] = useState(initialTitle);
-  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
+  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(
+    new Set()
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevStatus = useRef(status);
@@ -964,19 +1620,28 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
   }, [messages]);
 
   // Keep ref in sync so unmount/interval closures always see latest messages
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Save when stream completes normally
   useEffect(() => {
-    if (prevStatus.current !== "ready" && status === "ready" && messages.length > 0) {
+    if (
+      prevStatus.current !== "ready" &&
+      status === "ready" &&
+      messages.length > 0
+    ) {
       fetch(`/api/dr-planner/chats/${chatId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages }),
-      }).then(async (res) => {
-        const data = await res.json();
-        if (data.data?.title && data.data.title !== title) setTitle(data.data.title);
-      }).catch(() => {});
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (data.data?.title && data.data.title !== title)
+            setTitle(data.data.title);
+        })
+        .catch(() => {});
     }
     prevStatus.current = status;
   }, [status]);
@@ -1010,34 +1675,93 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
 
   // Fetch mention results when mentionQuery changes
   useEffect(() => {
-    if (mentionQuery === null) { setMentionResults([]); return; }
+    if (mentionQuery === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear on query reset
+      setMentionResults([]);
+      return;
+    }
     if (mentionDebounceRef.current) clearTimeout(mentionDebounceRef.current);
     mentionDebounceRef.current = setTimeout(async () => {
       setMentionLoading(true);
       const q = encodeURIComponent(mentionQuery);
       const [exRes, sesRes, stuRes] = await Promise.allSettled([
-        fetch(`/api/exercises?search=${q}&limit=4`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/sessions?limit=4`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/students`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/exercises?search=${q}&limit=4`).then((r) =>
+          r.ok ? r.json() : null
+        ),
+        fetch(`/api/sessions?limit=4`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/students`).then((r) => (r.ok ? r.json() : null)),
       ]);
       const combined: MentionResult[] = [];
       if (exRes.status === "fulfilled" && exRes.value?.data) {
-        const items = (exRes.value.data as Array<{ id: string; name: string; category: string; durationMinutes: number }>)
-          .filter(e => !mentionQuery || e.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        const items = (
+          exRes.value.data as Array<{
+            id: string;
+            name: string;
+            category: string;
+            durationMinutes: number;
+          }>
+        )
+          .filter(
+            (e) =>
+              !mentionQuery ||
+              e.name.toLowerCase().includes(mentionQuery.toLowerCase())
+          )
           .slice(0, 4);
-        combined.push(...items.map(e => ({ type: "ejercicio" as const, id: e.id, name: e.name, category: e.category, durationMinutes: e.durationMinutes })));
+        combined.push(
+          ...items.map((e) => ({
+            type: "ejercicio" as const,
+            id: e.id,
+            name: e.name,
+            category: e.category,
+            durationMinutes: e.durationMinutes,
+          }))
+        );
       }
       if (sesRes.status === "fulfilled" && sesRes.value?.data) {
-        const items = (sesRes.value.data as Array<{ id: string; title: string; scheduledAt: string }>)
-          .filter(s => !mentionQuery || s.title.toLowerCase().includes(mentionQuery.toLowerCase()))
+        const items = (
+          sesRes.value.data as Array<{
+            id: string;
+            title: string;
+            scheduledAt: string;
+          }>
+        )
+          .filter(
+            (s) =>
+              !mentionQuery ||
+              s.title.toLowerCase().includes(mentionQuery.toLowerCase())
+          )
           .slice(0, 4);
-        combined.push(...items.map(s => ({ type: "sesion" as const, id: s.id, title: s.title, scheduledAt: s.scheduledAt })));
+        combined.push(
+          ...items.map((s) => ({
+            type: "sesion" as const,
+            id: s.id,
+            title: s.title,
+            scheduledAt: s.scheduledAt,
+          }))
+        );
       }
       if (stuRes.status === "fulfilled" && stuRes.value?.data) {
-        const items = (stuRes.value.data as Array<{ id: string; name: string; playerLevel: string | null }>)
-          .filter(s => !mentionQuery || s.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        const items = (
+          stuRes.value.data as Array<{
+            id: string;
+            name: string;
+            playerLevel: string | null;
+          }>
+        )
+          .filter(
+            (s) =>
+              !mentionQuery ||
+              s.name.toLowerCase().includes(mentionQuery.toLowerCase())
+          )
           .slice(0, 4);
-        combined.push(...items.map(s => ({ type: "alumno" as const, id: s.id, name: s.name, playerLevel: s.playerLevel ?? null })));
+        combined.push(
+          ...items.map((s) => ({
+            type: "alumno" as const,
+            id: s.id,
+            name: s.name,
+            playerLevel: s.playerLevel ?? null,
+          }))
+        );
       }
       setMentionResults(combined);
       setMentionLoading(false);
@@ -1048,7 +1772,10 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
   useEffect(() => {
     if (mentionQuery === null) return;
     function onClickOutside(e: MouseEvent) {
-      if (inputWrapperRef.current && !inputWrapperRef.current.contains(e.target as Node)) {
+      if (
+        inputWrapperRef.current &&
+        !inputWrapperRef.current.contains(e.target as Node)
+      ) {
         setMentionQuery(null);
       }
     }
@@ -1057,7 +1784,11 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
   }, [mentionQuery]);
 
   const toggleExercise = useCallback((id: string) => {
-    setSelectedExercises(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedExercises((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   }, []);
 
   const handleModify = useCallback((ex: ExerciseItem) => {
@@ -1065,10 +1796,13 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
     textareaRef.current?.focus();
   }, []);
 
-  const handleSend = useCallback((text: string) => {
-    if (!text || isLoading) return;
-    sendMessage({ text });
-  }, [isLoading, sendMessage]);
+  const handleSend = useCallback(
+    (text: string) => {
+      if (!text || isLoading) return;
+      sendMessage({ text });
+    },
+    [isLoading, sendMessage]
+  );
 
   function submit() {
     const text = input.trim();
@@ -1079,8 +1813,14 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Escape") { setMentionQuery(null); return; }
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+    if (e.key === "Escape") {
+      setMentionQuery(null);
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -1122,7 +1862,10 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
   }
 
   function getMessageText(m: (typeof messages)[number]) {
-    return m.parts.map(p => p.type === "text" ? p.text : "").filter(Boolean).join("\n");
+    return m.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .filter(Boolean)
+      .join("\n");
   }
 
   async function handleDelete() {
@@ -1132,11 +1875,12 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-dvh">
-
       {/* Header */}
       <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-4 sm:px-6 md:px-10 py-3 sm:py-4 border-b border-foreground/15 bg-background/80 backdrop-blur shrink-0">
-        <Link href="/sessions/dr-planner"
-          className="font-sans text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors whitespace-nowrap">
+        <Link
+          href="/sessions/dr-planner"
+          className="font-sans text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors whitespace-nowrap"
+        >
           <span className="sm:hidden">←</span>
           <span className="hidden sm:inline">← Dr. Planner</span>
         </Link>
@@ -1153,14 +1897,17 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
             <button
               onClick={() => setMessages([])}
               title="Limpiar conversación"
-              className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+              className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
+            >
               <RotateCcw className="size-3" strokeWidth={1.6} />
               <span className="hidden sm:inline">Limpiar</span>
             </button>
           )}
-          <button onClick={handleDelete}
+          <button
+            onClick={handleDelete}
             className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-destructive transition-colors"
-            title="Eliminar">
+            title="Eliminar"
+          >
             <Trash2 className="size-3" strokeWidth={1.6} />
             <span className="hidden sm:inline">Eliminar</span>
           </button>
@@ -1178,119 +1925,244 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
               ¿Qué <em className="italic text-brand">sesión</em> necesitas hoy?
             </h2>
             <p className="text-[13px] text-foreground/60 leading-relaxed max-w-md">
-              Describe nivel del grupo, duración disponible y objetivos. Diseñaré el plan usando tu biblioteca de ejercicios.
+              Describe nivel del grupo, duración disponible y objetivos.
+              Diseñaré el plan usando tu biblioteca de ejercicios.
             </p>
             <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 border border-foreground/15">
-              {["Sesión de 60 min para nivel intermedio", "Técnica de volea para principiantes", "Entrenamiento físico para competición", "Táctica de juego de red para parejas"]
-                .map((s, i) => (
-                  <button key={s} onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                    className={cn(
-                      "text-left text-[12px] text-foreground/70 hover:text-foreground hover:bg-foreground/[0.03] px-4 py-3.5 transition-all border-foreground/10",
-                      i % 2 === 1 && "sm:border-l",
-                      i >= 2 && "border-t",
-                    )}>
-                    <span className="font-sans text-[9px] tabular-nums tracking-[0.22em] text-foreground/35 mr-2">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {s}
-                  </button>
-                ))}
+              {[
+                "Sesión de 60 min para nivel intermedio",
+                "Técnica de volea para principiantes",
+                "Entrenamiento físico para competición",
+                "Táctica de juego de red para parejas",
+              ].map((s, i) => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setInput(s);
+                    textareaRef.current?.focus();
+                  }}
+                  className={cn(
+                    "text-left text-[12px] text-foreground/70 hover:text-foreground hover:bg-foreground/[0.03] px-4 py-3.5 transition-all border-foreground/10",
+                    i % 2 === 1 && "sm:border-l",
+                    i >= 2 && "border-t"
+                  )}
+                >
+                  <span className="font-sans text-[9px] tabular-nums tracking-[0.22em] text-foreground/35 mr-2">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
         ) : (
           <div className="py-5 space-y-4 max-w-5xl mx-auto">
-            {messages.map(m => {
+            {messages.map((m) => {
               const text = getMessageText(m);
-              const parts = m.parts as Array<{ type: string; [k: string]: unknown }>;
+              const parts = m.parts as Array<{
+                type: string;
+                [k: string]: unknown;
+              }>;
               const showParts = getToolParts(parts, "mostrar_ejercicios");
-              const ejerciciosAvanzadoParts = getToolParts(parts, "buscar_ejercicios_avanzado");
+              const ejerciciosAvanzadoParts = getToolParts(
+                parts,
+                "buscar_ejercicios_avanzado"
+              );
               const createParts = getToolParts(parts, "crear_ejercicio");
               const sessionParts = getToolParts(parts, "crear_sesion");
               const alumnosParts = getToolParts(parts, "seleccionar_alumnos");
               const crearAlumnoParts = getToolParts(parts, "crear_alumno");
-              const sesionMetaParts = getToolParts(parts, "configurar_sesion_meta");
-              const buscarContextoParts = getToolParts(parts, "buscar_contexto");
-              const analizarAlumnoParts = getToolParts(parts, "analizar_alumno");
-              const sesionesSimilaresParts = getToolParts(parts, "buscar_sesiones_similares");
-              const questions = m.role === "assistant" && m.id === lastMsgId && !isLoading ? parseQuestions(text) : null;
-              const reasoningParts = m.role === "assistant"
-                ? (m.parts as Array<{ type: string; text?: string; state?: string }>)
-                    .filter(p => p.type === "reasoning" && typeof p.text === "string")
-                : [];
+              const sesionMetaParts = getToolParts(
+                parts,
+                "configurar_sesion_meta"
+              );
+              const buscarContextoParts = getToolParts(
+                parts,
+                "buscar_contexto"
+              );
+              const analizarAlumnoParts = getToolParts(
+                parts,
+                "analizar_alumno"
+              );
+              const sesionesSimilaresParts = getToolParts(
+                parts,
+                "buscar_sesiones_similares"
+              );
+              const questions =
+                m.role === "assistant" && m.id === lastMsgId && !isLoading
+                  ? parseQuestions(text)
+                  : null;
+              const reasoningParts =
+                m.role === "assistant"
+                  ? (
+                      m.parts as Array<{
+                        type: string;
+                        text?: string;
+                        state?: string;
+                      }>
+                    ).filter(
+                      (p) =>
+                        p.type === "reasoning" && typeof p.text === "string"
+                    )
+                  : [];
               return (
                 <div key={m.id} className="space-y-2 animate-fade-up">
                   {reasoningParts.map((p, i) => (
                     <ReasoningBubble
                       key={`r-${i}`}
                       text={p.text ?? ""}
-                      streaming={p.state === "streaming" || (isLoading && m.id === lastMsgId && i === reasoningParts.length - 1 && p.state !== "done")}
+                      streaming={
+                        p.state === "streaming" ||
+                        (isLoading &&
+                          m.id === lastMsgId &&
+                          i === reasoningParts.length - 1 &&
+                          p.state !== "done")
+                      }
                     />
                   ))}
                   <MarkdownBubble role={m.role} content={text} />
                   {alumnosParts.map((p, i) => (
-                    <StudentPickerCard key={i} part={p as { state: string; output?: unknown }} onSend={handleSend} />
+                    <StudentPickerCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                      onSend={handleSend}
+                    />
                   ))}
                   {crearAlumnoParts.map((p, i) => (
-                    <CrearAlumnoCard key={i} part={p as { state: string; output?: unknown }} />
+                    <CrearAlumnoCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
                   ))}
                   {sesionMetaParts.map((p, i) => (
-                    <ConfigurarSesionMetaCard key={i} part={p as { state: string; output?: unknown }} onSend={handleSend} />
+                    <ConfigurarSesionMetaCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                      onSend={handleSend}
+                    />
                   ))}
                   {buscarContextoParts.map((p, i) => (
-                    <BuscarContextoCard key={i} part={p as { state: string; output?: unknown }} />
+                    <BuscarContextoCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
                   ))}
                   {analizarAlumnoParts.map((p, i) => (
-                    <AnalizarAlumnoCard key={i} part={p as { state: string; output?: unknown }} />
+                    <AnalizarAlumnoCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
                   ))}
                   {sesionesSimilaresParts.map((p, i) => (
-                    <SesionesSimilaresCard key={i} part={p as { state: string; output?: unknown }} />
+                    <SesionesSimilaresCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
                   ))}
                   {[...showParts, ...ejerciciosAvanzadoParts].map((p, i) => {
                     if (p.state !== "output-available") return null;
                     const d = p.output as { ejercicios?: ExerciseItem[] };
                     if (!d?.ejercicios?.length) return null;
-                    return <ExerciseGrid key={i} ejercicios={d.ejercicios} selectedExercises={selectedExercises} onToggle={toggleExercise} onModify={handleModify} />;
+                    return (
+                      <ExerciseGrid
+                        key={i}
+                        ejercicios={d.ejercicios}
+                        selectedExercises={selectedExercises}
+                        onToggle={toggleExercise}
+                        onModify={handleModify}
+                      />
+                    );
                   })}
-                  {createParts.map((p, i) => <ExerciseToolCard key={i} part={p as { state: string; output?: unknown }} />)}
-                  {sessionParts.map((p, i) => <SessionCreatedCard key={i} part={p as { state: string; output?: unknown }} />)}
-                  {questions && <QuestionForm preguntas={questions} onSubmit={a => sendMessage({ text: questions.map(p => `${p.label}: ${a[p.id]}`).join(", ") })} />}
+                  {createParts.map((p, i) => (
+                    <ExerciseToolCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
+                  ))}
+                  {sessionParts.map((p, i) => (
+                    <SessionCreatedCard
+                      key={i}
+                      part={p as { state: string; output?: unknown }}
+                    />
+                  ))}
+                  {questions && (
+                    <QuestionForm
+                      preguntas={questions}
+                      onSubmit={(a) =>
+                        sendMessage({
+                          text: questions
+                            .map((p) => `${p.label}: ${a[p.id]}`)
+                            .join(", "),
+                        })
+                      }
+                    />
+                  )}
                 </div>
               );
             })}
-            {isLoading && (() => {
-              const last = messages[messages.length - 1];
-              const lastParts = (last?.parts ?? []) as AnyPart[];
-              const lastIsAssistant = last?.role === "assistant";
-              const hasVisibleText = lastIsAssistant && getMessageText(last).replace(/<preguntas>[\s\S]*?<\/preguntas>/g, "").trim().length > 0;
-              const lastReasoning = lastIsAssistant
-                ? [...lastParts].reverse().find(p => p.type === "reasoning" && typeof p.text === "string" && p.text!.trim().length > 0)
-                : undefined;
-              const isReasoningStreaming = lastReasoning?.state !== "done" && !hasVisibleText;
-              if (lastIsAssistant && lastReasoning && isReasoningStreaming) return null;
-              const activity = lastIsAssistant ? findCurrentActivity(lastParts) : null;
-              const label = status === "submitted"
-                ? "Conectando…"
-                : activity ?? (hasVisibleText ? "Redactando respuesta…" : "Pensando…");
-              return (
-                <div className="flex gap-3 justify-start">
-                  <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
+            {isLoading &&
+              (() => {
+                const last = messages[messages.length - 1];
+                const lastParts = (last?.parts ?? []) as AnyPart[];
+                const lastIsAssistant = last?.role === "assistant";
+                const hasVisibleText =
+                  lastIsAssistant &&
+                  getMessageText(last)
+                    .replace(/<preguntas>[\s\S]*?<\/preguntas>/g, "")
+                    .trim().length > 0;
+                const lastReasoning = lastIsAssistant
+                  ? [...lastParts]
+                      .reverse()
+                      .find(
+                        (p) =>
+                          p.type === "reasoning" &&
+                          typeof p.text === "string" &&
+                          p.text!.trim().length > 0
+                      )
+                  : undefined;
+                const isReasoningStreaming =
+                  lastReasoning?.state !== "done" && !hasVisibleText;
+                if (lastIsAssistant && lastReasoning && isReasoningStreaming)
+                  return null;
+                const activity = lastIsAssistant
+                  ? findCurrentActivity(lastParts)
+                  : null;
+                const label =
+                  status === "submitted"
+                    ? "Conectando…"
+                    : (activity ??
+                      (hasVisibleText ? "Redactando respuesta…" : "Pensando…"));
+                return (
+                  <div className="flex gap-3 justify-start">
+                    <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+                      <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
+                    </div>
+                    <div className="border-l-2 border-brand/50 bg-foreground/[0.02] px-4 py-2.5 flex items-center gap-3">
+                      <span className="relative flex size-1.5">
+                        <span className="absolute inline-flex size-full bg-brand/60 opacity-75 animate-ping" />
+                        <span className="relative inline-flex size-1.5 bg-brand" />
+                      </span>
+                      <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">
+                        {label}
+                      </span>
+                      <span className="flex gap-[3px]">
+                        <span
+                          className="size-1 bg-brand/40 animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <span
+                          className="size-1 bg-brand/40 animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                          className="size-1 bg-brand/40 animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </span>
+                    </div>
                   </div>
-                  <div className="border-l-2 border-brand/50 bg-foreground/[0.02] px-4 py-2.5 flex items-center gap-3">
-                    <span className="relative flex size-1.5">
-                      <span className="absolute inline-flex size-full bg-brand/60 opacity-75 animate-ping" />
-                      <span className="relative inline-flex size-1.5 bg-brand" />
-                    </span>
-                    <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">{label}</span>
-                    <span className="flex gap-[3px]">
-                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
             <div ref={bottomRef} />
           </div>
         )}
@@ -1305,16 +2177,25 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
                 {String(selectedExercises.size).padStart(2, "0")}
               </span>
               <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">
-                ejercicio{selectedExercises.size !== 1 ? "s" : ""} seleccionado{selectedExercises.size !== 1 ? "s" : ""}
+                ejercicio{selectedExercises.size !== 1 ? "s" : ""} seleccionado
+                {selectedExercises.size !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={() => setSelectedExercises(new Set())}
-                className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+              <button
+                onClick={() => setSelectedExercises(new Set())}
+                className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
+              >
                 <X className="size-3" strokeWidth={1.6} /> Limpiar
               </button>
-              <button onClick={() => router.push(`/sessions/new?exercises=${Array.from(selectedExercises).join(",")}`)}
-                className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[11px] font-semibold tracking-[0.18em] uppercase px-4 py-2 hover:bg-brand/90 transition-colors">
+              <button
+                onClick={() =>
+                  router.push(
+                    `/sessions/new?exercises=${Array.from(selectedExercises).join(",")}`
+                  )
+                }
+                className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[11px] font-semibold tracking-[0.18em] uppercase px-4 py-2 hover:bg-brand/90 transition-colors"
+              >
                 <Plus className="size-3" strokeWidth={2} /> Crear sesión
               </button>
             </div>
@@ -1334,25 +2215,38 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
             />
           )}
           <div className="flex gap-3 items-end border border-foreground/20 px-4 py-3 focus-within:border-brand transition-all bg-background">
-            <textarea ref={textareaRef} value={input} onChange={handleInputChange}
-              onKeyDown={handleKeyDown} placeholder="Describe la sesión que necesitas… (escribe @ para mencionar)" rows={1}
-              className="flex-1 text-[14px] bg-transparent focus:outline-none text-foreground placeholder:text-foreground/40 resize-none max-h-32 py-0.5" />
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe la sesión que necesitas… (escribe @ para mencionar)"
+              rows={1}
+              className="flex-1 text-[14px] bg-transparent focus:outline-none text-foreground placeholder:text-foreground/40 resize-none max-h-32 py-0.5"
+            />
             {isLoading ? (
-              <button type="button" onClick={() => {
-                stop();
-                fetch(`/api/dr-planner/chats/${chatId}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ messages }),
-                }).catch(() => {});
-              }}
+              <button
+                type="button"
+                onClick={() => {
+                  stop();
+                  fetch(`/api/dr-planner/chats/${chatId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ messages }),
+                  }).catch(() => {});
+                }}
                 className="size-8 border border-destructive/40 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-colors shrink-0"
-                title="Detener generación">
+                title="Detener generación"
+              >
                 <X className="size-3.5" strokeWidth={1.6} />
               </button>
             ) : (
-              <button type="button" onClick={submit} disabled={!input.trim()}
-                className="size-8 bg-brand text-brand-foreground flex items-center justify-center hover:bg-brand/90 transition-colors disabled:opacity-30 disabled:bg-foreground/10 disabled:text-foreground/40 shrink-0">
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!input.trim()}
+                className="size-8 bg-brand text-brand-foreground flex items-center justify-center hover:bg-brand/90 transition-colors disabled:opacity-30 disabled:bg-foreground/10 disabled:text-foreground/40 shrink-0"
+              >
                 <Send className="size-3.5" strokeWidth={2} />
               </button>
             )}

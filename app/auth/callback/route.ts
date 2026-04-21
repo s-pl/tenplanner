@@ -19,9 +19,7 @@ export async function GET(request: Request) {
 
       if (user) {
         if (!user.email) {
-          return NextResponse.redirect(
-            `${origin}/login?error=missing_email`,
-          );
+          return NextResponse.redirect(`${origin}/login?error=missing_email`);
         }
         try {
           await db

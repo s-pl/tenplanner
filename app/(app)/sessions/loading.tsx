@@ -13,7 +13,11 @@ export default function SessionsLoading() {
       {/* Filter tabs */}
       <div className="flex gap-1 bg-muted/20 rounded-xl p-1 w-fit">
         {[52, 72, 68].map((w, i) => (
-          <div key={i} className="h-8 rounded-lg bg-muted/30" style={{ width: w }} />
+          <div
+            key={i}
+            className="h-8 rounded-lg bg-muted/30"
+            style={{ width: w }}
+          />
         ))}
       </div>
 
