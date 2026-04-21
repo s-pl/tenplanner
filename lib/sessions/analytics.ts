@@ -1,10 +1,12 @@
 export type TrainingPhase = "activation" | "main" | "cooldown";
 export type ExerciseCategory = "technique" | "tactics" | "fitness" | "warm-up";
+export type ExerciseDifficulty = "beginner" | "intermediate" | "advanced";
 
 export interface AnalyticsExerciseInput {
   orderIndex: number;
   durationMinutes: number;
   category: string;
+  difficulty: string;
   resolvedPhase: TrainingPhase;
   resolvedIntensity: number | null;
   name: string;
@@ -16,27 +18,53 @@ export interface PhaseBreakdown {
   percentage: number;
 }
 
+export interface PhaseTarget {
+  phase: TrainingPhase;
+  targetPct: number;
+  actualPct: number;
+  actualMinutes: number;
+  deltaPct: number;
+}
+
 export interface CategoryBreakdown {
   category: ExerciseCategory;
   minutes: number;
 }
 
+export interface DifficultyBreakdown {
+  difficulty: ExerciseDifficulty;
+  minutes: number;
+  percentage: number;
+}
+
 export interface IntensityPoint {
   order: number;
   cumulativeMinutes: number;
+  midpointMinutes: number;
   intensity: number | null;
   name: string;
+  phase: TrainingPhase;
+  durationMinutes: number;
 }
 
 export interface SessionAnalytics {
   totalMinutes: number;
   exerciseCount: number;
   averageIntensity: number | null;
+  weightedAverageIntensity: number | null;
+  peakIntensity: number | null;
+  peakPositionPct: number | null;
+  peakExerciseName: string | null;
+  trainingLoad: number;
+  densityScore: number | null;
   phasesCovered: number;
+  balanceScore: number;
   studentCount: number;
   tagCount: number;
   phaseBreakdown: PhaseBreakdown[];
+  phaseTargets: PhaseTarget[];
   categoryBreakdown: CategoryBreakdown[];
+  difficultyBreakdown: DifficultyBreakdown[];
   intensityCurve: IntensityPoint[];
 }
 
@@ -47,10 +75,22 @@ const ALL_CATEGORIES: ExerciseCategory[] = [
   "tactics",
   "fitness",
 ];
+const ALL_DIFFICULTIES: ExerciseDifficulty[] = [
+  "beginner",
+  "intermediate",
+  "advanced",
+];
+
+// Objetivos de distribución por fase para una sesión equilibrada
+const PHASE_TARGETS: Record<TrainingPhase, number> = {
+  activation: 15,
+  main: 70,
+  cooldown: 15,
+};
 
 export function resolvePhase(
   overridePhase: string | null | undefined,
-  exercisePhase: string | null | undefined,
+  exercisePhase: string | null | undefined
 ): TrainingPhase {
   const value = overridePhase ?? exercisePhase ?? "main";
   if (value === "activation" || value === "main" || value === "cooldown") {
@@ -61,7 +101,7 @@ export function resolvePhase(
 
 export function resolveIntensity(
   overrideIntensity: number | null | undefined,
-  exerciseIntensity: number | null | undefined,
+  exerciseIntensity: number | null | undefined
 ): number | null {
   return overrideIntensity ?? exerciseIntensity ?? null;
 }
@@ -69,17 +109,18 @@ export function resolveIntensity(
 export function computeSessionAnalytics(
   exercises: AnalyticsExerciseInput[],
   studentCount: number,
-  tagCount: number,
+  tagCount: number
 ): SessionAnalytics {
   const sorted = [...exercises].sort((a, b) => a.orderIndex - b.orderIndex);
   const totalMinutes = sorted.reduce((s, e) => s + e.durationMinutes, 0);
 
+  // ── Fases ───────────────────────────────────────────────
   const phaseMinutes = new Map<TrainingPhase, number>();
   for (const phase of ALL_PHASES) phaseMinutes.set(phase, 0);
   for (const ex of sorted) {
     phaseMinutes.set(
       ex.resolvedPhase,
-      (phaseMinutes.get(ex.resolvedPhase) ?? 0) + ex.durationMinutes,
+      (phaseMinutes.get(ex.resolvedPhase) ?? 0) + ex.durationMinutes
     );
   }
 
@@ -92,6 +133,20 @@ export function computeSessionAnalytics(
     };
   });
 
+  const phaseTargets: PhaseTarget[] = ALL_PHASES.map((phase) => {
+    const minutes = phaseMinutes.get(phase) ?? 0;
+    const actualPct = totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0;
+    const targetPct = PHASE_TARGETS[phase];
+    return {
+      phase,
+      targetPct,
+      actualPct,
+      actualMinutes: minutes,
+      deltaPct: actualPct - targetPct,
+    };
+  });
+
+  // ── Categorías ──────────────────────────────────────────
   const categoryMinutes = new Map<ExerciseCategory, number>();
   for (const cat of ALL_CATEGORIES) categoryMinutes.set(cat, 0);
   for (const ex of sorted) {
@@ -101,7 +156,7 @@ export function computeSessionAnalytics(
     if (cat) {
       categoryMinutes.set(
         cat,
-        (categoryMinutes.get(cat) ?? 0) + ex.durationMinutes,
+        (categoryMinutes.get(cat) ?? 0) + ex.durationMinutes
       );
     }
   }
@@ -109,25 +164,98 @@ export function computeSessionAnalytics(
     category: c,
     minutes: categoryMinutes.get(c) ?? 0,
   }));
+  const categoriesCovered = categoryBreakdown.filter(
+    (c) => c.minutes > 0
+  ).length;
+  const balanceScore = Math.round((categoriesCovered / ALL_CATEGORIES.length) * 100);
 
+  // ── Dificultad ──────────────────────────────────────────
+  const difficultyMinutes = new Map<ExerciseDifficulty, number>();
+  for (const d of ALL_DIFFICULTIES) difficultyMinutes.set(d, 0);
+  for (const ex of sorted) {
+    const d = ALL_DIFFICULTIES.includes(ex.difficulty as ExerciseDifficulty)
+      ? (ex.difficulty as ExerciseDifficulty)
+      : null;
+    if (d) {
+      difficultyMinutes.set(
+        d,
+        (difficultyMinutes.get(d) ?? 0) + ex.durationMinutes
+      );
+    }
+  }
+  const difficultyBreakdown: DifficultyBreakdown[] = ALL_DIFFICULTIES.map(
+    (d) => {
+      const minutes = difficultyMinutes.get(d) ?? 0;
+      return {
+        difficulty: d,
+        minutes,
+        percentage: totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0,
+      };
+    }
+  );
+
+  // ── Curva de intensidad ─────────────────────────────────
   let cumulative = 0;
   const intensityCurve: IntensityPoint[] = sorted.map((ex, idx) => {
+    const start = cumulative;
     cumulative += ex.durationMinutes;
     return {
       order: idx + 1,
       cumulativeMinutes: cumulative,
+      midpointMinutes: start + ex.durationMinutes / 2,
       intensity: ex.resolvedIntensity,
       name: ex.name,
+      phase: ex.resolvedPhase,
+      durationMinutes: ex.durationMinutes,
     };
   });
 
-  const intensities = sorted
-    .map((e) => e.resolvedIntensity)
-    .filter((v): v is number => typeof v === "number");
+  // ── Métricas agregadas de intensidad ────────────────────
+  const withIntensity = sorted.filter(
+    (e) => typeof e.resolvedIntensity === "number"
+  );
+  const intensities = withIntensity.map(
+    (e) => e.resolvedIntensity as number
+  );
   const averageIntensity =
     intensities.length > 0
       ? intensities.reduce((s, v) => s + v, 0) / intensities.length
       : null;
+
+  // Training Load = Σ(minutes × intensity). Métrica estilo TRIMP simplificado.
+  const trainingLoad = withIntensity.reduce(
+    (sum, e) => sum + e.durationMinutes * (e.resolvedIntensity as number),
+    0
+  );
+
+  const weightedMinutes = withIntensity.reduce(
+    (s, e) => s + e.durationMinutes,
+    0
+  );
+  const weightedAverageIntensity =
+    weightedMinutes > 0 ? trainingLoad / weightedMinutes : null;
+
+  // Densidad = carga real / carga máxima teórica (intensidad=5 todo el tiempo medido)
+  const densityScore =
+    weightedMinutes > 0 ? (trainingLoad / (weightedMinutes * 5)) * 100 : null;
+
+  // Pico
+  let peakIntensity: number | null = null;
+  let peakPositionPct: number | null = null;
+  let peakExerciseName: string | null = null;
+  if (withIntensity.length > 0 && totalMinutes > 0) {
+    const peakPoint = intensityCurve
+      .filter((p) => p.intensity !== null)
+      .reduce<IntensityPoint | null>((best, p) => {
+        if (!best || (p.intensity ?? 0) > (best.intensity ?? 0)) return p;
+        return best;
+      }, null);
+    if (peakPoint) {
+      peakIntensity = peakPoint.intensity;
+      peakPositionPct = (peakPoint.midpointMinutes / totalMinutes) * 100;
+      peakExerciseName = peakPoint.name;
+    }
+  }
 
   const phasesCovered = phaseBreakdown.filter((p) => p.minutes > 0).length;
 
@@ -135,11 +263,20 @@ export function computeSessionAnalytics(
     totalMinutes,
     exerciseCount: sorted.length,
     averageIntensity,
+    weightedAverageIntensity,
+    peakIntensity,
+    peakPositionPct,
+    peakExerciseName,
+    trainingLoad,
+    densityScore,
     phasesCovered,
+    balanceScore,
     studentCount,
     tagCount,
     phaseBreakdown,
+    phaseTargets,
     categoryBreakdown,
+    difficultyBreakdown,
     intensityCurve,
   };
 }

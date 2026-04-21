@@ -89,7 +89,8 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           Selecciona los alumnos para esta sesión.
         </p>
         <span className="text-xs font-semibold text-foreground">
-          {state.studentIds.length} seleccionado{state.studentIds.length !== 1 ? "s" : ""}
+          {state.studentIds.length} seleccionado
+          {state.studentIds.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -125,12 +126,18 @@ export function StepStudents({ state, update }: StepStudentsProps) {
                   selected ? "bg-brand border-brand" : "border-border"
                 )}
               >
-                {selected && <Check className="size-3.5 text-brand-foreground" />}
+                {selected && (
+                  <Check className="size-3.5 text-brand-foreground" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {s.name}
+                </p>
                 {s.playerLevel && (
-                  <p className="text-xs text-muted-foreground truncate">{s.playerLevel}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {s.playerLevel}
+                  </p>
                 )}
               </div>
             </button>

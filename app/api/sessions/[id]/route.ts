@@ -76,7 +76,11 @@ export async function GET(_request: Request, context: RouteContext) {
       .orderBy(asc(sessionExercises.orderIndex));
 
     const studentRows = await db
-      .select({ id: students.id, name: students.name, imageUrl: students.imageUrl })
+      .select({
+        id: students.id,
+        name: students.name,
+        imageUrl: students.imageUrl,
+      })
       .from(sessionStudents)
       .innerJoin(students, eq(sessionStudents.studentId, students.id))
       .where(eq(sessionStudents.sessionId, id));
@@ -185,12 +189,18 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const updateValues: Record<string, unknown> = {};
-    if (sessionFields.title !== undefined) updateValues.title = sessionFields.title;
-    if (sessionFields.description !== undefined) updateValues.description = sessionFields.description;
-    if (sessionFields.scheduledAt !== undefined) updateValues.scheduledAt = new Date(sessionFields.scheduledAt);
-    if (sessionFields.objective !== undefined) updateValues.objective = sessionFields.objective;
-    if (sessionFields.intensity !== undefined) updateValues.intensity = sessionFields.intensity;
-    if (sessionFields.location !== undefined) updateValues.location = sessionFields.location;
+    if (sessionFields.title !== undefined)
+      updateValues.title = sessionFields.title;
+    if (sessionFields.description !== undefined)
+      updateValues.description = sessionFields.description;
+    if (sessionFields.scheduledAt !== undefined)
+      updateValues.scheduledAt = new Date(sessionFields.scheduledAt);
+    if (sessionFields.objective !== undefined)
+      updateValues.objective = sessionFields.objective;
+    if (sessionFields.intensity !== undefined)
+      updateValues.intensity = sessionFields.intensity;
+    if (sessionFields.location !== undefined)
+      updateValues.location = sessionFields.location;
     if (tags !== undefined) {
       updateValues.tags =
         tags && tags.length > 0
@@ -237,9 +247,9 @@ export async function PUT(request: Request, context: RouteContext) {
           .delete(sessionStudents)
           .where(eq(sessionStudents.sessionId, id));
         if (unique.length > 0) {
-          await tx.insert(sessionStudents).values(
-            unique.map((studentId) => ({ sessionId: id, studentId }))
-          );
+          await tx
+            .insert(sessionStudents)
+            .values(unique.map((studentId) => ({ sessionId: id, studentId })));
         }
       }
 

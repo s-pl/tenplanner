@@ -13,14 +13,21 @@ export default function ExercisesLoading() {
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/20 rounded-xl p-1 w-fit">
         {[60, 72, 56].map((w, i) => (
-          <div key={i} className="h-8 rounded-lg bg-muted/30" style={{ width: w }} />
+          <div
+            key={i}
+            className="h-8 rounded-lg bg-muted/30"
+            style={{ width: w }}
+          />
         ))}
       </div>
 
       {/* Category strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-16 rounded-xl bg-card border border-border/50" />
+          <div
+            key={i}
+            className="h-16 rounded-xl bg-card border border-border/50"
+          />
         ))}
       </div>
 
@@ -33,7 +40,10 @@ export default function ExercisesLoading() {
       {/* Cards grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div
+            key={i}
+            className="bg-card border border-border rounded-2xl overflow-hidden"
+          >
             <div className="aspect-video w-full bg-muted/30" />
             <div className="p-4 space-y-2">
               <div className="h-4 w-20 rounded-full bg-muted/30" />

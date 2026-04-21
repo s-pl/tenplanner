@@ -23,7 +23,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TenPlanner — Planificador de Entrenamiento de Pádel",
-  description: "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel.",
+  description:
+    "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel.",
 };
 
 export default function RootLayout({
@@ -38,7 +39,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
           try {
             var t = localStorage.getItem('theme');
             var isDark = t ? t === 'dark' : true;
@@ -53,7 +58,9 @@ export default function RootLayout({
             var fm = { sm: '13px', md: '15px', lg: '17px' };
             el.style.fontSize = fm[fs] || '15px';
           } catch(e) {}
-        ` }} />
+        `,
+          }}
+        />
         {children}
       </body>
     </html>

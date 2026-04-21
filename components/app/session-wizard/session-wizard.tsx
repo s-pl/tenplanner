@@ -28,22 +28,34 @@ function defaultScheduledAt() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function validateStep(step: number, state: WizardState): Partial<Record<keyof WizardState, string>> {
+function validateStep(
+  step: number,
+  state: WizardState
+): Partial<Record<keyof WizardState, string>> {
   const errors: Partial<Record<keyof WizardState, string>> = {};
   if (step === 1) {
     if (!state.title.trim()) errors.title = "El título es obligatorio";
-    else if (state.title.trim().length > 255) errors.title = "Máximo 255 caracteres";
-    if (!state.scheduledAt) errors.scheduledAt = "La fecha y hora son obligatorias";
+    else if (state.title.trim().length > 255)
+      errors.title = "Máximo 255 caracteres";
+    if (!state.scheduledAt)
+      errors.scheduledAt = "La fecha y hora son obligatorias";
     else {
       const parsed = new Date(state.scheduledAt);
       if (isNaN(parsed.getTime())) errors.scheduledAt = "Fecha inválida";
     }
-    if (!state.durationMinutes || state.durationMinutes < 5 || state.durationMinutes > 600) {
+    if (
+      !state.durationMinutes ||
+      state.durationMinutes < 5 ||
+      state.durationMinutes > 600
+    ) {
       errors.durationMinutes = "Duración entre 5 y 600 minutos";
     }
   }
   if (step === 2) {
-    if (state.intensity !== null && (state.intensity < 1 || state.intensity > 5)) {
+    if (
+      state.intensity !== null &&
+      (state.intensity < 1 || state.intensity > 5)
+    ) {
       errors.intensity = "Intensidad debe ser 1-5";
     }
     if (state.tags.length > 10) errors.tags = "Máximo 10 etiquetas";
@@ -51,11 +63,17 @@ function validateStep(step: number, state: WizardState): Partial<Record<keyof Wi
   return errors;
 }
 
-export function SessionWizard({ availableExercises, initialExercises }: SessionWizardProps) {
+export function SessionWizard({
+  availableExercises,
+  initialExercises,
+}: SessionWizardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawStep = parseInt(searchParams.get("step") ?? "1", 10);
-  const step = Number.isFinite(rawStep) && rawStep >= 1 && rawStep <= TOTAL_STEPS ? rawStep : 1;
+  const step =
+    Number.isFinite(rawStep) && rawStep >= 1 && rawStep <= TOTAL_STEPS
+      ? rawStep
+      : 1;
 
   const [state, setState] = useState<WizardState>(() => ({
     title: "",
@@ -164,11 +182,19 @@ export function SessionWizard({ availableExercises, initialExercises }: SessionW
       <ProgressIndicator step={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
 
       <div className="min-h-[320px]">
-        {step === 1 && <StepBasics state={state} update={update} errors={visibleErrors} />}
-        {step === 2 && <StepObjective state={state} update={update} errors={visibleErrors} />}
+        {step === 1 && (
+          <StepBasics state={state} update={update} errors={visibleErrors} />
+        )}
+        {step === 2 && (
+          <StepObjective state={state} update={update} errors={visibleErrors} />
+        )}
         {step === 3 && <StepStudents state={state} update={update} />}
         {step === 4 && (
-          <StepExercises state={state} update={update} availableExercises={availableExercises} />
+          <StepExercises
+            state={state}
+            update={update}
+            availableExercises={availableExercises}
+          />
         )}
       </div>
 

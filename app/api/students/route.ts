@@ -9,7 +9,11 @@ function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
-async function ensureUser(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }) {
+async function ensureUser(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}) {
   if (!user.email) return;
   const metadataName =
     typeof user.user_metadata?.full_name === "string"
@@ -25,7 +29,9 @@ async function ensureUser(user: { id: string; email?: string | null; user_metada
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -45,7 +51,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

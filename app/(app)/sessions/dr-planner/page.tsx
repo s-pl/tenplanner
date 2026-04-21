@@ -7,7 +7,9 @@ import { ChatListClient } from "./chat-list-client";
 
 export default async function DrPlannerListPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const chats = await db

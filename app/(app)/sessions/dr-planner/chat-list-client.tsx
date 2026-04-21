@@ -23,7 +23,10 @@ function formatRelative(date: Date): string {
   if (hours < 24) return `Hace ${hours}h`;
   if (days === 1) return "Ayer";
   if (days < 7) return `Hace ${days} días`;
-  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(date));
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(date));
 }
 
 export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
@@ -49,7 +52,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
     setDeletingId(id);
     try {
       await fetch(`/api/dr-planner/chats/${id}`, { method: "DELETE" });
-      setChats(prev => prev.filter(c => c.id !== id));
+      setChats((prev) => prev.filter((c) => c.id !== id));
     } finally {
       setDeletingId(null);
     }
@@ -76,7 +79,9 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               >
                 ← Sesiones
               </Link>
-              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">/</span>
+              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">
+                /
+              </span>
               <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
                 Dr. Planner · IA
               </p>
@@ -87,19 +92,25 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
           </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-6">
             <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-              Conversaciones con el <em className="italic text-brand">doctor</em>.
+              Conversaciones con el{" "}
+              <em className="italic text-brand">doctor</em>.
             </h1>
             <button
               onClick={handleNewChat}
               disabled={creating}
               className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase disabled:opacity-50"
             >
-              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" strokeWidth={2} />}
+              {creating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Plus className="size-3.5" strokeWidth={2} />
+              )}
               Nueva conversación
             </button>
           </div>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            Asistente de diseño de sesiones de pádel. Explícale contexto, restricciones y objetivos — él propone la planificación.
+            Asistente de diseño de sesiones de pádel. Explícale contexto,
+            restricciones y objetivos — él propone la planificación.
           </p>
         </header>
 
@@ -110,17 +121,23 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               Archivo vacío
             </p>
             <h2 className="font-heading text-3xl text-foreground mb-3">
-              Aún no has hablado con <em className="italic text-brand">Dr. Planner</em>.
+              Aún no has hablado con{" "}
+              <em className="italic text-brand">Dr. Planner</em>.
             </h2>
             <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
-              Inicia una conversación para diseñar tu próxima sesión con la ayuda de la IA.
+              Inicia una conversación para diseñar tu próxima sesión con la
+              ayuda de la IA.
             </p>
             <button
               onClick={handleNewChat}
               disabled={creating}
               className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase disabled:opacity-50"
             >
-              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" strokeWidth={2} />}
+              {creating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Plus className="size-3.5" strokeWidth={2} />
+              )}
               Iniciar conversación
             </button>
           </div>
@@ -139,7 +156,10 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
             </div>
             <ul>
               {chats.map((chat, idx) => (
-                <li key={chat.id} className="border-b border-foreground/10 group">
+                <li
+                  key={chat.id}
+                  className="border-b border-foreground/10 group"
+                >
                   <div className="relative">
                     <Link
                       href={`/sessions/dr-planner/${chat.id}`}
@@ -161,14 +181,16 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
                       </span>
                     </Link>
                     <button
-                      onClick={e => handleDelete(chat.id, e)}
+                      onClick={(e) => handleDelete(chat.id, e)}
                       disabled={deletingId === chat.id}
                       className="absolute right-1 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-foreground/35 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                       aria-label="Eliminar"
                     >
-                      {deletingId === chat.id
-                        ? <Loader2 className="size-3.5 animate-spin" />
-                        : <Trash2 className="size-3.5" strokeWidth={1.6} />}
+                      {deletingId === chat.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" strokeWidth={1.6} />
+                      )}
                     </button>
                   </div>
                 </li>

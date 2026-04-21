@@ -13,7 +13,9 @@ export default async function ExercisePage({ params }: PageProps) {
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   let exercise;
@@ -21,7 +23,11 @@ export default async function ExercisePage({ params }: PageProps) {
   try {
     const [exerciseResult, userResult] = await Promise.all([
       db.select().from(exercises).where(eq(exercises.id, id)).limit(1),
-      db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, user.id)).limit(1),
+      db
+        .select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1),
     ]);
     exercise = exerciseResult[0];
     dbUser = userResult[0];
@@ -46,9 +52,14 @@ export default async function ExercisePage({ params }: PageProps) {
         difficulty: exercise.difficulty,
         durationMinutes: exercise.durationMinutes,
         objectives: exercise.objectives ?? null,
-        steps: (exercise.steps as Array<{ title: string; description: string }> | null) ?? null,
+        steps:
+          (exercise.steps as Array<{
+            title: string;
+            description: string;
+          }> | null) ?? null,
         materials: (exercise.materials as string[] | null) ?? null,
-        location: (exercise.location as "indoor" | "outdoor" | "any" | null) ?? null,
+        location:
+          (exercise.location as "indoor" | "outdoor" | "any" | null) ?? null,
         videoUrl: exercise.videoUrl ?? null,
         tips: exercise.tips ?? null,
         imageUrl: exercise.imageUrl ?? null,

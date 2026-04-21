@@ -20,7 +20,11 @@ function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
-async function ensureUser(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }) {
+async function ensureUser(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}) {
   if (!user.email) return;
   const metadataName =
     typeof user.user_metadata?.full_name === "string"
@@ -102,7 +106,12 @@ export async function GET(request: NextRequest) {
     if (sessionRows.length === 0) {
       return NextResponse.json({
         data: [],
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 },
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 0,
+        },
       });
     }
 
@@ -233,9 +242,10 @@ export async function POST(request: Request) {
     const computedDuration = await calculateDuration(exerciseItems);
     const durationMinutes = providedDuration ?? computedDuration ?? 60;
 
-    const normalizedTags = tags && tags.length > 0
-      ? Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)))
-      : null;
+    const normalizedTags =
+      tags && tags.length > 0
+        ? Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)))
+        : null;
 
     const result = await db.transaction(async (tx) => {
       const [session] = await tx

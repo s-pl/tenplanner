@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
 
-type PlayerLevel = "beginner" | "amateur" | "intermediate" | "advanced" | "competitive";
+type PlayerLevel =
+  | "beginner"
+  | "amateur"
+  | "intermediate"
+  | "advanced"
+  | "competitive";
 
 const LEVEL_LABEL: Record<PlayerLevel, string> = {
   beginner: "Principiante",
@@ -29,12 +34,20 @@ interface PageProps {
 }
 
 function initialsFromName(name: string) {
-  return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 export default async function StudentsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { q } = await searchParams;
@@ -55,7 +68,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
       if (lvl) acc[lvl] = (acc[lvl] ?? 0) + 1;
       return acc;
     },
-    { beginner: 0, amateur: 0, intermediate: 0, advanced: 0, competitive: 0 },
+    { beginner: 0, amateur: 0, intermediate: 0, advanced: 0, competitive: 0 }
   );
 
   return (
@@ -96,7 +109,9 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             )}
           </div>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {rows.length} alumno{rows.length !== 1 ? "s" : ""} registrado{rows.length !== 1 ? "s" : ""} · fichas individuales con histórico y nivel.
+            {rows.length} alumno{rows.length !== 1 ? "s" : ""} registrado
+            {rows.length !== 1 ? "s" : ""} · fichas individuales con histórico y
+            nivel.
           </p>
         </header>
 
@@ -151,7 +166,8 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               Todavía no tienes <em className="italic text-brand">alumnos</em>.
             </h2>
             <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
-              Crea tu primera ficha para empezar a planificar sesiones personalizadas.
+              Crea tu primera ficha para empezar a planificar sesiones
+              personalizadas.
             </p>
             <Link
               href="/students/new"
@@ -167,7 +183,8 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               Sin resultados
             </p>
             <p className="font-heading text-2xl text-foreground mb-3">
-              Ningún alumno coincide con &ldquo;<em className="italic text-brand">{q}</em>&rdquo;.
+              Ningún alumno coincide con &ldquo;
+              <em className="italic text-brand">{q}</em>&rdquo;.
             </p>
             <Link
               href="/students"
@@ -191,7 +208,10 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                 const level = student.playerLevel as PlayerLevel | null;
                 const n = String(idx + 1).padStart(3, "0");
                 return (
-                  <li key={student.id} className="border-b border-foreground/10">
+                  <li
+                    key={student.id}
+                    className="border-b border-foreground/10"
+                  >
                     <Link
                       href={`/students/${student.id}`}
                       className="group grid grid-cols-[auto_auto_1fr_auto_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] transition-colors px-1"
@@ -202,7 +222,11 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                       <div className="size-10 rounded-full border border-foreground/20 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
                         {student.imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={student.imageUrl} alt={student.name} className="size-full object-cover" />
+                          <img
+                            src={student.imageUrl}
+                            alt={student.name}
+                            className="size-full object-cover"
+                          />
                         ) : (
                           <span className="font-heading text-[12px] text-foreground/75">
                             {initialsFromName(student.name)}
@@ -247,7 +271,8 @@ export default async function StudentsPage({ searchParams }: PageProps) {
         {/* Footnote */}
         <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
           <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
-            &ldquo;Un buen entrenador conoce a sus alumnos antes de diseñar su primera sesión.&rdquo;
+            &ldquo;Un buen entrenador conoce a sus alumnos antes de diseñar su
+            primera sesión.&rdquo;
           </p>
           <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
             /tenplanner · 04

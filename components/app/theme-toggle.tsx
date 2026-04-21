@@ -9,9 +9,11 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem("theme");
+    /* eslint-disable react-hooks/set-state-in-effect -- hydration-safe read from localStorage */
+    setMounted(true);
     setIsDark(stored ? stored === "dark" : true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   function toggle() {
@@ -36,7 +38,11 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
           : "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
       }
     >
-      {isDark ? <Sun className="size-4 shrink-0" /> : <Moon className="size-4 shrink-0" />}
+      {isDark ? (
+        <Sun className="size-4 shrink-0" />
+      ) : (
+        <Moon className="size-4 shrink-0" />
+      )}
       {!compact && <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>}
     </button>
   );

@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/auth/callback"];
+const PUBLIC_PREFIXES = ["/login", "/register", "/auth/callback", "/s/"];
+const PUBLIC_EXACT = new Set(["/"]);
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -41,7 +42,8 @@ export async function proxy(request: NextRequest) {
   const isProfileBootstrapApi =
     pathname === "/api/users" && request.method === "POST" && hasBearerToken;
   const isPublic =
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    PUBLIC_EXACT.has(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p)) ||
     isExercisesReadApi ||
     isProfileBootstrapApi;
   const isApiRoute = pathname.startsWith("/api/");

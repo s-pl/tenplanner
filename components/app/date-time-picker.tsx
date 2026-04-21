@@ -6,8 +6,18 @@ import { cn } from "@/lib/utils";
 
 const DAYS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
 const MONTHS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
 function getDaysInMonth(year: number, month: number) {
@@ -26,17 +36,31 @@ interface DateTimePickerProps {
   error?: boolean;
 }
 
-export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) {
+export function DateTimePicker({
+  value,
+  onChange,
+  error,
+}: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const rawParsed = value ? new Date(value.includes("T") ? value : `${value}T00:00`) : null;
+  const rawParsed = value
+    ? new Date(value.includes("T") ? value : `${value}T00:00`)
+    : null;
   const parsed = rawParsed && !isNaN(rawParsed.getTime()) ? rawParsed : null;
 
-  const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? new Date().getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsed?.getMonth() ?? new Date().getMonth());
-  const [hour, setHour] = useState(parsed ? String(parsed.getHours()).padStart(2, "0") : "10");
-  const [minute, setMinute] = useState(parsed ? String(parsed.getMinutes()).padStart(2, "0") : "00");
+  const [viewYear, setViewYear] = useState(
+    parsed?.getFullYear() ?? new Date().getFullYear()
+  );
+  const [viewMonth, setViewMonth] = useState(
+    parsed?.getMonth() ?? new Date().getMonth()
+  );
+  const [hour, setHour] = useState(
+    parsed ? String(parsed.getHours()).padStart(2, "0") : "10"
+  );
+  const [minute, setMinute] = useState(
+    parsed ? String(parsed.getMinutes()).padStart(2, "0") : "00"
+  );
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -62,23 +86,30 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
     const mNum = Math.min(59, Math.max(0, parseInt(m, 10) || 0));
     const mo = String(viewMonth + 1).padStart(2, "0");
     const dd = String(parsed.getDate()).padStart(2, "0");
-    onChange(`${viewYear}-${mo}-${dd}T${String(hNum).padStart(2, "0")}:${String(mNum).padStart(2, "0")}`);
+    onChange(
+      `${viewYear}-${mo}-${dd}T${String(hNum).padStart(2, "0")}:${String(mNum).padStart(2, "0")}`
+    );
   }
 
   function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
-    else setViewMonth((m) => m - 1);
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
   }
 
   function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
-    else setViewMonth((m) => m + 1);
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
   }
 
   const selectedDay = parsed?.getDate();
   const selectedMonth = parsed?.getMonth();
   const selectedYear = parsed?.getFullYear();
-  const isSelectedInView = selectedYear === viewYear && selectedMonth === viewMonth;
+  const isSelectedInView =
+    selectedYear === viewYear && selectedMonth === viewMonth;
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDow = getFirstDayOfWeek(viewYear, viewMonth);
@@ -135,7 +166,10 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] font-semibold text-muted-foreground py-1">
+              <div
+                key={d}
+                className="text-center text-[10px] font-semibold text-muted-foreground py-1"
+              >
                 {d}
               </div>
             ))}
@@ -164,8 +198,8 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
                     isSelected
                       ? "bg-brand text-brand-foreground"
                       : isToday
-                      ? "border border-brand/40 text-brand hover:bg-brand/10"
-                      : "text-foreground hover:bg-muted"
+                        ? "border border-brand/40 text-brand hover:bg-brand/10"
+                        : "text-foreground hover:bg-muted"
                   )}
                 >
                   {day}
@@ -178,7 +212,9 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
           <div className="mt-4 pt-3 border-t border-border">
             <div className="flex items-center gap-2">
               <Clock className="size-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground">Hora</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                Hora
+              </span>
               <div className="flex items-center gap-1 ml-auto">
                 <input
                   type="number"
@@ -188,11 +224,18 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
                   onChange={(e) => {
                     const raw = e.target.value;
                     setHour(raw);
-                    const clamped = String(Math.min(23, Math.max(0, parseInt(raw, 10) || 0))).padStart(2, "0");
+                    const clamped = String(
+                      Math.min(23, Math.max(0, parseInt(raw, 10) || 0))
+                    ).padStart(2, "0");
                     applyTime(clamped, minute);
                   }}
                   onBlur={(e) => {
-                    const clamped = String(Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 0))).padStart(2, "0");
+                    const clamped = String(
+                      Math.min(
+                        23,
+                        Math.max(0, parseInt(e.target.value, 10) || 0)
+                      )
+                    ).padStart(2, "0");
                     setHour(clamped);
                   }}
                   className="w-12 h-8 text-center text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 text-foreground"
@@ -206,11 +249,18 @@ export function DateTimePicker({ value, onChange, error }: DateTimePickerProps) 
                   onChange={(e) => {
                     const raw = e.target.value;
                     setMinute(raw);
-                    const clamped = String(Math.min(59, Math.max(0, parseInt(raw, 10) || 0))).padStart(2, "0");
+                    const clamped = String(
+                      Math.min(59, Math.max(0, parseInt(raw, 10) || 0))
+                    ).padStart(2, "0");
                     applyTime(hour, clamped);
                   }}
                   onBlur={(e) => {
-                    const clamped = String(Math.min(59, Math.max(0, parseInt(e.target.value, 10) || 0))).padStart(2, "0");
+                    const clamped = String(
+                      Math.min(
+                        59,
+                        Math.max(0, parseInt(e.target.value, 10) || 0)
+                      )
+                    ).padStart(2, "0");
                     setMinute(clamped);
                   }}
                   className="w-12 h-8 text-center text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 text-foreground"

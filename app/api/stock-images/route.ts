@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-
-
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim();
   const page = request.nextUrl.searchParams.get("page") ?? "1";
@@ -11,7 +9,10 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "PEXELS_API_KEY no configurada. Añádela al .env para usar búsqueda de stock." },
+      {
+        error:
+          "PEXELS_API_KEY no configurada. Añádela al .env para usar búsqueda de stock.",
+      },
       { status: 503 }
     );
   }
@@ -26,7 +27,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Error al buscar imágenes" },
+      {
+        error: err instanceof Error ? err.message : "Error al buscar imágenes",
+      },
       { status: 502 }
     );
   }

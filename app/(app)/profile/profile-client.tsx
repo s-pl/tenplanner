@@ -3,30 +3,44 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { ACCENT_COLORS, applyAccentColor, applyFontSize } from "@/lib/accent-colors";
+import {
+  ACCENT_COLORS,
+  applyAccentColor,
+  applyFontSize,
+} from "@/lib/accent-colors";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
-  Mail, Trash2, CheckCircle2, FileJson, FileText, Loader2, Camera,
+  Mail,
+  Trash2,
+  CheckCircle2,
+  FileJson,
+  FileText,
+  Loader2,
+  Camera,
+  Activity,
+  Clock,
+  Calendar,
+  Dumbbell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ROLES = [
-  { id: "coach",  label: "Entrenador" },
+  { id: "coach", label: "Entrenador" },
   { id: "player", label: "Jugador" },
-  { id: "both",   label: "Entrenador & Jugador" },
+  { id: "both", label: "Entrenador & Jugador" },
 ];
 
 const LEVELS = [
-  { id: "beginner",     label: "Principiante" },
+  { id: "beginner", label: "Principiante" },
   { id: "intermediate", label: "Intermedio" },
-  { id: "advanced",     label: "Avanzado" },
-  { id: "pro",          label: "Profesional" },
+  { id: "advanced", label: "Avanzado" },
+  { id: "pro", label: "Profesional" },
 ];
 
 const FONT_SIZES = [
-  { id: "sm", label: "A",  size: "text-xs",   desc: "Compacto" },
-  { id: "md", label: "A",  size: "text-sm",   desc: "Normal" },
-  { id: "lg", label: "A",  size: "text-base", desc: "Grande" },
+  { id: "sm", label: "A", size: "text-xs", desc: "Compacto" },
+  { id: "md", label: "A", size: "text-sm", desc: "Normal" },
+  { id: "lg", label: "A", size: "text-base", desc: "Grande" },
 ];
 
 type Tab = "profile" | "appearance" | "stats" | "data";
@@ -53,35 +67,37 @@ interface ProfileClientProps {
 }
 
 const TABS: { id: Tab; label: string; code: string }[] = [
-  { id: "profile",    label: "Perfil",       code: "01" },
-  { id: "appearance", label: "Apariencia",   code: "02" },
-  { id: "stats",      label: "Estadísticas", code: "03" },
-  { id: "data",       label: "Datos",        code: "04" },
+  { id: "profile", label: "Perfil", code: "01" },
+  { id: "appearance", label: "Apariencia", code: "02" },
+  { id: "stats", label: "Estadísticas", code: "03" },
+  { id: "data", label: "Datos", code: "04" },
 ];
 
 export function ProfileClient({ user, stats }: ProfileClientProps) {
   const [tab, setTab] = useState<Tab>("profile");
 
   // Profile state
-  const [name, setName]                       = useState(user.full_name ?? "");
-  const [role, setRole]                       = useState(user.role ?? "coach");
-  const [level, setLevel]                     = useState(user.skill_level ?? "intermediate");
-  const [bio, setBio]                         = useState(user.bio ?? "");
-  const [avatarUrl, setAvatarUrl]             = useState<string | null>(user.avatar_url ?? null);
+  const [name, setName] = useState(user.full_name ?? "");
+  const [role, setRole] = useState(user.role ?? "coach");
+  const [level, setLevel] = useState(user.skill_level ?? "intermediate");
+  const [bio, setBio] = useState(user.bio ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    user.avatar_url ?? null
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarError, setAvatarError]         = useState<string | null>(null);
-  const avatarInputRef                        = useRef<HTMLInputElement>(null);
-  const [saving, setSaving]                   = useState(false);
-  const [saved, setSaved]                     = useState(false);
-  const [profileError, setProfileError]       = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   // Appearance state
-  const [accent, setAccent]     = useState("green");
+  const [accent, setAccent] = useState("green");
   const [fontSize, setFontSize] = useState("md");
 
   // Export state
   const [exportingJson, setExportingJson] = useState(false);
-  const [exportingCsv, setExportingCsv]   = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   useEffect(() => {
     setAccent(localStorage.getItem("accent") ?? "green");
@@ -101,18 +117,32 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   }
 
   async function handleAvatarUpload(file: File) {
-    if (!file.type.startsWith("image/")) { setAvatarError("Solo se admiten imágenes"); return; }
-    if (file.size > 5 * 1024 * 1024) { setAvatarError("Máximo 5 MB"); return; }
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Solo se admiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError("Máximo 5 MB");
+      return;
+    }
     setAvatarUploading(true);
     setAvatarError(null);
     try {
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${user.id}.${ext}`;
       const supabase = createClient();
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      await fetch("/api/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: publicUrl }) });
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(path);
+      await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: publicUrl }),
+      });
       setAvatarUrl(publicUrl);
     } catch (e: unknown) {
       setAvatarError(e instanceof Error ? e.message : "Error al subir la foto");
@@ -162,11 +192,19 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
       const res = await fetch("/api/export");
       const data = await res.json();
       const sessions = data.sessions ?? [];
-      const headers = ["id", "title", "description", "scheduled_at", "duration_minutes"];
+      const headers = [
+        "id",
+        "title",
+        "description",
+        "scheduled_at",
+        "duration_minutes",
+      ];
       const rows = sessions.map((s: Record<string, unknown>) =>
         headers.map((h) => JSON.stringify(s[h] ?? "")).join(",")
       );
-      const blob = new Blob([[headers.join(","), ...rows].join("\n")], { type: "text/csv" });
+      const blob = new Blob([[headers.join(","), ...rows].join("\n")], {
+        type: "text/csv",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -179,56 +217,148 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   }
 
   const totalHours = Math.round(stats.totalMinutes / 60);
-  const initials = name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?";
+  const initials =
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?";
   const currentAccentMeta = ACCENT_COLORS.find((c) => c.id === accent);
 
   return (
     <div className="space-y-8">
-      {/* Identity strip */}
-      <section className="grid grid-cols-[auto_1fr_auto] items-center gap-6 border-y border-foreground/15 py-6">
-        <div className="relative">
-          <div className="size-20 rounded-full border border-foreground/25 bg-foreground/[0.02] overflow-hidden flex items-center justify-center">
-            {avatarUrl ? (
-              <Image src={avatarUrl} alt={name} width={80} height={80} className="size-full object-cover" />
-            ) : (
-              <span className="font-heading text-2xl text-foreground/80">{initials}</span>
-            )}
+      {/* Identity hero */}
+      <section className="relative overflow-hidden rounded-3xl border border-foreground/15 bg-foreground/[0.015]">
+        {/* Gradient banner */}
+        <div className="relative h-28 sm:h-32 overflow-hidden">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-br from-brand/30 via-brand/10 to-transparent"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.08]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 14px)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute -top-16 -right-10 size-56 rounded-full bg-brand/25 blur-3xl"
+          />
+        </div>
+
+        <div className="px-5 sm:px-8 pb-6 -mt-14">
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] md:items-end gap-5">
+            {/* Avatar */}
+            <div className="relative w-fit">
+              <div className="size-28 rounded-full border-4 border-background bg-foreground/[0.04] overflow-hidden shadow-xl shadow-brand/10 ring-1 ring-brand/30 flex items-center justify-center">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={name}
+                    width={112}
+                    height={112}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <span className="font-heading text-3xl text-foreground/75">
+                    {initials}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                title="Cambiar foto"
+                className="absolute bottom-1 right-1 size-8 rounded-full bg-background border border-foreground/20 shadow-sm flex items-center justify-center text-foreground/65 hover:text-brand hover:border-brand transition-colors disabled:opacity-60"
+              >
+                {avatarUploading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Camera className="size-3.5" strokeWidth={1.6} />
+                )}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleAvatarUpload(f);
+                }}
+              />
+            </div>
+
+            {/* Name + email + pills */}
+            <div className="min-w-0 md:pb-1">
+              <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-1">
+                Identidad · № 06
+              </p>
+              <h2 className="font-heading text-3xl sm:text-4xl italic text-foreground leading-tight truncate">
+                {name || "Tu nombre"}
+              </h2>
+              <p className="text-[12px] text-foreground/55 truncate mt-1 tabular-nums">
+                {user.email}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-brand/10 text-brand border border-brand/25 font-medium">
+                  <span className="size-1.5 rounded-full bg-brand" />
+                  {ROLES.find((r) => r.id === role)?.label ?? "—"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-foreground/5 text-foreground/75 border border-foreground/15">
+                  {LEVELS.find((l) => l.id === level)?.label ?? "—"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-foreground/5 text-foreground/60 border border-foreground/15 capitalize">
+                  {user.provider === "google" ? "Google" : "Correo"}
+                </span>
+              </div>
+              {avatarError && (
+                <p className="text-[11px] text-destructive mt-2">
+                  {avatarError}
+                </p>
+              )}
+            </div>
+
+            {/* Micro stats */}
+            <dl className="hidden md:grid grid-cols-3 gap-2 md:pb-1">
+              {[
+                {
+                  icon: Activity,
+                  label: "Sesiones",
+                  value: stats.totalSessions,
+                },
+                {
+                  icon: Clock,
+                  label: "Horas",
+                  value: totalHours,
+                },
+                {
+                  icon: Calendar,
+                  label: "Próx.",
+                  value: stats.upcomingSessions,
+                },
+              ].map(({ icon: Icon, label, value }) => (
+                <div
+                  key={label}
+                  className="text-right bg-background/60 backdrop-blur border border-foreground/12 rounded-xl px-3 py-2.5 min-w-[76px]"
+                >
+                  <div className="flex items-center justify-end gap-1 text-foreground/45">
+                    <Icon className="size-3" strokeWidth={1.6} />
+                    <dt className="font-sans text-[9px] uppercase tracking-[0.22em]">
+                      {label}
+                    </dt>
+                  </div>
+                  <dd className="font-heading text-xl tabular-nums text-foreground mt-0.5 leading-none">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <button
-            onClick={() => avatarInputRef.current?.click()}
-            disabled={avatarUploading}
-            title="Cambiar foto"
-            className="absolute -bottom-1 -right-1 size-7 rounded-full bg-background border border-foreground/25 flex items-center justify-center hover:border-brand hover:text-brand transition-colors"
-          >
-            {avatarUploading ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" strokeWidth={1.6} />}
-          </button>
-          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
-        </div>
-        <div className="min-w-0">
-          <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-1">
-            Identidad
-          </p>
-          <p className="font-heading italic text-2xl text-foreground truncate">
-            {name || "Tu nombre"}
-          </p>
-          <p className="text-[12px] text-foreground/55 truncate mt-0.5 tabular-nums">
-            {user.email}
-          </p>
-          {avatarError && (
-            <p className="text-[11px] text-destructive mt-1">{avatarError}</p>
-          )}
-        </div>
-        <div className="hidden md:flex flex-col items-end">
-          <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
-            Rol · Nivel
-          </p>
-          <p className="text-[13px] text-foreground">
-            {ROLES.find((r) => r.id === role)?.label ?? "—"}
-          </p>
-          <p className="text-[11px] text-foreground/55 tabular-nums mt-0.5">
-            {LEVELS.find((l) => l.id === level)?.label ?? "—"}
-          </p>
         </div>
       </section>
 
@@ -247,13 +377,17 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   : "border-transparent text-foreground/55 hover:text-foreground"
               )}
             >
-              <span className={cn(
-                "font-sans text-[10px] tabular-nums tracking-[0.22em]",
-                isActive ? "text-brand" : "text-foreground/40"
-              )}>
+              <span
+                className={cn(
+                  "font-sans text-[10px] tabular-nums tracking-[0.22em]",
+                  isActive ? "text-brand" : "text-foreground/40"
+                )}
+              >
                 {code}
               </span>
-              <span className={cn("text-[14px]", isActive && "font-heading italic")}>
+              <span
+                className={cn("text-[14px]", isActive && "font-heading italic")}
+              >
                 {label}
               </span>
             </button>
@@ -266,7 +400,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label htmlFor="name" className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+              <label
+                htmlFor="name"
+                className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2"
+              >
                 Nombre para mostrar
               </label>
               <input
@@ -280,7 +417,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             </div>
             <div>
               <label className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
-                <Mail className="inline size-3 mr-1 -mt-0.5" strokeWidth={1.6} />
+                <Mail
+                  className="inline size-3 mr-1 -mt-0.5"
+                  strokeWidth={1.6}
+                />
                 Correo electrónico
               </label>
               <input
@@ -339,8 +479,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </div>
 
           <div>
-            <label htmlFor="bio" className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
-              Bio <span className="text-foreground/35 normal-case tracking-normal">· opcional</span>
+            <label
+              htmlFor="bio"
+              className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2"
+            >
+              Bio{" "}
+              <span className="text-foreground/35 normal-case tracking-normal">
+                · opcional
+              </span>
             </label>
             <textarea
               id="bio"
@@ -389,7 +535,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         <div className="space-y-10">
           <div>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">A</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                A
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                 Color de acento
               </p>
@@ -415,7 +563,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     style={{ backgroundColor: c.preview }}
                   />
                   {c.label}
-                  {accent === c.id && <span className="text-[10px] tracking-[0.22em] text-brand">◆</span>}
+                  {accent === c.id && (
+                    <span className="text-[10px] tracking-[0.22em] text-brand">
+                      ◆
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -428,7 +580,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
           <div>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">B</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                B
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                 Tamaño del texto
               </p>
@@ -447,7 +601,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   )}
                 >
                   <span className={cn("font-bold", f.size)}>{f.label}</span>
-                  <span className="font-sans text-[9px] uppercase tracking-[0.22em] mt-0.5">{f.desc}</span>
+                  <span className="font-sans text-[9px] uppercase tracking-[0.22em] mt-0.5">
+                    {f.desc}
+                  </span>
                 </button>
               ))}
             </div>
@@ -455,13 +611,16 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
           <div>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">C</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                C
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                 Tema
               </p>
             </div>
             <p className="text-[12px] text-foreground/55 mt-3 mb-4">
-              El modo oscuro está pensado para sesiones de entrenamiento nocturnas.
+              El modo oscuro está pensado para sesiones de entrenamiento
+              nocturnas.
             </p>
             <div className="w-fit">
               <ThemeToggle />
@@ -473,24 +632,63 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
       {/* ── STATS ── */}
       {tab === "stats" && (
         <div className="space-y-10">
-          <section className="grid grid-cols-2 md:grid-cols-4 border-y border-foreground/15">
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Sesiones totales",    value: stats.totalSessions, accent: true },
-              { label: "Horas entrenadas",     value: `${totalHours}h` },
-              { label: "Ejercicios (biblioteca)", value: stats.totalExercises },
-              { label: "Próximas sesiones",   value: stats.upcomingSessions },
-            ].map(({ label, value, accent: isAccent }, i) => (
+              {
+                label: "Sesiones totales",
+                value: stats.totalSessions,
+                icon: Activity,
+                accent: true,
+              },
+              {
+                label: "Horas entrenadas",
+                value: `${totalHours}h`,
+                icon: Clock,
+              },
+              {
+                label: "Biblioteca",
+                value: stats.totalExercises,
+                icon: Dumbbell,
+              },
+              {
+                label: "Próximas",
+                value: stats.upcomingSessions,
+                icon: Calendar,
+              },
+            ].map(({ label, value, icon: Icon, accent: isAccent }) => (
               <div
                 key={label}
-                className={cn("px-4 py-6", i > 0 && "border-l border-foreground/10")}
+                className={cn(
+                  "relative overflow-hidden rounded-2xl border p-5 transition-colors",
+                  isAccent
+                    ? "border-brand/25 bg-brand/5 hover:bg-brand/[0.07]"
+                    : "border-foreground/15 bg-foreground/[0.015] hover:bg-foreground/[0.03]"
+                )}
               >
-                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
-                  {label}
-                </p>
-                <p className={cn(
-                  "font-heading text-4xl tabular-nums leading-none",
-                  isAccent ? "text-brand" : "text-foreground"
-                )}>
+                {isAccent && (
+                  <div
+                    aria-hidden
+                    className="absolute -top-8 -right-8 size-24 rounded-full bg-brand/15 blur-2xl"
+                  />
+                )}
+                <div className="relative flex items-center gap-1.5 text-foreground/55 mb-3">
+                  <Icon
+                    className={cn(
+                      "size-3.5",
+                      isAccent ? "text-brand" : "text-foreground/55"
+                    )}
+                    strokeWidth={1.6}
+                  />
+                  <p className="font-sans text-[9px] uppercase tracking-[0.22em]">
+                    {label}
+                  </p>
+                </div>
+                <p
+                  className={cn(
+                    "relative font-heading text-4xl tabular-nums leading-none",
+                    isAccent ? "text-brand" : "text-foreground"
+                  )}
+                >
                   {value}
                 </p>
               </div>
@@ -499,7 +697,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
           <section>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">·</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                ·
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                 Cuenta · detalles
               </p>
@@ -507,15 +707,34 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             <dl className="divide-y divide-foreground/10">
               {[
                 { label: "Correo electrónico", value: user.email ?? "—" },
-                { label: "Método de acceso",  value: user.provider === "google" ? "Google OAuth" : "Correo y contraseña" },
-                { label: "Miembro desde",     value: user.created_at ? new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(user.created_at)) : "—" },
-                { label: "Estado",            value: "Activo" },
+                {
+                  label: "Método de acceso",
+                  value:
+                    user.provider === "google"
+                      ? "Google OAuth"
+                      : "Correo y contraseña",
+                },
+                {
+                  label: "Miembro desde",
+                  value: user.created_at
+                    ? new Intl.DateTimeFormat("es-ES", {
+                        month: "long",
+                        year: "numeric",
+                      }).format(new Date(user.created_at))
+                    : "—",
+                },
+                { label: "Estado", value: "Activo" },
               ].map(({ label, value }) => (
-                <div key={label} className="grid grid-cols-[1fr_auto] gap-4 py-3.5 items-baseline">
+                <div
+                  key={label}
+                  className="grid grid-cols-[1fr_auto] gap-4 py-3.5 items-baseline"
+                >
                   <dt className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                     {label}
                   </dt>
-                  <dd className="text-[13px] text-foreground tabular-nums">{value}</dd>
+                  <dd className="text-[13px] text-foreground tabular-nums">
+                    {value}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -528,7 +747,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         <div className="space-y-10">
           <section>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">01</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                01
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                 Exportar · copia de tus datos
               </p>
@@ -542,7 +763,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 disabled={exportingJson}
                 className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors disabled:opacity-60"
               >
-                {exportingJson ? <Loader2 className="size-3.5 animate-spin" /> : <FileJson className="size-3.5 text-brand" strokeWidth={1.6} />}
+                {exportingJson ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <FileJson className="size-3.5 text-brand" strokeWidth={1.6} />
+                )}
                 JSON · completo
               </button>
               <button
@@ -550,7 +775,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 disabled={exportingCsv}
                 className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors border-l border-foreground/15 disabled:opacity-60"
               >
-                {exportingCsv ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5 text-foreground/60" strokeWidth={1.6} />}
+                {exportingCsv ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <FileText
+                    className="size-3.5 text-foreground/60"
+                    strokeWidth={1.6}
+                  />
+                )}
                 CSV · sesiones
               </button>
             </div>
@@ -561,7 +793,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 "Relaciones sesión–ejercicio",
                 "Metadatos de la cuenta",
               ].map((item) => (
-                <p key={item} className="text-[12px] text-foreground/55 flex items-start gap-2">
+                <p
+                  key={item}
+                  className="text-[12px] text-foreground/55 flex items-start gap-2"
+                >
                   <span className="text-brand mt-0.5">◆</span>
                   {item}
                 </p>
@@ -571,16 +806,21 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
           <section>
             <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-destructive/30">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-destructive">△</p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-destructive">
+                △
+              </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive">
                 Zona de peligro
               </p>
             </div>
             <div className="mt-5 grid grid-cols-[1fr_auto] gap-6 items-start border-l-2 border-destructive/40 pl-4 py-2">
               <div>
-                <p className="font-heading italic text-[15px] text-foreground">Eliminar cuenta</p>
+                <p className="font-heading italic text-[15px] text-foreground">
+                  Eliminar cuenta
+                </p>
                 <p className="text-[12px] text-foreground/55 mt-1 max-w-md">
-                  Elimina permanentemente tu cuenta y todos los datos de entrenamiento. Esta acción no se puede deshacer.
+                  Elimina permanentemente tu cuenta y todos los datos de
+                  entrenamiento. Esta acción no se puede deshacer.
                 </p>
               </div>
               <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors">

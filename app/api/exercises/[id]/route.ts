@@ -104,13 +104,20 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
 
   try {
     const [existing] = await db
-      .select({ id: exercises.id, isGlobal: exercises.isGlobal, createdBy: exercises.createdBy })
+      .select({
+        id: exercises.id,
+        isGlobal: exercises.isGlobal,
+        createdBy: exercises.createdBy,
+      })
       .from(exercises)
       .where(eq(exercises.id, parsedParams.data.id))
       .limit(1);
 
     if (!existing) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Exercise not found" },
+        { status: 404 }
+      );
     }
 
     const isAdmin = await getCurrentUserIsAdmin(user.id);
@@ -118,7 +125,12 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
     if (existing.isGlobal && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (!existing.isGlobal && existing.createdBy && existing.createdBy !== user.id && !isAdmin) {
+    if (
+      !existing.isGlobal &&
+      existing.createdBy &&
+      existing.createdBy !== user.id &&
+      !isAdmin
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -126,9 +138,20 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
     const updateValues: Record<string, unknown> = {};
 
     const fields = [
-      "name", "description", "category", "difficulty", "durationMinutes",
-      "objectives", "imageUrl", "tips", "location", "videoUrl", "steps", "materials",
-      "phase", "intensity",
+      "name",
+      "description",
+      "category",
+      "difficulty",
+      "durationMinutes",
+      "objectives",
+      "imageUrl",
+      "tips",
+      "location",
+      "videoUrl",
+      "steps",
+      "materials",
+      "phase",
+      "intensity",
     ] as const;
 
     for (const field of fields) {
@@ -179,13 +202,20 @@ export async function DELETE(_request: Request, context: ExerciseRouteContext) {
 
   try {
     const [existing] = await db
-      .select({ id: exercises.id, isGlobal: exercises.isGlobal, createdBy: exercises.createdBy })
+      .select({
+        id: exercises.id,
+        isGlobal: exercises.isGlobal,
+        createdBy: exercises.createdBy,
+      })
       .from(exercises)
       .where(eq(exercises.id, parsedParams.data.id))
       .limit(1);
 
     if (!existing) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Exercise not found" },
+        { status: 404 }
+      );
     }
 
     const isAdmin = await getCurrentUserIsAdmin(user.id);
@@ -193,7 +223,12 @@ export async function DELETE(_request: Request, context: ExerciseRouteContext) {
     if (existing.isGlobal && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (!existing.isGlobal && existing.createdBy && existing.createdBy !== user.id && !isAdmin) {
+    if (
+      !existing.isGlobal &&
+      existing.createdBy &&
+      existing.createdBy !== user.id &&
+      !isAdmin
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

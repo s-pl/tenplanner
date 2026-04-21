@@ -35,7 +35,11 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       addTag(tagInput);
-    } else if (e.key === "Backspace" && tagInput === "" && state.tags.length > 0) {
+    } else if (
+      e.key === "Backspace" &&
+      tagInput === "" &&
+      state.tags.length > 0
+    ) {
       removeTag(state.tags.length - 1);
     }
   }
@@ -43,8 +47,12 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <label htmlFor="objective" className="block text-sm font-semibold text-foreground">
-          Objetivo <span className="font-normal text-muted-foreground">(opcional)</span>
+        <label
+          htmlFor="objective"
+          className="block text-sm font-semibold text-foreground"
+        >
+          Objetivo{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         </label>
         <textarea
           id="objective"
@@ -59,7 +67,8 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
 
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-foreground">
-          Intensidad <span className="font-normal text-muted-foreground">(opcional)</span>
+          Intensidad{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         </label>
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map((n) => {
@@ -82,12 +91,18 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
             );
           })}
         </div>
-        {errors.intensity && <p className="text-xs text-destructive">{errors.intensity}</p>}
+        {errors.intensity && (
+          <p className="text-xs text-destructive">{errors.intensity}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="tag-input" className="block text-sm font-semibold text-foreground">
-          Etiquetas <span className="font-normal text-muted-foreground">(máx. 10)</span>
+        <label
+          htmlFor="tag-input"
+          className="block text-sm font-semibold text-foreground"
+        >
+          Etiquetas{" "}
+          <span className="font-normal text-muted-foreground">(máx. 10)</span>
         </label>
         <div className="flex flex-wrap gap-2 p-2 min-h-11 bg-background border border-border rounded-xl focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand/50 transition-colors">
           {state.tags.map((tag, i) => (
@@ -113,7 +128,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={onTagKeyDown}
             onBlur={() => tagInput && addTag(tagInput)}
-            placeholder={state.tags.length === 0 ? "Ej: bandeja, derecha, presión…" : ""}
+            placeholder={
+              state.tags.length === 0 ? "Ej: bandeja, derecha, presión…" : ""
+            }
             disabled={state.tags.length >= 10}
             className="flex-1 min-w-[120px] h-7 px-1 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground"
           />
@@ -121,7 +138,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
         <p className="text-xs text-muted-foreground">
           Pulsa Enter o coma para añadir una etiqueta. {state.tags.length}/10
         </p>
-        {errors.tags && <p className="text-xs text-destructive">{errors.tags}</p>}
+        {errors.tags && (
+          <p className="text-xs text-destructive">{errors.tags}</p>
+        )}
       </div>
     </div>
   );

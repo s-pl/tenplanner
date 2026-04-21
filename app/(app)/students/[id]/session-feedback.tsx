@@ -26,7 +26,11 @@ export function SessionFeedback({
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  function save(nextAttended: boolean | null, nextRating: number | null, nextFeedback: string) {
+  function save(
+    nextAttended: boolean | null,
+    nextRating: number | null,
+    nextFeedback: string
+  ) {
     setSaved(false);
     startTransition(async () => {
       const res = await saveSessionFeedback({
@@ -46,10 +50,16 @@ export function SessionFeedback({
   return (
     <div className="space-y-3 mt-3 pt-3 border-t border-border/60">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Asistencia</span>
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Asistencia
+        </span>
         <button
           type="button"
-          onClick={() => { const v = attended === true ? null : true; setAttended(v); save(v, rating, feedback); }}
+          onClick={() => {
+            const v = attended === true ? null : true;
+            setAttended(v);
+            save(v, rating, feedback);
+          }}
           className={cn(
             "inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors",
             attended === true
@@ -61,7 +71,11 @@ export function SessionFeedback({
         </button>
         <button
           type="button"
-          onClick={() => { const v = attended === false ? null : false; setAttended(v); save(v, rating, feedback); }}
+          onClick={() => {
+            const v = attended === false ? null : false;
+            setAttended(v);
+            save(v, rating, feedback);
+          }}
           className={cn(
             "inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors",
             attended === false
@@ -74,18 +88,26 @@ export function SessionFeedback({
 
         <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           {isPending && <Loader2 className="size-3 animate-spin" />}
-          {saved && !isPending && <span className="text-brand font-medium">Guardado</span>}
+          {saved && !isPending && (
+            <span className="text-brand font-medium">Guardado</span>
+          )}
         </span>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Valoración</span>
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Valoración
+        </span>
         <div className="flex gap-0.5">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
-              onClick={() => { const v = rating === n ? null : n; setRating(v); save(attended, v, feedback); }}
+              onClick={() => {
+                const v = rating === n ? null : n;
+                setRating(v);
+                save(attended, v, feedback);
+              }}
               className="p-0.5 hover:scale-110 transition-transform"
               aria-label={`${n} estrellas`}
             >

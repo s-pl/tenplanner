@@ -20,7 +20,10 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <label htmlFor="title" className="block text-sm font-semibold text-foreground">
+        <label
+          htmlFor="title"
+          className="block text-sm font-semibold text-foreground"
+        >
           Título <span className="text-destructive">*</span>
         </label>
         <input
@@ -36,7 +39,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
             errors.title ? "border-destructive" : "border-border"
           )}
         />
-        {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+        {errors.title && (
+          <p className="text-xs text-destructive">{errors.title}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -95,7 +100,8 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
 
       <div className="space-y-1.5">
         <label className="block text-sm font-semibold text-foreground">
-          Ubicación <span className="font-normal text-muted-foreground">(opcional)</span>
+          Ubicación{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         </label>
         <div className="flex flex-wrap gap-2">
           {LOCATION_OPTIONS.map((loc) => {
