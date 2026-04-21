@@ -193,17 +193,16 @@ function assistantAskedToCreateSession(messages: UIMessage[]): boolean {
 
   return (
     /necesito que confirmes.*(?:crear|creo|crea).*(?:sesion|sesión)/.test(assistantText)
-    || /(?:puedo|puedes|quieres que).*(?:crear|creo|crea).*(?:sesion|sesión)/.test(assistantText)
+    || /(?:puedo|puedes|quieres?(?: que)?).*(?:crear|creo|crea).*(?:sesion|sesión)/.test(assistantText)
     || /responde exactamente.*confirmo/.test(assistantText)
     || /revisa y pulsa.*confirmar.*crear la sesion/.test(assistantText)
+    || /confirmar.*(?:crear|sesion)/.test(assistantText)
     || /falta confirmacion explicita/.test(assistantText)
   );
 }
 
 function hasSessionConfirmation(lastUserText: string, messages: UIMessage[]): boolean {
   if (hasSessionConfirmationPhrase(lastUserText)) return true;
-
-  if (isSimpleNegative(lastUserText)) return false;
 
   if (isSimpleAffirmation(lastUserText) && assistantAskedToCreateSession(messages)) {
     return true;
@@ -214,12 +213,20 @@ function hasSessionConfirmation(lastUserText: string, messages: UIMessage[]): bo
   // mismatch with "sí"). Retraction only via explicit negation of creating the session.
   const userTexts = getUserTexts(messages);
   const hasPriorConfirmation = userTexts.some((text) => hasSessionConfirmationPhrase(text));
+
+  // Simple negative ("no", "nop", etc.): without prior confirmation → no confirmation.
+  // With prior confirmation → only retract if the AI was explicitly asking about creating/canceling the session.
+  // Otherwise "no" is answering a different question and the prior confirmation must remain sticky.
+  if (isSimpleNegative(lastUserText)) {
+    if (!hasPriorConfirmation) return false;
+    return !assistantAskedToCreateSession(messages);
+  }
+
   if (!hasPriorConfirmation) return false;
 
   const normalizedLast = normalizeText(lastUserText);
   const retracted =
     /\b(?:no|cancela|cancelar|anula|anular|para|detente)\b.*\b(?:crear|crea|cree|cree?la|sesion|sesión)\b/.test(normalizedLast)
-    || normalizedLast === "no"
     || normalizedLast === "cancela"
     || normalizedLast === "cancelar";
 
@@ -421,7 +428,7 @@ export async function POST(request: Request) {
     db.select().from(users).where(eq(users.id, user.id)).limit(1),
     db.select({ total: count() }).from(sessions).where(eq(sessions.userId, user.id)),
     db.select(EXERCISE_FIELDS).from(exercises).where(eq(exercises.createdBy, user.id)),
-    db.select(EXERCISE_FIELDS).from(exercises).where(isNull(exercises.createdBy)).limit(60),
+    db.select(EXERCISE_FIELDS).from(exercises).where(or(eq(exercises.isGlobal, true), isNull(exercises.createdBy))).limit(60),
     db.select({
       id: students.id,
       name: students.name,
@@ -777,7 +784,7 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
           if (tipo === "todos") {
             const [exResults, sesResults] = await Promise.all([
               db.select({ id: exercises.id, name: exercises.name, category: exercises.category, difficulty: exercises.difficulty, durationMinutes: exercises.durationMinutes, isAiGenerated: exercises.isAiGenerated })
-                .from(exercises).where(or(eq(exercises.createdBy, user.id), isNull(exercises.createdBy))).limit(20),
+                .from(exercises).where(or(eq(exercises.createdBy, user.id), eq(exercises.isGlobal, true), isNull(exercises.createdBy))).limit(20),
               db.select({ id: sessions.id, title: sessions.title, scheduledAt: sessions.scheduledAt, durationMinutes: sessions.durationMinutes, objective: sessions.objective })
                 .from(sessions).where(and(eq(sessions.userId, user.id), ilike(sessions.title, `%${query}%`))).orderBy(desc(sessions.scheduledAt)).limit(5),
             ]);
@@ -792,7 +799,7 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
               description: exercises.description, objectives: exercises.objectives,
               isAiGenerated: exercises.isAiGenerated,
             }).from(exercises)
-              .where(or(eq(exercises.createdBy, user.id), isNull(exercises.createdBy)))
+              .where(or(eq(exercises.createdBy, user.id), eq(exercises.isGlobal, true), isNull(exercises.createdBy)))
               .limit(20);
             const filtered = results.filter(e => e.name.toLowerCase().includes(q));
             return { tipo: "ejercicio", resultados: filtered.slice(0, 5) };
@@ -872,7 +879,7 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
         execute: async ({ query, categoria, dificultad, duracionMin, duracionMax, soloPersonales }) => {
           const baseCondition = soloPersonales
             ? eq(exercises.createdBy, user.id)
-            : or(eq(exercises.createdBy, user.id), isNull(exercises.createdBy));
+            : or(eq(exercises.createdBy, user.id), eq(exercises.isGlobal, true), isNull(exercises.createdBy));
 
           const conditions = [baseCondition!];
           if (categoria) conditions.push(eq(exercises.category, categoria));
