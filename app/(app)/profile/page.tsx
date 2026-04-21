@@ -35,17 +35,36 @@ export default async function ProfilePage() {
   const upcomingSessions = Number(sessionStats?.upcomingSessions ?? 0);
 
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-          Perfil
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Gestiona tu cuenta, apariencia y datos de entrenamiento
-        </p>
-      </div>
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
+        }}
+      />
+      <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-8">
+        <header className="pb-6 border-b border-foreground/15">
+          <div className="flex items-baseline justify-between gap-4 mb-3">
+            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              Cuenta · Preferencias
+            </p>
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
+              № 06
+            </p>
+          </div>
+          <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
+            Tu <em className="italic text-brand">perfil</em>,
+            <br />
+            tu manera de entrenar.
+          </h1>
+          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
+            Ajusta los datos que te representan, la apariencia de la app y el resumen de tu actividad como entrenador.
+          </p>
+        </header>
 
-      <ProfileClient
+        <ProfileClient
         user={{
           id: user.id,
           email: user.email ?? null,
@@ -65,6 +84,7 @@ export default async function ProfilePage() {
           upcomingSessions,
         }}
       />
+      </div>
     </div>
   );
 }

@@ -6,10 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { ACCENT_COLORS, applyAccentColor, applyFontSize } from "@/lib/accent-colors";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
-  User, Mail, Shield, Trash2, CheckCircle2, Palette, Type,
-  BarChart3, FileJson, FileText, Loader2, Zap, Star, Trophy,
-  Clock, CalendarDays, Dumbbell, Settings, Camera,
+  Mail, Trash2, CheckCircle2, FileJson, FileText, Loader2, Camera,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const ROLES = [
   { id: "coach",  label: "Entrenador" },
@@ -24,20 +23,9 @@ const LEVELS = [
   { id: "pro",          label: "Profesional" },
 ];
 
-const AVATAR_COLORS = [
-  { id: "green",  bg: "bg-emerald-500/15",  text: "text-emerald-400",  hex: "#34d399" },
-  { id: "blue",   bg: "bg-blue-500/15",     text: "text-blue-400",     hex: "#60a5fa" },
-  { id: "violet", bg: "bg-violet-500/15",   text: "text-violet-400",   hex: "#a78bfa" },
-  { id: "amber",  bg: "bg-amber-500/15",    text: "text-amber-400",    hex: "#fbbf24" },
-  { id: "rose",   bg: "bg-rose-500/15",     text: "text-rose-400",     hex: "#fb7185" },
-  { id: "cyan",   bg: "bg-cyan-500/15",     text: "text-cyan-400",     hex: "#22d3ee" },
-  { id: "orange", bg: "bg-orange-500/15",   text: "text-orange-400",   hex: "#fb923c" },
-  { id: "pink",   bg: "bg-pink-500/15",     text: "text-pink-400",     hex: "#f472b6" },
-];
-
 const FONT_SIZES = [
-  { id: "sm", label: "A",  size: "text-xs", desc: "Compacto" },
-  { id: "md", label: "A",  size: "text-sm", desc: "Normal" },
+  { id: "sm", label: "A",  size: "text-xs",   desc: "Compacto" },
+  { id: "md", label: "A",  size: "text-sm",   desc: "Normal" },
   { id: "lg", label: "A",  size: "text-base", desc: "Grande" },
 ];
 
@@ -64,24 +52,28 @@ interface ProfileClientProps {
   };
 }
 
+const TABS: { id: Tab; label: string; code: string }[] = [
+  { id: "profile",    label: "Perfil",       code: "01" },
+  { id: "appearance", label: "Apariencia",   code: "02" },
+  { id: "stats",      label: "Estadísticas", code: "03" },
+  { id: "data",       label: "Datos",        code: "04" },
+];
+
 export function ProfileClient({ user, stats }: ProfileClientProps) {
   const [tab, setTab] = useState<Tab>("profile");
-  const [prevTab, setPrevTab] = useState<Tab>("profile");
-  const [animKey, setAnimKey] = useState(0);
 
   // Profile state
-  const [name, setName]             = useState(user.full_name ?? "");
-  const [role, setRole]             = useState(user.role ?? "coach");
-  const [level, setLevel]           = useState(user.skill_level ?? "intermediate");
-  const [bio, setBio]               = useState(user.bio ?? "");
-  const [avatarColor, setAvatarColor] = useState(user.avatar_color ?? "green");
-  const [avatarUrl, setAvatarUrl]   = useState<string | null>(user.avatar_url ?? null);
+  const [name, setName]                       = useState(user.full_name ?? "");
+  const [role, setRole]                       = useState(user.role ?? "coach");
+  const [level, setLevel]                     = useState(user.skill_level ?? "intermediate");
+  const [bio, setBio]                         = useState(user.bio ?? "");
+  const [avatarUrl, setAvatarUrl]             = useState<string | null>(user.avatar_url ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarError, setAvatarError] = useState<string | null>(null);
-  const avatarInputRef              = useRef<HTMLInputElement>(null);
-  const [saving, setSaving]         = useState(false);
-  const [saved, setSaved]           = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [avatarError, setAvatarError]         = useState<string | null>(null);
+  const avatarInputRef                        = useRef<HTMLInputElement>(null);
+  const [saving, setSaving]                   = useState(false);
+  const [saved, setSaved]                     = useState(false);
+  const [profileError, setProfileError]       = useState<string | null>(null);
 
   // Appearance state
   const [accent, setAccent]     = useState("green");
@@ -95,12 +87,6 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     setAccent(localStorage.getItem("accent") ?? "green");
     setFontSize(localStorage.getItem("font-size") ?? "md");
   }, []);
-
-  function changeTab(t: Tab) {
-    setPrevTab(tab);
-    setTab(t);
-    setAnimKey((k) => k + 1);
-  }
 
   function handleAccentChange(id: string) {
     setAccent(id);
@@ -142,7 +128,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: name, role, skill_level: level, bio, avatar_color: avatarColor },
+        data: { full_name: name, role, skill_level: level, bio },
       });
       if (error) throw error;
       setSaved(true);
@@ -194,468 +180,417 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
   const totalHours = Math.round(stats.totalMinutes / 60);
   const initials = name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?";
-  const avatarMeta = AVATAR_COLORS.find((c) => c.id === avatarColor) ?? AVATAR_COLORS[0];
   const currentAccentMeta = ACCENT_COLORS.find((c) => c.id === accent);
 
-  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "profile",    label: "Perfil",           icon: User },
-    { id: "appearance", label: "Apariencia",       icon: Palette },
-    { id: "stats",      label: "Estadísticas",     icon: BarChart3 },
-    { id: "data",       label: "Datos y Privacidad", icon: Shield },
-  ];
-
   return (
-    <div className="flex flex-col lg:flex-row gap-6 items-start">
-
-      {/* ── Left sidebar ── */}
-      <div className="w-full lg:w-72 shrink-0 space-y-4 animate-fade-up">
-
-        {/* Avatar card */}
-        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-3">
-          <div className="relative group">
-            <div className={`size-20 rounded-2xl relative ${!avatarUrl ? avatarMeta.bg : ""} flex items-center justify-center transition-all duration-300 hover:scale-105 overflow-hidden`}>
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt={name} fill className="object-cover" />
-              ) : (
-                <span className={`text-2xl font-bold ${avatarMeta.text}`}>{initials}</span>
-              )}
-            </div>
-            <button
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarUploading}
-              title="Cambiar foto"
-              className="absolute -bottom-1.5 -right-1.5 size-7 rounded-full bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors shadow-sm"
-            >
-              {avatarUploading ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : <Camera className="size-3.5 text-muted-foreground" />}
-            </button>
-            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
+    <div className="space-y-8">
+      {/* Identity strip */}
+      <section className="grid grid-cols-[auto_1fr_auto] items-center gap-6 border-y border-foreground/15 py-6">
+        <div className="relative">
+          <div className="size-20 rounded-full border border-foreground/25 bg-foreground/[0.02] overflow-hidden flex items-center justify-center">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={name} width={80} height={80} className="size-full object-cover" />
+            ) : (
+              <span className="font-heading text-2xl text-foreground/80">{initials}</span>
+            )}
           </div>
-          {avatarError && <p className="text-xs text-destructive">{avatarError}</p>}
+          <button
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            title="Cambiar foto"
+            className="absolute -bottom-1 -right-1 size-7 rounded-full bg-background border border-foreground/25 flex items-center justify-center hover:border-brand hover:text-brand transition-colors"
+          >
+            {avatarUploading ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" strokeWidth={1.6} />}
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
+        </div>
+        <div className="min-w-0">
+          <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-1">
+            Identidad
+          </p>
+          <p className="font-heading italic text-2xl text-foreground truncate">
+            {name || "Tu nombre"}
+          </p>
+          <p className="text-[12px] text-foreground/55 truncate mt-0.5 tabular-nums">
+            {user.email}
+          </p>
+          {avatarError && (
+            <p className="text-[11px] text-destructive mt-1">{avatarError}</p>
+          )}
+        </div>
+        <div className="hidden md:flex flex-col items-end">
+          <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
+            Rol · Nivel
+          </p>
+          <p className="text-[13px] text-foreground">
+            {ROLES.find((r) => r.id === role)?.label ?? "—"}
+          </p>
+          <p className="text-[11px] text-foreground/55 tabular-nums mt-0.5">
+            {LEVELS.find((l) => l.id === level)?.label ?? "—"}
+          </p>
+        </div>
+      </section>
+
+      {/* Tab rail */}
+      <nav className="flex flex-wrap gap-x-8 gap-y-2 border-b border-foreground/15">
+        {TABS.map(({ id, label, code }) => {
+          const isActive = tab === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                "group -mb-px pb-3 flex items-baseline gap-2 border-b-2 transition-colors",
+                isActive
+                  ? "border-brand text-foreground"
+                  : "border-transparent text-foreground/55 hover:text-foreground"
+              )}
+            >
+              <span className={cn(
+                "font-sans text-[10px] tabular-nums tracking-[0.22em]",
+                isActive ? "text-brand" : "text-foreground/40"
+              )}>
+                {code}
+              </span>
+              <span className={cn("text-[14px]", isActive && "font-heading italic")}>
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ── PROFILE ── */}
+      {tab === "profile" && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label htmlFor="name" className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+                Nombre para mostrar
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tu nombre completo"
+                className="w-full h-10 bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-[15px] text-foreground placeholder:text-foreground/35 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+                <Mail className="inline size-3 mr-1 -mt-0.5" strokeWidth={1.6} />
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                value={user.email ?? ""}
+                disabled
+                className="w-full h-10 bg-transparent border-0 border-b border-foreground/15 text-[15px] text-foreground/50 cursor-not-allowed tabular-nums"
+              />
+            </div>
+          </div>
+
           <div>
-            <p className="font-heading font-semibold text-lg text-foreground leading-tight">
-              {name || "Tu nombre"}
+            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
+              Rol
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[180px]">{user.email}</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">
-              <Zap className="size-3" />
-              {ROLES.find((r) => r.id === role)?.label ?? "Entrenador"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {LEVELS.find((l) => l.id === level)?.label ?? "Intermedio"}
-            </span>
-          </div>
-          {bio && (
-            <p className="text-xs text-muted-foreground italic leading-relaxed border-t border-border pt-3 w-full">
-              &ldquo;{bio}&rdquo;
-            </p>
-          )}
-        </div>
-
-        {/* Mini stats */}
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3 animate-fade-up stagger-1">
-          {[
-            { icon: CalendarDays, label: "Sesiones",  value: stats.totalSessions, color: "text-brand" },
-            { icon: Clock,        label: "Horas",      value: totalHours,          color: "text-amber-400" },
-            { icon: Dumbbell,     label: "Ejercicios", value: stats.totalExercises, color: "text-blue-400" },
-            { icon: Star,         label: "Próximas",   value: stats.upcomingSessions, color: "text-purple-400" },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Icon className={`size-3.5 ${color}`} />
-                <span className="text-xs">{label}</span>
-              </div>
-              <span className="text-sm font-semibold text-foreground">{value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Tab nav (desktop only) */}
-        <nav className="hidden lg:block bg-card border border-border rounded-2xl p-2 space-y-0.5 animate-fade-up stagger-2">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => changeTab(id)}
-              className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                tab === id
-                  ? "bg-brand/10 text-brand"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Icon className="size-4 shrink-0" />
-              {label}
-              {tab === id && (
-                <span className="ml-auto size-1.5 rounded-full bg-brand animate-scale-in" />
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* Accent colour preview */}
-        <div className="hidden lg:flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-xl animate-fade-up stagger-3">
-          <div
-            className="size-4 rounded-full shrink-0 transition-all duration-300"
-            style={{ backgroundColor: currentAccentMeta?.preview ?? "#4ade80" }}
-          />
-          <span className="text-xs text-muted-foreground">
-            Tema {currentAccentMeta?.label ?? "Verde Pádel"}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Main content ── */}
-      <div className="flex-1 min-w-0 space-y-4">
-
-        {/* Mobile tab bar */}
-        <div className="lg:hidden flex gap-1 bg-muted/50 rounded-xl p-1 overflow-x-auto">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => changeTab(id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-1 justify-center ${
-                tab === id
-                  ? "bg-card text-foreground shadow-sm border border-border"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Icon className="size-3.5 shrink-0" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content — animated on change */}
-        <div key={animKey} className="animate-fade-up">
-
-          {/* ── PROFILE TAB ── */}
-          {tab === "profile" && (
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
-
-              {/* Avatar colour */}
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-3">
-                  Color del avatar
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {AVATAR_COLORS.map((c, i) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setAvatarColor(c.id)}
-                      title={c.id}
-                      className={`size-8 rounded-full border-2 transition-all duration-200 ${
-                        avatarColor === c.id
-                          ? "border-foreground scale-110 shadow-lg"
-                          : "border-transparent hover:scale-110 hover:border-foreground/30"
-                      }`}
-                      style={{
-                        backgroundColor: c.hex,
-                        animationDelay: `${i * 0.03}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                {/* Name */}
-                <div className="space-y-1.5">
-                  <label htmlFor="name" className="block text-sm font-semibold text-foreground">
-                    Nombre para mostrar
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Tu nombre completo"
-                    className="w-full h-10 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-
-                {/* Email */}
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Mail className="size-3.5" /> Correo electrónico
-                  </label>
-                  <input
-                    type="email"
-                    value={user.email ?? ""}
-                    disabled
-                    className="w-full h-10 px-3 text-sm bg-muted/40 border border-border rounded-lg text-muted-foreground cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Role */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-foreground">Rol</label>
-                <div className="flex gap-2 flex-wrap">
-                  {ROLES.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => setRole(r.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                        role === r.id
-                          ? "bg-brand text-brand-foreground border-brand shadow-sm shadow-brand/20"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted hover:border-border"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Skill level */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-foreground">Nivel</label>
-                <div className="flex gap-2 flex-wrap">
-                  {LEVELS.map((l) => (
-                    <button
-                      key={l.id}
-                      onClick={() => setLevel(l.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-1.5 ${
-                        level === l.id
-                          ? "bg-brand text-brand-foreground border-brand shadow-sm shadow-brand/20"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {l.id === "pro" && <Trophy className="size-3.5" />}
-                      {l.id === "advanced" && <Star className="size-3.5" />}
-                      {l.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bio */}
-              <div className="space-y-1.5">
-                <label htmlFor="bio" className="block text-sm font-semibold text-foreground">
-                  Bio
-                  <span className="font-normal text-muted-foreground ml-2">(opcional)</span>
-                </label>
-                <textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Filosofía de entrenamiento, objetivos, ejercicios favoritos…"
-                  rows={3}
-                  maxLength={300}
-                  className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
-                />
-                <p className="text-xs text-muted-foreground text-right">{bio.length}/300</p>
-              </div>
-
-              {profileError && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 animate-scale-in">
-                  <p className="text-sm text-destructive">{profileError}</p>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 pt-1">
+            <div className="flex gap-0 border border-foreground/15 w-fit">
+              {ROLES.map((r, i) => (
                 <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-60 shadow-sm shadow-brand/20"
+                  key={r.id}
+                  onClick={() => setRole(r.id)}
+                  className={cn(
+                    "px-4 py-2.5 text-[13px] transition-colors",
+                    i > 0 && "border-l border-foreground/15",
+                    role === r.id
+                      ? "bg-brand text-brand-foreground font-semibold"
+                      : "text-foreground/65 hover:text-foreground hover:bg-foreground/[0.03]"
+                  )}
                 >
-                  {saving ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : saved ? (
-                    <CheckCircle2 className="size-4 animate-scale-in" />
-                  ) : null}
-                  {saving ? "Guardando…" : saved ? "¡Guardado!" : "Guardar cambios"}
+                  {r.label}
                 </button>
-                {saved && (
-                  <p className="text-sm text-brand animate-fade-in">Cambios guardados correctamente.</p>
-                )}
-              </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
+              Nivel
+            </p>
+            <div className="flex gap-0 border border-foreground/15 w-fit flex-wrap">
+              {LEVELS.map((l, i) => (
+                <button
+                  key={l.id}
+                  onClick={() => setLevel(l.id)}
+                  className={cn(
+                    "px-4 py-2.5 text-[13px] transition-colors",
+                    i > 0 && "border-l border-foreground/15",
+                    level === l.id
+                      ? "bg-brand text-brand-foreground font-semibold"
+                      : "text-foreground/65 hover:text-foreground hover:bg-foreground/[0.03]"
+                  )}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="bio" className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+              Bio <span className="text-foreground/35 normal-case tracking-normal">· opcional</span>
+            </label>
+            <textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Filosofía de entrenamiento, objetivos, ejercicios favoritos…"
+              rows={3}
+              maxLength={300}
+              className="w-full px-0 py-2 text-[14px] bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-foreground placeholder:text-foreground/35 resize-none italic font-heading transition-colors"
+            />
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40 text-right">
+              {bio.length}/300
+            </p>
+          </div>
+
+          {profileError && (
+            <div className="border-l-2 border-destructive pl-4 py-1">
+              <p className="text-[13px] text-destructive">{profileError}</p>
             </div>
           )}
 
-          {/* ── APPEARANCE TAB ── */}
-          {tab === "appearance" && (
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-8">
-
-              {/* Accent color */}
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Color de acento</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Cambia botones, estados activos y destacados en toda la app.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {ACCENT_COLORS.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => handleAccentChange(c.id)}
-                      className={`group flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all duration-200 ${
-                        accent === c.id
-                          ? "border-foreground/30 bg-muted scale-105"
-                          : "border-border hover:bg-muted hover:scale-102"
-                      }`}
-                    >
-                      <span
-                        className="size-4 rounded-full shrink-0 transition-transform duration-200 group-hover:scale-110"
-                        style={{ backgroundColor: c.preview }}
-                      />
-                      <span className="text-sm font-medium text-foreground">{c.label}</span>
-                      {accent === c.id && (
-                        <CheckCircle2 className="size-3.5 text-foreground/60 ml-1 animate-scale-in" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Font size */}
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Tamaño del texto</h3>
-                <p className="text-xs text-muted-foreground mb-4">Ajusta el tamaño del texto en todas las páginas.</p>
-                <div className="flex gap-3">
-                  {FONT_SIZES.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => handleFontSizeChange(f.id)}
-                      className={`flex flex-col items-center px-6 py-3 rounded-xl border transition-all duration-200 min-w-[80px] ${
-                        fontSize === f.id
-                          ? "border-brand bg-brand/10 text-brand scale-105 shadow-sm shadow-brand/10"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <span className={`font-bold ${f.size}`}>{f.label}</span>
-                      <span className="text-xs mt-0.5 opacity-70">{f.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Theme */}
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">Tema</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  El modo oscuro está diseñado para sesiones de entrenamiento nocturnas.
-                </p>
-                <div className="w-fit">
-                  <ThemeToggle />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── STATS TAB ── */}
-          {tab === "stats" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                {[
-                  { icon: CalendarDays, label: "Sesiones totales",      value: stats.totalSessions,   color: "text-brand",     bg: "bg-brand/10" },
-                  { icon: Clock,        label: "Horas entrenadas",       value: totalHours,            color: "text-amber-400", bg: "bg-amber-400/10" },
-                  { icon: Dumbbell,     label: "Biblioteca de ejercicios", value: stats.totalExercises,  color: "text-blue-400",  bg: "bg-blue-400/10" },
-                  { icon: Star,         label: "Sesiones próximas",     value: stats.upcomingSessions, color: "text-purple-400", bg: "bg-purple-400/10" },
-                ].map(({ icon: Icon, label, value, color, bg }, i) => (
-                  <div
-                    key={label}
-                    className={`bg-card border border-border rounded-2xl p-5 animate-fade-up`}
-                    style={{ animationDelay: `${i * 0.05}s` }}
-                  >
-                    <div className={`size-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                      <Icon className={`size-4 ${color}`} />
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">{value}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <h3 className="font-semibold text-foreground mb-4">Detalles de la cuenta</h3>
-                <div className="divide-y divide-border">
-                  {[
-                    { icon: Mail,   label: "Correo electrónico", value: user.email ?? "—" },
-                    { icon: Shield, label: "Inicio de sesión",  value: user.provider === "google" ? "Google OAuth" : "Correo y Contraseña" },
-                    { icon: Zap,    label: "Miembro desde",     value: user.created_at ? new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(user.created_at)) : "—" },
-                    { icon: Settings, label: "Estado",          value: "Activo" },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="flex items-center gap-3 py-3">
-                      <Icon className="size-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm text-muted-foreground flex-1">{label}</span>
-                      <span className="text-sm font-medium text-foreground">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── DATA TAB ── */}
-          {tab === "data" && (
-            <div className="space-y-4">
-              <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Exportar datos</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Descarga una copia completa de todos tus datos de entrenamiento.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleExportJson}
-                    disabled={exportingJson}
-                    className="inline-flex items-center gap-2 border border-border bg-background text-sm font-medium text-foreground px-4 py-2.5 rounded-xl hover:bg-muted active:scale-95 transition-all duration-150 disabled:opacity-60"
-                  >
-                    {exportingJson ? <Loader2 className="size-4 animate-spin" /> : <FileJson className="size-4 text-brand" />}
-                    Descargar como JSON
-                  </button>
-                  <button
-                    onClick={handleExportCsv}
-                    disabled={exportingCsv}
-                    className="inline-flex items-center gap-2 border border-border bg-background text-sm font-medium text-foreground px-4 py-2.5 rounded-xl hover:bg-muted active:scale-95 transition-all duration-150 disabled:opacity-60"
-                  >
-                    {exportingCsv ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4 text-amber-400" />}
-                    Sesiones como CSV
-                  </button>
-                </div>
-
-                <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
-                  <p className="text-xs font-semibold text-foreground">Incluido en la exportación:</p>
-                  {[
-                    "Todas las sesiones con fechas y duraciones",
-                    "Biblioteca completa de ejercicios",
-                    "Relaciones sesión-ejercicio",
-                    "Metadatos de la cuenta",
-                  ].map((item) => (
-                    <p key={item} className="text-xs text-muted-foreground flex items-start gap-2">
-                      <CheckCircle2 className="size-3.5 text-brand shrink-0 mt-0.5" />
-                      {item}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-card border border-destructive/20 rounded-2xl p-6 space-y-4">
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Zona de peligro</h3>
-                  <p className="text-sm text-muted-foreground">Acciones irreversibles — procede con precaución.</p>
-                </div>
-                <div className="flex items-start justify-between gap-4 border border-destructive/20 rounded-xl p-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Eliminar cuenta</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Elimina permanentemente tu cuenta y todos los datos de entrenamiento.
-                    </p>
-                  </div>
-                  <button className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 active:scale-95 transition-all duration-150">
-                    <Trash2 className="size-3.5" />
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
+          <div className="flex items-center gap-4 pt-2 border-t border-foreground/10">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase disabled:opacity-60"
+            >
+              {saving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : saved ? (
+                <CheckCircle2 className="size-3.5" />
+              ) : null}
+              {saving ? "Guardando…" : saved ? "Guardado" : "Guardar cambios"}
+            </button>
+            {saved && (
+              <p className="text-[12px] text-brand font-sans tracking-wide uppercase">
+                ◆ Cambios guardados
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── APPEARANCE ── */}
+      {tab === "appearance" && (
+        <div className="space-y-10">
+          <div>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">A</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Color de acento
+              </p>
+            </div>
+            <p className="text-[12px] text-foreground/55 mt-3 mb-5">
+              Se aplica a botones, estados activos y destacados.
+            </p>
+            <div className="flex flex-wrap gap-0 border border-foreground/15 w-fit">
+              {ACCENT_COLORS.map((c, i) => (
+                <button
+                  key={c.id}
+                  onClick={() => handleAccentChange(c.id)}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] transition-colors",
+                    i > 0 && "border-l border-foreground/15",
+                    accent === c.id
+                      ? "bg-foreground/[0.04] text-foreground"
+                      : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.02]"
+                  )}
+                >
+                  <span
+                    className="size-3 rounded-full shrink-0 border border-foreground/10"
+                    style={{ backgroundColor: c.preview }}
+                  />
+                  {c.label}
+                  {accent === c.id && <span className="text-[10px] tracking-[0.22em] text-brand">◆</span>}
+                </button>
+              ))}
+            </div>
+            {currentAccentMeta && (
+              <p className="font-sans text-[10px] tracking-[0.22em] uppercase text-foreground/40 mt-3">
+                Activo · {currentAccentMeta.label}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">B</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Tamaño del texto
+              </p>
+            </div>
+            <div className="flex gap-0 mt-4 border border-foreground/15 w-fit">
+              {FONT_SIZES.map((f, i) => (
+                <button
+                  key={f.id}
+                  onClick={() => handleFontSizeChange(f.id)}
+                  className={cn(
+                    "flex flex-col items-center px-6 py-3 transition-colors min-w-[88px]",
+                    i > 0 && "border-l border-foreground/15",
+                    fontSize === f.id
+                      ? "bg-brand/10 text-brand"
+                      : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03]"
+                  )}
+                >
+                  <span className={cn("font-bold", f.size)}>{f.label}</span>
+                  <span className="font-sans text-[9px] uppercase tracking-[0.22em] mt-0.5">{f.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">C</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Tema
+              </p>
+            </div>
+            <p className="text-[12px] text-foreground/55 mt-3 mb-4">
+              El modo oscuro está pensado para sesiones de entrenamiento nocturnas.
+            </p>
+            <div className="w-fit">
+              <ThemeToggle />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STATS ── */}
+      {tab === "stats" && (
+        <div className="space-y-10">
+          <section className="grid grid-cols-2 md:grid-cols-4 border-y border-foreground/15">
+            {[
+              { label: "Sesiones totales",    value: stats.totalSessions, accent: true },
+              { label: "Horas entrenadas",     value: `${totalHours}h` },
+              { label: "Ejercicios (biblioteca)", value: stats.totalExercises },
+              { label: "Próximas sesiones",   value: stats.upcomingSessions },
+            ].map(({ label, value, accent: isAccent }, i) => (
+              <div
+                key={label}
+                className={cn("px-4 py-6", i > 0 && "border-l border-foreground/10")}
+              >
+                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
+                  {label}
+                </p>
+                <p className={cn(
+                  "font-heading text-4xl tabular-nums leading-none",
+                  isAccent ? "text-brand" : "text-foreground"
+                )}>
+                  {value}
+                </p>
+              </div>
+            ))}
+          </section>
+
+          <section>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">·</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Cuenta · detalles
+              </p>
+            </div>
+            <dl className="divide-y divide-foreground/10">
+              {[
+                { label: "Correo electrónico", value: user.email ?? "—" },
+                { label: "Método de acceso",  value: user.provider === "google" ? "Google OAuth" : "Correo y contraseña" },
+                { label: "Miembro desde",     value: user.created_at ? new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(user.created_at)) : "—" },
+                { label: "Estado",            value: "Activo" },
+              ].map(({ label, value }) => (
+                <div key={label} className="grid grid-cols-[1fr_auto] gap-4 py-3.5 items-baseline">
+                  <dt className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                    {label}
+                  </dt>
+                  <dd className="text-[13px] text-foreground tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
+      )}
+
+      {/* ── DATA ── */}
+      {tab === "data" && (
+        <div className="space-y-10">
+          <section>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">01</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Exportar · copia de tus datos
+              </p>
+            </div>
+            <p className="text-[13px] text-foreground/60 mt-4 mb-6 max-w-xl">
+              Descarga una copia completa de sesiones, ejercicios y metadatos.
+            </p>
+            <div className="flex flex-wrap gap-0 border border-foreground/15 w-fit">
+              <button
+                onClick={handleExportJson}
+                disabled={exportingJson}
+                className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors disabled:opacity-60"
+              >
+                {exportingJson ? <Loader2 className="size-3.5 animate-spin" /> : <FileJson className="size-3.5 text-brand" strokeWidth={1.6} />}
+                JSON · completo
+              </button>
+              <button
+                onClick={handleExportCsv}
+                disabled={exportingCsv}
+                className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors border-l border-foreground/15 disabled:opacity-60"
+              >
+                {exportingCsv ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5 text-foreground/60" strokeWidth={1.6} />}
+                CSV · sesiones
+              </button>
+            </div>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 max-w-xl">
+              {[
+                "Todas las sesiones con fechas y duraciones",
+                "Biblioteca completa de ejercicios",
+                "Relaciones sesión–ejercicio",
+                "Metadatos de la cuenta",
+              ].map((item) => (
+                <p key={item} className="text-[12px] text-foreground/55 flex items-start gap-2">
+                  <span className="text-brand mt-0.5">◆</span>
+                  {item}
+                </p>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-destructive/30">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-destructive">△</p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive">
+                Zona de peligro
+              </p>
+            </div>
+            <div className="mt-5 grid grid-cols-[1fr_auto] gap-6 items-start border-l-2 border-destructive/40 pl-4 py-2">
+              <div>
+                <p className="font-heading italic text-[15px] text-foreground">Eliminar cuenta</p>
+                <p className="text-[12px] text-foreground/55 mt-1 max-w-md">
+                  Elimina permanentemente tu cuenta y todos los datos de entrenamiento. Esta acción no se puede deshacer.
+                </p>
+              </div>
+              <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors">
+                <Trash2 className="size-3" strokeWidth={1.6} />
+                Eliminar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

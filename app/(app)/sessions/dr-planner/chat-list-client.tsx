@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Plus, Sparkles, Trash2, MessageSquare, Loader2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 interface ChatItem {
   id: string;
@@ -57,84 +56,136 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
   }
 
   return (
-    <div className="w-full px-4 md:px-8 py-8 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/sessions"
-          className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0">
-          <ArrowLeft className="size-4" />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-full bg-brand/15 border border-brand/20 flex items-center justify-center">
-              <Bot className="size-4 text-brand" />
-            </div>
-            <h1 className="font-heading text-2xl font-bold text-foreground">Dr. Planner</h1>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full border border-brand/20">
-              <Sparkles className="size-2.5" /> IA
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1 ml-10">Asistente de diseño de sesiones de pádel</p>
-        </div>
-        <button
-          onClick={handleNewChat}
-          disabled={creating}
-          className="flex items-center gap-2 text-sm font-semibold bg-brand text-brand-foreground px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50"
-        >
-          {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-          Nueva conversación
-        </button>
-      </div>
-
-      {/* Chat list */}
-      {chats.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-          <div className="size-14 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-            <MessageSquare className="size-6 text-brand" />
-          </div>
-          <div>
-            <p className="font-medium text-foreground">Sin conversaciones todavía</p>
-            <p className="text-sm text-muted-foreground mt-1">Inicia una nueva conversación con Dr. Planner</p>
-          </div>
-          <button
-            onClick={handleNewChat}
-            disabled={creating}
-            className="flex items-center gap-2 text-sm font-semibold bg-brand text-brand-foreground px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50"
-          >
-            {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-            Nueva conversación
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {chats.map(chat => (
-            <Link
-              key={chat.id}
-              href={`/sessions/dr-planner/${chat.id}`}
-              className={cn(
-                "flex items-center gap-4 p-4 rounded-2xl border border-border bg-card hover:border-brand/30 hover:bg-card/80 transition-all group"
-              )}
-            >
-              <div className="size-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-                <Bot className="size-4 text-brand" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{chat.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{formatRelative(chat.updatedAt)}</p>
-              </div>
-              <button
-                onClick={e => handleDelete(chat.id, e)}
-                disabled={deletingId === chat.id}
-                className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
+        }}
+      />
+      <div className="relative px-4 sm:px-6 md:px-10 py-10">
+        {/* Masthead */}
+        <header className="pb-6 border-b border-foreground/15">
+          <div className="flex items-baseline justify-between gap-4 mb-3">
+            <div className="flex items-baseline gap-3">
+              <Link
+                href="/sessions"
+                className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors"
               >
-                {deletingId === chat.id
-                  ? <Loader2 className="size-3.5 animate-spin" />
-                  : <Trash2 className="size-3.5" />}
-              </button>
-            </Link>
-          ))}
-        </div>
-      )}
+                ← Sesiones
+              </Link>
+              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">/</span>
+              <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+                Dr. Planner · IA
+              </p>
+            </div>
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
+              № {String(chats.length).padStart(3, "0")}
+            </p>
+          </div>
+          <div className="grid grid-cols-[1fr_auto] items-end gap-6">
+            <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
+              Conversaciones con el <em className="italic text-brand">doctor</em>.
+            </h1>
+            <button
+              onClick={handleNewChat}
+              disabled={creating}
+              className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase disabled:opacity-50"
+            >
+              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" strokeWidth={2} />}
+              Nueva conversación
+            </button>
+          </div>
+          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
+            Asistente de diseño de sesiones de pádel. Explícale contexto, restricciones y objetivos — él propone la planificación.
+          </p>
+        </header>
+
+        {/* Body */}
+        {chats.length === 0 ? (
+          <div className="py-20 text-center border-b border-foreground/15">
+            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-4">
+              Archivo vacío
+            </p>
+            <h2 className="font-heading text-3xl text-foreground mb-3">
+              Aún no has hablado con <em className="italic text-brand">Dr. Planner</em>.
+            </h2>
+            <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
+              Inicia una conversación para diseñar tu próxima sesión con la ayuda de la IA.
+            </p>
+            <button
+              onClick={handleNewChat}
+              disabled={creating}
+              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase disabled:opacity-50"
+            >
+              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" strokeWidth={2} />}
+              Iniciar conversación
+            </button>
+          </div>
+        ) : (
+          <section>
+            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-4 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                01
+              </p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Historial · ordenadas por última actividad
+              </p>
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40">
+                {chats.length}
+              </p>
+            </div>
+            <ul>
+              {chats.map((chat, idx) => (
+                <li key={chat.id} className="border-b border-foreground/10 group">
+                  <div className="relative">
+                    <Link
+                      href={`/sessions/dr-planner/${chat.id}`}
+                      className="grid grid-cols-[auto_1fr_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] transition-colors px-1"
+                    >
+                      <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 w-8">
+                        {String(idx + 1).padStart(3, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-heading text-[17px] italic text-foreground truncate group-hover:text-brand transition-colors">
+                          {chat.title}
+                        </p>
+                        <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums tracking-wide">
+                          {formatRelative(chat.updatedAt)}
+                        </p>
+                      </div>
+                      <span className="font-sans text-[11px] tracking-[0.22em] text-foreground/40 group-hover:text-brand transition-colors pr-10">
+                        →
+                      </span>
+                    </Link>
+                    <button
+                      onClick={e => handleDelete(chat.id, e)}
+                      disabled={deletingId === chat.id}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-foreground/35 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label="Eliminar"
+                    >
+                      {deletingId === chat.id
+                        ? <Loader2 className="size-3.5 animate-spin" />
+                        : <Trash2 className="size-3.5" strokeWidth={1.6} />}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
+          <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
+            &ldquo;La mejor sesión empieza con una buena pregunta.&rdquo;
+          </p>
+          <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
+            /tenplanner · IA
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

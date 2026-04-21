@@ -164,6 +164,8 @@ function normalizeDateTimeInput(value?: string): string | undefined {
 }
 
 function hasSessionConfirmationPhrase(text: string): boolean {
+  if (text.includes("[FORM_META_CONFIRMED]")) return true;
+
   const normalized = normalizeText(text);
   if (!normalized) return false;
 
@@ -207,17 +209,37 @@ function hasSessionConfirmation(lastUserText: string, messages: UIMessage[]): bo
     return true;
   }
 
-  return false;
+  // Sticky: once the user has confirmed with the form marker or an explicit phrase,
+  // keep confirmation valid even after follow-up messages (e.g. resolving a duration
+  // mismatch with "sí"). Retraction only via explicit negation of creating the session.
+  const userTexts = getUserTexts(messages);
+  const hasPriorConfirmation = userTexts.some((text) => hasSessionConfirmationPhrase(text));
+  if (!hasPriorConfirmation) return false;
+
+  const normalizedLast = normalizeText(lastUserText);
+  const retracted =
+    /\b(?:no|cancela|cancelar|anula|anular|para|detente)\b.*\b(?:crear|crea|cree|cree?la|sesion|sesión)\b/.test(normalizedLast)
+    || normalizedLast === "no"
+    || normalizedLast === "cancela"
+    || normalizedLast === "cancelar";
+
+  return !retracted;
 }
 
 function parseConfirmedSessionMeta(text: string): SessionMetaDraft {
   if (!hasSessionConfirmationPhrase(text)) return {};
 
-  const objective = text.match(/objetivo\s*:\s*(.+?)(?=,\s*(?:intensidad|ubicaci[oó]n|etiquetas?|fecha)\s*:|$)/i)?.[1]?.trim();
-  const intensityRaw = text.match(/intensidad\s*:\s*(\d)/i)?.[1];
-  const location = text.match(/ubicaci[oó]n\s*:\s*(.+?)(?=,\s*(?:objetivo|intensidad|etiquetas?|fecha)\s*:|$)/i)?.[1]?.trim();
-  const tagsRaw = text.match(/etiquetas?\s*:\s*(.+?)(?=,\s*(?:objetivo|intensidad|ubicaci[oó]n|fecha)\s*:|$)/i)?.[1]?.trim();
-  const scheduledRaw = text.match(/fecha(?:\s+y\s+hora)?\s*:\s*(.+?)$/i)?.[1]?.trim();
+  // Form marker format: [FORM_META_CONFIRMED] | objetivo=... | intensidad=3 | ubicacion=... | etiquetas=a,b | fecha=2026-04-26T22:52
+  const kv = (key: string) => {
+    const re = new RegExp(`${key}\\s*[:=]\\s*([^|]+?)(?=\\s*[|,]\\s*(?:objetivo|intensidad|ubicaci[oó]n|etiquetas?|fecha)\\s*[:=]|$)`, "i");
+    return text.match(re)?.[1]?.trim();
+  };
+
+  const objective = kv("objetivo");
+  const intensityRaw = text.match(/intensidad\s*[:=]\s*(\d)/i)?.[1];
+  const location = kv("ubicaci[oó]n");
+  const tagsRaw = kv("etiquetas?");
+  const scheduledRaw = kv("fecha(?:\\s+y\\s+hora)?");
   const scheduledAt = normalizeDateTimeInput(scheduledRaw) ?? scheduledRaw;
 
   const intensity = intensityRaw ? Number(intensityRaw) : undefined;
@@ -442,11 +464,12 @@ export async function POST(request: Request) {
 1. Si hay alumnos y aún no se han seleccionado → llama YA a \`seleccionar_alumnos\`. No preguntes en texto.
 2. Recopila lo que falte (nivel, duración, objetivo) con \`<preguntas>\`. Nada de preguntas repetidas.
 3. Diseña el plan. Muéstralo con \`mostrar_ejercicios\`. Si necesitas algo que no existe, pide permiso para crearlo con \`crear_ejercicio\`.
-4. Llama a \`configurar_sesion_meta\` con objetivo/intensidad/fecha prellenados. Escribe solo: "Revisa y pulsa **Confirmar** para crear la sesión." Y PARA.
-5. Cuando el usuario confirme explícitamente la creación (por ejemplo "Confirmo los datos de la sesión: …" o "sí, crea la sesión") llama a \`crear_sesion\`.
+4. Llama a \`configurar_sesion_meta\` SIEMPRE con TODOS los campos ya conocidos prellenados: \`objective\` (del historial o del estado), \`intensity\` (estima según ejercicios si no se dijo), \`scheduledAt\` (usa la fecha por defecto si no se dijo), \`location\` y \`tags\` si se mencionaron, \`durationMinutes\` (suma del plan). NO llames a esta tool con campos vacíos — si ya tienes el dato, pásalo. Escribe solo: "Revisa y pulsa **Confirmar** para crear la sesión." Y PARA.
+5. Cuando el usuario envíe \`[FORM_META_CONFIRMED]\` o confirme con texto ("sí, crea la sesión", "confirmo", etc.) llama INMEDIATAMENTE a \`crear_sesion\` sin volver a preguntar nada. El marcador \`[FORM_META_CONFIRMED]\` YA es confirmación final — nunca pidas confirmación adicional después de verlo.
 
 ## Reglas estrictas (no negociables)
 - NO llames a \`crear_sesion\` sin confirmación explícita del usuario en su último mensaje.
+- \`[FORM_META_CONFIRMED]\` ES confirmación explícita. Procede a crear la sesión sin más preguntas.
 - Un "sí" breve cuenta solo si acabas de preguntar de forma directa si quieres crear la sesión.
 - NO llames a \`crear_ejercicio\` sin permiso explícito en su último mensaje.
 - NO vuelvas a llamar a \`seleccionar_alumnos\` si ya hay alumnos seleccionados.
@@ -470,10 +493,11 @@ Tipos: "texto", "numero", "select" (con "opciones"). No repitas datos que ya ten
 - Duración objetivo: ${conversationState.requestedDurationMinutes ?? "—"}
 - Objetivo: ${confirmedObjective ?? "—"}
 - Alumnos seleccionados: ${selectedStudentsSummary}
-- Confirmación crear sesión: ${conversationState.hasExplicitSessionConfirmation ? "SÍ" : "NO"}
+- Confirmación crear sesión: ${conversationState.hasExplicitSessionConfirmation ? "SÍ → LLAMA YA a crear_sesion. No preguntes más." : "NO"}
 - Permiso crear ejercicios: ${conversationState.hasExerciseCreationConsent ? "SÍ" : "NO"}
 - Permiso desviar duración: ${conversationState.hasDurationDeviationConsent ? "SÍ" : "NO"}
 - Fecha de hoy: ${todayStr} · Fecha por defecto para sesiones: ${tomorrowISO}
+- Meta ya confirmada del formulario: ${JSON.stringify(conversationState.confirmedSessionMeta)}
 
 ## Perfil del entrenador
 ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}

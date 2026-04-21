@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { Plus, Users, Search, ChevronRight, Trophy } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
@@ -14,6 +14,14 @@ const LEVEL_LABEL: Record<PlayerLevel, string> = {
   intermediate: "Intermedio",
   advanced: "Avanzado",
   competitive: "Competitivo",
+};
+
+const LEVEL_CODE: Record<PlayerLevel, string> = {
+  beginner: "L1",
+  amateur: "L2",
+  intermediate: "L3",
+  advanced: "L4",
+  competitive: "L5",
 };
 
 interface PageProps {
@@ -41,106 +49,211 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     ? rows.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()))
     : rows;
 
+  const levelCounts = rows.reduce<Record<PlayerLevel, number>>(
+    (acc, s) => {
+      const lvl = s.playerLevel as PlayerLevel | null;
+      if (lvl) acc[lvl] = (acc[lvl] ?? 0) + 1;
+      return acc;
+    },
+    { beginner: 0, amateur: 0, intermediate: 0, advanced: 0, competitive: 0 },
+  );
+
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-            Alumnos
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {rows.length} alumno{rows.length !== 1 ? "s" : ""} registrado{rows.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {rows.length > 0 && (
-          <Link
-            href="/students/new"
-            className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors shrink-0"
-          >
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">Nuevo alumno</span>
-          </Link>
-        )}
-      </div>
-
-      {rows.length > 0 && (
-        <form className="relative" action="/students" method="get">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="search" name="q"
-            placeholder="Buscar por nombre…"
-            defaultValue={q}
-            className="w-full sm:max-w-sm h-9 pl-9 pr-4 text-sm bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground"
-          />
-        </form>
-      )}
-
-      {rows.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center">
-          <div className="size-14 rounded-2xl bg-brand/10 flex items-center justify-center mx-auto mb-4">
-            <Users className="size-6 text-brand" />
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
+        }}
+      />
+      <div className="relative px-4 sm:px-6 md:px-10 py-10">
+        {/* Masthead */}
+        <header className="pb-6 border-b border-foreground/15">
+          <div className="flex items-baseline justify-between gap-4 mb-3">
+            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              Roster · Alumnos
+            </p>
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
+              № {String(rows.length).padStart(3, "0")}
+            </p>
           </div>
-          <p className="font-heading text-xl font-semibold text-foreground mb-1">Todavía no tienes alumnos</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
-            Crea tu primer alumno para empezar a planificar sus sesiones de entrenamiento.
-          </p>
-          <Link
-            href="/students/new"
-            className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-brand/90 transition-colors"
-          >
-            <Plus className="size-4" />
-            Crear alumno
-          </Link>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center">
-          <p className="font-medium text-foreground mb-1">Sin resultados</p>
-          <p className="text-sm text-muted-foreground">
-            Ningún alumno coincide con &ldquo;{q}&rdquo;.
-          </p>
-          <Link href="/students"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80 transition-colors mt-4">
-            Limpiar búsqueda
-          </Link>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((student) => {
-            const level = student.playerLevel as PlayerLevel | null;
-            return (
+          <div className="grid grid-cols-[1fr_auto] items-end gap-6">
+            <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
+              Tus <em className="italic text-brand">alumnos</em>,
+              <br />
+              uno a uno.
+            </h1>
+            {rows.length > 0 && (
               <Link
-                key={student.id}
-                href={`/students/${student.id}`}
-                className="group bg-card border border-border rounded-2xl p-5 hover:border-brand/30 transition-colors flex items-center gap-4"
+                href="/students/new"
+                className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
               >
-                <div className="size-12 rounded-full bg-brand/15 flex items-center justify-center shrink-0 overflow-hidden">
-                  {student.imageUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={student.imageUrl} alt={student.name} className="size-full object-cover" />
-                  ) : (
-                    <span className="text-sm font-semibold text-brand">{initialsFromName(student.name)}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm leading-snug truncate">{student.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {level && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
-                        <Trophy className="size-3" />
-                        {LEVEL_LABEL[level]}
-                      </span>
-                    )}
-                    {student.email && (
-                      <span className="text-xs text-muted-foreground truncate">{student.email}</span>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="size-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
+                <Plus className="size-3.5" strokeWidth={2} />
+                Nuevo alumno
               </Link>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
+            {rows.length} alumno{rows.length !== 1 ? "s" : ""} registrado{rows.length !== 1 ? "s" : ""} · fichas individuales con histórico y nivel.
+          </p>
+        </header>
+
+        {/* Level strip */}
+        {rows.length > 0 && (
+          <section className="grid grid-cols-5 border-b border-foreground/15">
+            {(Object.keys(LEVEL_LABEL) as PlayerLevel[]).map((lvl, i) => (
+              <div
+                key={lvl}
+                className={`px-4 py-5 ${i > 0 ? "border-l border-foreground/10" : ""}`}
+              >
+                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
+                  {LEVEL_CODE[lvl]} · {LEVEL_LABEL[lvl]}
+                </p>
+                <p className="font-heading text-3xl tabular-nums text-foreground leading-none">
+                  {levelCounts[lvl]}
+                </p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Search rail */}
+        {rows.length > 0 && (
+          <section className="py-5 border-b border-foreground/15 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+              01
+            </p>
+            <form className="relative" action="/students" method="get">
+              <Search className="absolute left-0 top-1/2 -translate-y-1/2 size-3.5 text-foreground/40 pointer-events-none" />
+              <input
+                type="search"
+                name="q"
+                placeholder="Buscar por nombre…"
+                defaultValue={q}
+                className="w-full sm:max-w-md h-9 pl-6 pr-4 text-[13px] bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-foreground placeholder:text-foreground/40 transition-colors"
+              />
+            </form>
+            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/50">
+              {filtered.length}/{rows.length}
+            </p>
+          </section>
+        )}
+
+        {/* Empty */}
+        {rows.length === 0 ? (
+          <div className="py-20 text-center border-b border-foreground/15">
+            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-4">
+              Estantería vacía
+            </p>
+            <h2 className="font-heading text-3xl text-foreground mb-3">
+              Todavía no tienes <em className="italic text-brand">alumnos</em>.
+            </h2>
+            <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
+              Crea tu primera ficha para empezar a planificar sesiones personalizadas.
+            </p>
+            <Link
+              href="/students/new"
+              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase"
+            >
+              <Plus className="size-3.5" strokeWidth={2} />
+              Crear alumno
+            </Link>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center border-b border-foreground/15">
+            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 mb-2">
+              Sin resultados
+            </p>
+            <p className="font-heading text-2xl text-foreground mb-3">
+              Ningún alumno coincide con &ldquo;<em className="italic text-brand">{q}</em>&rdquo;.
+            </p>
+            <Link
+              href="/students"
+              className="inline-flex items-center gap-1.5 text-[12px] tracking-wide text-foreground/60 hover:text-brand transition-colors uppercase border-b border-foreground/30 hover:border-brand"
+            >
+              Limpiar búsqueda
+            </Link>
+          </div>
+        ) : (
+          <section>
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 py-4 border-b border-foreground/15">
+              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                02
+              </p>
+              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Fichas · ordenadas alfabéticamente
+              </p>
+            </div>
+            <ul>
+              {filtered.map((student, idx) => {
+                const level = student.playerLevel as PlayerLevel | null;
+                const n = String(idx + 1).padStart(3, "0");
+                return (
+                  <li key={student.id} className="border-b border-foreground/10">
+                    <Link
+                      href={`/students/${student.id}`}
+                      className="group grid grid-cols-[auto_auto_1fr_auto_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] transition-colors px-1"
+                    >
+                      <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 w-8">
+                        {n}
+                      </span>
+                      <div className="size-10 rounded-full border border-foreground/20 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
+                        {student.imageUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={student.imageUrl} alt={student.name} className="size-full object-cover" />
+                        ) : (
+                          <span className="font-heading text-[12px] text-foreground/75">
+                            {initialsFromName(student.name)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-heading text-[17px] italic text-foreground truncate group-hover:text-brand transition-colors">
+                          {student.name}
+                        </p>
+                        {student.email && (
+                          <p className="text-[11px] text-foreground/45 truncate mt-0.5 tabular-nums">
+                            {student.email}
+                          </p>
+                        )}
+                      </div>
+                      {level ? (
+                        <div className="hidden sm:flex flex-col items-end">
+                          <span className="font-sans text-[9px] tracking-[0.22em] text-foreground/45 uppercase">
+                            {LEVEL_CODE[level]}
+                          </span>
+                          <span className="text-[12px] text-foreground/70">
+                            {LEVEL_LABEL[level]}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="hidden sm:inline font-sans text-[9px] tracking-[0.22em] text-foreground/30 uppercase">
+                          — · sin nivel
+                        </span>
+                      )}
+                      <span className="font-sans text-[11px] tracking-[0.22em] text-foreground/40 group-hover:text-brand transition-colors">
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {/* Footnote */}
+        <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
+          <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
+            &ldquo;Un buen entrenador conoce a sus alumnos antes de diseñar su primera sesión.&rdquo;
+          </p>
+          <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
+            /tenplanner · 04
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

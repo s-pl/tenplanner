@@ -69,16 +69,16 @@ interface BuscarContextoResult {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const CAT: Record<Category, { label: string; color: string; bar: string }> = {
-  technique: { label: "Técnica",       color: "text-blue-400 bg-blue-400/10 border-blue-400/20",   bar: "bg-blue-400" },
-  tactics:   { label: "Táctica",       color: "text-purple-400 bg-purple-400/10 border-purple-400/20", bar: "bg-purple-400" },
-  fitness:   { label: "Fitness",       color: "text-amber-400 bg-amber-400/10 border-amber-400/20", bar: "bg-amber-400" },
-  "warm-up": { label: "Calentamiento", color: "text-brand bg-brand/10 border-brand/20",            bar: "bg-brand" },
+const CAT: Record<Category, { label: string; code: string }> = {
+  technique: { label: "Técnica",       code: "TÉC" },
+  tactics:   { label: "Táctica",       code: "TÁC" },
+  fitness:   { label: "Fitness",       code: "FÍS" },
+  "warm-up": { label: "Calentamiento", code: "CAL" },
 };
-const DIFF: Record<Difficulty, { label: string; dot: string }> = {
-  beginner:     { label: "Principiante", dot: "bg-green-400" },
-  intermediate: { label: "Intermedio",   dot: "bg-amber-400" },
-  advanced:     { label: "Avanzado",     dot: "bg-red-400" },
+const DIFF: Record<Difficulty, { label: string; bars: number }> = {
+  beginner:     { label: "Principiante", bars: 2 },
+  intermediate: { label: "Intermedio",   bars: 3 },
+  advanced:     { label: "Avanzado",     bars: 5 },
 };
 
 const LEVEL_LABEL: Record<string, string> = {
@@ -86,12 +86,8 @@ const LEVEL_LABEL: Record<string, string> = {
   advanced: "Avanzado", competitive: "Competición",
 };
 
-const LEVEL_COLOR: Record<string, string> = {
-  beginner: "text-green-400 bg-green-400/10 border-green-400/20",
-  amateur: "text-sky-400 bg-sky-400/10 border-sky-400/20",
-  intermediate: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  advanced: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-  competitive: "text-red-400 bg-red-400/10 border-red-400/20",
+const LEVEL_CODE: Record<string, string> = {
+  beginner: "L1", amateur: "L2", intermediate: "L3", advanced: "L4", competitive: "L5",
 };
 
 // ─── Mention chip (inline in user messages) ──────────────────────────────────
@@ -142,7 +138,7 @@ function renderMarkdown(raw: string): string {
     .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code class="font-mono text-xs bg-muted px-1 py-0.5 rounded">$1</code>');
+    .replace(/`([^`]+)`/g, '<code class="font-mono text-[11px] text-brand bg-foreground/[0.04] px-1 py-0.5">$1</code>');
 
   const lines = raw.split("\n");
   const out: string[] = [];
@@ -162,13 +158,13 @@ function renderMarkdown(raw: string): string {
       const code: string[] = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) { code.push(esc(lines[i])); i++; }
-      out.push(`<pre class="my-2 rounded-xl bg-muted p-3 overflow-x-auto text-xs font-mono leading-relaxed whitespace-pre"><code>${code.join("\n")}</code></pre>`);
+      out.push(`<pre class="my-2 border-l-2 border-brand/40 bg-foreground/[0.03] p-3 overflow-x-auto text-[11px] font-mono leading-relaxed whitespace-pre"><code>${code.join("\n")}</code></pre>`);
       i++; continue;
     }
     if (/^### /.test(line)) { closeList(); out.push(`<h3 class="font-heading font-semibold text-sm mt-3 mb-0.5 text-foreground">${inline(line.slice(4))}</h3>`); i++; continue; }
     if (/^## /.test(line))  { closeList(); out.push(`<h2 class="font-heading font-semibold text-base mt-4 mb-1 text-foreground">${inline(line.slice(3))}</h2>`); i++; continue; }
     if (/^# /.test(line))   { closeList(); out.push(`<h1 class="font-heading font-bold text-lg mt-4 mb-1 text-foreground">${inline(line.slice(2))}</h1>`); i++; continue; }
-    if (line.trim() === "---") { closeList(); out.push('<hr class="border-border my-3">'); i++; continue; }
+    if (line.trim() === "---") { closeList(); out.push('<hr class="border-foreground/15 my-3">'); i++; continue; }
 
     const ul = line.match(/^[*-] (.+)/);
     if (ul) {
@@ -249,34 +245,32 @@ function ReasoningBubble({ text, streaming }: { text: string; streaming: boolean
   if (!text.trim()) return null;
   return (
     <div className="flex gap-3 justify-start">
-      <div className="size-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0 mt-1">
-        <Brain className={cn("size-3.5 text-brand", streaming && "animate-pulse")} />
+      <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+        <Brain className={cn("size-3.5 text-brand", streaming && "animate-pulse")} strokeWidth={1.6} />
       </div>
       <div className="max-w-[85%] w-full">
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors group"
+          className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 hover:text-foreground transition-colors"
         >
-          <span className="inline-flex items-center gap-1.5">
-            {streaming ? (
-              <>
-                <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex size-full rounded-full bg-brand/60 opacity-75 animate-ping" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-brand" />
-                </span>
-                <span className="text-brand">Pensando…</span>
-              </>
-            ) : (
-              <span>Razonamiento</span>
-            )}
-          </span>
-          <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
+          {streaming ? (
+            <>
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full bg-brand/60 opacity-75 animate-ping" />
+                <span className="relative inline-flex size-1.5 bg-brand" />
+              </span>
+              <span className="text-brand">Pensando…</span>
+            </>
+          ) : (
+            <span>Razonamiento</span>
+          )}
+          <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} strokeWidth={1.6} />
         </button>
         {open && (
-          <div className="mt-1.5 rounded-xl border border-dashed border-brand/25 bg-brand/[0.03] px-3.5 py-2.5 text-[12px] leading-relaxed text-muted-foreground whitespace-pre-wrap italic">
+          <div className="mt-2 border-l-2 border-brand/40 bg-foreground/[0.02] px-3.5 py-2.5 text-[12px] leading-relaxed text-foreground/65 whitespace-pre-wrap italic font-heading">
             {text}
-            {streaming && <span className="inline-block w-1.5 h-3 ml-0.5 bg-brand/60 animate-pulse align-middle rounded-sm" />}
+            {streaming && <span className="inline-block w-1.5 h-3 ml-0.5 bg-brand/60 animate-pulse align-middle" />}
           </div>
         )}
       </div>
@@ -291,23 +285,23 @@ function MarkdownBubble({ role, content }: { role: string; content: string }) {
   return (
     <div className={cn("flex gap-3", isAssistant ? "justify-start" : "justify-end")}>
       {isAssistant && (
-        <div className="size-7 rounded-full bg-brand/15 border border-brand/20 flex items-center justify-center shrink-0 mt-1">
-          <Bot className="size-3.5 text-brand" />
+        <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+          <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
         </div>
       )}
       <div className={cn(
-        "max-w-[85%] rounded-2xl px-4 py-3",
+        "max-w-[85%] px-4 py-3",
         isAssistant
-          ? "bg-card border border-border text-foreground rounded-tl-sm"
-          : "bg-brand text-brand-foreground rounded-tr-sm text-sm leading-relaxed"
+          ? "border-l-2 border-brand/50 bg-foreground/[0.02] text-foreground"
+          : "bg-brand text-brand-foreground text-[14px] leading-relaxed"
       )}>
         {isAssistant
           ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(clean) }} />
           : <span>{renderUserContent(clean)}</span>}
       </div>
       {!isAssistant && (
-        <div className="size-7 rounded-full bg-muted border border-border flex items-center justify-center shrink-0 mt-1">
-          <User className="size-3.5 text-muted-foreground" />
+        <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+          <User className="size-3.5 text-foreground/60" strokeWidth={1.6} />
         </div>
       )}
     </div>
@@ -322,34 +316,43 @@ function ExerciseCard({ exercise, selected, onToggle, onModify }: {
   const diff = DIFF[exercise.difficulty] ?? DIFF.intermediate;
   return (
     <div onClick={onToggle} className={cn(
-      "relative flex flex-col gap-2 rounded-xl p-3.5 border cursor-pointer transition-all group pl-5",
-      selected ? "bg-brand/8 border-brand/40 ring-1 ring-brand/20" : "bg-card border-border hover:border-brand/30"
+      "relative flex flex-col gap-2 p-3.5 border cursor-pointer transition-all group pl-4",
+      selected ? "bg-brand/[0.06] border-brand" : "bg-card border-foreground/15 hover:border-foreground/35"
     )}>
-      <div className={cn("absolute top-0 left-0 w-1 h-full rounded-l-xl", cat.bar)} />
+      <div className={cn("absolute top-0 left-0 w-[2px] h-full", selected ? "bg-brand" : "bg-foreground/15")} />
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", cat.color)}>{cat.label}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+            {cat.code} · {cat.label}
+          </span>
           {exercise.isAiGenerated && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-brand bg-brand/10 px-1.5 py-0.5 rounded-full border border-brand/20">
-              <Sparkles className="size-2.5" /> IA
+            <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand">
+              ◆ IA
             </span>
           )}
         </div>
-        <div className={cn("size-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
-          selected ? "bg-brand border-brand" : "border-muted-foreground/30 group-hover:border-brand/50")}>
-          {selected && <Check className="size-3 text-white" />}
+        <div className={cn("size-4 border flex items-center justify-center shrink-0 transition-all",
+          selected ? "bg-brand border-brand" : "border-foreground/25 group-hover:border-foreground/50")}>
+          {selected && <Check className="size-2.5 text-brand-foreground" strokeWidth={3} />}
         </div>
       </div>
-      <h3 className="font-heading font-semibold text-sm text-foreground leading-snug">{exercise.name}</h3>
-      {exercise.description && <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{exercise.description}</p>}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Clock className="size-3" />{exercise.durationMinutes} min</span>
-          <span className="flex items-center gap-1.5"><span className={cn("size-1.5 rounded-full", diff.dot)} />{diff.label}</span>
+      <h3 className="font-heading italic text-[15px] text-foreground leading-snug">{exercise.name}</h3>
+      {exercise.description && <p className="text-[12px] text-foreground/55 leading-relaxed line-clamp-2">{exercise.description}</p>}
+      <div className="flex items-center justify-between pt-1 border-t border-foreground/10">
+        <div className="flex items-center gap-3 text-[11px] text-foreground/55 tabular-nums">
+          <span className="flex items-center gap-1"><Clock className="size-3" strokeWidth={1.6} />{exercise.durationMinutes}′</span>
+          <span className="flex items-center gap-1">
+            <span className="flex gap-[2px]">
+              {[1,2,3,4,5].map(n => (
+                <span key={n} className={cn("w-[2px] h-2", n <= diff.bars ? "bg-brand" : "bg-foreground/15")} />
+              ))}
+            </span>
+            {diff.label}
+          </span>
         </div>
         <button onClick={e => { e.stopPropagation(); onModify(exercise); }}
-          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
-          Modificar <ChevronRight className="size-3" />
+          className="flex items-center gap-1 text-[10px] tracking-[0.18em] uppercase text-foreground/50 hover:text-brand transition-colors">
+          Modificar →
         </button>
       </div>
     </div>
@@ -363,7 +366,7 @@ function ExerciseGrid({ ejercicios, selectedExercises, onToggle, onModify }: {
   if (!ejercicios.length) return null;
   const sel = ejercicios.filter(e => selectedExercises.has(e.id)).length;
   return (
-    <div className="ml-10 mt-2 space-y-2">
+    <div className="ml-2 sm:ml-10 mt-2 space-y-2">
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{ejercicios.length}</span> ejercicio{ejercicios.length !== 1 ? "s" : ""}
         {sel > 0 && <span className="text-brand ml-1.5">· {sel} seleccionado{sel !== 1 ? "s" : ""}</span>}
@@ -380,43 +383,44 @@ function ExerciseGrid({ ejercicios, selectedExercises, onToggle, onModify }: {
 
 function ExerciseToolCard({ part }: { part: { state: string; output?: unknown } }) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Guardando ejercicio…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Guardando ejercicio…</div>;
   if (part.state !== "output-available") return null;
   const r = part.output as { ok: boolean; name?: string; error?: string };
   return r.ok
-    ? <div className="ml-10 mt-2 flex items-center gap-2.5 bg-brand/10 border border-brand/20 rounded-xl px-4 py-2.5 max-w-sm animate-scale-in">
-        <CheckCircle2 className="size-4 text-brand shrink-0" />
-        <span className="text-xs font-medium text-foreground">{r.name}</span>
-        <span className="text-xs text-muted-foreground">guardado en tu biblioteca</span>
-        <span className="flex items-center gap-1 text-[10px] font-semibold text-brand bg-brand/10 px-1.5 py-0.5 rounded-full border border-brand/20 ml-auto shrink-0"><Sparkles className="size-2.5" /> IA</span>
+    ? <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-scale-in">
+        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
+        <span className="font-heading italic text-[14px] text-foreground">{r.name}</span>
+        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">guardado</span>
+        <span className="ml-auto font-sans text-[9px] uppercase tracking-[0.22em] text-brand shrink-0 flex items-center gap-1"><Sparkles className="size-2.5" /> IA</span>
       </div>
-    : <div className="ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm animate-fade-in">
-        <XCircle className="size-4 text-destructive shrink-0" /><span className="text-xs text-destructive">{r.error}</span>
+    : <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
+        <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
       </div>;
 }
 
 function SessionCreatedCard({ part }: { part: { state: string; output?: unknown } }) {
   const router = useRouter();
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Creando sesión…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in"><Loader2 className="size-3.5 animate-spin text-brand" />Creando sesión…</div>;
   if (part.state !== "output-available") return null;
   const r = part.output as { ok: boolean; sessionId?: string; title?: string; totalDuration?: number; error?: string };
   if (!r.ok)
-    return <div className="ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm animate-fade-in">
-      <XCircle className="size-4 text-destructive shrink-0" /><span className="text-xs text-destructive">{r.error}</span>
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm animate-fade-in">
+      <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
     </div>;
   return (
-    <div className="ml-10 mt-2 flex items-center gap-3 bg-brand/10 border border-brand/25 rounded-xl px-4 py-3 max-w-sm animate-scale-in">
-      <div className="size-8 rounded-lg bg-brand/20 flex items-center justify-center shrink-0">
-        <CalendarCheck className="size-4 text-brand" />
+    <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-3 max-w-sm animate-scale-in">
+      <div className="size-9 border border-foreground/20 flex items-center justify-center shrink-0">
+        <CalendarCheck className="size-4 text-brand" strokeWidth={1.6} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-foreground truncate">{r.title}</p>
-        {r.totalDuration ? <p className="text-xs text-muted-foreground">{r.totalDuration} min</p> : null}
+        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">Sesión creada</p>
+        <p className="font-heading italic text-[14px] text-foreground truncate">{r.title}</p>
+        {r.totalDuration ? <p className="font-sans text-[10px] tabular-nums text-foreground/50">{r.totalDuration}′</p> : null}
       </div>
       <button onClick={() => router.push(`/sessions/${r.sessionId}`)}
-        className="text-xs font-semibold text-brand border border-brand/30 px-3 py-1.5 rounded-lg hover:bg-brand/10 transition-colors shrink-0">
-        Ver sesión
+        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0">
+        Ver →
       </button>
     </div>
   );
@@ -426,24 +430,24 @@ function QuestionForm({ preguntas, onSubmit }: { preguntas: Pregunta[]; onSubmit
   const [values, setValues] = useState<Record<string, string>>(Object.fromEntries(preguntas.map(p => [p.id, ""])));
   return (
     <form onSubmit={e => { e.preventDefault(); onSubmit(values); }}
-      className="ml-10 mt-2 bg-muted/40 border border-border rounded-xl p-4 space-y-3 max-w-xs">
+      className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 space-y-4 max-w-xs bg-foreground/[0.02]">
       {preguntas.map(p => (
-        <div key={p.id} className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">{p.label}</label>
+        <div key={p.id} className="space-y-1.5">
+          <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">{p.label}</label>
           {p.tipo === "select" && p.opciones
             ? <select value={values[p.id]} onChange={e => setValues(v => ({ ...v, [p.id]: e.target.value }))} required
-                className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30">
+                className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors">
                 <option value="">Selecciona…</option>
                 {p.opciones.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             : <input type={p.tipo === "numero" ? "number" : "text"} value={values[p.id]}
                 onChange={e => setValues(v => ({ ...v, [p.id]: e.target.value }))}
                 placeholder={p.placeholder ?? ""} required min={p.tipo === "numero" ? 1 : undefined}
-                className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30" />
+                className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
           }
         </div>
       ))}
-      <button type="submit" className="w-full text-sm font-semibold bg-brand text-brand-foreground rounded-lg py-2 hover:bg-brand/90 transition-colors">Enviar</button>
+      <button type="submit" className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">Enviar</button>
     </form>
   );
 }
@@ -456,7 +460,7 @@ function StudentPickerCard({ part, onSend }: {
   const [confirmed, setConfirmed] = useState(false);
 
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Cargando alumnos…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Cargando alumnos…</div>;
   if (part.state !== "output-available") return null;
 
   const r = part.output as { estudiantes: StudentItem[]; pregunta?: string };
@@ -464,20 +468,20 @@ function StudentPickerCard({ part, onSend }: {
 
   if (confirmed) {
     return (
-      <div className="ml-10 mt-2 flex items-center gap-2 bg-brand/10 border border-brand/20 rounded-xl px-4 py-2.5 max-w-sm">
-        <CheckCircle2 className="size-4 text-brand shrink-0" />
-        <span className="text-xs text-muted-foreground">Selección confirmada</span>
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
+        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
+        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Selección confirmada</span>
       </div>
     );
   }
 
   if (estudiantes.length === 0) {
     return (
-      <div className="ml-10 mt-2 bg-muted/40 border border-border rounded-xl p-4 max-w-sm space-y-2">
-        <p className="text-xs text-muted-foreground">Aún no tienes alumnos — puedes crear uno.</p>
+      <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 max-w-sm space-y-3 bg-foreground/[0.02]">
+        <p className="text-[12px] text-foreground/65">Aún no tienes alumnos — puedes crear uno.</p>
         <Link href="/students/new"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand border border-brand/30 px-3 py-1.5 rounded-lg hover:bg-brand/10 transition-colors">
-          <UserPlus className="size-3.5" /> Crear alumno
+          className="inline-flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+          <UserPlus className="size-3" strokeWidth={1.6} /> Crear alumno
         </Link>
       </div>
     );
@@ -502,30 +506,29 @@ function StudentPickerCard({ part, onSend }: {
   }
 
   return (
-    <div className="ml-10 mt-2 bg-card border border-border rounded-xl p-4 max-w-sm space-y-3">
-      <p className="text-xs font-semibold text-foreground">
+    <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 max-w-sm space-y-3 bg-foreground/[0.02]">
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
         {r.pregunta ?? "¿Para quién es esta sesión?"}
       </p>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {estudiantes.map(s => {
           const isSelected = selected.has(s.id);
-          const levelColor = s.playerLevel ? (LEVEL_COLOR[s.playerLevel] ?? "") : "";
           return (
             <div key={s.id} onClick={() => toggle(s.id)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 border cursor-pointer transition-all",
-                isSelected ? "bg-brand/8 border-brand/40" : "bg-muted/30 border-border hover:border-brand/30"
+                "flex items-center gap-3 px-3 py-2.5 border cursor-pointer transition-all",
+                isSelected ? "bg-brand/[0.06] border-brand" : "bg-transparent border-foreground/15 hover:border-foreground/35"
               )}>
-              <div className={cn("size-4 rounded border-2 flex items-center justify-center shrink-0 transition-all",
-                isSelected ? "bg-brand border-brand" : "border-muted-foreground/30")}>
-                {isSelected && <Check className="size-2.5 text-white" />}
+              <div className={cn("size-4 border flex items-center justify-center shrink-0 transition-all",
+                isSelected ? "bg-brand border-brand" : "border-foreground/30")}>
+                {isSelected && <Check className="size-2.5 text-brand-foreground" strokeWidth={3} />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
+                <p className="text-[14px] text-foreground truncate">{s.name}</p>
               </div>
               {s.playerLevel && (
-                <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0", levelColor)}>
-                  {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
+                <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 shrink-0">
+                  {LEVEL_CODE[s.playerLevel] ?? "—"} · {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
                 </span>
               )}
             </div>
@@ -533,7 +536,7 @@ function StudentPickerCard({ part, onSend }: {
         })}
       </div>
       <button onClick={confirm}
-        className="w-full text-sm font-semibold bg-brand text-brand-foreground rounded-lg py-2 hover:bg-brand/90 transition-colors">
+        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">
         Confirmar selección
       </button>
     </div>
@@ -542,27 +545,27 @@ function StudentPickerCard({ part, onSend }: {
 
 function CrearAlumnoCard({ part }: { part: { state: string; output?: unknown } }) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Creando alumno…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Creando alumno…</div>;
   if (part.state !== "output-available") return null;
   const r = part.output as { ok: boolean; id?: string; name?: string; error?: string };
   if (!r.ok)
     return (
-      <div className="ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm">
-        <XCircle className="size-4 text-destructive shrink-0" /><span className="text-xs text-destructive">{r.error}</span>
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
+        <XCircle className="size-3.5 text-destructive shrink-0" strokeWidth={1.6} /><span className="text-[12px] text-destructive">{r.error}</span>
       </div>
     );
   return (
-    <div className="ml-10 mt-2 flex items-center gap-3 bg-brand/10 border border-brand/25 rounded-xl px-4 py-3 max-w-sm">
-      <div className="size-8 rounded-lg bg-brand/20 flex items-center justify-center shrink-0">
-        <UserPlus className="size-4 text-brand" />
+    <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-3 border-l-2 border-brand bg-foreground/[0.02] px-4 py-3 max-w-sm">
+      <div className="size-9 border border-foreground/20 flex items-center justify-center shrink-0">
+        <UserPlus className="size-4 text-brand" strokeWidth={1.6} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-foreground">Alumno creado</p>
-        <p className="text-xs text-muted-foreground truncate">{r.name}</p>
+        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">Alumno creado</p>
+        <p className="font-heading italic text-[14px] text-foreground truncate">{r.name}</p>
       </div>
       <Link href={`/students/${r.id}`}
-        className="text-xs font-semibold text-brand border border-brand/30 px-3 py-1.5 rounded-lg hover:bg-brand/10 transition-colors shrink-0">
-        Ver perfil
+        className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors shrink-0">
+        Ver →
       </Link>
     </div>
   );
@@ -582,14 +585,14 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
   const [scheduledAt, setScheduledAt] = useState(output?.scheduledAt ?? "");
 
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Preparando configuración…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Preparando configuración…</div>;
   if (part.state !== "output-available") return null;
 
   if (confirmed) {
     return (
-      <div className="ml-10 mt-2 flex items-center gap-2 bg-brand/10 border border-brand/20 rounded-xl px-4 py-2.5 max-w-sm">
-        <CheckCircle2 className="size-4 text-brand shrink-0" />
-        <span className="text-xs text-muted-foreground">Configuración confirmada</span>
+      <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 border-l-2 border-brand bg-foreground/[0.02] px-4 py-2.5 max-w-sm">
+        <CheckCircle2 className="size-3.5 text-brand shrink-0" strokeWidth={1.6} />
+        <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Configuración confirmada</span>
       </div>
     );
   }
@@ -608,30 +611,28 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
   }
 
   return (
-    <div className="ml-10 mt-2 bg-card border border-border rounded-xl p-4 max-w-sm space-y-3">
-      <p className="text-xs font-semibold text-foreground">Configurar sesión</p>
+    <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-4 max-w-sm space-y-4 bg-foreground/[0.02]">
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand">Configurar sesión</p>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-          Objetivo
-        </label>
+      <div className="space-y-1.5">
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">Objetivo</label>
         <textarea value={objective} onChange={e => setObjective(e.target.value)} rows={2}
           placeholder="Ej. Mejorar la volea de derecha bajo presión"
-          className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none" />
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors resize-none placeholder:text-foreground/30" />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          <Flame className="size-3" /> Intensidad
+      <div className="space-y-1.5">
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 flex items-center gap-1.5">
+          <Flame className="size-3" strokeWidth={1.6} /> Intensidad
         </label>
-        <div className="flex gap-1.5">
+        <div className="flex">
           {[1, 2, 3, 4, 5].map(n => (
             <button key={n} type="button" onClick={() => setIntensity(n)}
               className={cn(
-                "flex-1 text-xs font-semibold py-1.5 rounded-lg border transition-all",
+                "flex-1 font-sans text-[11px] tabular-nums font-semibold py-2 border transition-all -ml-px first:ml-0",
                 intensity === n
-                  ? "bg-brand text-brand-foreground border-brand"
-                  : "bg-background border-border text-muted-foreground hover:border-brand/30"
+                  ? "bg-brand text-brand-foreground border-brand z-10"
+                  : "bg-transparent border-foreground/20 text-foreground/55 hover:border-foreground/50"
               )}>
               {n}
             </button>
@@ -639,32 +640,32 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
         </div>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          <MapPin className="size-3" /> Ubicación
+      <div className="space-y-1.5">
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 flex items-center gap-1.5">
+          <MapPin className="size-3" strokeWidth={1.6} /> Ubicación
         </label>
         <input type="text" value={location} onChange={e => setLocation(e.target.value)}
-          placeholder="Ej. Pista 3 - Club Pádel Norte"
-          className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30" />
+          placeholder="Ej. Pista 3 · Club Pádel Norte"
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          <Tag className="size-3" /> Etiquetas <span className="font-normal">(separadas por coma)</span>
+      <div className="space-y-1.5">
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55 flex items-center gap-1.5">
+          <Tag className="size-3" strokeWidth={1.6} /> Etiquetas
         </label>
         <input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)}
-          placeholder="Ej. técnica, volea, avanzado"
-          className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30" />
+          placeholder="técnica, volea, avanzado"
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors placeholder:text-foreground/30" />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Fecha y hora</label>
+      <div className="space-y-1.5">
+        <label className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">Fecha y hora</label>
         <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
-          className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/30" />
+          className="w-full text-[13px] bg-transparent border-0 border-b border-foreground/20 px-0 py-1.5 focus:outline-none focus:border-brand transition-colors" />
       </div>
 
       <button onClick={confirm}
-        className="w-full text-sm font-semibold bg-brand text-brand-foreground rounded-lg py-2 hover:bg-brand/90 transition-colors">
+        className="w-full font-sans text-[11px] uppercase tracking-[0.22em] font-semibold bg-brand text-brand-foreground py-2.5 hover:bg-brand/90 transition-colors">
         Confirmar y crear sesión
       </button>
     </div>
@@ -673,45 +674,48 @@ function ConfigurarSesionMetaCard({ part, onSend }: {
 
 function BuscarContextoCard({ part }: { part: { state: string; output?: unknown } }) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando…</div>;
   if (part.state !== "output-available") return null;
   const r = part.output as BuscarContextoResult;
   if (!r?.resultados?.length)
-    return <div className="ml-10 mt-2 text-xs text-muted-foreground">Sin resultados.</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">Sin resultados.</div>;
 
   const iconForTipo = (tipo: string) => {
-    if (tipo === "ejercicio") return <Dumbbell className="size-3.5 text-blue-400 shrink-0" />;
-    if (tipo === "sesion") return <Calendar className="size-3.5 text-purple-400 shrink-0" />;
-    return <GraduationCap className="size-3.5 text-brand shrink-0" />;
+    if (tipo === "ejercicio") return <Dumbbell className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
+    if (tipo === "sesion") return <Calendar className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
+    return <GraduationCap className="size-3 text-foreground/60 shrink-0" strokeWidth={1.6} />;
   };
 
   const labelForTipo: Record<string, string> = { ejercicio: "Ejercicios", sesion: "Sesiones", alumno: "Alumnos" };
 
   return (
-    <div className="ml-10 mt-2 bg-card border border-border rounded-xl p-3 max-w-sm space-y-2">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{labelForTipo[r.tipo] ?? r.tipo}</p>
-      <div className="space-y-1">
-        {r.resultados.map((item) => {
+    <div className="ml-2 sm:ml-10 mt-2 border border-foreground/15 p-3 max-w-sm bg-foreground/[0.02]">
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand mb-2">{labelForTipo[r.tipo] ?? r.tipo}</p>
+      <ul>
+        {r.resultados.map((item, idx) => {
           const name = item.name ?? item.title ?? "";
           const subtitle = item.category ?? (item.scheduledAt ? new Date(item.scheduledAt).toLocaleDateString("es-ES") : null) ?? item.playerLevel ?? null;
           return (
-            <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40">
+            <li key={item.id} className="flex items-center gap-3 py-2 border-b border-foreground/5 last:border-0">
+              <span className="font-sans text-[9px] tabular-nums tracking-[0.18em] text-foreground/40 w-4">
+                {String(idx + 1).padStart(2, "0")}
+              </span>
               {iconForTipo(r.tipo)}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">{name}</p>
-                {subtitle && <p className="text-[10px] text-muted-foreground truncate">{subtitle}</p>}
+                <p className="text-[12px] text-foreground truncate">{name}</p>
+                {subtitle && <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 truncate">{subtitle}</p>}
               </div>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }
 
 function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown } }) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Analizando alumno…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Analizando alumno…</div>;
   if (part.state !== "output-available") return null;
 
   type AlumnoData = {
@@ -724,61 +728,60 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
   const r = part.output as AlumnoData;
 
   if (!r.ok)
-    return <div className="ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm">
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-2.5 max-w-sm">
       <XCircle className="size-4 text-destructive shrink-0" /><span className="text-xs text-destructive">{r.error}</span>
     </div>;
 
   const { student, totalSessions = 0, recentSessions = [] } = r;
   if (!student) return null;
-  const levelColor = student.playerLevel ? (LEVEL_COLOR[student.playerLevel] ?? "") : "";
 
   return (
-    <div className="ml-10 mt-2 bg-card border border-border rounded-xl p-4 max-w-sm space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-          <GraduationCap className="size-5 text-brand" />
+    <div className="ml-2 sm:ml-10 mt-2 bg-card border border-foreground/15 p-4 max-w-sm space-y-3">
+      <div className="flex items-center gap-3 pb-3 border-b border-foreground/10">
+        <div className="size-10 border border-foreground/20 flex items-center justify-center shrink-0">
+          <GraduationCap className="size-4 text-foreground/70" strokeWidth={1.6} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{student.name}</p>
-            {student.playerLevel && (
-              <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0", levelColor)}>
-                {LEVEL_LABEL[student.playerLevel] ?? student.playerLevel}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+          <p className="font-heading italic text-[15px] text-foreground">{student.name}</p>
+          <div className="flex items-center gap-3 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 mt-0.5">
+            {student.playerLevel && <span>{LEVEL_CODE[student.playerLevel] ?? "—"} · {LEVEL_LABEL[student.playerLevel] ?? student.playerLevel}</span>}
             {student.dominantHand && <span>{student.dominantHand === "right" ? "Diestra" : "Zurda"}</span>}
-            {student.yearsExperience != null && <span>{student.yearsExperience} años exp.</span>}
+            {student.yearsExperience != null && <span>{student.yearsExperience}y exp.</span>}
           </div>
         </div>
       </div>
 
       {student.notes && (
-        <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 italic">{student.notes}</p>
+        <p className="font-heading italic text-[13px] text-foreground/75 border-l-2 border-brand/40 pl-3">{student.notes}</p>
       )}
 
-      <div className="bg-muted/40 rounded-lg px-3 py-2 text-center">
-        <p className="text-xl font-bold text-foreground">{totalSessions}</p>
-        <p className="text-[10px] text-muted-foreground">sesiones registradas</p>
+      <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 py-2 border-y border-foreground/10">
+        <p className="font-heading text-3xl tabular-nums text-foreground leading-none">{totalSessions}</p>
+        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+          sesiones<br />registradas
+        </p>
       </div>
 
       {recentSessions.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Últimas sesiones</p>
+        <div className="space-y-1">
+          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 mb-1.5">
+            Últimas sesiones
+          </p>
           {recentSessions.slice(0, 4).map(s => (
-            <div key={s.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-muted/30">
-              <Calendar className="size-3 text-muted-foreground shrink-0" />
+            <div key={s.id} className="flex items-center gap-3 px-0 py-2 border-b border-foreground/5 last:border-0">
+              <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/40 w-4">
+                {String(recentSessions.indexOf(s) + 1).padStart(2, "0")}
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">{s.title}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {new Date(s.scheduledAt).toLocaleDateString("es-ES")} · {s.durationMinutes} min
+                <p className="text-[12px] text-foreground truncate">{s.title}</p>
+                <p className="text-[10px] text-foreground/50 tabular-nums">
+                  {new Date(s.scheduledAt).toLocaleDateString("es-ES")} · {s.durationMinutes}′
                 </p>
               </div>
               {s.intensity != null && (
-                <div className="flex gap-0.5 shrink-0">
+                <div className="flex gap-[2px] shrink-0">
                   {[1, 2, 3, 4, 5].map(n => (
-                    <span key={n} className={cn("size-1.5 rounded-full", n <= s.intensity! ? "bg-brand" : "bg-muted-foreground/20")} />
+                    <span key={n} className={cn("w-[2px] h-2.5", n <= s.intensity! ? "bg-brand" : "bg-foreground/15")} />
                   ))}
                 </div>
               )}
@@ -788,8 +791,8 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
       )}
 
       <Link href={`/students/${student.id}`}
-        className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold text-brand border border-brand/30 px-3 py-1.5 rounded-lg hover:bg-brand/10 transition-colors">
-        Ver perfil completo <ChevronRight className="size-3" />
+        className="flex items-center justify-center gap-1.5 w-full text-[11px] tracking-[0.18em] uppercase text-foreground/70 border border-foreground/20 px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+        Ver perfil completo →
       </Link>
     </div>
   );
@@ -797,48 +800,54 @@ function AnalizarAlumnoCard({ part }: { part: { state: string; output?: unknown 
 
 function SesionesSimilaresCard({ part }: { part: { state: string; output?: unknown } }) {
   if (part.state === "input-streaming" || part.state === "input-available")
-    return <div className="ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando sesiones…</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-brand" />Buscando sesiones…</div>;
   if (part.state !== "output-available") return null;
 
   type SesionItem = { id: string; title: string; scheduledAt: string | Date; durationMinutes: number; objective: string | null; intensity: number | null; tags: string[] | null };
   const r = part.output as { sesiones: SesionItem[] };
 
   if (!r.sesiones?.length)
-    return <div className="ml-10 mt-2 text-xs text-muted-foreground">No se encontraron sesiones.</div>;
+    return <div className="ml-2 sm:ml-10 mt-2 text-xs text-muted-foreground">No se encontraron sesiones.</div>;
 
   return (
-    <div className="ml-10 mt-2 space-y-2">
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{r.sesiones.length}</span> sesión{r.sesiones.length !== 1 ? "es" : ""} encontrada{r.sesiones.length !== 1 ? "s" : ""}
+    <div className="ml-2 sm:ml-10 mt-2 space-y-2">
+      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+        <span className="tabular-nums text-brand">{String(r.sesiones.length).padStart(2, "0")}</span> · sesión{r.sesiones.length !== 1 ? "es" : ""} encontrada{r.sesiones.length !== 1 ? "s" : ""}
       </p>
-      <div className="space-y-2">
-        {r.sesiones.map(s => (
-          <Link key={s.id} href={`/sessions/${s.id}`}
-            className="flex items-center gap-3 bg-card border border-border hover:border-brand/30 rounded-xl px-3.5 py-3 transition-all group block">
-            <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Calendar className="size-4 text-muted-foreground group-hover:text-brand transition-colors" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                <span>{new Date(s.scheduledAt).toLocaleDateString("es-ES")}</span>
-                <span>·</span>
-                <span>{s.durationMinutes} min</span>
-                {s.intensity != null && <><span>·</span><span>Intensidad {s.intensity}/5</span></>}
-              </div>
-              {s.objective && <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{s.objective}</p>}
-              {s.tags && s.tags.length > 0 && (
-                <div className="flex gap-1 mt-1 flex-wrap">
-                  {s.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">{tag}</span>
-                  ))}
+      <ul className="border-y border-foreground/10">
+        {r.sesiones.map((s, idx) => (
+          <li key={s.id} className="border-b border-foreground/10 last:border-0">
+            <Link href={`/sessions/${s.id}`}
+              className="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3 hover:bg-foreground/[0.02] transition-colors group">
+              <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/40 w-6">
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+              <div className="min-w-0">
+                <p className="font-heading italic text-[14px] text-foreground truncate group-hover:text-brand transition-colors">{s.title}</p>
+                <div className="flex items-center gap-2 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/50 mt-0.5">
+                  <span>{new Date(s.scheduledAt).toLocaleDateString("es-ES")}</span>
+                  <span>·</span>
+                  <span>{s.durationMinutes}′</span>
+                  {s.intensity != null && (
+                    <span className="flex gap-[2px]">
+                      {[1,2,3,4,5].map(n => (
+                        <span key={n} className={cn("w-[2px] h-2", n <= s.intensity! ? "bg-brand" : "bg-foreground/15")} />
+                      ))}
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
-          </Link>
+                {s.objective && <p className="text-[11px] text-foreground/50 mt-0.5 truncate italic">{s.objective}</p>}
+                {s.tags && s.tags.length > 0 && (
+                  <div className="flex gap-2 mt-1 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+                    {s.tags.slice(0, 3).map(tag => <span key={tag}>· {tag}</span>)}
+                  </div>
+                )}
+              </div>
+              <ChevronRight className="size-3 text-foreground/40 group-hover:text-brand transition-colors shrink-0" strokeWidth={1.6} />
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -857,27 +866,27 @@ function MentionPopover({ query, results, loading, onSelect }: {
   const hasResults = results.length > 0;
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-popover border border-border rounded-xl shadow-xl overflow-hidden max-h-[250px] overflow-y-auto">
+    <div className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-background border border-foreground/20 overflow-hidden max-h-[280px] overflow-y-auto">
       {loading && (
-        <div className="flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin text-brand" /> Buscando…
+        <div className="flex items-center gap-2 px-3 py-3 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+          <Loader2 className="size-3 animate-spin text-brand" strokeWidth={1.6} /> Buscando…
         </div>
       )}
       {!loading && !hasResults && (
-        <div className="px-3 py-2.5 text-xs text-muted-foreground">Sin resultados para &apos;@{query}&apos;</div>
+        <div className="px-3 py-3 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">Sin resultados para &apos;@{query}&apos;</div>
       )}
       {!loading && hasResults && (
         <div className="py-1">
           {grouped.ejercicio.length > 0 && (
             <>
-              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Ejercicios</p>
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-b border-foreground/10">Ejercicios</p>
               {grouped.ejercicio.map(r => (
                 <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted transition-colors text-left">
-                  <Dumbbell className="size-3.5 text-blue-400 shrink-0" />
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
+                  <Dumbbell className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{r.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{r.category} · {r.durationMinutes} min</p>
+                    <p className="text-[12px] text-foreground truncate">{r.name}</p>
+                    <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/50 truncate">{r.category} · {r.durationMinutes}′</p>
                   </div>
                 </button>
               ))}
@@ -885,14 +894,14 @@ function MentionPopover({ query, results, loading, onSelect }: {
           )}
           {grouped.sesion.length > 0 && (
             <>
-              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Sesiones</p>
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">Sesiones</p>
               {grouped.sesion.map(r => (
                 <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted transition-colors text-left">
-                  <Calendar className="size-3.5 text-purple-400 shrink-0" />
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
+                  <Calendar className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{r.title}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{new Date(r.scheduledAt).toLocaleDateString("es-ES")}</p>
+                    <p className="text-[12px] text-foreground truncate">{r.title}</p>
+                    <p className="font-sans text-[9px] tabular-nums tracking-[0.18em] text-foreground/50 truncate">{new Date(r.scheduledAt).toLocaleDateString("es-ES")}</p>
                   </div>
                 </button>
               ))}
@@ -900,14 +909,14 @@ function MentionPopover({ query, results, loading, onSelect }: {
           )}
           {grouped.alumno.length > 0 && (
             <>
-              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Alumnos</p>
+              <p className="px-3 pt-2 pb-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-brand border-y border-foreground/10">Alumnos</p>
               {grouped.alumno.map(r => (
                 <button key={r.id} onClick={() => onSelect(r)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted transition-colors text-left">
-                  <GraduationCap className="size-3.5 text-brand shrink-0" />
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-foreground/[0.04] transition-colors text-left border-b border-foreground/5 last:border-0">
+                  <GraduationCap className="size-3 text-foreground/55 shrink-0" strokeWidth={1.6} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{r.name}</p>
-                    {r.playerLevel && <p className="text-[10px] text-muted-foreground truncate">{LEVEL_LABEL[r.playerLevel] ?? r.playerLevel}</p>}
+                    <p className="text-[12px] text-foreground truncate">{r.name}</p>
+                    {r.playerLevel && <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/50 truncate">{LEVEL_CODE[r.playerLevel] ?? "—"} · {LEVEL_LABEL[r.playerLevel] ?? r.playerLevel}</p>}
                   </div>
                 </button>
               ))}
@@ -1125,52 +1134,64 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-dvh">
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 md:px-6 py-3.5 border-b border-border bg-card/50 backdrop-blur shrink-0">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-4 sm:px-6 md:px-10 py-3 sm:py-4 border-b border-foreground/15 bg-background/80 backdrop-blur shrink-0">
         <Link href="/sessions/dr-planner"
-          className="size-8 rounded-lg border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0">
-          <ArrowLeft className="size-4" />
+          className="font-sans text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors whitespace-nowrap">
+          <span className="sm:hidden">←</span>
+          <span className="hidden sm:inline">← Dr. Planner</span>
         </Link>
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="size-7 rounded-full bg-brand/15 border border-brand/20 flex items-center justify-center shrink-0">
-            <Bot className="size-3.5 text-brand" />
-          </div>
-          <p className="text-sm font-medium text-foreground truncate">{title}</p>
+        <div className="min-w-0 text-center">
+          <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-foreground/45 hidden sm:block">
+            Conversación · IA
+          </p>
+          <p className="font-heading italic text-[14px] sm:text-[15px] text-foreground truncate sm:mt-0.5">
+            {title}
+          </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-4">
           {messages.length > 0 && (
             <button
               onClick={() => setMessages([])}
               title="Limpiar conversación"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-muted">
-              <RotateCcw className="size-3.5" />
+              className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+              <RotateCcw className="size-3" strokeWidth={1.6} />
               <span className="hidden sm:inline">Limpiar</span>
             </button>
           )}
           <button onClick={handleDelete}
-            className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
-            <Trash2 className="size-3.5" />
+            className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-destructive transition-colors"
+            title="Eliminar">
+            <Trash2 className="size-3" strokeWidth={1.6} />
+            <span className="hidden sm:inline">Eliminar</span>
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-5 max-w-lg mx-auto text-center pb-4">
-            <div className="size-14 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-              <Bot className="size-7 text-brand" />
-            </div>
-            <div>
-              <h2 className="font-heading text-xl font-bold text-foreground mb-1.5">Dr. Planner</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Describe el nivel del grupo, la duración disponible y los objetivos. Diseñaré el plan usando tu biblioteca de ejercicios.
-              </p>
-            </div>
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="flex flex-col items-center justify-center h-full gap-8 max-w-xl mx-auto text-center pb-4">
+            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              Consulta · Dr. Planner
+            </p>
+            <h2 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
+              ¿Qué <em className="italic text-brand">sesión</em> necesitas hoy?
+            </h2>
+            <p className="text-[13px] text-foreground/60 leading-relaxed max-w-md">
+              Describe nivel del grupo, duración disponible y objetivos. Diseñaré el plan usando tu biblioteca de ejercicios.
+            </p>
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 border border-foreground/15">
               {["Sesión de 60 min para nivel intermedio", "Técnica de volea para principiantes", "Entrenamiento físico para competición", "Táctica de juego de red para parejas"]
-                .map(s => (
+                .map((s, i) => (
                   <button key={s} onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                    className="text-left text-xs text-muted-foreground bg-muted/50 hover:bg-muted border border-border hover:border-brand/30 rounded-xl px-3.5 py-3 transition-all">
+                    className={cn(
+                      "text-left text-[12px] text-foreground/70 hover:text-foreground hover:bg-foreground/[0.03] px-4 py-3.5 transition-all border-foreground/10",
+                      i % 2 === 1 && "sm:border-l",
+                      i >= 2 && "border-t",
+                    )}>
+                    <span className="font-sans text-[9px] tabular-nums tracking-[0.22em] text-foreground/35 mr-2">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
                     {s}
                   </button>
                 ))}
@@ -1252,19 +1273,19 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
                 : activity ?? (hasVisibleText ? "Redactando respuesta…" : "Pensando…");
               return (
                 <div className="flex gap-3 justify-start">
-                  <div className="size-7 rounded-full bg-brand/15 border border-brand/20 flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="size-3.5 text-brand" />
+                  <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
                   </div>
-                  <div className="bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-2.5 flex items-center gap-2.5">
-                    <span className="relative flex size-2">
-                      <span className="absolute inline-flex size-full rounded-full bg-brand/60 opacity-75 animate-ping" />
-                      <span className="relative inline-flex size-2 rounded-full bg-brand" />
+                  <div className="border-l-2 border-brand/50 bg-foreground/[0.02] px-4 py-2.5 flex items-center gap-3">
+                    <span className="relative flex size-1.5">
+                      <span className="absolute inline-flex size-full bg-brand/60 opacity-75 animate-ping" />
+                      <span className="relative inline-flex size-1.5 bg-brand" />
                     </span>
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                    <span className="flex gap-0.5">
-                      <span className="size-1 rounded-full bg-brand/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="size-1 rounded-full bg-brand/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="size-1 rounded-full bg-brand/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">{label}</span>
+                    <span className="flex gap-[3px]">
+                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="size-1 bg-brand/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                     </span>
                   </div>
                 </div>
@@ -1277,24 +1298,24 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
 
       {/* Floating bar — exercises selected */}
       {selectedExercises.size > 0 && (
-        <div className="shrink-0 px-4 md:px-6 py-3 border-t border-brand/25 bg-brand/5">
-          <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="size-6 rounded-lg bg-brand flex items-center justify-center">
-                <span className="text-[11px] font-bold text-white">{selectedExercises.size}</span>
-              </div>
-              <span className="text-sm font-medium text-foreground">
+        <div className="shrink-0 px-4 sm:px-6 md:px-10 py-3 border-t border-brand bg-brand/[0.04]">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-baseline gap-3">
+              <span className="font-heading text-2xl tabular-nums text-brand leading-none">
+                {String(selectedExercises.size).padStart(2, "0")}
+              </span>
+              <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">
                 ejercicio{selectedExercises.size !== 1 ? "s" : ""} seleccionado{selectedExercises.size !== 1 ? "s" : ""}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <button onClick={() => setSelectedExercises(new Set())}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-lg hover:bg-muted transition-colors">
-                <X className="size-3.5" /> Limpiar
+                className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+                <X className="size-3" strokeWidth={1.6} /> Limpiar
               </button>
               <button onClick={() => router.push(`/sessions/new?exercises=${Array.from(selectedExercises).join(",")}`)}
-                className="flex items-center gap-1.5 text-sm font-semibold bg-brand text-brand-foreground px-4 py-2 rounded-xl hover:bg-brand/90 transition-colors">
-                <Plus className="size-4" /> Crear sesión
+                className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[11px] font-semibold tracking-[0.18em] uppercase px-4 py-2 hover:bg-brand/90 transition-colors">
+                <Plus className="size-3" strokeWidth={2} /> Crear sesión
               </button>
             </div>
           </div>
@@ -1302,44 +1323,42 @@ export function DrPlannerChat({ chatId, initialTitle, initialMessages }: {
       )}
 
       {/* Input — fixed bottom with safe area padding on mobile */}
-      <div className="shrink-0 px-4 md:px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-border bg-card/50 backdrop-blur">
-        <div className="max-w-5xl mx-auto">
-          <div ref={inputWrapperRef} className="relative">
-            {mentionQuery !== null && (
-              <MentionPopover
-                query={mentionQuery}
-                results={mentionResults}
-                loading={mentionLoading}
-                onSelect={handleMentionSelect}
-              />
+      <div className="shrink-0 px-4 sm:px-6 md:px-10 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-foreground/15 bg-background/80 backdrop-blur">
+        <div ref={inputWrapperRef} className="relative">
+          {mentionQuery !== null && (
+            <MentionPopover
+              query={mentionQuery}
+              results={mentionResults}
+              loading={mentionLoading}
+              onSelect={handleMentionSelect}
+            />
+          )}
+          <div className="flex gap-3 items-end border border-foreground/20 px-4 py-3 focus-within:border-brand transition-all bg-background">
+            <textarea ref={textareaRef} value={input} onChange={handleInputChange}
+              onKeyDown={handleKeyDown} placeholder="Describe la sesión que necesitas… (escribe @ para mencionar)" rows={1}
+              className="flex-1 text-[14px] bg-transparent focus:outline-none text-foreground placeholder:text-foreground/40 resize-none max-h-32 py-0.5" />
+            {isLoading ? (
+              <button type="button" onClick={() => {
+                stop();
+                fetch(`/api/dr-planner/chats/${chatId}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ messages }),
+                }).catch(() => {});
+              }}
+                className="size-8 border border-destructive/40 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-colors shrink-0"
+                title="Detener generación">
+                <X className="size-3.5" strokeWidth={1.6} />
+              </button>
+            ) : (
+              <button type="button" onClick={submit} disabled={!input.trim()}
+                className="size-8 bg-brand text-brand-foreground flex items-center justify-center hover:bg-brand/90 transition-colors disabled:opacity-30 disabled:bg-foreground/10 disabled:text-foreground/40 shrink-0">
+                <Send className="size-3.5" strokeWidth={2} />
+              </button>
             )}
-            <div className="flex gap-2 items-end bg-background border border-border rounded-2xl px-3 py-2 focus-within:ring-2 focus-within:ring-brand/30 focus-within:border-brand/50 transition-all">
-              <textarea ref={textareaRef} value={input} onChange={handleInputChange}
-                onKeyDown={handleKeyDown} placeholder="Describe la sesión que necesitas… (escribe @ para mencionar)" rows={1}
-                className="flex-1 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground resize-none max-h-32 py-1" />
-              {isLoading ? (
-                <button type="button" onClick={() => {
-                  stop();
-                  fetch(`/api/dr-planner/chats/${chatId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ messages }),
-                  }).catch(() => {});
-                }}
-                  className="size-8 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive flex items-center justify-center hover:bg-destructive/25 transition-colors shrink-0"
-                  title="Detener generación">
-                  <X className="size-3.5" />
-                </button>
-              ) : (
-                <button type="button" onClick={submit} disabled={!input.trim()}
-                  className="size-8 rounded-xl bg-brand text-brand-foreground flex items-center justify-center hover:bg-brand/90 transition-colors disabled:opacity-40 shrink-0">
-                  <Send className="size-3.5" />
-                </button>
-              )}
-            </div>
           </div>
-          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-            Intro para enviar · Shift+Intro para nueva línea · @ para mencionar
+          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 text-center mt-2">
+            Intro enviar · Shift+Intro nueva línea · @ mencionar
           </p>
         </div>
       </div>
