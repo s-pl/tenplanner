@@ -470,7 +470,7 @@ export async function POST(request: Request) {
 ## Flujo (una sola ruta)
 1. Si hay alumnos y aún no se han seleccionado → llama YA a \`seleccionar_alumnos\`. No preguntes en texto.
 2. Recopila lo que falte (nivel, duración, objetivo) con \`<preguntas>\`. Nada de preguntas repetidas.
-3. Diseña el plan. Muéstralo con \`mostrar_ejercicios\`. Si necesitas algo que no existe, pide permiso para crearlo con \`crear_ejercicio\`.
+3. Diseña el plan. Muéstralo con \`mostrar_ejercicios\`. Si necesitas algo que no existe en la biblioteca, describe en texto la especificación completa del ejercicio (nombre, categoría, dificultad, duración, objetivo) y pregunta: "¿Lo creo así o quieres ajustar algo?" Espera respuesta antes de llamar a \`crear_ejercicio\`.
 4. Llama a \`configurar_sesion_meta\` SIEMPRE con TODOS los campos ya conocidos prellenados: \`objective\` (del historial o del estado), \`intensity\` (estima según ejercicios si no se dijo), \`scheduledAt\` (usa la fecha por defecto si no se dijo), \`location\` y \`tags\` si se mencionaron, \`durationMinutes\` (suma del plan). NO llames a esta tool con campos vacíos — si ya tienes el dato, pásalo. Escribe solo: "Revisa y pulsa **Confirmar** para crear la sesión." Y PARA.
 5. Cuando el usuario envíe \`[FORM_META_CONFIRMED]\` o confirme con texto ("sí, crea la sesión", "confirmo", etc.) llama INMEDIATAMENTE a \`crear_sesion\` sin volver a preguntar nada. El marcador \`[FORM_META_CONFIRMED]\` YA es confirmación final — nunca pidas confirmación adicional después de verlo.
 
@@ -478,7 +478,7 @@ export async function POST(request: Request) {
 - NO llames a \`crear_sesion\` sin confirmación explícita del usuario en su último mensaje.
 - \`[FORM_META_CONFIRMED]\` ES confirmación explícita. Procede a crear la sesión sin más preguntas.
 - Un "sí" breve cuenta solo si acabas de preguntar de forma directa si quieres crear la sesión.
-- NO llames a \`crear_ejercicio\` sin permiso explícito en su último mensaje.
+- NO llames a \`crear_ejercicio\` sin haber mostrado primero la especificación y recibido aprobación del usuario.
 - NO vuelvas a llamar a \`seleccionar_alumnos\` si ya hay alumnos seleccionados.
 - Si la duración del plan difiere de la pedida y no hay permiso → no crees, ajusta o pregunta.
 - Máx. 3 \`crear_ejercicio\` por turno.
@@ -501,7 +501,7 @@ Tipos: "texto", "numero", "select" (con "opciones"). No repitas datos que ya ten
 - Objetivo: ${confirmedObjective ?? "—"}
 - Alumnos seleccionados: ${selectedStudentsSummary}
 - Confirmación crear sesión: ${conversationState.hasExplicitSessionConfirmation ? "SÍ → LLAMA YA a crear_sesion. No preguntes más." : "NO"}
-- Permiso crear ejercicios: ${conversationState.hasExerciseCreationConsent ? "SÍ" : "NO"}
+- Aprobación ejercicios pendiente: ${conversationState.hasExerciseCreationConsent ? "SÍ (usuario aprobó spec, llama crear_ejercicio)" : "NO (muestra spec primero)"}
 - Permiso desviar duración: ${conversationState.hasDurationDeviationConsent ? "SÍ" : "NO"}
 - Fecha de hoy: ${todayStr} · Fecha por defecto para sesiones: ${tomorrowISO}
 - Meta ya confirmada del formulario: ${JSON.stringify(conversationState.confirmedSessionMeta)}
@@ -564,13 +564,6 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
           materials: z.array(z.string()).optional(),
         }),
         execute: async ({ name, description, category, difficulty, durationMinutes, objectives, tips, materials }) => {
-          if (!conversationState.hasExerciseCreationConsent) {
-            return {
-              ok: false,
-              error: "Falta permiso explícito para crear ejercicios nuevos. Pide confirmación antes de crear.",
-            };
-          }
-
           if (createExerciseCalls >= 3) {
             return {
               ok: false,
