@@ -174,6 +174,8 @@ export const students = pgTable(
     profileTokenExpiresAt: timestamp("profile_token_expires_at", {
       withTimezone: true,
     }),
+    consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),
+    consentVersion: varchar("consent_version", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

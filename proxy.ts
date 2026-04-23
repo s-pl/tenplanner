@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PREFIXES = ["/login", "/register", "/auth/callback", "/s/"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/register",
+  "/auth/callback",
+  "/s/",
+  "/privacidad",
+  "/aviso-legal",
+  "/cookies",
+  "/terminos",
+  "/api/cron/",
+];
 const PUBLIC_EXACT = new Set(["/"]);
 
 export async function proxy(request: NextRequest) {

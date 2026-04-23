@@ -1033,8 +1033,8 @@ export default function LandingPage() {
             </div>
             {[
               { t: "Producto", l: [["Dr. Planner", "#planner"], ["Biblioteca", "#biblioteca"], ["Sesiones", "#anatomia"], ["Alumnos", "#alumnos"], ["Calendario", "#calendario"]] },
-              { t: "Cuenta", l: [["Entrar", "/login"], ["Crear cuenta", "/register"], ["Precios", "#"]] },
-              { t: "Soporte", l: [["Contacto", "#"], ["Guía rápida", "#"], ["Estado", "#"]] },
+              { t: "Cuenta", l: [["Entrar", "/login"], ["Crear cuenta", "/register"]] },
+              { t: "Legal", l: [["Privacidad", "/privacidad"], ["Aviso legal", "/aviso-legal"], ["Cookies", "/cookies"], ["Términos", "/terminos"]] },
             ].map((col) => (
               <div key={col.t}>
                 <p className="font-sans text-[10px] tracking-[0.22em] uppercase text-foreground/45 mb-4">{col.t}</p>
