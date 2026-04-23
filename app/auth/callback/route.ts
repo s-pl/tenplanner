@@ -31,8 +31,12 @@ export async function GET(request: Request) {
               image: user.user_metadata.avatar_url ?? null,
             })
             .onConflictDoNothing();
-        } catch {
+        } catch (error) {
           // DB error shouldn't trap the user — session is already set
+          console.error("Error syncing user profile during auth callback", {
+            userId: user.id,
+            error,
+          });
         }
       }
 
