@@ -182,6 +182,7 @@ export default function RegisterPage() {
 
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const {
     register,
@@ -229,6 +230,12 @@ export default function RegisterPage() {
   }
 
   async function submitAll() {
+    if (!privacyAccepted) {
+      setServerError(
+        "Debes aceptar la política de privacidad para crear una cuenta."
+      );
+      return;
+    }
     setLoading(true);
     setServerError(null);
 
@@ -867,6 +874,29 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          <label className="flex items-start gap-3 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              className="mt-0.5 size-4 rounded border-border accent-brand"
+            />
+            <span className="text-muted-foreground leading-snug">
+              He leído y acepto la{" "}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline text-foreground hover:text-brand"
+              >
+                política de privacidad
+              </a>
+              . Entiendo que, si introduzco datos de alumnos, soy responsable
+              de informarles y, si son menores de 14 años, de obtener el
+              consentimiento parental.
+            </span>
+          </label>
+
           {serverError && (
             <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
               <p className="text-sm text-destructive">{serverError}</p>
@@ -884,7 +914,7 @@ export default function RegisterPage() {
             <Button
               type="button"
               onClick={submitAll}
-              disabled={loading}
+              disabled={loading || !privacyAccepted}
               className="flex-1 h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
             >
               {loading ? (

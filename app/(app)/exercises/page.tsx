@@ -17,6 +17,7 @@ import {
   User,
   Clock,
 } from "lucide-react";
+import { MobileFab } from "@/components/app/mobile-fab";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -532,6 +533,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           </footer>
         )}
       </div>
+      <MobileFab href="/exercises/new" icon="plus" label="Nuevo ejercicio" />
     </div>
   );
 }

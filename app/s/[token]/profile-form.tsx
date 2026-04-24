@@ -42,6 +42,10 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consent) {
+      setError("Debes aceptar que tu entrenador trate tus datos.");
+      return;
+    }
     setError("");
 
     if (!birthDate) {

@@ -16,6 +16,7 @@ import {
   Dumbbell,
   Bot,
 } from "lucide-react";
+import { AiInsightsWidget } from "@/components/app/dashboard/ai-insights-widget";
 
 function formatDayMonth(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
@@ -164,6 +165,9 @@ export default async function DashboardPage() {
             </div>
           </div>
         </header>
+
+        {/* ─── AI INSIGHTS ─── */}
+        <AiInsightsWidget coachId={user.id} />
 
         {/* ─── STATS — monocromo, hairline grid ─── */}
         <section aria-labelledby="stats-heading" className="space-y-4">

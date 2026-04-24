@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
 import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { Plus, ArrowRight, ArrowLeft, ArrowUpRight, Bot } from "lucide-react";
+import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
 
 type Filter = "upcoming" | "past" | "all";
 const PAGE_SIZE = 20;
@@ -359,6 +360,13 @@ export default async function SessionsPage({ searchParams }: PageProps) {
           </footer>
         )}
       </div>
+      <MobileFabSpeedDial
+        primaryLabel="Nueva sesión"
+        actions={[
+          { href: "/sessions/dr-planner", label: "Dr. Planner", icon: "bot" },
+          { href: "/sessions/new", label: "Nueva sesión", icon: "plus" },
+        ]}
+      />
     </div>
   );
 }

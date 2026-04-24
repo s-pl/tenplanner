@@ -5,6 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
+import { MobileFab } from "@/components/app/mobile-fab";
 
 type PlayerLevel =
   | "beginner"
@@ -101,7 +102,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             {rows.length > 0 && (
               <Link
                 href="/students/new"
-                className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
+                className="hidden md:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
               >
                 <Plus className="size-3.5" strokeWidth={2} />
                 Nuevo alumno
@@ -279,6 +280,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </p>
         </footer>
       </div>
+      <MobileFab href="/students/new" icon="user-plus" label="Nuevo alumno" />
     </div>
   );
 }

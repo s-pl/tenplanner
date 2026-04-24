@@ -148,6 +148,7 @@ export const sessionExercises = pgTable(
   (t) => [
     index("session_exercises_session_id_idx").on(t.sessionId),
     index("session_exercises_session_order_idx").on(t.sessionId, t.orderIndex),
+    index("session_exercises_exercise_id_idx").on(t.exerciseId),
   ]
 );
 
