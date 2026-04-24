@@ -3,19 +3,21 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { exercises } from "@/db/schema";
+import { exercises, sessions, sessionExercises } from "@/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
 import type { WizardExercise } from "@/components/app/session-wizard/types";
 
 interface PageProps {
-  searchParams: Promise<{ exercises?: string; step?: string }>;
+  searchParams: Promise<{ exercises?: string; step?: string; from?: string }>;
 }
 
 export default async function NewSessionPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const allExercises = await db
@@ -27,9 +29,64 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
       durationMinutes: exercises.durationMinutes,
     })
     .from(exercises)
-    .orderBy(exercises.name);
+    .orderBy(exercises.name)
+    .limit(200);
 
-  const { exercises: exerciseParam } = await searchParams;
+  const { exercises: exerciseParam, from: fromSessionId } = await searchParams;
+
+  // Pre-fill from an existing session ("Reutilizar")
+  let fromSession: { title: string; objective: string | null; location: string | null } | null = null;
+  let fromExercises: WizardExercise[] = [];
+
+  if (fromSessionId) {
+    const [sourceSession] = await db
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        objective: sessions.objective,
+        location: sessions.location,
+        userId: sessions.userId,
+      })
+      .from(sessions)
+      .where(eq(sessions.id, fromSessionId))
+      .limit(1);
+
+    if (sourceSession && sourceSession.userId === user.id) {
+      fromSession = {
+        title: sourceSession.title,
+        objective: sourceSession.objective,
+        location: sourceSession.location,
+      };
+
+      const sourceExercises = await db
+        .select({
+          exerciseId: exercises.id,
+          name: exercises.name,
+          category: exercises.category,
+          durationMinutes: sessionExercises.durationMinutes,
+          defaultDuration: exercises.durationMinutes,
+          notes: sessionExercises.notes,
+          phase: sessionExercises.phase,
+          intensity: sessionExercises.intensity,
+        })
+        .from(sessionExercises)
+        .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
+        .where(eq(sessionExercises.sessionId, fromSessionId))
+        .orderBy(asc(sessionExercises.orderIndex));
+
+      fromExercises = sourceExercises.map((e) => ({
+        exerciseId: e.exerciseId,
+        name: e.name,
+        category: e.category,
+        durationMinutes: e.durationMinutes ?? e.defaultDuration,
+        overrideDuration: e.durationMinutes ?? null,
+        notes: e.notes ?? "",
+        phase: e.phase ?? null,
+        intensity: e.intensity ?? null,
+      }));
+    }
+  }
+
   const preSelectedIds = new Set(
     (exerciseParam ?? "").split(",").filter(Boolean)
   );
@@ -45,6 +102,9 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
       phase: null,
       intensity: null,
     }));
+
+  const initialExercises =
+    fromExercises.length > 0 ? fromExercises : preSelected.length > 0 ? preSelected : undefined;
 
   return (
     <div className="relative">
@@ -81,9 +141,11 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
             Diseña tu <em className="italic text-brand">próxima sesión</em>.
           </h1>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {preSelected.length > 0
-              ? `${preSelected.length} ejercicio${preSelected.length !== 1 ? "s" : ""} pre-seleccionado${preSelected.length !== 1 ? "s" : ""} desde Dr. Planner. Ajusta detalles y publica.`
-              : "Construye la sesión paso a paso: contexto, ejercicios y revisión final."}
+            {fromSession
+              ? `Reutilizando "${fromSession.title}" como base. Ajusta la fecha y los detalles que necesites.`
+              : preSelected.length > 0
+                ? `${preSelected.length} ejercicio${preSelected.length !== 1 ? "s" : ""} pre-seleccionado${preSelected.length !== 1 ? "s" : ""} desde Dr. Planner. Ajusta detalles y publica.`
+                : "Construye la sesión paso a paso: contexto, ejercicios y revisión final."}
           </p>
         </header>
 
@@ -91,9 +153,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           <Suspense fallback={null}>
             <SessionWizard
               availableExercises={allExercises}
-              initialExercises={
-                preSelected.length > 0 ? preSelected : undefined
-              }
+              initialExercises={initialExercises}
+              initialTitle={fromSession?.title}
+              initialObjective={fromSession?.objective ?? undefined}
+              initialLocation={fromSession?.location ?? undefined}
             />
           </Suspense>
         </div>

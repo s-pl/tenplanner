@@ -7,8 +7,9 @@ import { StudentForm } from "@/components/app/student-form";
 export default async function NewStudentPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   return (

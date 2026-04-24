@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { legal } from "@/lib/legal-config";
 
 export const metadata: Metadata = {
   title: "Política de Privacidad · TenPlanner",
@@ -102,36 +103,13 @@ export default function PrivacidadPage() {
         El responsable del tratamiento de tus datos personales es:
       </P>
       <div className="border border-foreground/15 rounded-md px-4 py-3 my-4 text-[13px] text-foreground/80 space-y-1">
-        <p>
-          <strong>Titular:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: nombre o razón social -->"}
-          </span>
-        </p>
-        <p>
-          <strong>NIF / CIF:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: NIF -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Domicilio:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: dirección postal completa -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Correo de contacto:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: privacidad@tudominio.com -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Delegado de Protección de Datos (DPO):</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: si aplica, nombre + email -->"}
-          </span>
-        </p>
+        <p><strong>Titular:</strong> {legal.companyName}</p>
+        <p><strong>NIF / CIF:</strong> {legal.nif}</p>
+        <p><strong>Domicilio:</strong> {legal.address}</p>
+        <p><strong>Correo de contacto:</strong> <a href={`mailto:${legal.privacyEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.privacyEmail}</a></p>
+        {legal.dpo && (
+          <p><strong>Delegado de Protección de Datos (DPO):</strong> {legal.dpo}</p>
+        )}
       </div>
 
       <H2 id="datos">2. Datos que tratamos</H2>
@@ -359,9 +337,7 @@ export default function PrivacidadPage() {
       </ul>
       <P>
         Para ejercerlos, escribe a{" "}
-        <span className="text-foreground/50 italic">
-          {"<!-- TODO: privacidad@tudominio.com -->"}
-        </span>{" "}
+        <a href={`mailto:${legal.privacyEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.privacyEmail}</a>{" "}
         acreditando tu identidad. Responderemos en un plazo máximo de 30 días.
       </P>
       <P>

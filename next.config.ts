@@ -4,8 +4,6 @@ const devOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const turbopackRoot = process.cwd();
-
 const isProd = process.env.NODE_ENV === "production";
 
 // Tight CSP for production. `unsafe-inline` script is kept for Next.js runtime
@@ -46,9 +44,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: turbopackRoot,
-  },
   ...(devOrigins && devOrigins.length > 0
     ? { allowedDevOrigins: devOrigins }
     : {}),

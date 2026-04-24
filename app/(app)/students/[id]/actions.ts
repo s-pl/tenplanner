@@ -18,8 +18,9 @@ export type SaveFeedbackInput = {
 export async function saveSessionFeedback(input: SaveFeedbackInput) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return { ok: false as const, error: "Unauthorized" };
 
   const [row] = await db
@@ -68,8 +69,9 @@ export async function saveSessionFeedback(input: SaveFeedbackInput) {
 export async function generateProfileLink(studentId: string) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return { ok: false as const, error: "Unauthorized" };
 
   const [student] = await db

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { exercises as exercisesTable } from "@/db/schema";
-import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { exercises as exercisesTable, exerciseFavorites } from "@/db/schema";
+import { and, asc, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { FavoriteToggle } from "@/components/app/favorite-toggle";
 import {
   Plus,
   ArrowRight,
@@ -56,13 +57,14 @@ const CATEGORIES = [
   "warm-up",
 ] as const;
 const DIFFICULTIES = ["all", "beginner", "intermediate", "advanced"] as const;
-const TABS = ["all", "global", "mine"] as const;
+const TABS = ["all", "global", "mine", "favorites"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   all: "Todos",
   global: "Globales",
   mine: "Propios",
+  favorites: "Favoritos",
 };
 
 const PAGE_SIZE = 30;
@@ -80,8 +82,9 @@ interface PageProps {
 export default async function ExercisesPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const { category, difficulty, q, tab, page } = await searchParams;
@@ -110,7 +113,25 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         ? eq(exercisesTable.createdBy, user.id)
         : allVisibleWhere;
 
-  const listConditions: SQL[] = [visibilityWhere];
+  // Pre-fetch favorites: needed both for toggle state and for the "favorites" tab filter
+  const favRows = await db
+    .select({ exerciseId: exerciseFavorites.exerciseId })
+    .from(exerciseFavorites)
+    .where(eq(exerciseFavorites.userId, user.id))
+    .catch(() => [] as { exerciseId: string }[]);
+  const favoritedIds = new Set(favRows.map((f) => f.exerciseId));
+  const favIdArray = Array.from(favoritedIds);
+
+  const listConditions: SQL[] = [];
+  if (activeTab === "favorites") {
+    listConditions.push(
+      favIdArray.length > 0
+        ? inArray(exercisesTable.id, favIdArray)
+        : sql`1=0`
+    );
+  } else {
+    listConditions.push(visibilityWhere);
+  }
   if (activeCategory !== "all")
     listConditions.push(eq(exercisesTable.category, activeCategory));
   if (activeDifficulty !== "all")
@@ -178,6 +199,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     all: Number(allRows[0]?.total ?? 0),
     global: Number(globalRows[0]?.total ?? 0),
     mine: Number(mineRows[0]?.total ?? 0),
+    favorites: favIdArray.length,
   };
 
   function buildHref(params: Record<string, string | undefined>) {
@@ -403,33 +425,41 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
               else if (exercise.createdBy === user.id)
                 owner = { label: "PRP", icon: User };
 
+              const isFavorited = favoritedIds.has(exercise.id);
+
               return (
                 <li
                   key={exercise.id}
-                  className="md:border-b md:border-foreground/10 md:[&:nth-child(3n)]:border-r-0 md:border-r md:border-foreground/10 md:[&:nth-last-child(-n+3)]:border-b-0"
+                  className="md:border-b md:border-foreground/10 md:[&:nth-child(3n)]:border-r-0 md:border-r md:border-foreground/10 md:[&:nth-last-child(-n+3)]:border-b-0 flex flex-col"
                 >
-                  <Link
-                    href={`/exercises/${exercise.id}`}
-                    className="group block p-6 h-full hover:bg-foreground/[0.02] transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-5">
-                      <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
-                        № {String(globalIdx).padStart(3, "0")}
-                      </span>
+                  {/* Card header — outside Link so FavoriteToggle doesn't cause navigation */}
+                  <div className="flex items-center justify-between px-6 pt-5 pb-0">
+                    <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
+                      № {String(globalIdx).padStart(3, "0")}
+                    </span>
+                    <div className="flex items-center gap-2.5">
                       {owner && (
                         <span
                           className={`inline-flex items-center gap-1 font-sans text-[9px] uppercase tracking-[0.2em] ${
-                            owner.label === "IA"
-                              ? "text-brand"
-                              : "text-foreground/50"
+                            owner.label === "IA" ? "text-brand" : "text-foreground/50"
                           }`}
                         >
                           <owner.icon className="size-2.5" strokeWidth={1.8} />
                           {owner.label}
                         </span>
                       )}
+                      <FavoriteToggle
+                        exerciseId={exercise.id}
+                        initialFavorited={isFavorited}
+                        size="sm"
+                      />
                     </div>
+                  </div>
 
+                  <Link
+                    href={`/exercises/${exercise.id}`}
+                    className="group flex-1 block px-6 pb-6 pt-3 hover:bg-foreground/[0.02] transition-colors"
+                  >
                     <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-brand mb-1.5">
                       {catCode} · {catLabel}
                     </p>

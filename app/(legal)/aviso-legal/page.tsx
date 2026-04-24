@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { legal } from "@/lib/legal-config";
 
 export const metadata: Metadata = {
   title: "Aviso Legal · TenPlanner",
@@ -41,36 +42,13 @@ export default function AvisoLegalPage() {
 
       <H2 id="titular">1. Titular</H2>
       <div className="border border-foreground/15 rounded-md px-4 py-3 my-4 text-[13px] text-foreground/80 space-y-1">
-        <p>
-          <strong>Denominación:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: nombre o razón social -->"}
-          </span>
-        </p>
-        <p>
-          <strong>NIF / CIF:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: NIF -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Domicilio:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: dirección postal -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Correo electrónico:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: contacto@tudominio.com -->"}
-          </span>
-        </p>
-        <p>
-          <strong>Registro Mercantil:</strong>{" "}
-          <span className="text-foreground/50 italic">
-            {"<!-- TODO: tomo, folio, hoja (si aplica) -->"}
-          </span>
-        </p>
+        <p><strong>Denominación:</strong> {legal.companyName}</p>
+        <p><strong>NIF / CIF:</strong> {legal.nif}</p>
+        <p><strong>Domicilio:</strong> {legal.address}</p>
+        <p><strong>Correo electrónico:</strong> <a href={`mailto:${legal.contactEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.contactEmail}</a></p>
+        {legal.mercantileRegistry && (
+          <p><strong>Registro Mercantil:</strong> {legal.mercantileRegistry}</p>
+        )}
       </div>
 
       <H2 id="objeto">2. Objeto</H2>

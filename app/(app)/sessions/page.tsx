@@ -50,8 +50,9 @@ function humanDate(date: Date) {
 export default async function SessionsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const { filter, page } = await searchParams;
@@ -109,7 +110,14 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const offset = (safePage - 1) * PAGE_SIZE;
 
   const sessionRows = await db
-    .select()
+    .select({
+      id: sessionsTable.id,
+      title: sessionsTable.title,
+      description: sessionsTable.description,
+      scheduledAt: sessionsTable.scheduledAt,
+      durationMinutes: sessionsTable.durationMinutes,
+      status: sessionsTable.status,
+    })
     .from(sessionsTable)
     .where(whereClause)
     .orderBy(asc(sessionsTable.scheduledAt))
@@ -282,10 +290,22 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                       <div className="flex items-center gap-3 mb-1">
                         <span
                           className={`font-sans text-[9px] uppercase tracking-[0.2em] ${
-                            isPast ? "text-foreground/40" : "text-brand"
+                            session.status === "completed"
+                              ? "text-brand"
+                              : session.status === "cancelled"
+                                ? "text-destructive/70"
+                                : isPast
+                                  ? "text-foreground/40"
+                                  : "text-foreground/60"
                           }`}
                         >
-                          {isPast ? "Archivada" : "En agenda"}
+                          {session.status === "completed"
+                            ? "Completada"
+                            : session.status === "cancelled"
+                              ? "Cancelada"
+                              : isPast
+                                ? "Sin completar"
+                                : "En agenda"}
                         </span>
                         {relative && (
                           <span className="font-sans text-[10px] italic text-foreground/45">

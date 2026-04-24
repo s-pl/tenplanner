@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PREFIXES = [
   "/login",
   "/register",
+  "/forgot-password",
+  "/reset-password",
   "/auth/callback",
   "/s/",
   "/privacidad",
@@ -19,13 +21,17 @@ const RECOVERABLE_REFRESH_TOKEN_ERRORS = new Set([
   "invalid_refresh_token",
 ]);
 
-function isRecoverableRefreshTokenError(error: unknown): boolean {
+function isRecoverableAuthError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const maybeError = error as {
     code?: string;
+    name?: string;
     status?: number;
     message?: string;
   };
+
+  // Session missing entirely (e.g. cookies cleared by a concurrent request)
+  if (maybeError.name === "AuthSessionMissingError") return true;
 
   if (
     typeof maybeError.code === "string" &&
@@ -38,6 +44,8 @@ function isRecoverableRefreshTokenError(error: unknown): boolean {
     typeof maybeError.message === "string"
       ? maybeError.message.toLowerCase()
       : "";
+
+  if (message.includes("auth session missing")) return true;
 
   return maybeError.status === 400 && message.includes("refresh token");
 }
@@ -129,7 +137,7 @@ export async function proxy(request: NextRequest) {
       if (error) throw error;
       user = currentUser;
     } catch (error) {
-      if (isRecoverableRefreshTokenError(error)) {
+      if (isRecoverableAuthError(error)) {
         clearSupabaseAuthCookies(request, supabaseResponse);
       } else {
         console.error("Unexpected Supabase auth error in proxy", error);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Loader2, Search, UserPlus, Users } from "lucide-react";
+import { Check, ChevronDown, Loader2, Search, UserPlus, Users, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StudentOption, WizardState } from "./types";
 
@@ -11,40 +11,64 @@ interface StepStudentsProps {
   update: (patch: Partial<WizardState>) => void;
 }
 
+interface GroupOption {
+  id: string;
+  name: string;
+  description: string | null;
+  memberCount: number;
+  studentIds: string[];
+}
+
 type LoadStatus = "loading" | "ready" | "unavailable";
 
 export function StepStudents({ state, update }: StepStudentsProps) {
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [students, setStudents] = useState<StudentOption[]>([]);
+  const [groups, setGroups] = useState<GroupOption[]>([]);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"individual" | "groups">("individual");
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/students", { cache: "no-store" });
-        if (!res.ok) {
+        const [studentsRes, groupsRes] = await Promise.all([
+          fetch("/api/students", { cache: "no-store" }),
+          fetch("/api/groups?withStudents=true", { cache: "no-store" }),
+        ]);
+        if (!studentsRes.ok) {
           if (!cancelled) setStatus("unavailable");
           return;
         }
-        const payload = (await res.json()) as { data?: StudentOption[] };
+        const studentsPayload = (await studentsRes.json()) as { data?: StudentOption[] };
+        const groupsPayload = groupsRes.ok ? (await groupsRes.json()) as { data?: GroupOption[] } : { data: [] };
         if (cancelled) return;
-        setStudents(Array.isArray(payload?.data) ? payload.data : []);
+        setStudents(Array.isArray(studentsPayload?.data) ? studentsPayload.data : []);
+        setGroups(Array.isArray(groupsPayload?.data) ? groupsPayload.data : []);
         setStatus("ready");
       } catch {
         if (!cancelled) setStatus("unavailable");
       }
     }
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   function toggleStudent(id: string) {
     const set = new Set(state.studentIds);
     if (set.has(id)) set.delete(id);
     else set.add(id);
+    update({ studentIds: Array.from(set) });
+  }
+
+  function selectGroup(group: GroupOption) {
+    const set = new Set(state.studentIds);
+    const allSelected = group.studentIds.every((id) => set.has(id));
+    if (allSelected) {
+      group.studentIds.forEach((id) => set.delete(id));
+    } else {
+      group.studentIds.forEach((id) => set.add(id));
+    }
     update({ studentIds: Array.from(set) });
   }
 
@@ -88,67 +112,154 @@ export function StepStudents({ state, update }: StepStudentsProps) {
         <p className="text-sm text-muted-foreground">
           Selecciona los alumnos para esta sesión.
         </p>
-        <span className="text-xs font-semibold text-foreground">
-          {state.studentIds.length} seleccionado
-          {state.studentIds.length !== 1 ? "s" : ""}
+        <span className="text-xs font-semibold text-foreground tabular-nums">
+          {state.studentIds.length} seleccionado{state.studentIds.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar alumnos…"
-          className="w-full h-10 pl-10 pr-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
-        />
+      {/* Tab selector */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl border border-border">
+        <button
+          type="button"
+          onClick={() => setTab("individual")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-medium transition-colors",
+            tab === "individual"
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Users className="size-3.5" />
+          Individual
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("groups")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-medium transition-colors",
+            tab === "groups"
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Users2 className="size-3.5" />
+          Por grupo
+          {groups.length > 0 && (
+            <span className="ml-0.5 size-4 rounded-full bg-brand/15 text-brand text-[9px] flex items-center justify-center font-bold">
+              {groups.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {filtered.map((s) => {
-          const selected = state.studentIds.includes(s.id);
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => toggleStudent(s.id)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors",
-                selected
-                  ? "border-brand bg-brand/5"
-                  : "border-border bg-background hover:border-brand/40"
-              )}
-            >
-              <div
-                className={cn(
-                  "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
-                  selected ? "bg-brand border-brand" : "border-border"
-                )}
-              >
-                {selected && (
-                  <Check className="size-3.5 text-brand-foreground" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {s.name}
-                </p>
-                {s.playerLevel && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {s.playerLevel}
-                  </p>
-                )}
-              </div>
-            </button>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="text-xs text-muted-foreground col-span-full text-center py-6">
-            Sin resultados para &ldquo;{search}&rdquo;
-          </p>
-        )}
-      </div>
+      {tab === "groups" ? (
+        <div className="space-y-2">
+          {groups.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-border rounded-xl">
+              <Users2 className="size-8 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No tienes grupos creados.</p>
+              <Link href="/groups" className="mt-2 inline-block text-xs text-brand hover:underline">
+                Crear un grupo
+              </Link>
+            </div>
+          ) : (
+            groups.map((g) => {
+              const allSelected = g.studentIds.length > 0 && g.studentIds.every((id) => state.studentIds.includes(id));
+              const someSelected = g.studentIds.some((id) => state.studentIds.includes(id));
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => selectGroup(g)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors",
+                    allSelected
+                      ? "border-brand bg-brand/5"
+                      : someSelected
+                        ? "border-brand/40 bg-brand/[0.02]"
+                        : "border-border bg-background hover:border-brand/40"
+                  )}
+                >
+                  <div className={cn(
+                    "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                    allSelected ? "bg-brand border-brand" : someSelected ? "bg-brand/20 border-brand/40" : "border-border"
+                  )}>
+                    {allSelected && <Check className="size-3.5 text-background" />}
+                    {someSelected && !allSelected && <span className="size-2 rounded-sm bg-brand" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">{g.name}</p>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {g.memberCount} {g.memberCount === 1 ? "alumno" : "alumnos"}
+                      </span>
+                    </div>
+                    {g.description && (
+                      <p className="text-xs text-muted-foreground truncate">{g.description}</p>
+                    )}
+                  </div>
+                  <ChevronDown className={cn("size-4 text-muted-foreground/40 shrink-0 -rotate-90")} />
+                </button>
+              );
+            })
+          )}
+          {state.studentIds.length > 0 && (
+            <p className="text-xs text-muted-foreground pt-1">
+              {state.studentIds.length} alumno{state.studentIds.length !== 1 ? "s" : ""} seleccionado{state.studentIds.length !== 1 ? "s" : ""} en total
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar alumnos…"
+              className="w-full h-10 pl-10 pr-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {filtered.map((s) => {
+              const selected = state.studentIds.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleStudent(s.id)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors",
+                    selected
+                      ? "border-brand bg-brand/5"
+                      : "border-border bg-background hover:border-brand/40"
+                  )}
+                >
+                  <div className={cn(
+                    "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                    selected ? "bg-brand border-brand" : "border-border"
+                  )}>
+                    {selected && <Check className="size-3.5 text-background" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
+                    {s.playerLevel && (
+                      <p className="text-xs text-muted-foreground truncate">{s.playerLevel}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="text-xs text-muted-foreground col-span-full text-center py-6">
+                Sin resultados para &ldquo;{search}&rdquo;
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <p className="text-xs text-muted-foreground">
         Este paso es opcional, puedes continuar sin seleccionar alumnos.

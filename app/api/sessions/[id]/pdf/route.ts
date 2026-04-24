@@ -1,0 +1,145 @@
+import { createElement, type ReactElement } from "react";
+import type { DocumentProps } from "@react-pdf/renderer";
+import { asc, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { renderToStream } from "@react-pdf/renderer";
+import { db } from "@/db";
+import {
+  exercises,
+  sessionExercises,
+  sessionStudents,
+  sessions,
+  students,
+  users,
+} from "@/db/schema";
+import { createClient } from "@/lib/supabase/server";
+import { sessionIdParamsSchema, zodValidationErrorResponse } from "../../validation";
+import { SessionPdf, type PdfSession } from "@/lib/sessions/pdf";
+
+export const runtime = "nodejs";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "session";
+}
+
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+export async function GET(_request: Request, context: RouteContext) {
+  const params = await context.params;
+  const parsed = sessionIdParamsSchema.safeParse(params);
+  if (!parsed.success) return zodValidationErrorResponse(parsed.error);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = parsed.data;
+
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+  if (session.userId !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const [coachRow] = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  const exerciseRows = await db
+    .select({
+      orderIndex: sessionExercises.orderIndex,
+      durationMinutes: sessionExercises.durationMinutes,
+      notes: sessionExercises.notes,
+      phase: sessionExercises.phase,
+      intensity: sessionExercises.intensity,
+      exerciseName: exercises.name,
+      exerciseCategory: exercises.category,
+      exerciseDifficulty: exercises.difficulty,
+      exerciseDurationMinutes: exercises.durationMinutes,
+    })
+    .from(sessionExercises)
+    .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
+    .where(eq(sessionExercises.sessionId, id))
+    .orderBy(asc(sessionExercises.orderIndex));
+
+  const studentRows = await db
+    .select({
+      name: students.name,
+      playerLevel: students.playerLevel,
+    })
+    .from(sessionStudents)
+    .innerJoin(students, eq(sessionStudents.studentId, students.id))
+    .where(eq(sessionStudents.sessionId, id));
+
+  const data: PdfSession = {
+    title: session.title,
+    description: session.description,
+    scheduledAt: new Date(session.scheduledAt),
+    durationMinutes: session.durationMinutes,
+    objective: session.objective,
+    intensity: session.intensity,
+    tags: session.tags,
+    location: session.location,
+    coachName: coachRow?.name ?? user.email ?? "Entrenador",
+    exercises: exerciseRows.map((e) => ({
+      name: e.exerciseName,
+      category: e.exerciseCategory,
+      difficulty: e.exerciseDifficulty,
+      orderIndex: e.orderIndex,
+      durationMinutes: e.durationMinutes ?? e.exerciseDurationMinutes,
+      notes: e.notes,
+      phase: e.phase,
+      intensity: e.intensity,
+    })),
+    students: studentRows,
+  };
+
+  try {
+    const element = createElement(SessionPdf, { session: data }) as unknown as ReactElement<DocumentProps>;
+    const stream = await renderToStream(element);
+    const buffer = await streamToBuffer(stream as unknown as NodeJS.ReadableStream);
+    const filename = `sesion-${slugify(session.title)}-${
+      new Date(session.scheduledAt).toISOString().split("T")[0]
+    }.pdf`;
+    return new Response(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    console.error("[sessions/pdf] render failed", { sessionId: id, err });
+    return NextResponse.json(
+      { error: "No se pudo generar el PDF" },
+      { status: 500 }
+    );
+  }
+}

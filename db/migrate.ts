@@ -4,7 +4,9 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
 async function runMigrations() {
-  const client = postgres(process.env.DATABASE_URL!, { max: 1 });
+  // Use direct connection URL for DDL migrations — the pooler (port 6543) drops DDL
+  const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL!;
+  const client = postgres(url, { max: 1 });
   const db = drizzle(client);
 
   console.log("Running migrations...");

@@ -18,6 +18,9 @@ const TOTAL_STEPS = STEP_LABELS.length;
 interface SessionWizardProps {
   availableExercises: AvailableExercise[];
   initialExercises?: WizardExercise[];
+  initialTitle?: string;
+  initialObjective?: string;
+  initialLocation?: string;
 }
 
 function defaultScheduledAt() {
@@ -66,6 +69,9 @@ function validateStep(
 export function SessionWizard({
   availableExercises,
   initialExercises,
+  initialTitle,
+  initialObjective,
+  initialLocation,
 }: SessionWizardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,11 +82,11 @@ export function SessionWizard({
       : 1;
 
   const [state, setState] = useState<WizardState>(() => ({
-    title: "",
+    title: initialTitle ?? "",
     scheduledAt: defaultScheduledAt(),
     durationMinutes: 60,
-    location: "",
-    objective: "",
+    location: initialLocation ?? "",
+    objective: initialObjective ?? "",
     intensity: null,
     tags: [],
     studentIds: [],

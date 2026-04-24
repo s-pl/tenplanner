@@ -2,16 +2,29 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessions as sessionsTable } from "@/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
+
+// Sessions loaded into the calendar are limited to this window to keep
+// initial payload bounded. User can navigate the UI within this range.
+const WINDOW_PAST_DAYS = 90;
+const WINDOW_FUTURE_DAYS = 365;
+const MAX_SESSIONS = 1000;
 
 export default async function CalendarPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   if (!user) redirect("/login");
+
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setDate(now.getDate() - WINDOW_PAST_DAYS);
+  const windowEnd = new Date(now);
+  windowEnd.setDate(now.getDate() + WINDOW_FUTURE_DAYS);
 
   const sessions = await db
     .select({
@@ -19,10 +32,18 @@ export default async function CalendarPage() {
       title: sessionsTable.title,
       scheduledAt: sessionsTable.scheduledAt,
       durationMinutes: sessionsTable.durationMinutes,
+      status: sessionsTable.status,
     })
     .from(sessionsTable)
-    .where(eq(sessionsTable.userId, user.id))
-    .orderBy(asc(sessionsTable.scheduledAt));
+    .where(
+      and(
+        eq(sessionsTable.userId, user.id),
+        gte(sessionsTable.scheduledAt, windowStart),
+        lte(sessionsTable.scheduledAt, windowEnd)
+      )
+    )
+    .orderBy(asc(sessionsTable.scheduledAt))
+    .limit(MAX_SESSIONS);
 
   const serialized = sessions.map((s) => ({
     ...s,

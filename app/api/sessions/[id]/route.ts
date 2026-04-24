@@ -38,6 +38,14 @@ async function calculateDuration(
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const params = await context.params;
   const parsedParams = sessionIdParamsSchema.safeParse(params);
   if (!parsedParams.success) {
@@ -50,7 +58,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const [session] = await db
       .select()
       .from(sessions)
-      .where(eq(sessions.id, id))
+      .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
       .limit(1);
 
     if (!session) {
