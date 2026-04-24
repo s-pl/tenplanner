@@ -18,6 +18,14 @@ type ExerciseRouteContext = {
 };
 
 export async function GET(_request: Request, context: ExerciseRouteContext) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const params = await context.params;
   const parsedParams = exerciseIdParamsSchema.safeParse(params);
 
@@ -42,6 +50,7 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         videoUrl: exercises.videoUrl,
         tips: exercises.tips,
         createdBy: exercises.createdBy,
+        isGlobal: exercises.isGlobal,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
       })
@@ -54,6 +63,15 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         { error: "Exercise not found" },
         { status: 404 }
       );
+    }
+
+    const canAccess =
+      exercise.isGlobal ||
+      exercise.createdBy === null ||
+      exercise.createdBy === user.id;
+
+    if (!canAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({ data: exercise });

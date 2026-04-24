@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>Verifica tu cuenta · TenPlanner</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111111;">
+    <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f6f5f2;">
+      Confirma tu correo para activar tu cuenta de TenPlanner.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f5f2;">
+      <tr>
+        <td align="center" style="padding:48px 20px;">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;background:#ffffff;border:1px solid #e6e4df;">
+
+            <tr>
+              <td style="padding:32px 40px 0 40px;">
+                <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:20px;letter-spacing:-0.01em;color:#111111;">
+                  ten<span style="color:#188046;font-weight:600;">planner</span>
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:28px 40px 0 40px;">
+                <p style="margin:0;font-size:10px;letter-spacing:0.26em;text-transform:uppercase;color:#6b6b6b;">
+                  Bienvenida · Confirmación
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:8px 40px 0 40px;">
+                <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.15;letter-spacing:-0.01em;color:#111111;font-weight:400;">
+                  Confirma tu <em style="color:#188046;">correo</em>,<br />
+                  y empieza.
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 40px 0 40px;">
+                <p style="margin:0;font-size:15px;line-height:1.55;color:#2a2a2a;">
+                  Gracias por unirte a TenPlanner. Para activar tu cuenta pulsa el botón de abajo. El enlace es de un solo uso y caduca en <strong>24 horas</strong>.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="left" style="padding:28px 40px 0 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background:#111111;">
+                      <a href="{{ .ConfirmationURL }}"
+                         style="display:inline-block;padding:14px 26px;font-size:13px;font-weight:600;letter-spacing:0.02em;color:#ffffff;text-decoration:none;">
+                        Confirmar cuenta
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:24px 40px 0 40px;">
+                <p style="margin:0;font-size:12px;line-height:1.5;color:#6b6b6b;">
+                  Si el botón no funciona, copia y pega esta dirección en tu navegador:
+                </p>
+                <p style="margin:6px 0 0 0;font-size:12px;line-height:1.4;color:#188046;word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#188046;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Próximos pasos -->
+            <tr>
+              <td style="padding:28px 40px 0 40px;">
+                <div style="border-left:2px solid #188046;padding:4px 0 4px 14px;">
+                  <p style="margin:0;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#6b6b6b;">Después</p>
+                  <p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#2a2a2a;">
+                    Podrás añadir tus primeros alumnos, consultar el asistente <strong>Dr. Planner</strong> y diseñar sesiones en minutos.
+                  </p>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:28px 40px 0 40px;">
+                <div style="height:1px;background:#e6e4df;"></div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 40px 36px 40px;">
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#6b6b6b;">
+                  ¿No creaste esta cuenta? Ignora este correo y no pasará nada. Si tienes dudas, escríbenos a
+                  <a href="mailto:hola@tenplanner.app" style="color:#111111;text-decoration:underline;">hola@tenplanner.app</a>.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;">
+            <tr>
+              <td style="padding:20px 40px 0 40px;" align="center">
+                <p style="margin:0;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#9a9a9a;">
+                  TenPlanner · Padel planner para entrenadores
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+# Encargados y subencargados del tratamiento
+
+Lista vigente de terceros que acceden a datos personales tratados por cuenta del responsable. Cualquier alta/baja debe documentarse aquí y reflejarse en la Política de Privacidad pública.
+
+**Última revisión:** 2026-04-23
+
+| # | Proveedor | Servicio prestado | Datos a los que accede | Ubicación de tratamiento | DPA / SCC | Garantías extra | Estado |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | **Supabase Inc.** | Base de datos Postgres, autenticación, Storage. | Todos los datos de usuario, alumno, sesiones y storage (avatares, media). | Región configurable (UE preferente); infraestructura AWS US. | <https://supabase.com/privacy/dpa> + SCC UE 2021/914. | RLS activo desde migración `0013_rls_complete_policies.sql`. | `<!-- TODO: aceptar DPA desde dashboard Supabase -->` |
+| 2 | **Anthropic, PBC** | Modelo de lenguaje Claude para Dr. Planner. | Texto del prompt del entrenador; potencialmente referencias a alumnos. | EE. UU. | <https://www.anthropic.com/legal/dpa> + SCC. | `<!-- TODO: solicitar Zero Data Retention a privacy@anthropic.com -->`. Sin ZDR, retención 30 días. | `<!-- TODO: ZDR pendiente -->` |
+| 3 | **Vercel Inc.** | Hosting Next.js + CDN. | Request headers, IP, cookies en tránsito. | EE. UU. (red global). | <https://vercel.com/legal/dpa> + SCC. | Logs de función ≤ 1 h (plan Hobby/Pro). | `<!-- TODO: aceptar DPA -->` |
+| 4 | **Pexels GmbH** | API pública de fotografías de stock para la biblioteca visual. | Solo términos de búsqueda; no recibe datos personales. | Alemania (UE). | No aplica (no trata datos personales por cuenta). | Uso de API key sin asociación a usuarios finales. | OK |
+
+## Procedimiento de cambio
+
+1. Evaluar proveedor: ubicación, certificaciones (SOC 2, ISO 27001), DPA firmable.
+2. Revisar impacto en RAT (`RAT.md`).
+3. Actualizar `/privacidad` (sección 5) **antes** del alta.
+4. Comunicar a los usuarios si supone cambio sustancial — art. 13/14 RGPD.
+5. Actualizar esta tabla.

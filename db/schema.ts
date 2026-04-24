@@ -22,6 +22,12 @@ export const exerciseCategoryEnum = pgEnum("exercise_category", [
   "warm-up",
 ]);
 
+export const sessionStatusEnum = pgEnum("session_status", [
+  "scheduled",
+  "completed",
+  "cancelled",
+]);
+
 export const difficultyEnum = pgEnum("difficulty", [
   "beginner",
   "intermediate",
@@ -113,6 +119,7 @@ export const sessions = pgTable(
     intensity: integer("intensity"), // 1-5, app-validated
     tags: json("tags").$type<string[]>(),
     location: varchar("location", { length: 50 }),
+    status: sessionStatusEnum("status").notNull().default("scheduled"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -144,10 +151,12 @@ export const sessionExercises = pgTable(
     notes: text("notes"),
     phase: trainingPhaseEnum("phase"),
     intensity: integer("intensity"),
+    coachRating: integer("coach_rating"), // 1-5 rating by coach after session
   },
   (t) => [
     index("session_exercises_session_id_idx").on(t.sessionId),
     index("session_exercises_session_order_idx").on(t.sessionId, t.orderIndex),
+    index("session_exercises_exercise_id_idx").on(t.exerciseId),
   ]
 );
 
@@ -174,6 +183,8 @@ export const students = pgTable(
     profileTokenExpiresAt: timestamp("profile_token_expires_at", {
       withTimezone: true,
     }),
+    consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),
+    consentVersion: varchar("consent_version", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -211,6 +222,74 @@ export const sessionStudents = pgTable(
     ),
     index("session_students_session_id_idx").on(t.sessionId),
     index("session_students_student_id_idx").on(t.studentId),
+  ]
+);
+
+// Groups (coach-defined groups of students)
+export const groups = pgTable(
+  "groups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    coachId: uuid("coach_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("groups_coach_id_idx").on(t.coachId),
+  ]
+);
+
+export const groupStudents = pgTable(
+  "group_students",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    groupId: uuid("group_id")
+      .references(() => groups.id, { onDelete: "cascade" })
+      .notNull(),
+    studentId: uuid("student_id")
+      .references(() => students.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("group_students_group_student_uniq").on(t.groupId, t.studentId),
+    index("group_students_group_id_idx").on(t.groupId),
+    index("group_students_student_id_idx").on(t.studentId),
+  ]
+);
+
+// Exercise favorites (coach bookmarks)
+export const exerciseFavorites = pgTable(
+  "exercise_favorites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    exerciseId: uuid("exercise_id")
+      .references(() => exercises.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("exercise_favorites_user_exercise_uniq").on(
+      t.userId,
+      t.exerciseId
+    ),
+    index("exercise_favorites_user_id_idx").on(t.userId),
   ]
 );
 
@@ -265,6 +344,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   exercises: many(exercises),
   coachedStudents: many(students),
+  exerciseFavorites: many(exerciseFavorites),
+  groups: many(groups),
 }));
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
@@ -273,6 +354,7 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [users.id],
   }),
   sessionExercises: many(sessionExercises),
+  favorites: many(exerciseFavorites),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
@@ -304,6 +386,7 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
     references: [users.id],
   }),
   sessionStudents: many(sessionStudents),
+  groupStudents: many(groupStudents),
 }));
 
 export const sessionStudentsRelations = relations(
@@ -316,6 +399,30 @@ export const sessionStudentsRelations = relations(
     student: one(students, {
       fields: [sessionStudents.studentId],
       references: [students.id],
+    }),
+  })
+);
+
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  coach: one(users, { fields: [groups.coachId], references: [users.id] }),
+  groupStudents: many(groupStudents),
+}));
+
+export const groupStudentsRelations = relations(groupStudents, ({ one }) => ({
+  group: one(groups, { fields: [groupStudents.groupId], references: [groups.id] }),
+  student: one(students, { fields: [groupStudents.studentId], references: [students.id] }),
+}));
+
+export const exerciseFavoritesRelations = relations(
+  exerciseFavorites,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [exerciseFavorites.userId],
+      references: [users.id],
+    }),
+    exercise: one(exercises, {
+      fields: [exerciseFavorites.exerciseId],
+      references: [exercises.id],
     }),
   })
 );

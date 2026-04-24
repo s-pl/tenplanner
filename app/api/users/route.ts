@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
@@ -24,7 +25,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
 
   // After signUp() the session cookie is not yet set, so we also accept a
   // Bearer token that the client passes from the freshly-created session.
@@ -87,7 +88,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -110,4 +111,59 @@ export async function PATCH(request: Request) {
     .set({ image: parsed.data.image ?? null })
     .where(eq(users.id, user.id));
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/users — GDPR right to erasure.
+ *
+ * Deletes the public.users row (cascades to sessions, session_exercises,
+ * session_students, students, dr_planner_chats, dr_planner_messages) and
+ * then deletes the Supabase auth user so the account is fully gone.
+ */
+export async function DELETE() {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceRoleKey || !supabaseUrl) {
+    return NextResponse.json(
+      { error: "Account deletion not configured on the server" },
+      { status: 503 }
+    );
+  }
+
+  try {
+    // Delete app data first (FK cascades handle related rows).
+    await db.delete(users).where(eq(users.id, user.id));
+
+    // Then delete the auth identity via the service-role admin client.
+    const admin = createAdminClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error } = await admin.auth.admin.deleteUser(user.id);
+    if (error) {
+      console.error("Supabase auth admin.deleteUser failed", {
+        userId: user.id,
+        error,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete auth user" },
+        { status: 500 }
+      );
+    }
+
+    // Best-effort: sign the caller out by clearing the session cookie.
+    await supabase.auth.signOut();
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Account deletion failed", { userId: user.id, error });
+    return NextResponse.json({ error: "Deletion failed" }, { status: 500 });
+  }
 }

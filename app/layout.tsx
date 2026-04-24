@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { CookieBanner } from "@/components/app/cookie-banner";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -21,10 +22,49 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+  "https://tenplanner.app";
+
 export const metadata: Metadata = {
-  title: "TenPlanner — Planificador de Entrenamiento de Pádel",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "TenPlanner — Planificador de Entrenamiento de Pádel",
+    template: "%s · TenPlanner",
+  },
   description:
-    "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel.",
+    "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel. Diseña sesiones, gestiona alumnos y mide progreso.",
+  keywords: [
+    "pádel",
+    "entrenamiento",
+    "planificador",
+    "entrenador",
+    "sesiones",
+    "TenPlanner",
+  ],
+  applicationName: "TenPlanner",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "TenPlanner",
+    title: "TenPlanner — Planificador de Entrenamiento de Pádel",
+    description:
+      "Diseña sesiones, gestiona alumnos y mide el progreso de tu pádel.",
+    url: "/",
+    locale: "es_ES",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TenPlanner",
+    description:
+      "Planificador inteligente de entrenamiento de pádel para entrenadores.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
@@ -62,6 +102,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

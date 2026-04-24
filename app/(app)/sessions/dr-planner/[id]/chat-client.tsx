@@ -143,6 +143,42 @@ const LEVEL_CODE: Record<string, string> = {
   competitive: "L5",
 };
 
+const STREAM_CONNECT_TIMEOUT_MS = 45_000;
+
+async function fetchWithChatTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> {
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(
+    () => timeoutController.abort(),
+    STREAM_CONNECT_TIMEOUT_MS
+  );
+
+  const upstreamSignal = init?.signal;
+  const abortFromUpstream = () => timeoutController.abort();
+
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) timeoutController.abort();
+    else
+      upstreamSignal.addEventListener("abort", abortFromUpstream, {
+        once: true,
+      });
+  }
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: timeoutController.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+    if (upstreamSignal) {
+      upstreamSignal.removeEventListener("abort", abortFromUpstream);
+    }
+  }
+}
+
 // ─── Mention chip (inline in user messages) ──────────────────────────────────
 
 const MENTION_ICONS: Record<string, React.ReactNode> = {
@@ -1590,10 +1626,17 @@ export function DrPlannerChat({
   initialMessages: Record<string, unknown>[];
 }) {
   const router = useRouter();
-  const { messages, sendMessage, status, setMessages, stop } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/dr-planner" }),
-    messages: initialMessages as unknown as UIMessage[],
-  });
+  const { messages, sendMessage, status, setMessages, stop, error, clearError } =
+    useChat({
+      transport: new DefaultChatTransport({
+        api: "/api/dr-planner",
+        fetch: fetchWithChatTimeout,
+      }),
+      messages: initialMessages as unknown as UIMessage[],
+      onError: (chatError) => {
+        console.error("[Dr. Planner] chat error:", chatError);
+      },
+    });
 
   const [input, setInput] = useState("");
   const [title, setTitle] = useState(initialTitle);
@@ -1614,6 +1657,11 @@ export function DrPlannerChat({
 
   const isLoading = status === "streaming" || status === "submitted";
   const lastMsgId = messages[messages.length - 1]?.id;
+  const chatErrorText = error
+    ? error.message.toLowerCase().includes("abort")
+      ? "La conexión con la IA tardó demasiado. Inténtalo de nuevo."
+      : error.message
+    : null;
 
   useLayoutEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1799,14 +1847,16 @@ export function DrPlannerChat({
   const handleSend = useCallback(
     (text: string) => {
       if (!text || isLoading) return;
+      clearError();
       sendMessage({ text });
     },
-    [isLoading, sendMessage]
+    [clearError, isLoading, sendMessage]
   );
 
   function submit() {
     const text = input.trim();
     if (!text || isLoading) return;
+    clearError();
     setInput("");
     setMentionQuery(null);
     sendMessage({ text });
@@ -1916,6 +1966,30 @@ export function DrPlannerChat({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10">
+        {chatErrorText && (
+          <div className="max-w-5xl mx-auto pt-4">
+            <div className="flex items-start gap-3 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-3">
+              <XCircle
+                className="size-3.5 text-destructive shrink-0 mt-0.5"
+                strokeWidth={1.6}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive">
+                  Error de conexión IA
+                </p>
+                <p className="text-[12px] text-destructive/90 mt-1">
+                  {chatErrorText}
+                </p>
+              </div>
+              <button
+                onClick={clearError}
+                className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive/80 hover:text-destructive transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-8 max-w-xl mx-auto text-center pb-4">
             <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">

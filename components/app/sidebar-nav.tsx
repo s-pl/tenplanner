@@ -9,6 +9,7 @@ import {
   ClipboardList,
   CalendarDays,
   Users,
+  Users2,
   UserCircle,
   LogOut,
   Menu,
@@ -56,7 +57,16 @@ const navItems: NavItem[] = [
       },
     ],
   },
-  { href: "/students", label: "Alumnos", icon: Users, index: "04" },
+  {
+    href: "/students",
+    label: "Alumnos",
+    icon: Users,
+    index: "04",
+    submenu: [
+      { href: "/students", label: "Lista de alumnos", icon: Users },
+      { href: "/groups", label: "Grupos", icon: Users2 },
+    ],
+  },
   { href: "/calendar", label: "Calendario", icon: CalendarDays, index: "05" },
   { href: "/profile", label: "Perfil", icon: UserCircle, index: "06" },
 ];

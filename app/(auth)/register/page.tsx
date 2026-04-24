@@ -129,7 +129,7 @@ const QUICK_CITIES = [
   "Zaragoza",
 ];
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 // ─── Password strength ─────────────────────────────────────────────────────
 
@@ -182,6 +182,7 @@ export default function RegisterPage() {
 
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const {
     register,
@@ -205,8 +206,7 @@ export default function RegisterPage() {
 
   function canAdvance(): boolean {
     if (step === 2) return profile.city.trim().length > 0;
-    if (step === 3) return profile.role !== null;
-    if (step === 4) return profile.playerLevel !== null;
+    if (step === 3) return profile.role !== null && profile.playerLevel !== null;
     return true;
   }
 
@@ -229,6 +229,12 @@ export default function RegisterPage() {
   }
 
   async function submitAll() {
+    if (!privacyAccepted) {
+      setServerError(
+        "Debes aceptar la política de privacidad para crear una cuenta."
+      );
+      return;
+    }
     setLoading(true);
     setServerError(null);
 
@@ -309,10 +315,6 @@ export default function RegisterPage() {
   }
 
   const levelOptions = profile.role === "coach" ? COACH_LEVELS : LEVELS;
-  const levelTitle =
-    profile.role === "coach"
-      ? "¿Cuál es tu experiencia como entrenador?"
-      : "¿Cuál es tu nivel de juego?";
 
   // ─── Pantalla de éxito ────────────────────────────────────────────────────
 
@@ -394,9 +396,8 @@ export default function RegisterPage() {
             <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
               {step === 1 && "Crea tu cuenta"}
               {step === 2 && "¿Dónde juegas?"}
-              {step === 3 && "¿Cuál es tu perfil?"}
-              {step === 4 && levelTitle}
-              {step === 5 && "Tus objetivos"}
+              {step === 3 && "Tu perfil deportivo"}
+              {step === 4 && "Tus objetivos"}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Paso {step} de {TOTAL_STEPS}
@@ -683,114 +684,140 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* ─── PASO 3: Rol ─── */}
+      {/* ─── PASO 3: Rol + Nivel + Experiencia ─── */}
       {step === 3 && (
-        <div className="space-y-5">
-          <div className="grid gap-3">
-            {ROLES.map(({ id, emoji, label, desc }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setProfile((p) => ({ ...p, role: id }))}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-150",
-                  profile.role === id
-                    ? "bg-brand/10 border-brand ring-1 ring-brand/30"
-                    : "border-border hover:bg-muted hover:border-border"
-                )}
-              >
-                <span className="text-3xl shrink-0">{emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={cn(
-                      "font-semibold text-sm",
-                      profile.role === id ? "text-brand" : "text-foreground"
-                    )}
-                  >
-                    {label}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-                </div>
-                {profile.role === id && (
-                  <Check className="size-4 text-brand shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
-          <StepNav onBack={back} onNext={next} canNext={canAdvance()} />
-        </div>
-      )}
-
-      {/* ─── PASO 4: Nivel + Experiencia ─── */}
-      {step === 4 && (
-        <div className="space-y-5">
-          <div className="grid gap-2">
-            {levelOptions.map(({ id, label, desc }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setProfile((p) => ({ ...p, playerLevel: id }))}
-                className={cn(
-                  "flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150",
-                  profile.playerLevel === id
-                    ? "bg-brand/10 border-brand"
-                    : "border-border hover:bg-muted"
-                )}
-              >
-                <div>
-                  <p
-                    className={cn(
-                      "text-sm font-semibold",
-                      profile.playerLevel === id
-                        ? "text-brand"
-                        : "text-foreground"
-                    )}
-                  >
-                    {label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-                {profile.playerLevel === id && (
-                  <Check className="size-4 text-brand shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-foreground">
-              Años de experiencia{" "}
-              <span className="font-normal text-muted-foreground">
-                (opcional)
-              </span>
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={0}
-                max={60}
-                placeholder="0"
-                value={profile.yearsExperience ?? ""}
-                onChange={(e) =>
-                  setProfile((p) => ({
-                    ...p,
-                    yearsExperience: e.target.value
-                      ? parseInt(e.target.value)
-                      : null,
-                  }))
-                }
-                className="w-24 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground"
-              />
-              <span className="text-sm text-muted-foreground">años</span>
+        <div className="space-y-6">
+          {/* Rol */}
+          <div className="space-y-2">
+            <p className="text-xs font-sans uppercase tracking-[0.22em] text-muted-foreground">
+              Rol
+            </p>
+            <div className="grid gap-2">
+              {ROLES.map(({ id, emoji, label, desc }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() =>
+                    setProfile((p) => ({
+                      ...p,
+                      role: id,
+                      // reset level if the role switches between coach/non-coach
+                      // so the shown scale matches.
+                      playerLevel:
+                        (p.role === "coach") !== (id === "coach")
+                          ? null
+                          : p.playerLevel,
+                    }))
+                  }
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-150",
+                    profile.role === id
+                      ? "bg-brand/10 border-brand ring-1 ring-brand/30"
+                      : "border-border hover:bg-muted hover:border-border"
+                  )}
+                >
+                  <span className="text-2xl shrink-0">{emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={cn(
+                        "font-semibold text-sm",
+                        profile.role === id ? "text-brand" : "text-foreground"
+                      )}
+                    >
+                      {label}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {desc}
+                    </p>
+                  </div>
+                  {profile.role === id && (
+                    <Check className="size-4 text-brand shrink-0" />
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
+          {/* Nivel (condicional) */}
+          {profile.role && (
+            <div className="space-y-2">
+              <p className="text-xs font-sans uppercase tracking-[0.22em] text-muted-foreground">
+                {profile.role === "coach" ? "Experiencia" : "Nivel"}
+              </p>
+              <div className="grid gap-2">
+                {levelOptions.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() =>
+                      setProfile((p) => ({ ...p, playerLevel: id }))
+                    }
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border text-left transition-all duration-150",
+                      profile.playerLevel === id
+                        ? "bg-brand/10 border-brand"
+                        : "border-border hover:bg-muted"
+                    )}
+                  >
+                    <div>
+                      <p
+                        className={cn(
+                          "text-sm font-semibold",
+                          profile.playerLevel === id
+                            ? "text-brand"
+                            : "text-foreground"
+                        )}
+                      >
+                        {label}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                    {profile.playerLevel === id && (
+                      <Check className="size-4 text-brand shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Años experiencia (opcional, cuando ya hay nivel) */}
+          {profile.playerLevel && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-sans uppercase tracking-[0.22em] text-muted-foreground">
+                Años de experiencia{" "}
+                <span className="normal-case tracking-normal text-[11px]">
+                  (opcional)
+                </span>
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  placeholder="0"
+                  value={profile.yearsExperience ?? ""}
+                  onChange={(e) =>
+                    setProfile((p) => ({
+                      ...p,
+                      yearsExperience: e.target.value
+                        ? parseInt(e.target.value)
+                        : null,
+                    }))
+                  }
+                  className="w-24 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground"
+                />
+                <span className="text-sm text-muted-foreground">años</span>
+              </div>
+            </div>
+          )}
+
           <StepNav onBack={back} onNext={next} canNext={canAdvance()} />
         </div>
       )}
 
-      {/* ─── PASO 5: Objetivos ─── */}
-      {step === 5 && (
+      {/* ─── PASO 4: Objetivos ─── */}
+      {step === 4 && (
         <div className="space-y-5">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
@@ -867,6 +894,29 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          <label className="flex items-start gap-3 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              className="mt-0.5 size-4 rounded border-border accent-brand"
+            />
+            <span className="text-muted-foreground leading-snug">
+              He leído y acepto la{" "}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline text-foreground hover:text-brand"
+              >
+                política de privacidad
+              </a>
+              . Entiendo que, si introduzco datos de alumnos, soy responsable
+              de informarles y, si son menores de 14 años, de obtener el
+              consentimiento parental.
+            </span>
+          </label>
+
           {serverError && (
             <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
               <p className="text-sm text-destructive">{serverError}</p>
@@ -884,7 +934,7 @@ export default function RegisterPage() {
             <Button
               type="button"
               onClick={submitAll}
-              disabled={loading}
+              disabled={loading || !privacyAccepted}
               className="flex-1 h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
             >
               {loading ? (

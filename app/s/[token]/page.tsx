@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { Zap } from "lucide-react";
 import { db } from "@/db";
-import { students } from "@/db/schema";
+import { students, users } from "@/db/schema";
 import { ProfileForm } from "./profile-form";
 
 interface PageProps {
@@ -16,6 +17,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
     .select({
       id: students.id,
       name: students.name,
+      coachId: students.coachId,
       profileToken: students.profileToken,
       profileTokenExpiresAt: students.profileTokenExpiresAt,
     })
@@ -24,6 +26,12 @@ export default async function StudentProfilePage({ params }: PageProps) {
     .limit(1);
 
   if (!student) notFound();
+
+  const [coach] = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.id, student.coachId))
+    .limit(1);
 
   const now = new Date();
   const expired =
@@ -59,17 +67,26 @@ export default async function StudentProfilePage({ params }: PageProps) {
                   Hola, {student.name}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Tu entrenador te ha invitado a completar tu perfil de jugador.
-                  Solo tardas un minuto.
+                  {coach?.name ?? "Tu entrenador/a"} te ha invitado a completar
+                  tu perfil de jugador. Solo tardas un minuto.
                 </p>
               </div>
-              <ProfileForm token={token} initialName={student.name} />
+              <ProfileForm
+                token={token}
+                initialName={student.name}
+                coachName={coach?.name ?? null}
+              />
             </>
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Este enlace expira en 7 días y es de uso exclusivo para ti.
+        <p className="text-center text-[11px] text-muted-foreground mt-6">
+          Este enlace expira en 7 días y es de uso exclusivo para ti. Al
+          enviarlo aceptas la{" "}
+          <Link href="/privacidad" target="_blank" className="underline">
+            política de privacidad
+          </Link>
+          .
         </p>
       </div>
     </div>

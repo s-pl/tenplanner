@@ -120,6 +120,19 @@ export async function PUT(request: Request, context: StudentRouteContext) {
   }
 }
 
+const AVATARS_BUCKET = "avatars";
+
+function extractStoragePath(
+  publicUrl: string | null,
+  bucket: string
+): string | null {
+  if (!publicUrl) return null;
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return publicUrl.slice(idx + marker.length);
+}
+
 export async function DELETE(_request: Request, context: StudentRouteContext) {
   const supabase = await createClient();
   const {
@@ -133,6 +146,15 @@ export async function DELETE(_request: Request, context: StudentRouteContext) {
   if (!parsed.success) return zodValidationErrorResponse(parsed.error);
 
   try {
+    const [existing] = await db
+      .select({ id: students.id, imageUrl: students.imageUrl })
+      .from(students)
+      .where(
+        and(eq(students.id, parsed.data.id), eq(students.coachId, user.id))
+      )
+      .limit(1);
+    if (!existing) return notFoundResponse();
+
     const [deleted] = await db
       .delete(students)
       .where(
@@ -141,6 +163,12 @@ export async function DELETE(_request: Request, context: StudentRouteContext) {
       .returning({ id: students.id });
 
     if (!deleted) return notFoundResponse();
+
+    const path = extractStoragePath(existing.imageUrl, AVATARS_BUCKET);
+    if (path) {
+      await supabase.storage.from(AVATARS_BUCKET).remove([path]);
+    }
+
     return NextResponse.json({ ok: true });
   } catch {
     return internalServerError();

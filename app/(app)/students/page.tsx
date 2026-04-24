@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
-import { Plus, Search } from "lucide-react";
+import { and, asc, count, eq, ilike, type SQL } from "drizzle-orm";
+import { Plus, Search, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
+import { MobileFab } from "@/components/app/mobile-fab";
+
+const PAGE_SIZE = 30;
 
 type PlayerLevel =
   | "beginner"
@@ -30,7 +33,7 @@ const LEVEL_CODE: Record<PlayerLevel, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }
 
 function initialsFromName(name: string) {
@@ -46,30 +49,61 @@ function initialsFromName(name: string) {
 export default async function StudentsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const { q } = await searchParams;
+  const { q, page } = await searchParams;
+  const searchTerm = q?.trim() ?? "";
+  const parsedPage = Number(page ?? "1");
+  const currentPage =
+    Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+  const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const rows = await db
-    .select()
-    .from(studentsTable)
-    .where(eq(studentsTable.coachId, user.id))
-    .orderBy(asc(studentsTable.name));
+  const conditions: SQL[] = [eq(studentsTable.coachId, user.id)];
+  if (searchTerm) conditions.push(ilike(studentsTable.name, `%${searchTerm}%`));
+  const listWhere = and(...conditions);
 
-  const filtered = q
-    ? rows.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()))
-    : rows;
+  const [rowPage, totalRows, levelRows] = await Promise.all([
+    db
+      .select()
+      .from(studentsTable)
+      .where(listWhere)
+      .orderBy(asc(studentsTable.name))
+      .limit(PAGE_SIZE + 1)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(studentsTable)
+      .where(eq(studentsTable.coachId, user.id)),
+    db
+      .select({ level: studentsTable.playerLevel, total: count() })
+      .from(studentsTable)
+      .where(eq(studentsTable.coachId, user.id))
+      .groupBy(studentsTable.playerLevel),
+  ]);
 
-  const levelCounts = rows.reduce<Record<PlayerLevel, number>>(
-    (acc, s) => {
-      const lvl = s.playerLevel as PlayerLevel | null;
-      if (lvl) acc[lvl] = (acc[lvl] ?? 0) + 1;
+  const hasNextPage = rowPage.length > PAGE_SIZE;
+  const filtered = hasNextPage ? rowPage.slice(0, PAGE_SIZE) : rowPage;
+  const totalStudents = Number(totalRows[0]?.total ?? 0);
+
+  const levelCounts = levelRows.reduce<Record<PlayerLevel, number>>(
+    (acc, r) => {
+      const lvl = r.level as PlayerLevel | null;
+      if (lvl) acc[lvl] = Number(r.total);
       return acc;
     },
     { beginner: 0, amateur: 0, intermediate: 0, advanced: 0, competitive: 0 }
   );
+
+  function buildHref(params: { q?: string; page?: string }) {
+    const p = new URLSearchParams();
+    if (params.q) p.set("q", params.q);
+    if (params.page && params.page !== "1") p.set("page", params.page);
+    const s = p.toString();
+    return `/students${s ? `?${s}` : ""}`;
+  }
 
   return (
     <div className="relative">
@@ -89,7 +123,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               Roster · Alumnos
             </p>
             <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
-              № {String(rows.length).padStart(3, "0")}
+              № {String(totalStudents).padStart(3, "0")}
             </p>
           </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-6">
@@ -98,10 +132,10 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               <br />
               uno a uno.
             </h1>
-            {rows.length > 0 && (
+            {totalStudents > 0 && (
               <Link
                 href="/students/new"
-                className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
+                className="hidden md:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
               >
                 <Plus className="size-3.5" strokeWidth={2} />
                 Nuevo alumno
@@ -109,14 +143,14 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             )}
           </div>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {rows.length} alumno{rows.length !== 1 ? "s" : ""} registrado
-            {rows.length !== 1 ? "s" : ""} · fichas individuales con histórico y
+              {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
+            {totalStudents !== 1 ? "s" : ""} · fichas individuales con histórico y
             nivel.
           </p>
         </header>
 
         {/* Level strip */}
-        {rows.length > 0 && (
+        {totalStudents > 0 && (
           <section className="grid grid-cols-5 border-b border-foreground/15">
             {(Object.keys(LEVEL_LABEL) as PlayerLevel[]).map((lvl, i) => (
               <div
@@ -135,7 +169,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
         )}
 
         {/* Search rail */}
-        {rows.length > 0 && (
+        {totalStudents > 0 && (
           <section className="py-5 border-b border-foreground/15 grid grid-cols-[auto_1fr_auto] items-center gap-4">
             <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
               01
@@ -146,18 +180,18 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                 type="search"
                 name="q"
                 placeholder="Buscar por nombre…"
-                defaultValue={q}
+                defaultValue={searchTerm}
                 className="w-full sm:max-w-md h-9 pl-6 pr-4 text-[13px] bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-foreground placeholder:text-foreground/40 transition-colors"
               />
             </form>
             <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/50">
-              {filtered.length}/{rows.length}
+              {filtered.length}/{totalStudents}
             </p>
           </section>
         )}
 
         {/* Empty */}
-        {rows.length === 0 ? (
+        {totalStudents === 0 ? (
           <div className="py-20 text-center border-b border-foreground/15">
             <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-4">
               Estantería vacía
@@ -184,7 +218,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             </p>
             <p className="font-heading text-2xl text-foreground mb-3">
               Ningún alumno coincide con &ldquo;
-              <em className="italic text-brand">{q}</em>&rdquo;.
+              <em className="italic text-brand">{searchTerm}</em>&rdquo;.
             </p>
             <Link
               href="/students"
@@ -268,6 +302,50 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </section>
         )}
 
+        {/* Pagination */}
+        {(currentPage > 1 || hasNextPage) && (
+          <nav className="flex items-center justify-between pt-4 border-t border-foreground/15">
+            <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
+              {filtered.length > 0
+                ? `${offset + 1}–${offset + filtered.length}`
+                : "0"}{" "}
+              · Página {currentPage.toString().padStart(2, "0")}
+            </p>
+            <div className="flex items-center gap-5">
+              {currentPage > 1 ? (
+                <Link
+                  href={buildHref({
+                    q: searchTerm || undefined,
+                    page: String(currentPage - 1),
+                  })}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+                >
+                  <ArrowLeft className="size-3" /> Anterior
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                  <ArrowLeft className="size-3" /> Anterior
+                </span>
+              )}
+              {hasNextPage ? (
+                <Link
+                  href={buildHref({
+                    q: searchTerm || undefined,
+                    page: String(currentPage + 1),
+                  })}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+                >
+                  Siguiente <ArrowUpRight className="size-3" />
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                  Siguiente <ArrowUpRight className="size-3" />
+                </span>
+              )}
+            </div>
+          </nav>
+        )}
+
         {/* Footnote */}
         <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
           <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
@@ -279,6 +357,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </p>
         </footer>
       </div>
+      <MobileFab href="/students/new" icon="user-plus" label="Nuevo alumno" />
     </div>
   );
 }

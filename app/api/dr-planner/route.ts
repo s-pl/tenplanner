@@ -1,13 +1,23 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, generateText, stepCountIs, streamText, type UIMessage } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, sessions, sessionExercises, exercises, students, sessionStudents } from "@/db/schema";
+import { users, sessions, sessionExercises, exercises, students, sessionStudents, groups, groupStudents } from "@/db/schema";
 import { eq, count, isNull, inArray, and, or, ilike, desc, gte, lte } from "drizzle-orm";
 import { z } from "zod";
+import {
+  listCoachStudentsSummary,
+  findInactiveStudents,
+  getStudentAnalytics,
+  detectTrainingGaps,
+  getStudentProgress,
+  recommendNextSession,
+  getCoachStats,
+} from "@/lib/dr-planner/insights";
+import { rateLimit, tooManyRequestsResponse } from "@/lib/rate-limit";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const anthropic = createAnthropic({ apiKey: process.env.NEXT_ANTHROPIC_API_KEY });
 
@@ -37,23 +47,6 @@ function buildUserContext(profile: {
   return parts.join(" | ");
 }
 
-function buildStudentContext(studentList: Array<{
-  id: string; name: string; playerLevel: string | null; dominantHand: string | null;
-}>) {
-  if (!studentList.length) return "Ninguno todavía.";
-  return studentList.map(s =>
-    `  • [${s.id}] ${s.name} | Nivel: ${s.playerLevel ?? "no indicado"} | Mano: ${s.dominantHand ?? "no indicada"}`
-  ).join("\n");
-}
-
-function formatExerciseLine(e: {
-  id: string; name: string; category: string; difficulty: string;
-  durationMinutes: number; description: string | null; isAiGenerated: boolean;
-}) {
-  const tag = e.isAiGenerated ? " [IA]" : "";
-  return `  • [${e.id}] ${e.name}${tag} | ${e.category} | ${e.difficulty} | ${e.durationMinutes}min`;
-}
-
 type CoachStudent = {
   id: string;
   name: string;
@@ -80,6 +73,7 @@ type ConversationState = {
   confirmedSessionMeta: SessionMetaDraft;
   hasExerciseCreationConsent: boolean;
   hasDurationDeviationConsent: boolean;
+  hasExercisePlanConfirmed: boolean;
 };
 
 function normalizeText(value: string): string {
@@ -300,7 +294,7 @@ function inferSelectedStudentIds(userTexts: string[], coachStudents: CoachStuden
 
 function isSimpleAffirmation(text: string): boolean {
   const normalized = normalizeText(text).replace(/[.!?]+$/g, "");
-  return ["si", "sí", "ok", "vale", "dale", "adelante", "hazlo", "de acuerdo", "perfecto"].includes(normalized);
+  return ["si", "sí", "ok", "vale", "dale", "adelante", "hazlo", "de acuerdo", "perfecto", "acepto", "listo", "confirmado", "confirmo"].includes(normalized);
 }
 
 function getPreviousAssistantText(messages: UIMessage[], userIndex: number): string {
@@ -358,6 +352,12 @@ function extractLatestConfirmedSessionMeta(userTexts: string[]): SessionMetaDraf
 }
 
 function inferDurationDeviationConsentFromHistory(messages: UIMessage[]): boolean {
+  // Token-based check: button in the UI sends this explicit marker
+  for (const m of messages) {
+    if (m.role === "user" && getMessageText(m).includes("[DURATION_CONSENT_GRANTED]")) return true;
+    if (m.role === "user" && getMessageText(m).includes("[DURATION_CONSENT_DECLINED]")) return false;
+  }
+
   let consent = false;
 
   for (let i = 0; i < messages.length; i += 1) {
@@ -416,6 +416,7 @@ function inferConversationState(messages: UIMessage[], coachStudents: CoachStude
     confirmedSessionMeta: extractLatestConfirmedSessionMeta(userTexts),
     hasExerciseCreationConsent: hasExerciseCreationConsent(lastUserText, messages),
     hasDurationDeviationConsent: inferDurationDeviationConsentFromHistory(messages),
+    hasExercisePlanConfirmed: userTexts.some((t) => t.includes("[EXERCISES_CONFIRMED]")),
   };
 }
 
@@ -424,11 +425,15 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [profileRows, countRows, personalExercises, globalExercises, coachStudents] = await Promise.all([
+  // Rate limit: 30 chat turns/min per user (prevents credit drain)
+  const rl = await rateLimit(`dr-planner:${user.id}`, 30, 60_000);
+  if (!rl.ok) return tooManyRequestsResponse(rl);
+
+  const [profileRows, countRows, personalExerciseCountRows, globalExerciseCountRows, coachStudents] = await Promise.all([
     db.select().from(users).where(eq(users.id, user.id)).limit(1),
     db.select({ total: count() }).from(sessions).where(eq(sessions.userId, user.id)),
-    db.select(EXERCISE_FIELDS).from(exercises).where(eq(exercises.createdBy, user.id)),
-    db.select(EXERCISE_FIELDS).from(exercises).where(or(eq(exercises.isGlobal, true), isNull(exercises.createdBy))).limit(60),
+    db.select({ total: count() }).from(exercises).where(eq(exercises.createdBy, user.id)),
+    db.select({ total: count() }).from(exercises).where(or(eq(exercises.isGlobal, true), isNull(exercises.createdBy))),
     db.select({
       id: students.id,
       name: students.name,
@@ -437,6 +442,9 @@ export async function POST(request: Request) {
       gender: students.gender,
     }).from(students).where(eq(students.coachId, user.id)),
   ]);
+
+  const personalExerciseCount = Number(personalExerciseCountRows[0]?.total ?? 0);
+  const globalExerciseCount = Number(globalExerciseCountRows[0]?.total ?? 0);
 
   const profile = profileRows[0];
   const sessionCount = Number(countRows[0]?.total ?? 0);
@@ -460,79 +468,106 @@ export async function POST(request: Request) {
 
   const confirmedObjective = conversationState.confirmedSessionMeta.objective ?? conversationState.objectiveFromHistory;
 
-  const systemPrompt = `Eres Dr. Planner, asistente experto en diseño de sesiones de pádel. Hablas español, directo y breve. Sin emojis.
+  const isFirstTurn = messages.filter((m) => m.role === "user").length <= 1;
+
+  // Split stable vs dynamic so Anthropic prompt caching can hit the long static part.
+  const systemStable = `Eres Dr. Planner, asistente experto en diseño de sesiones de pádel. Hablas español, directo y breve. Sin emojis.
 
 ## Estilo
-- Máximo 3-4 frases por turno. El plan va en mostrar_ejercicios + configurar_sesion_meta, NO en texto.
+- Máximo 3-4 frases por turno. El plan va en \`mostrar_ejercicios\` + \`configurar_sesion_meta\`, NO en texto.
 - Markdown ligero: **negrita** para énfasis. Nada de recuentos ni resúmenes de lo hecho.
 - Si no hace falta escribir, no escribas.
+- Nunca vuelques en texto datos que una tool puede renderizar como tarjeta.
 
-## Flujo (una sola ruta)
-1. Si hay alumnos y aún no se han seleccionado → llama YA a \`seleccionar_alumnos\`. No preguntes en texto.
+## Casos típicos (mapa entrada → acción)
+Usa esta tabla como guía rápida. Si la petición encaja con un caso, dispara las tools que indica sin preguntar cosas obvias.
+
+| Entrada del usuario | Qué haces |
+|---|---|
+| Solo saluda ("hola", "buenas") en turno inicial | Paralelo: \`estadisticas_globales\` + \`alumnos_inactivos\`. Renderiza con \`mostrar_insights\` (máx 4 items accionables). Una sola línea final: "Dime en qué te ayudo". |
+| Pide algo concreto desde el primer turno ("diseña sesión para X", "busca ejercicios de volea") | Responde directo a esa petición. **NO** metas insights genéricos de relleno. |
+| Menciona un alumno por nombre | \`analizar_alumno\` con su id. Muestra el resultado como tarjeta — no lo resumas. |
+| "¿A quién llevo más tiempo sin entrenar?" / "¿Qué alumnos están parados?" | \`alumnos_inactivos\` → \`mostrar_insights\`. |
+| "¿Qué tal voy este mes?" / "Dame mis números" | \`estadisticas_globales\` → \`mostrar_insights\` con 2-3 stats clave. |
+| "¿Qué debería entrenar con X?" / "Proponme algo para X" | \`recomendar_proxima_sesion\` con studentIds. Si quieres justificación, pide \`generarInsight: true\`. |
+| "¿En qué falla X?" / "¿Qué le falta a X?" | \`gaps_de_entrenamiento\` con su studentId. |
+| "¿Cómo va X estos meses?" / "Progreso de X" | \`progreso_alumno\` con su studentId. |
+| "Como la sesión de la semana pasada pero..." / "Hicimos algo parecido" | \`buscar_sesiones_similares\` (query/duracionMinutos) — usa el mejor match como plantilla. |
+| "Ejercicios de [categoría/nivel/duración]" | \`buscar_ejercicios_avanzado\` con los filtros → \`mostrar_ejercicios\` con resultados. |
+| No conoce el nombre del ejercicio pero lo describe | \`buscar_contexto\` libre, luego \`mostrar_ejercicios\`. |
+| "Diseña una sesión" sin alumnos seleccionados | Si la lista de alumnos tiene elementos → \`seleccionar_alumnos\` ya. Si está vacía → ofrece crear uno o diseñar genérica. |
+
+## Flujo (diseño de sesión)
+1. Si hay alumnos y aún no se han seleccionado → \`seleccionar_alumnos\`. No preguntes en texto.
 2. Recopila lo que falte (nivel, duración, objetivo) con \`<preguntas>\`. Nada de preguntas repetidas.
-3. Diseña el plan. Muéstralo con \`mostrar_ejercicios\`. Si necesitas algo que no existe en la biblioteca, describe en texto la especificación completa del ejercicio (nombre, categoría, dificultad, duración, objetivo) y pregunta: "¿Lo creo así o quieres ajustar algo?" Espera respuesta antes de llamar a \`crear_ejercicio\`.
-4. Llama a \`configurar_sesion_meta\` SIEMPRE con TODOS los campos ya conocidos prellenados: \`objective\` (del historial o del estado), \`intensity\` (estima según ejercicios si no se dijo), \`scheduledAt\` (usa la fecha por defecto si no se dijo), \`location\` y \`tags\` si se mencionaron, \`durationMinutes\` (suma del plan). NO llames a esta tool con campos vacíos — si ya tienes el dato, pásalo. Escribe solo: "Revisa y pulsa **Confirmar** para crear la sesión." Y PARA.
-5. Cuando el usuario envíe \`[FORM_META_CONFIRMED]\` o confirme con texto ("sí, crea la sesión", "confirmo", etc.) llama INMEDIATAMENTE a \`crear_sesion\` sin volver a preguntar nada. El marcador \`[FORM_META_CONFIRMED]\` YA es confirmación final — nunca pidas confirmación adicional después de verlo.
+3. Diseña el plan. Muéstralo con \`mostrar_ejercicios\`. Escribe solo: "Revisa el plan y pulsa **Confirmar plan** cuando estés listo." Y PARA — **NO llames a \`configurar_sesion_meta\` ni a ninguna otra tool en este mismo turno.**
+4. Cuando el usuario envíe \`[EXERCISES_CONFIRMED]\` → \`configurar_sesion_meta\` con TODOS los campos ya conocidos prellenados. Escribe solo: "Revisa y pulsa **Confirmar** para crear la sesión." Y PARA.
+5. Cuando el usuario envíe \`[FORM_META_CONFIRMED]\` → \`crear_sesion\` inmediatamente.
+6. Tras \`crear_sesion\` exitoso: una sola frase de cierre ("Creada. Suerte con la pista.") — sin recapitular nada.
+
+**PROHIBIDO**: \`configurar_sesion_meta\` en el mismo turno que \`mostrar_ejercicios\`. Son pasos distintos con confirmación del usuario entre medias.
+
+## Datos: dónde buscar qué
+| Necesitas | Tool |
+|---|---|
+| Lista resumida de alumnos | \`listar_alumnos_resumen\` |
+| Perfil profundo de un alumno | \`analizar_alumno\` |
+| Huecos en las últimas 8 semanas | \`gaps_de_entrenamiento\` |
+| Serie temporal (6 meses) | \`progreso_alumno\` |
+| Alumnos sin entrenar (≥N días) | \`alumnos_inactivos\` |
+| Numeritos del coach | \`estadisticas_globales\` |
+| Sesiones previas como plantilla | \`buscar_sesiones_similares\` |
+| Biblioteca personal + global | \`buscar_ejercicios_avanzado\` (filtros) o \`buscar_contexto\` (libre) |
+| Propuesta razonada | \`recomendar_proxima_sesion\` |
+| Panel visual de observaciones | \`mostrar_insights\` |
+
+El contexto inyectado en este prompt ya te dice número total de alumnos y tamaño de biblioteca. **NO llames a tools para reconfirmar esos conteos.**
 
 ## Reglas estrictas (no negociables)
 - NO llames a \`crear_sesion\` sin confirmación explícita del usuario en su último mensaje.
-- \`[FORM_META_CONFIRMED]\` ES confirmación explícita. Procede a crear la sesión sin más preguntas.
-- Un "sí" breve cuenta solo si acabas de preguntar de forma directa si quieres crear la sesión.
-- NO llames a \`crear_ejercicio\` sin haber mostrado primero la especificación y recibido aprobación del usuario.
+- \`[FORM_META_CONFIRMED]\` ES confirmación explícita.
+- Un "sí" breve cuenta solo si acabas de preguntar directamente.
+- NO llames a \`crear_ejercicio\` sin haber mostrado antes la spec y recibido aprobación.
 - NO vuelvas a llamar a \`seleccionar_alumnos\` si ya hay alumnos seleccionados.
-- Si la duración del plan difiere de la pedida y no hay permiso → no crees, ajusta o pregunta.
+- Si la duración del plan difiere de la pedida y no hay permiso → ajusta o pregunta.
 - Máx. 3 \`crear_ejercicio\` por turno.
 - Para alumnos: usa \`<preguntas>\` (nombre, nivel) antes de \`crear_alumno\`. Nunca inventes nombres.
-- En \`crear_sesion\`: cada ejercicio DEBE llevar \`phase\` (activation/main/cooldown) e \`intensity\` (1-5). Sin intensidades la curva de la sesión queda vacía. Guía: calentamiento 1-2, principal 3-5 (subir y mantener pico antes de bajar), vuelta a la calma 1-2.
+- En \`crear_sesion\`: cada ejercicio DEBE llevar \`phase\` (activation/main/cooldown) e \`intensity\` (1-5). Guía: activación 1-2, principal 3-5 (pico y bajada), cooldown 1-2.
+- Si una tool devuelve pocos/ningún resultado, dilo y sugiere alternativa (ampliar filtros, crear ejercicio nuevo…). No inventes datos.
 
 ## Preguntas interactivas
 Cuando necesites datos, añade al FINAL del mensaje:
-\`<preguntas>[{"id":"duracion","label":"Duración (min)","tipo":"numero"},{"id":"nivel","label":"Nivel","tipo":"select","opciones":["principiante","amateur","intermedio","avanzado","competición"]}]</preguntas>\`
-Tipos: "texto", "numero", "select" (con "opciones"). No repitas datos que ya tengas.
+\`<preguntas>[{"id":"duracion","label":"Duración (min)","tipo":"numero"},{"id":"nivel","label":"Nivel","tipo":"select","opciones":["principiante","amateur","intermedio","avanzado","competición"]}]</preguntas>\``;
 
-## Herramientas disponibles
-- \`seleccionar_alumnos\`, \`crear_alumno\`, \`analizar_alumno\`
-- \`mostrar_ejercicios\`, \`crear_ejercicio\`, \`buscar_ejercicios_avanzado\`
-- \`buscar_sesiones_similares\`, \`buscar_contexto\` (para menciones @)
-- \`configurar_sesion_meta\`, \`crear_sesion\`
-
-## Estado actual (léelo antes de actuar)
+  const systemDynamic = `## Estado actual
+- Turno inicial: ${isFirstTurn ? "SÍ (muestra insights proactivos si no hay petición concreta)" : "no"}
 - Duración objetivo: ${conversationState.requestedDurationMinutes ?? "—"}
 - Objetivo: ${confirmedObjective ?? "—"}
 - Alumnos seleccionados: ${selectedStudentsSummary}
-- Confirmación crear sesión: ${conversationState.hasExplicitSessionConfirmation ? "SÍ → LLAMA YA a crear_sesion. No preguntes más." : "NO"}
-- Aprobación ejercicios pendiente: ${conversationState.hasExerciseCreationConsent ? "SÍ (usuario aprobó spec, llama crear_ejercicio)" : "NO (muestra spec primero)"}
+- Confirmación crear sesión: ${conversationState.hasExplicitSessionConfirmation ? "SÍ → llama ya a crear_sesion" : "NO"}
+- Plan de ejercicios confirmado: ${conversationState.hasExercisePlanConfirmed ? "SÍ → llama ya a configurar_sesion_meta" : "NO (espera [EXERCISES_CONFIRMED])"}
+- Aprobación ejercicios pendiente: ${conversationState.hasExerciseCreationConsent ? "SÍ" : "NO"}
 - Permiso desviar duración: ${conversationState.hasDurationDeviationConsent ? "SÍ" : "NO"}
-- Fecha de hoy: ${todayStr} · Fecha por defecto para sesiones: ${tomorrowISO}
+- Fecha de hoy: ${todayStr} · Fecha por defecto: ${tomorrowISO}
 - Meta ya confirmada del formulario: ${JSON.stringify(conversationState.confirmedSessionMeta)}
 
 ## Perfil del entrenador
 ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
 
-## Alumnos (${coachStudents.length})
-${buildStudentContext(coachStudents)}${hasStudents ? "" : "\nSin alumnos. Puedes ofrecer crear uno."}
-
-## Biblioteca personal (${personalExercises.length})
-${personalExercises.length > 0 ? personalExercises.map(formatExerciseLine).join("\n") : "  (vacía)"}
-
-## Biblioteca global (${globalExercises.length})
-${globalExercises.map(formatExerciseLine).join("\n")}`;
+## Contexto agregado (pide detalles por tool cuando los necesites)
+- Alumnos registrados: ${coachStudents.length}${hasStudents ? "" : " (sin alumnos — puedes ofrecer crear uno)"}
+- Ejercicios en biblioteca personal: ${personalExerciseCount}
+- Ejercicios en biblioteca global: ${globalExerciseCount}`;
 
   let createExerciseCalls = 0;
 
   const result = streamText({
     model: anthropic("claude-haiku-4-5"),
-    system: systemPrompt,
+    system: `${systemStable}\n\n${systemDynamic}`,
     messages: await convertToModelMessages(messages),
-    maxOutputTokens: 1800,
+    maxOutputTokens: 2400,
     temperature: 0.4,
-    stopWhen: stepCountIs(12),
-    providerOptions: {
-      anthropic: {
-        thinking: { type: "enabled", budgetTokens: 1500 },
-        disableParallelToolUse: true,
-      },
-    },
+    stopWhen: stepCountIs(20),
     tools: {
       mostrar_ejercicios: {
         description: "Presenta ejercicios como tarjetas interactivas. Usar siempre en lugar de listar ejercicios en texto.",
@@ -645,7 +680,11 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
               const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`;
               return {
                 ok: false,
-                error: `La propuesta suma ${totalDuration} min y el objetivo era ${conversationState.requestedDurationMinutes} min (${deltaLabel} min). Pregunta al entrenador si acepta esta diferencia o ajusta ejercicios para cuadrar la duración.`,
+                code: "DURATION_MISMATCH",
+                totalDuration,
+                requestedDuration: conversationState.requestedDurationMinutes,
+                delta,
+                error: `Duración propuesta: ${totalDuration} min (objetivo: ${conversationState.requestedDurationMinutes} min, diferencia: ${deltaLabel} min). Confirma si el entrenador acepta la diferencia o ajusta los ejercicios.`,
               };
             }
 
@@ -812,28 +851,132 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
         },
       },
       analizar_alumno: {
-        description: "Muestra perfil completo de un alumno con su historial de sesiones y estadísticas. Usar cuando el entrenador pregunte por un alumno o quiera adaptar una sesión a su historial.",
+        description: "Devuelve perfil analítico completo del alumno (KPIs, categorías trabajadas 60d, fases, gaps, progreso, últimas sesiones). La UI lo renderiza como StudentAnalyticsCard — NO lo resumas en texto, deja que la tarjeta lo muestre.",
         inputSchema: z.object({
           studentId: z.string().describe("ID del alumno a analizar"),
+          generarInsight: z.boolean().optional().describe("Si true, añade un insight sintetizado por IA."),
+        }),
+        execute: async ({ studentId, generarInsight }) => {
+          const analytics = await getStudentAnalytics(user.id, studentId);
+          if (!analytics) return { ok: false, error: "Alumno no encontrado" };
+          const gaps = await detectTrainingGaps(user.id, studentId);
+          const progress = await getStudentProgress(user.id, studentId);
+
+          let insight: string | null = null;
+          if (generarInsight) {
+            try {
+              const { text } = await generateText({
+                model: anthropic("claude-sonnet-4-6"),
+                maxOutputTokens: 220,
+                temperature: 0.3,
+                prompt: `Entrenador de pádel. Alumno: ${analytics.student.name} (${analytics.student.playerLevel ?? "sin nivel"}).
+Datos 60d: ${analytics.sessionsLast60d} sesiones, última hace ${analytics.daysSinceLast ?? "?"} días, intensidad media ${analytics.avgIntensity ?? "?"}.
+Categorías: ${analytics.categoriesLast60d.map(c => `${c.category} ${c.minutes}min`).join(", ") || "ninguna"}.
+Gaps: ${gaps.map(g => g.label).join(", ") || "ninguno"}.
+En 2 frases (máx 40 palabras), diagnóstico accionable para la próxima sesión. Sin emojis, directo.`,
+              });
+              insight = text.trim();
+            } catch (err) {
+              console.error("[Dr. Planner] insight analizar_alumno:", err);
+            }
+          }
+
+          return { ok: true, analytics, gaps, progress, insight };
+        },
+      },
+      listar_alumnos_resumen: {
+        description: "Lista resumida de todos los alumnos del entrenador con última sesión y frecuencia. Úsala para saber a quién tiene y elegir un foco.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          const summary = await listCoachStudentsSummary(user.id);
+          return { alumnos: summary };
+        },
+      },
+      alumnos_inactivos: {
+        description: "Devuelve alumnos cuya última sesión fue hace ≥ diasUmbral (o que nunca tuvieron sesión). Úsala al inicio para detectar quién lleva tiempo parado.",
+        inputSchema: z.object({
+          diasUmbral: z.number().int().min(1).max(365).optional().describe("Días desde última sesión; por defecto 14"),
+        }),
+        execute: async ({ diasUmbral }) => {
+          const items = await findInactiveStudents(user.id, diasUmbral ?? 14);
+          return { diasUmbral: diasUmbral ?? 14, alumnos: items };
+        },
+      },
+      gaps_de_entrenamiento: {
+        description: "Detecta categorías/fases con poco o nulo volumen en los últimos 60 días para un alumno. Útil para justificar una recomendación.",
+        inputSchema: z.object({
+          studentId: z.string(),
         }),
         execute: async ({ studentId }) => {
-          const [student] = await db.select().from(students)
-            .where(and(eq(students.id, studentId), eq(students.coachId, user.id))).limit(1);
-          if (!student) return { ok: false, error: "Alumno no encontrado" };
-
-          const recentSessions = await db.select({
-            id: sessions.id, title: sessions.title, scheduledAt: sessions.scheduledAt,
-            durationMinutes: sessions.durationMinutes, objective: sessions.objective,
-            intensity: sessions.intensity,
-          })
-            .from(sessionStudents)
-            .innerJoin(sessions, eq(sessionStudents.sessionId, sessions.id))
-            .where(eq(sessionStudents.studentId, studentId))
-            .orderBy(desc(sessions.scheduledAt))
-            .limit(8);
-
-          return { ok: true, student, totalSessions: recentSessions.length, recentSessions };
+          const gaps = await detectTrainingGaps(user.id, studentId);
+          return { gaps };
         },
+      },
+      progreso_alumno: {
+        description: "Serie temporal mensual (últimos 6 meses) de nº de sesiones e intensidad media para un alumno. Para mini-charts.",
+        inputSchema: z.object({
+          studentId: z.string(),
+        }),
+        execute: async ({ studentId }) => {
+          const progress = await getStudentProgress(user.id, studentId);
+          return { progress };
+        },
+      },
+      estadisticas_globales: {
+        description: "Agregados del entrenador: sesiones este mes vs pasado, minutos, intensidad media, top ejercicios, distribución por categoría.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          const stats = await getCoachStats(user.id);
+          return { stats };
+        },
+      },
+      recomendar_proxima_sesion: {
+        description: "Propuesta razonada de próxima sesión para uno o varios alumnos basada en sus gaps. La UI la renderiza como RecommendationCard.",
+        inputSchema: z.object({
+          studentIds: z.array(z.string()).min(1),
+          generarInsight: z.boolean().optional(),
+        }),
+        execute: async ({ studentIds, generarInsight }) => {
+          const rec = await recommendNextSession(user.id, studentIds);
+          if (!rec) return { ok: false, error: "No se encontraron alumnos válidos" };
+
+          let insight: string | null = null;
+          if (generarInsight) {
+            try {
+              const { text } = await generateText({
+                model: anthropic("claude-sonnet-4-6"),
+                maxOutputTokens: 220,
+                temperature: 0.4,
+                prompt: `Entrenador de pádel. Propuesta para ${rec.targetStudents.map(s => s.name).join(", ")}.
+Foco: ${rec.focus}. Duración: ${rec.durationSugerida}min, intensidad ${rec.intensitySugerida}/5.
+Gaps detectados: ${rec.gaps.map(g => g.label).join(", ") || "ninguno"}.
+En 2 frases (máx 40 palabras), por qué esta propuesta tiene sentido ahora. Sin emojis, directo.`,
+              });
+              insight = text.trim();
+            } catch (err) {
+              console.error("[Dr. Planner] insight recomendar:", err);
+            }
+          }
+
+          return { ok: true, recomendacion: { ...rec, insight } };
+        },
+      },
+      mostrar_insights: {
+        description: "Renderiza un panel visual de insights accionables (alertas, sugerencias, stats). Úsalo para la bienvenida proactiva y siempre que tengas varias observaciones que presentar juntas.",
+        inputSchema: z.object({
+          titulo: z.string().optional().describe("Título opcional del panel, ej: 'Resumen de tu semana'"),
+          items: z.array(z.object({
+            tipo: z.enum(["alerta", "sugerencia", "stat"]),
+            titulo: z.string(),
+            detalle: z.string(),
+            metric: z.string().optional().describe("Valor destacado a mostrar grande (opcional)"),
+            accion: z.object({
+              label: z.string(),
+              prompt: z.string().describe("Texto que se enviará al chat si el usuario pulsa la acción"),
+            }).optional(),
+          })).min(1).max(6),
+        }),
+        execute: async (input) => input,
       },
       buscar_sesiones_similares: {
         description: "Busca sesiones pasadas del entrenador para usar como referencia o inspiración. Usar cuando el entrenador quiera basar una nueva sesión en algo previo.",
@@ -885,6 +1028,38 @@ ${globalExercises.map(formatExerciseLine).join("\n")}`;
             .where(and(...conditions)).limit(20);
 
           return { ejercicios: results };
+        },
+      },
+      listar_grupos: {
+        description: "Lista los grupos de alumnos del entrenador con sus miembros. Úsala cuando el usuario mencione un grupo con @ o cuando quiera planificar para un grupo concreto.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          type GroupRow = { groupId: string; groupName: string; description: string | null; studentId: string | null; studentName: string | null; playerLevel: string | null };
+          const rows: GroupRow[] = await db
+            .select({
+              groupId: groups.id,
+              groupName: groups.name,
+              description: groups.description,
+              studentId: students.id,
+              studentName: students.name,
+              playerLevel: students.playerLevel,
+            })
+            .from(groups)
+            .leftJoin(groupStudents, eq(groupStudents.groupId, groups.id))
+            .leftJoin(students, eq(groupStudents.studentId, students.id))
+            .where(eq(groups.coachId, user.id))
+            .catch(() => [] as GroupRow[]);
+
+          const map = new Map<string, { id: string; name: string; description: string | null; members: { id: string; name: string; level: string | null }[] }>();
+          for (const row of rows) {
+            if (!map.has(row.groupId)) {
+              map.set(row.groupId, { id: row.groupId, name: row.groupName, description: row.description ?? null, members: [] });
+            }
+            if (row.studentId && row.studentName) {
+              map.get(row.groupId)!.members.push({ id: row.studentId, name: row.studentName, level: row.playerLevel ?? null });
+            }
+          }
+          return { grupos: Array.from(map.values()) };
         },
       },
     },

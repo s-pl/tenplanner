@@ -7,6 +7,7 @@ import {
   sessionExercises,
   sessionStudents,
   students,
+  exerciseFavorites,
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { SessionDetailClient } from "./session-detail-client";
@@ -24,14 +25,15 @@ interface PageProps {
 export default async function SessionPage({ params }: PageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session: authSession },
+  } = await supabase.auth.getSession();
+  const user = authSession?.user ?? null;
 
   if (!user) redirect("/login");
 
   const { id } = await params;
 
-  const [[sessionRow], exerciseRows, allExercises, studentRows] =
+  const [[sessionRow], exerciseRows, allExercises, studentRows, favRows] =
     await Promise.all([
       db.select().from(sessions).where(eq(sessions.id, id)).limit(1),
       db
@@ -48,6 +50,7 @@ export default async function SessionPage({ params }: PageProps) {
           overrideIntensity: sessionExercises.intensity,
           exercisePhase: exercises.phase,
           exerciseIntensity: exercises.intensity,
+          coachRating: sessionExercises.coachRating,
         })
         .from(sessionExercises)
         .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -62,22 +65,30 @@ export default async function SessionPage({ params }: PageProps) {
           durationMinutes: exercises.durationMinutes,
         })
         .from(exercises)
-        .orderBy(exercises.name),
+        .orderBy(exercises.name)
+        .limit(200),
       db
         .select({
           id: students.id,
           name: students.name,
           imageUrl: students.imageUrl,
+          attended: sessionStudents.attended,
         })
         .from(sessionStudents)
         .innerJoin(students, eq(sessionStudents.studentId, students.id))
         .where(eq(sessionStudents.sessionId, id))
         .orderBy(asc(students.name)),
+      db
+        .select({ exerciseId: exerciseFavorites.exerciseId })
+        .from(exerciseFavorites)
+        .where(eq(exerciseFavorites.userId, user.id)),
     ]);
 
   const session = sessionRow;
   if (!session) notFound();
   if (session.userId !== user.id) notFound();
+
+  const favoritedIds = new Set(favRows.map((f) => f.exerciseId));
 
   const resolvedExercises = exerciseRows.map((e) => ({
     exerciseId: e.exerciseId,
@@ -87,6 +98,7 @@ export default async function SessionPage({ params }: PageProps) {
     orderIndex: e.orderIndex,
     durationMinutes: e.durationMinutes ?? e.defaultDurationMinutes,
     notes: e.notes,
+    coachRating: e.coachRating,
   }));
 
   const analyticsInput: AnalyticsExerciseInput[] = exerciseRows.map((e) => ({
@@ -125,11 +137,13 @@ export default async function SessionPage({ params }: PageProps) {
         intensity: session.intensity,
         tags,
         location: session.location,
+        status: session.status,
       }}
       sessionExercises={resolvedExercises}
       availableExercises={allExercises}
       analytics={analytics}
       students={studentRows}
+      favoritedExerciseIds={Array.from(favoritedIds)}
     />
   );
 }

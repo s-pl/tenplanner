@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   ACCENT_COLORS,
@@ -98,6 +99,41 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   // Export state
   const [exportingJson, setExportingJson] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  // Delete account state
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== "ELIMINAR") return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "ELIMINAR" }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(data.error ?? "No se pudo eliminar la cuenta.");
+      }
+      await createClient().auth.signOut();
+      router.replace("/");
+      router.refresh();
+    } catch (e: unknown) {
+      setDeleteError(
+        e instanceof Error ? e.message : "No se pudo eliminar la cuenta."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     setAccent(localStorage.getItem("accent") ?? "green");
@@ -823,12 +859,91 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   entrenamiento. Esta acción no se puede deshacer.
                 </p>
               </div>
-              <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors">
+              <button
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
+                className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors"
+              >
                 <Trash2 className="size-3" strokeWidth={1.6} />
                 Eliminar
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-account-title"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={(e) => {
+            if (!deleting && e.target === e.currentTarget) setDeleteOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-destructive/40 bg-card shadow-xl p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="size-10 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center text-destructive shrink-0">
+                <Trash2 className="size-4" strokeWidth={1.6} />
+              </div>
+              <div className="min-w-0">
+                <p
+                  id="delete-account-title"
+                  className="font-heading italic text-lg text-foreground"
+                >
+                  Eliminar cuenta
+                </p>
+                <p className="text-[13px] text-foreground/70 mt-1 leading-relaxed">
+                  Esta acción es <strong>irreversible</strong>. Se eliminarán
+                  tus sesiones, alumnos, ejercicios propios, conversaciones
+                  con Dr. Planner y tu cuenta de autenticación.
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+                Escribe <span className="text-destructive">ELIMINAR</span> para
+                confirmar
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                disabled={deleting}
+                className="w-full h-10 rounded-md border border-foreground/20 bg-background px-3 text-[14px] text-foreground focus:outline-none focus:border-destructive"
+                placeholder="ELIMINAR"
+              />
+            </div>
+            {deleteError && (
+              <p className="text-[12px] text-destructive">{deleteError}</p>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-foreground/10">
+              <button
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="text-[12px] tracking-wide uppercase text-foreground/70 hover:text-foreground px-4 py-2 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirmText !== "ELIMINAR"}
+                className="inline-flex items-center gap-2 bg-destructive text-destructive-foreground text-[12px] font-semibold tracking-wide uppercase px-4 py-2 rounded-md hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleting ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" strokeWidth={1.8} />
+                )}
+                {deleting ? "Eliminando…" : "Eliminar cuenta"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

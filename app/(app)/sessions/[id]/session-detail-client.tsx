@@ -12,7 +12,12 @@ import {
   Clock,
   Dumbbell,
   CheckCircle2,
+  XCircle,
   Circle,
+  FileDown,
+  Copy,
+  Star,
+  Play,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -57,12 +62,14 @@ export interface SessionData {
   intensity: number | null;
   tags: string[];
   location: string | null;
+  status: "scheduled" | "completed" | "cancelled";
 }
 
 export interface SessionStudentData {
   id: string;
   name: string;
   imageUrl: string | null;
+  attended: boolean | null;
 }
 
 export interface SessionExerciseData {
@@ -73,6 +80,7 @@ export interface SessionExerciseData {
   orderIndex: number;
   durationMinutes: number;
   notes: string | null;
+  coachRating: number | null;
 }
 
 function formatDate(isoString: string) {
@@ -106,6 +114,7 @@ interface Props {
   availableExercises: AvailableExercise[];
   analytics: SessionAnalytics;
   students: SessionStudentData[];
+  favoritedExerciseIds: string[];
 }
 
 function IntensityIndicator({ value }: { value: number }) {
@@ -178,40 +187,90 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function StudentsSection({ students }: { students: SessionStudentData[] }) {
+function StudentsSection({
+  students,
+  sessionId,
+}: {
+  students: SessionStudentData[];
+  sessionId: string;
+}) {
+  const [attendance, setAttendance] = useState<Record<string, boolean | null>>(
+    () => Object.fromEntries(students.map((s) => [s.id, s.attended]))
+  );
+  const [saving, setSaving] = useState<string | null>(null);
+
+  async function toggleAttendance(studentId: string) {
+    const current = attendance[studentId];
+    const next = current === true ? false : true;
+    setSaving(studentId);
+    const res = await fetch(`/api/sessions/${sessionId}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, attended: next }),
+    });
+    if (res.ok) setAttendance((prev) => ({ ...prev, [studentId]: next }));
+    setSaving(null);
+  }
+
+  const presentCount = Object.values(attendance).filter(Boolean).length;
+
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-border/50">
-        <h2 className="font-semibold text-sm text-foreground">Alumnos</h2>
+      <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+        <h2 className="font-semibold text-sm text-foreground">Pase de lista</h2>
+        {students.length > 0 && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {presentCount}/{students.length} presentes
+          </span>
+        )}
       </div>
-      <div className="p-6">
+      <div className="divide-y divide-border/50">
         {students.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Sin alumnos asignados</p>
+          <p className="px-6 py-4 text-xs text-muted-foreground">Sin alumnos asignados</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {students.map((s) => (
+          students.map((s) => {
+            const attended = attendance[s.id];
+            const isSaving = saving === s.id;
+            return (
               <div
                 key={s.id}
-                className="inline-flex items-center gap-2 bg-muted/40 border border-border rounded-full pl-1 pr-3 py-1"
+                className="flex items-center gap-3 px-6 py-3"
               >
                 {s.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={s.imageUrl}
-                    alt={s.name}
-                    className="size-6 rounded-full object-cover"
-                  />
+                  <img src={s.imageUrl} alt={s.name} className="size-8 rounded-full object-cover shrink-0" />
                 ) : (
-                  <span className="size-6 rounded-full bg-brand/20 text-brand text-[10px] font-bold flex items-center justify-center">
+                  <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
                     {getInitials(s.name)}
                   </span>
                 )}
-                <span className="text-xs font-medium text-foreground truncate max-w-[14ch]">
-                  {s.name}
-                </span>
+                <span className="flex-1 text-sm font-medium text-foreground truncate">{s.name}</span>
+                <button
+                  onClick={() => toggleAttendance(s.id)}
+                  disabled={isSaving}
+                  aria-label={attended ? "Marcar ausente" : "Marcar presente"}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
+                    attended === true
+                      ? "bg-brand/10 border-brand/30 text-brand"
+                      : attended === false
+                        ? "bg-destructive/10 border-destructive/30 text-destructive"
+                        : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {isSaving ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : attended === true ? (
+                    <><CheckCircle2 className="size-3" /> Presente</>
+                  ) : attended === false ? (
+                    <><XCircle className="size-3" /> Ausente</>
+                  ) : (
+                    <><Circle className="size-3" /> Sin marcar</>
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
       </div>
     </div>
@@ -356,12 +415,72 @@ export function SessionDetailClient({
   availableExercises,
   analytics,
   students,
+  favoritedExerciseIds,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [status, setStatus] = useState(session.status);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [exerciseRatings, setExerciseRatings] = useState<Record<string, number>>(
+    () => Object.fromEntries(
+      sessionExercises
+        .filter((e) => e.coachRating != null)
+        .map((e) => [e.exerciseId, e.coachRating!])
+    )
+  );
+  const [savingRating, setSavingRating] = useState<string | null>(null);
+
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/pdf`);
+      if (!res.ok) throw new Error("Error generando PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        res.headers.get("content-disposition")?.match(/filename="(.+)"/)?.[1] ??
+        `sesion-${session.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silencioso — el botón vuelve a su estado normal
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
+  async function handleStatusChange(newStatus: "completed" | "cancelled" | "scheduled") {
+    setUpdatingStatus(true);
+    const res = await fetch(`/api/sessions/${session.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) {
+      setStatus(newStatus);
+      router.refresh();
+    }
+    setUpdatingStatus(false);
+  }
+
+  async function handleRateExercise(exerciseId: string, rating: number) {
+    setSavingRating(exerciseId);
+    const res = await fetch(`/api/sessions/${session.id}/exercise-rating`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseId, rating }),
+    });
+    if (res.ok) {
+      setExerciseRatings((prev) => ({ ...prev, [exerciseId]: rating }));
+    }
+    setSavingRating(null);
+  }
 
   const isPast = new Date(session.scheduledAt) < new Date();
 
@@ -439,7 +558,37 @@ export function SessionDetailClient({
             Sesiones de Entrenamiento
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Execute session — only for upcoming/scheduled */}
+          {status === "scheduled" && (
+            <Link
+              href={`/sessions/${session.id}/execute`}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-background bg-brand px-3 py-2 rounded-lg hover:bg-brand/90 transition-colors"
+            >
+              <Play className="size-3.5" />
+              <span className="hidden sm:inline">Dar clase</span>
+            </Link>
+          )}
+          {/* Reutilizar */}
+          <Link
+            href={`/sessions/new?from=${session.id}`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Copy className="size-3.5" />
+            <span className="hidden sm:inline">Reutilizar</span>
+          </Link>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {downloadingPdf ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <FileDown className="size-3.5" />
+            )}
+            <span className="hidden sm:inline">PDF</span>
+          </button>
           <button
             onClick={() => setMode("edit")}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
@@ -464,8 +613,10 @@ export function SessionDetailClient({
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                {isPast ? (
+                {status === "completed" ? (
                   <CheckCircle2 className="size-5 text-brand" />
+                ) : status === "cancelled" ? (
+                  <XCircle className="size-5 text-destructive" />
                 ) : (
                   <Circle className="size-5 text-muted-foreground/60" />
                 )}
@@ -474,10 +625,12 @@ export function SessionDetailClient({
                 <span
                   className={cn(
                     "text-xs font-bold uppercase tracking-widest",
-                    isPast ? "text-muted-foreground" : "text-brand"
+                    status === "completed" ? "text-brand" :
+                    status === "cancelled" ? "text-destructive" :
+                    "text-muted-foreground"
                   )}
                 >
-                  {isPast ? "Completada" : "Próxima"}
+                  {status === "completed" ? "Completada" : status === "cancelled" ? "Cancelada" : "Programada"}
                 </span>
                 <div className="flex items-center gap-3 mt-0.5">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -490,6 +643,40 @@ export function SessionDetailClient({
             </div>
           </div>
         </div>
+
+        {/* Status actions */}
+        {status !== "completed" && status !== "cancelled" && (
+          <div className="px-6 py-3 border-b border-border/50 flex items-center gap-2">
+            <button
+              onClick={() => handleStatusChange("completed")}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors disabled:opacity-50"
+            >
+              {updatingStatus ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+              Marcar completada
+            </button>
+            <button
+              onClick={() => handleStatusChange("cancelled")}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive border border-destructive/30 bg-destructive/5 px-3 py-1.5 rounded-full hover:bg-destructive/15 transition-colors disabled:opacity-50"
+            >
+              <XCircle className="size-3" />
+              Cancelar sesión
+            </button>
+          </div>
+        )}
+        {status === "cancelled" && (
+          <div className="px-6 py-3 border-b border-border/50">
+            <button
+              onClick={() => handleStatusChange("scheduled")}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              {updatingStatus ? <Loader2 className="size-3 animate-spin" /> : <Circle className="size-3" />}
+              Reprogramar
+            </button>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-6 space-y-5">
@@ -528,7 +715,7 @@ export function SessionDetailClient({
       <SessionAnalyticsView analytics={analytics} />
 
       {/* Students */}
-      <StudentsSection students={students} />
+      <StudentsSection students={students} sessionId={session.id} />
 
       {/* Roadmap */}
       {sessionExercises.length > 0 && (
@@ -541,52 +728,68 @@ export function SessionDetailClient({
       {/* Exercises list */}
       {sessionExercises.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-border/50">
-            <h2 className="font-semibold text-sm text-foreground">
-              Ejercicios
-            </h2>
+          <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-foreground">Ejercicios</h2>
+            {status === "completed" && (
+              <p className="text-[10px] text-muted-foreground">Valoración post-sesión</p>
+            )}
           </div>
           <div className="divide-y divide-border/60">
             {sessionExercises.map((ex, idx) => {
               const diff = DIFFICULTY_META[ex.difficulty];
+              const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
+              const isSaving = savingRating === ex.exerciseId;
               return (
-                <Link
-                  key={ex.exerciseId}
-                  href={`/exercises/${ex.exerciseId}`}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-muted/40 transition-colors group"
-                >
+                <div key={ex.exerciseId} className="flex items-center gap-4 px-6 py-4">
                   <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right">
                     {idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-brand transition-colors">
+                    <Link
+                      href={`/exercises/${ex.exerciseId}`}
+                      className="text-sm font-medium text-foreground hover:text-brand transition-colors"
+                    >
                       {ex.name}
-                    </p>
+                    </Link>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span
                         className={cn(
                           "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                          CATEGORY_COLORS[ex.category] ??
-                            "text-muted-foreground bg-muted"
+                          CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
                         )}
                       >
                         {CATEGORY_LABELS[ex.category] ?? ex.category}
                       </span>
-                      <span
-                        className={cn(
-                          "text-[10px] font-medium",
-                          diff?.color ?? "text-muted-foreground"
-                        )}
-                      >
+                      <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
                         {diff?.label ?? ex.difficulty}
                       </span>
                     </div>
                   </div>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                    <Clock className="size-3" />
-                    {ex.durationMinutes} min
-                  </span>
-                </Link>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                      <Clock className="size-3" />
+                      {ex.durationMinutes} min
+                    </span>
+                    <div className="flex items-center gap-0.5" title="Valorar ejercicio">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => handleRateExercise(ex.exerciseId, star)}
+                          disabled={isSaving}
+                          aria-label={`Valorar con ${star} estrellas`}
+                          className={cn(
+                            "p-0.5 transition-colors disabled:opacity-50 touch-manipulation",
+                            star <= currentRating
+                              ? "text-amber-400"
+                              : "text-muted-foreground/25 hover:text-amber-400/60"
+                          )}
+                        >
+                          <Star className="size-4 fill-current" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
