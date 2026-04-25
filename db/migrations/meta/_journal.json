@@ -120,6 +120,34 @@
       "when": 1777400000000,
       "tag": "0016_favorites_status_rating",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777500000000,
+      "tag": "0017_exercise_advanced_filters",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1777600000000,
+      "tag": "0018_drafts_and_session_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777700000000,
+      "tag": "0019_favorites_into_lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777800000000,
+      "tag": "0020_landing_content",
+      "breakpoints": true
     }
   ]
 }

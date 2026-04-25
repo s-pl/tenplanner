@@ -16,8 +16,6 @@ import { createClient } from "@/lib/supabase/server";
 import { sessionIdParamsSchema, zodValidationErrorResponse } from "../../validation";
 import { SessionPdf, type PdfSession } from "@/lib/sessions/pdf";
 
-export const runtime = "nodejs";
-
 type RouteContext = { params: Promise<{ id: string }> };
 
 function slugify(input: string) {

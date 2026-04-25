@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UserPlus, UserMinus, Trash2, Loader2, Users } from "lucide-react";
@@ -100,7 +101,7 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
             currentMembers.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-5 py-3 group/row hover:bg-muted/30 transition-colors">
                 {m.imageUrl
-                  ? <img src={m.imageUrl} alt={m.name} className="size-8 rounded-full object-cover shrink-0" />
+                  ? <Image src={m.imageUrl} alt={m.name} width={32} height={32} className="size-8 rounded-full object-cover shrink-0" />
                   : <Initials name={m.name} />}
                 <div className="flex-1 min-w-0">
                   <Link href={`/students/${m.id}`} className="text-sm font-medium text-foreground hover:text-brand transition-colors truncate block">
@@ -144,7 +145,7 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                   className="w-full flex items-center gap-3 px-5 py-3 hover:bg-brand/5 transition-colors disabled:opacity-50 text-left touch-manipulation"
                 >
                   {s.imageUrl
-                    ? <img src={s.imageUrl} alt={s.name} className="size-8 rounded-full object-cover shrink-0" />
+                    ? <Image src={s.imageUrl} alt={s.name} width={32} height={32} className="size-8 rounded-full object-cover shrink-0" />
                     : <Initials name={s.name} />}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{s.name}</p>

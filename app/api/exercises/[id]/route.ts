@@ -51,6 +51,16 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         tips: exercises.tips,
         createdBy: exercises.createdBy,
         isGlobal: exercises.isGlobal,
+        formato: exercises.formato,
+        numJugadores: exercises.numJugadores,
+        tipoPelota: exercises.tipoPelota,
+        tipoActividad: exercises.tipoActividad,
+        golpes: exercises.golpes,
+        efecto: exercises.efecto,
+        variantes: exercises.variantes,
+        imageUrls: exercises.imageUrls,
+        phase: exercises.phase,
+        intensity: exercises.intensity,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
       })
@@ -126,6 +136,8 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
         id: exercises.id,
         isGlobal: exercises.isGlobal,
         createdBy: exercises.createdBy,
+        imageUrl: exercises.imageUrl,
+        imageUrls: exercises.imageUrls,
       })
       .from(exercises)
       .where(eq(exercises.id, parsedParams.data.id))
@@ -153,6 +165,22 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
     }
 
     const d = parsedBody.data;
+    const finalImageUrl =
+      d.imageUrl !== undefined ? (d.imageUrl ?? null) : existing.imageUrl;
+    const finalImageUrls =
+      d.imageUrls !== undefined
+        ? (d.imageUrls ?? null)
+        : ((existing.imageUrls as string[] | null) ?? null);
+    const totalImages =
+      (finalImageUrl ? 1 : 0) + (finalImageUrls?.length ?? 0);
+
+    if (totalImages > 4) {
+      return NextResponse.json(
+        { error: "Solo se permiten 4 imágenes por ejercicio" },
+        { status: 400 }
+      );
+    }
+
     const updateValues: Record<string, unknown> = {};
 
     const fields = [
@@ -170,6 +198,14 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "materials",
       "phase",
       "intensity",
+      "formato",
+      "numJugadores",
+      "tipoPelota",
+      "tipoActividad",
+      "golpes",
+      "efecto",
+      "variantes",
+      "imageUrls",
     ] as const;
 
     for (const field of fields) {

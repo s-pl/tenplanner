@@ -7,7 +7,8 @@ import {
   sessionExercises,
   sessionStudents,
   students,
-  exerciseFavorites,
+  exerciseListItems,
+  exerciseLists,
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { SessionDetailClient } from "./session-detail-client";
@@ -79,9 +80,10 @@ export default async function SessionPage({ params }: PageProps) {
         .where(eq(sessionStudents.sessionId, id))
         .orderBy(asc(students.name)),
       db
-        .select({ exerciseId: exerciseFavorites.exerciseId })
-        .from(exerciseFavorites)
-        .where(eq(exerciseFavorites.userId, user.id)),
+        .select({ exerciseId: exerciseListItems.exerciseId })
+        .from(exerciseListItems)
+        .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+        .where(eq(exerciseLists.userId, user.id)),
     ]);
 
   const session = sessionRow;

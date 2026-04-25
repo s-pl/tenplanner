@@ -657,7 +657,10 @@ function CalendarMonth() {
 
 /* ─── Page ────────────────────────────────────────────────────── */
 
-export default function LandingPage() {
+import { getLandingContent } from "@/lib/landing-content";
+
+export default async function LandingPage() {
+  const copy = await getLandingContent();
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-brand/25">
 
@@ -723,20 +726,20 @@ export default function LandingPage() {
 
               <div className="mt-10 grid sm:grid-cols-[1fr_auto] gap-6 sm:gap-10 items-end max-w-2xl">
                 <p className="text-[15px] leading-relaxed text-foreground/70 max-w-md">
-                  TenPlanner es el cuaderno digital del entrenador de pádel profesional: biblioteca de drills, historial por alumno, curva de intensidad por sesión y un asistente — <span className="italic">Dr. Planner</span> — que conoce tu plantilla.
+                  {copy.hero_subtitle}
                 </p>
                 <div className="flex items-center gap-3">
                   <Link
                     href="/register"
                     className="group inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground font-medium text-sm pl-5 pr-1.5 py-1.5"
                   >
-                    Empezar
+                    {copy.hero_cta_primary}
                     <span className="inline-flex items-center justify-center size-7 rounded-full bg-background/20">
                       <ArrowRight className="size-3.5" strokeWidth={2} />
                     </span>
                   </Link>
                   <a href="#planner" className="text-sm text-foreground/60 hover:text-foreground underline underline-offset-4 decoration-foreground/30 transition-colors">
-                    Ver cómo funciona
+                    {copy.hero_cta_secondary}
                   </a>
                 </div>
               </div>
@@ -755,10 +758,7 @@ export default function LandingPage() {
       <section className="border-b border-foreground/10 bg-foreground/[0.015]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
           {[
-            { k: "Usado por", v: "Entrenadores", sub: "Club · Academia · Pro" },
-            { k: "Diseñar sesión", v: "≈ 3 min", sub: "vs. 20 min en papel" },
-            { k: "Drills incluidos", v: "137", sub: "+ los tuyos propios" },
-            { k: "IA razonando", v: "Claude 4.5", sub: "Pensamiento visible" },
+            ...copy.specs_strip,
           ].map((s) => (
             <div key={s.k} className="flex flex-col">
               <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/45">{s.k}</span>
@@ -780,7 +780,7 @@ export default function LandingPage() {
               </h2>
 
               <p className="mt-6 text-[15px] leading-relaxed text-foreground/70 max-w-md">
-                Describe el grupo, la duración y el objetivo. Dr. Planner lee el historial del alumno, elige ejercicios de tu biblioteca, ajusta la carga y prepara la sesión. Si falta un drill, lo crea.
+                {copy.planner_description}
               </p>
 
               <dl className="mt-10 space-y-0 border-t border-foreground/15">
@@ -823,7 +823,7 @@ export default function LandingPage() {
               </h2>
 
               <p className="mt-6 text-[15px] leading-relaxed text-foreground/70 max-w-md">
-                137 ejercicios de serie. Añade los tuyos con fotos, materiales, tips y objetivos. Búscalos por categoría, dificultad o duración.
+                {copy.biblioteca_description}
               </p>
 
               <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6">
@@ -859,7 +859,7 @@ export default function LandingPage() {
                 a la calma.
               </h2>
               <p className="mt-6 text-[15px] leading-relaxed text-foreground/70 max-w-sm">
-                Diseña por fases. Cada ejercicio lleva su intensidad. La curva de carga se dibuja sola y te dice si la sesión está desequilibrada.
+                {copy.anatomia_description}
               </p>
 
               <RuleHeavy />
@@ -927,7 +927,7 @@ export default function LandingPage() {
               </h2>
 
               <p className="mt-6 text-[15px] leading-relaxed text-foreground/70 max-w-md">
-                Perfil por alumno con nivel, mano dominante, experiencia, objetivos y notas. Dr. Planner los lee antes de proponer la sesión.
+                {copy.alumnos_description}
               </p>
 
               <RuleHeavy />
@@ -991,7 +991,7 @@ export default function LandingPage() {
           </h2>
 
           <p className="mt-10 text-[15px] leading-relaxed text-foreground/65 max-w-lg mx-auto">
-            TenPlanner no sustituye tu criterio. Lo libera del papel.
+            {copy.manifesto_sub}
           </p>
 
           <div className="mt-12 flex items-center justify-center gap-4">
@@ -1028,7 +1028,7 @@ export default function LandingPage() {
                 Ten<span className="italic text-brand">planner</span>
               </span>
               <p className="mt-4 text-[13px] text-foreground/60 leading-relaxed max-w-xs">
-                Cuaderno digital del entrenador de pádel. Hecho para la pista, no para la demo.
+                {copy.footer_tagline}
               </p>
             </div>
             {[

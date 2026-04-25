@@ -30,7 +30,6 @@ function isRecoverableAuthError(error: unknown): boolean {
     message?: string;
   };
 
-  // Session missing entirely (e.g. cookies cleared by a concurrent request)
   if (maybeError.name === "AuthSessionMissingError") return true;
 
   if (
@@ -109,6 +108,7 @@ export async function proxy(request: NextRequest) {
       );
     }
   }
+
   const authHeader = request.headers.get("authorization");
   const hasBearerToken =
     typeof authHeader === "string" && authHeader.startsWith("Bearer ");
@@ -127,7 +127,6 @@ export async function proxy(request: NextRequest) {
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] =
     null;
   if (shouldCheckUser) {
-    // Refresh session only when needed for auth decisions.
     try {
       const {
         data: { user: currentUser },
