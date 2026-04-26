@@ -34,6 +34,7 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
         orderIndex: sessionExercises.orderIndex,
         steps: exercises.steps,
         tips: exercises.tips,
+        materials: exercises.materials,
       })
       .from(sessionExercises)
       .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -55,6 +56,7 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
     orderIndex: e.orderIndex,
     steps: Array.isArray(e.steps) ? e.steps : [],
     tips: e.tips,
+    materials: Array.isArray(e.materials) ? (e.materials as string[]) : [],
   }));
 
   return (

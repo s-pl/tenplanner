@@ -7,7 +7,8 @@ import {
   sessionExercises,
   sessionStudents,
   students,
-  exerciseFavorites,
+  exerciseListItems,
+  exerciseLists,
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { SessionDetailClient } from "./session-detail-client";
@@ -51,6 +52,7 @@ export default async function SessionPage({ params }: PageProps) {
           exercisePhase: exercises.phase,
           exerciseIntensity: exercises.intensity,
           coachRating: sessionExercises.coachRating,
+          materials: exercises.materials,
         })
         .from(sessionExercises)
         .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -79,9 +81,10 @@ export default async function SessionPage({ params }: PageProps) {
         .where(eq(sessionStudents.sessionId, id))
         .orderBy(asc(students.name)),
       db
-        .select({ exerciseId: exerciseFavorites.exerciseId })
-        .from(exerciseFavorites)
-        .where(eq(exerciseFavorites.userId, user.id)),
+        .select({ exerciseId: exerciseListItems.exerciseId })
+        .from(exerciseListItems)
+        .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+        .where(eq(exerciseLists.userId, user.id)),
     ]);
 
   const session = sessionRow;
@@ -99,6 +102,7 @@ export default async function SessionPage({ params }: PageProps) {
     durationMinutes: e.durationMinutes ?? e.defaultDurationMinutes,
     notes: e.notes,
     coachRating: e.coachRating,
+    materials: Array.isArray(e.materials) ? e.materials : [],
   }));
 
   const analyticsInput: AnalyticsExerciseInput[] = exerciseRows.map((e) => ({

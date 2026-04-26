@@ -16,8 +16,6 @@ import { createClient } from "@/lib/supabase/server";
 import { sessionIdParamsSchema, zodValidationErrorResponse } from "../../validation";
 import { SessionPdf, type PdfSession } from "@/lib/sessions/pdf";
 
-export const runtime = "nodejs";
-
 type RouteContext = { params: Promise<{ id: string }> };
 
 function slugify(input: string) {
@@ -83,6 +81,7 @@ export async function GET(_request: Request, context: RouteContext) {
       exerciseCategory: exercises.category,
       exerciseDifficulty: exercises.difficulty,
       exerciseDurationMinutes: exercises.durationMinutes,
+      exerciseMaterials: exercises.materials,
     })
     .from(sessionExercises)
     .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -117,6 +116,7 @@ export async function GET(_request: Request, context: RouteContext) {
       notes: e.notes,
       phase: e.phase,
       intensity: e.intensity,
+      materials: Array.isArray(e.exerciseMaterials) ? e.exerciseMaterials : [],
     })),
     students: studentRows,
   };

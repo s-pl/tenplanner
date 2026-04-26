@@ -120,13 +120,28 @@ export async function PATCH(request: Request) {
  * session_students, students, dr_planner_chats, dr_planner_messages) and
  * then deletes the Supabase auth user so the account is fully gone.
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = z.object({ confirm: z.literal("ELIMINAR") }).safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Confirmación inválida." },
+      { status: 400 }
+    );
   }
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

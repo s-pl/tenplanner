@@ -7,7 +7,11 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { ExerciseForm } from "@/components/app/exercise-form";
 
-export default async function NewExercisePage() {
+interface PageProps {
+  searchParams: Promise<{ mode?: string }>;
+}
+
+export default async function NewExercisePage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -21,6 +25,9 @@ export default async function NewExercisePage() {
     .where(eq(users.id, user.id))
     .limit(1);
   const isAdmin = !!dbUser?.isAdmin;
+  const { mode } = await searchParams;
+  const initialFormMode =
+    mode === "full" || mode === "quick" ? mode : undefined;
 
   return (
     <div className="px-6 md:px-8 py-8 space-y-6">
@@ -42,7 +49,12 @@ export default async function NewExercisePage() {
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-6">
-        <ExerciseForm mode="create" isAdmin={isAdmin} />
+        <ExerciseForm
+          mode="create"
+          isAdmin={isAdmin}
+          initialFormMode={initialFormMode}
+          enableDrafts
+        />
       </div>
     </div>
   );

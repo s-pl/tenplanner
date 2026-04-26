@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -18,6 +19,7 @@ import {
   Copy,
   Star,
   Play,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -27,7 +29,7 @@ import {
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
-import { Target, Flame, MapPin, Hash } from "lucide-react";
+import { Target, Flame, MapPin, Hash, Package } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -81,6 +83,7 @@ export interface SessionExerciseData {
   durationMinutes: number;
   notes: string | null;
   coachRating: number | null;
+  materials: string[];
 }
 
 function formatDate(isoString: string) {
@@ -237,8 +240,7 @@ function StudentsSection({
                 className="flex items-center gap-3 px-6 py-3"
               >
                 {s.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.imageUrl} alt={s.name} className="size-8 rounded-full object-cover shrink-0" />
+                  <Image src={s.imageUrl} alt={s.name} width={32} height={32} className="size-8 rounded-full object-cover shrink-0" />
                 ) : (
                   <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
                     {getInitials(s.name)}
@@ -423,6 +425,11 @@ export function SessionDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [sanitizeNotes, setSanitizeNotes] = useState(true);
+  const [templateTitle, setTemplateTitle] = useState(session.title);
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [exerciseRatings, setExerciseRatings] = useState<Record<string, number>>(
@@ -497,6 +504,29 @@ export function SessionDetailClient({
     }
     router.push("/sessions");
     router.refresh();
+  }
+
+  async function handlePublish() {
+    if (!templateTitle.trim()) return;
+    setPublishing(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sanitizeNotes,
+          templateTitle: templateTitle.trim(),
+          templateDescription: templateDescription.trim() || null,
+        }),
+      });
+      const json = await res.json() as { data?: { templateId: string } };
+      if (res.ok && json.data?.templateId) {
+        router.push(`/sessions/templates/${json.data.templateId}`);
+      }
+    } finally {
+      setPublishing(false);
+      setShowPublishDialog(false);
+    }
   }
 
   if (mode === "edit") {
@@ -577,6 +607,13 @@ export function SessionDetailClient({
             <Copy className="size-3.5" />
             <span className="hidden sm:inline">Reutilizar</span>
           </Link>
+          <button
+            onClick={() => setShowPublishDialog(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand border border-brand/30 px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors"
+          >
+            <Upload className="size-3.5" />
+            <span className="hidden sm:inline">Publicar</span>
+          </button>
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
@@ -725,6 +762,38 @@ export function SessionDetailClient({
         />
       )}
 
+      {/* Materials summary */}
+      {(() => {
+        const allMaterials = Array.from(
+          new Set(sessionExercises.flatMap((e) => e.materials ?? []))
+        );
+        if (allMaterials.length === 0) return null;
+        return (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center gap-2">
+              <Package className="size-4 text-brand" />
+              <h2 className="font-semibold text-sm text-foreground">
+                Material necesario
+              </h2>
+              <span className="ml-auto text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {allMaterials.length} elemento{allMaterials.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="px-6 py-4 flex flex-wrap gap-2">
+              {allMaterials.map((m) => (
+                <span
+                  key={m}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold bg-brand/10 text-brand border border-brand/15 px-3 py-1.5 rounded-full"
+                >
+                  <Package className="size-3 opacity-70" />
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Exercises list */}
       {sessionExercises.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -740,53 +809,73 @@ export function SessionDetailClient({
               const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
               const isSaving = savingRating === ex.exerciseId;
               return (
-                <div key={ex.exerciseId} className="flex items-center gap-4 px-6 py-4">
-                  <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/exercises/${ex.exerciseId}`}
-                      className="text-sm font-medium text-foreground hover:text-brand transition-colors"
-                    >
-                      {ex.name}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span
-                        className={cn(
-                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                          CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
-                        )}
-                      >
-                        {CATEGORY_LABELS[ex.category] ?? ex.category}
-                      </span>
-                      <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
-                        {diff?.label ?? ex.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
-                      <Clock className="size-3" />
-                      {ex.durationMinutes} min
+                <div key={ex.exerciseId} className="px-6 py-4">
+                  <div className="flex items-start gap-4">
+                    <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right mt-0.5">
+                      {idx + 1}
                     </span>
-                    <div className="flex items-center gap-0.5" title="Valorar ejercicio">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onClick={() => handleRateExercise(ex.exerciseId, star)}
-                          disabled={isSaving}
-                          aria-label={`Valorar con ${star} estrellas`}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/exercises/${ex.exerciseId}`}
+                        className="text-sm font-medium text-foreground hover:text-brand transition-colors"
+                      >
+                        {ex.name}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span
                           className={cn(
-                            "p-0.5 transition-colors disabled:opacity-50 touch-manipulation",
-                            star <= currentRating
-                              ? "text-amber-400"
-                              : "text-muted-foreground/25 hover:text-amber-400/60"
+                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                            CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
                           )}
                         >
-                          <Star className="size-4 fill-current" />
-                        </button>
-                      ))}
+                          {CATEGORY_LABELS[ex.category] ?? ex.category}
+                        </span>
+                        <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
+                          {diff?.label ?? ex.difficulty}
+                        </span>
+                      </div>
+                      {ex.materials && ex.materials.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {ex.materials.map((m) => (
+                            <span
+                              key={m}
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-full"
+                            >
+                              <Package className="size-2.5 opacity-60" />
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {ex.notes && (
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed italic">
+                          {ex.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                        <Clock className="size-3" />
+                        {ex.durationMinutes} min
+                      </span>
+                      <div className="flex items-center gap-0.5" title="Valorar ejercicio">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onClick={() => handleRateExercise(ex.exerciseId, star)}
+                            disabled={isSaving}
+                            aria-label={`Valorar con ${star} estrellas`}
+                            className={cn(
+                              "p-0.5 transition-colors disabled:opacity-50 touch-manipulation",
+                              star <= currentRating
+                                ? "text-amber-400"
+                                : "text-muted-foreground/25 hover:text-amber-400/60"
+                            )}
+                          >
+                            <Star className="size-4 fill-current" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -849,6 +938,117 @@ export function SessionDetailClient({
               >
                 {deleting && <Loader2 className="size-4 animate-spin" />}
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPublishDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl border border-foreground/15 bg-background shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-foreground/8">
+              <button
+                onClick={() => setShowPublishDialog(false)}
+                className="absolute right-4 top-4 size-7 flex items-center justify-center rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/8 transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+              <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 mb-1">
+                Publicar como plantilla
+              </p>
+              <h2 className="font-heading text-[20px] text-foreground">
+                Compartir en el mercado
+              </h2>
+              <p className="mt-1 text-[13px] text-foreground/50 leading-relaxed">
+                Se crea una copia pública. Tu información personal no se publica.
+              </p>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Template title */}
+              <div className="space-y-1.5">
+                <label className="block text-[12px] font-semibold text-foreground/70 uppercase tracking-[0.1em]">
+                  Título de la plantilla <span className="text-brand">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateTitle}
+                  onChange={(e) => setTemplateTitle(e.target.value)}
+                  maxLength={255}
+                  className="w-full h-10 px-3.5 rounded-xl border border-foreground/15 bg-background text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50 transition-colors"
+                />
+              </div>
+
+              {/* Template description */}
+              <div className="space-y-1.5">
+                <label className="block text-[12px] font-semibold text-foreground/70 uppercase tracking-[0.1em]">
+                  Descripción{" "}
+                  <span className="font-normal normal-case tracking-normal text-foreground/40">(opcional)</span>
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Explica el objetivo, nivel o contexto de uso de esta plantilla…"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-foreground/15 bg-background text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50 transition-colors resize-none"
+                />
+              </div>
+
+              {/* Privacy summary */}
+              <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-3.5 space-y-2">
+                <p className="text-[11px] font-semibold text-foreground/50 uppercase tracking-[0.12em]">
+                  Qué se publica
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px]">
+                  {[
+                    { label: "Estructura de ejercicios", included: true },
+                    { label: "Duración e intensidad", included: true },
+                    { label: "Objetivo y etiquetas", included: true },
+                    { label: "Tu nombre (autor)", included: true },
+                    { label: "Alumnos asignados", included: false },
+                    { label: "Ubicación del entreno", included: false },
+                    { label: "Asistencia y notas privadas", included: false },
+                  ].map(({ label, included }) => (
+                    <span key={label} className={cn("flex items-center gap-1.5", included ? "text-foreground/70" : "text-foreground/35 line-through")}>
+                      <span className={cn("size-1.5 rounded-full shrink-0", included ? "bg-brand" : "bg-foreground/20")} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Strip notes */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sanitizeNotes}
+                  onChange={(e) => setSanitizeNotes(e.target.checked)}
+                  className="mt-0.5 accent-[var(--brand)]"
+                />
+                <div>
+                  <p className="text-[13px] font-medium text-foreground">Vaciar notas de ejercicios</p>
+                  <p className="text-[12px] text-foreground/50">Elimina anotaciones personales de cada ejercicio.</p>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-2 px-6 pb-6">
+              <button
+                onClick={() => setShowPublishDialog(false)}
+                className="flex-1 rounded-xl border border-foreground/15 px-4 py-2.5 text-[13px] font-medium text-foreground/70 hover:border-foreground/30 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={publishing || !templateTitle.trim()}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-60 transition-colors"
+              >
+                {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                Publicar plantilla
               </button>
             </div>
           </div>

@@ -9,8 +9,6 @@ import {
 
 const CHAT_RETENTION_DAYS = 180;
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {

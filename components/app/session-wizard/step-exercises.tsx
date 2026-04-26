@@ -9,11 +9,21 @@ import {
   Dumbbell,
   Filter,
   GripVertical,
+  Loader2,
   Plus,
   Search,
   StickyNote,
   X,
 } from "lucide-react";
+import { ExerciseForm, type ExerciseFormResult } from "@/components/app/exercise-form";
+import { SessionExerciseLists } from "@/components/app/session-exercise-lists";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   PHASE_LABELS,
@@ -62,6 +72,8 @@ export function StepExercises({
   update,
   availableExercises,
 }: StepExercisesProps) {
+  const [libraryExercises, setLibraryExercises] = useState(availableExercises);
+  const [sourceTab, setSourceTab] = useState<"library" | "lists">("library");
   const [search, setSearch] = useState("");
   const [libCategoryFilter, setLibCategoryFilter] = useState<string>("all");
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(
@@ -74,6 +86,8 @@ export function StepExercises({
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
   const [isDropZoneActive, setIsDropZoneActive] = useState(false);
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [refreshingLibrary, setRefreshingLibrary] = useState(false);
   const dragCounter = useRef(0);
 
   const selected = state.exercises;
@@ -83,10 +97,10 @@ export function StepExercises({
   );
   const selectedIds = new Set(selected.map((e) => e.exerciseId));
   const availableCategories = Array.from(
-    new Set(availableExercises.map((e) => e.category))
+    new Set(libraryExercises.map((e) => e.category))
   );
 
-  const filteredAvailable = availableExercises.filter((ex) => {
+  const filteredAvailable = libraryExercises.filter((ex) => {
     const notSelected = !selectedIds.has(ex.id);
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory =
@@ -97,6 +111,10 @@ export function StepExercises({
   useEffect(() => {
     if (editingDurationIdx !== null) durationInputRef.current?.focus();
   }, [editingDurationIdx]);
+
+  useEffect(() => {
+    setLibraryExercises(availableExercises);
+  }, [availableExercises]);
 
   function setExercises(next: WizardExercise[]) {
     update({ exercises: next });
@@ -120,6 +138,34 @@ export function StepExercises({
     } else {
       setExercises([...selected, item]);
     }
+  }
+
+  function addExercisesFromList(
+    items: Array<{
+      id: string;
+      name: string;
+      category: string;
+      difficulty: string;
+      durationMinutes: number;
+    }>
+  ) {
+    if (items.length === 0) return;
+
+    const nextItems: WizardExercise[] = items
+      .filter((item) => !selectedIds.has(item.id))
+      .map((item) => ({
+        exerciseId: item.id,
+        name: item.name,
+        category: item.category,
+        durationMinutes: item.durationMinutes,
+        overrideDuration: null,
+        notes: "",
+        phase: null,
+        intensity: null,
+      }));
+
+    if (nextItems.length === 0) return;
+    setExercises([...selected, ...nextItems]);
   }
 
   function removeExercise(id: string) {
@@ -171,7 +217,7 @@ export function StepExercises({
     const type = e.dataTransfer.getData("dnd-type");
     if (type === "library") {
       const id = e.dataTransfer.getData("exercise-id");
-      const ex = availableExercises.find((a) => a.id === id);
+      const ex = libraryExercises.find((a) => a.id === id);
       if (ex && !selectedIds.has(id)) addExercise(ex, toIndex);
     } else if (type === "reorder") {
       const from = parseInt(e.dataTransfer.getData("src-index"), 10);
@@ -187,7 +233,7 @@ export function StepExercises({
     const type = e.dataTransfer.getData("dnd-type");
     if (type === "library") {
       const id = e.dataTransfer.getData("exercise-id");
-      const ex = availableExercises.find((a) => a.id === id);
+      const ex = libraryExercises.find((a) => a.id === id);
       if (ex && !selectedIds.has(id)) addExercise(ex);
     } else if (type === "reorder") {
       const from = parseInt(e.dataTransfer.getData("src-index"), 10);
@@ -196,8 +242,134 @@ export function StepExercises({
     setDragSrcIdx(null);
   }
 
+  async function refreshLibrary(createdExercise?: ExerciseFormResult) {
+    setRefreshingLibrary(true);
+
+    try {
+      const res = await fetch("/api/exercises?limit=200", {
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        if (createdExercise && !selectedIds.has(createdExercise.id)) {
+          const fallbackExercise: AvailableExercise = {
+            id: createdExercise.id,
+            name: createdExercise.name,
+            category: createdExercise.category,
+            difficulty: createdExercise.difficulty,
+            durationMinutes: createdExercise.durationMinutes,
+          };
+
+          setLibraryExercises((current) => {
+            const next = current.filter((exercise) => exercise.id !== fallbackExercise.id);
+            return [fallbackExercise, ...next];
+          });
+          addExercise(fallbackExercise);
+        }
+        return;
+      }
+
+      const payload = (await res.json()) as {
+        data?: Array<{
+          id: string;
+          name: string;
+          category: string;
+          difficulty: string;
+          durationMinutes: number;
+        }>;
+      };
+
+      const nextLibrary = Array.isArray(payload.data)
+        ? payload.data.map((exercise) => ({
+            id: exercise.id,
+            name: exercise.name,
+            category: exercise.category,
+            difficulty: exercise.difficulty,
+            durationMinutes: exercise.durationMinutes,
+          }))
+        : [];
+
+      const fallbackExercise =
+        createdExercise != null
+          ? ({
+              id: createdExercise.id,
+              name: createdExercise.name,
+              category: createdExercise.category,
+              difficulty: createdExercise.difficulty,
+              durationMinutes: createdExercise.durationMinutes,
+            } satisfies AvailableExercise)
+          : null;
+
+      const normalizedLibrary =
+        fallbackExercise &&
+        !nextLibrary.some((exercise) => exercise.id === fallbackExercise.id)
+          ? [fallbackExercise, ...nextLibrary]
+          : nextLibrary;
+
+      if (normalizedLibrary.length > 0) {
+        setLibraryExercises(normalizedLibrary);
+      }
+
+      if (createdExercise && !selectedIds.has(createdExercise.id)) {
+        const createdFromList =
+          normalizedLibrary.find(
+            (exercise) => exercise.id === createdExercise.id
+          ) ?? fallbackExercise;
+
+        if (createdFromList) {
+          addExercise(createdFromList);
+        }
+      }
+    } catch {
+      if (createdExercise && !selectedIds.has(createdExercise.id)) {
+        const fallbackExercise: AvailableExercise = {
+          id: createdExercise.id,
+          name: createdExercise.name,
+          category: createdExercise.category,
+          difficulty: createdExercise.difficulty,
+          durationMinutes: createdExercise.durationMinutes,
+        };
+
+        setLibraryExercises((current) => {
+          const next = current.filter((exercise) => exercise.id !== fallbackExercise.id);
+          return [fallbackExercise, ...next];
+        });
+        addExercise(fallbackExercise);
+      }
+    } finally {
+      setRefreshingLibrary(false);
+    }
+  }
+
+  async function handleQuickCreateSuccess(exercise?: ExerciseFormResult) {
+    setShowQuickCreate(false);
+    if (!exercise) return;
+    await refreshLibrary(exercise);
+  }
+
   return (
-    <div className="space-y-4">
+    <>
+      <Dialog open={showQuickCreate} onOpenChange={setShowQuickCreate}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear ejercicio rápido</DialogTitle>
+            <DialogDescription>
+              Crea un ejercicio mínimo sin salir del wizard y añádelo
+              automáticamente a esta sesión.
+            </DialogDescription>
+          </DialogHeader>
+          <ExerciseForm
+            mode="create"
+            initialFormMode="quick"
+            enableDrafts
+            draftQueryParam="exerciseDraft"
+            onSuccess={handleQuickCreateSuccess}
+            onCancel={() => setShowQuickCreate(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <div className="space-y-4">
       {selected.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
@@ -212,13 +384,13 @@ export function StepExercises({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 min-h-[440px]">
         {/* LEFT: timeline */}
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-            <CalendarDays className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+            <CalendarDays className="size-4 text-brand" />
+            <span className="text-sm font-bold text-foreground uppercase tracking-wide">
               Plan de entrenamiento
             </span>
             {totalDuration > 0 && (
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
+              <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
                 <Clock className="size-3" />
                 {formatMinutes(totalDuration)}
               </span>
@@ -526,106 +698,169 @@ export function StepExercises({
           </div>
         </div>
 
-        {/* RIGHT: library */}
+        {/* RIGHT: sources */}
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-            <BookOpen className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">
-              Biblioteca
-            </span>
-            {filteredAvailable.length > 0 && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {filteredAvailable.length} disponibles
-              </span>
-            )}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+            <div className="inline-flex rounded-full border border-border bg-background p-1">
+              <button
+                type="button"
+                onClick={() => setSourceTab("library")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                  sourceTab === "library"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <BookOpen className="size-3.5" />
+                Biblioteca
+              </button>
+              <button
+                type="button"
+                onClick={() => setSourceTab("lists")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                  sourceTab === "lists"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <CalendarDays className="size-3.5" />
+                Listas
+              </button>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              {sourceTab === "library" && filteredAvailable.length > 0 ? (
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {filteredAvailable.length} disponibles
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowQuickCreate(true)}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 hover:bg-brand/20 px-2 py-1 rounded-lg transition-colors"
+              >
+                <Plus className="size-3" />
+                Nuevo
+              </button>
+            </div>
           </div>
-          <div className="px-3 pt-2 pb-1.5 border-b border-border shrink-0">
-            <div className="relative mb-2">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar ejercicios…"
-                className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+
+          {sourceTab === "lists" ? (
+            <div className="flex-1 overflow-y-auto max-h-[360px] lg:max-h-none">
+              <SessionExerciseLists
+                selectedExerciseIds={Array.from(selectedIds)}
+                onApplyList={addExercisesFromList}
               />
             </div>
-            <div className="flex gap-1 overflow-x-auto pb-0.5">
-              {["all", ...availableCategories].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setLibCategoryFilter(cat)}
-                  className={cn(
-                    "shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full transition-colors whitespace-nowrap",
-                    libCategoryFilter === cat
-                      ? "bg-brand text-brand-foreground"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {cat === "all" ? "Todos" : (CATEGORY_LABELS[cat] ?? cat)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto divide-y divide-border/50 max-h-[360px] lg:max-h-none">
-            {filteredAvailable.length === 0 ? (
-              <div className="text-center py-8 px-4">
-                <Filter className="size-6 text-muted-foreground mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">
-                  {search || libCategoryFilter !== "all"
-                    ? "Sin resultados para ese filtro"
-                    : availableExercises.length === 0
-                      ? "No hay ejercicios en la biblioteca"
-                      : "Todos los ejercicios están en la sesión"}
-                </p>
-              </div>
-            ) : (
-              filteredAvailable.map((ex) => (
-                <div
-                  key={ex.id}
-                  draggable
-                  onDragStart={(e) => onLibraryDragStart(e, ex)}
-                  className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors cursor-grab active:cursor-grabbing"
-                >
-                  <div
-                    className={cn(
-                      "w-0.5 h-7 rounded-full shrink-0",
-                      CATEGORY_BAR[ex.category] ?? "bg-muted"
-                    )}
+          ) : (
+            <>
+              <div className="px-3 pt-2 pb-1.5 border-b border-border shrink-0">
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar ejercicios…"
+                    className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
                   />
-                  <GripVertical className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate leading-snug">
-                      {ex.name}
-                    </p>
-                    <span
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-0.5">
+                  {["all", ...availableCategories].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setLibCategoryFilter(cat)}
                       className={cn(
-                        "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                        CATEGORY_COLORS[ex.category] ??
-                          "text-muted-foreground bg-muted"
+                        "shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full transition-colors whitespace-nowrap",
+                        libCategoryFilter === cat
+                          ? "bg-brand text-brand-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      {CATEGORY_LABELS[ex.category] ?? ex.category}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                    <Clock className="size-3" />
-                    {ex.durationMinutes} min
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => addExercise(ex)}
-                    className="size-6 rounded-md flex items-center justify-center bg-brand/10 text-brand hover:bg-brand/20 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
+                      {cat === "all" ? "Todos" : (CATEGORY_LABELS[cat] ?? cat)}
+                    </button>
+                  ))}
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-border/50 max-h-[360px] lg:max-h-none">
+                {filteredAvailable.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <Filter className="size-6 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">
+                      {search || libCategoryFilter !== "all"
+                        ? "Sin resultados para ese filtro"
+                        : libraryExercises.length === 0
+                          ? "No hay ejercicios en la biblioteca"
+                          : "Todos los ejercicios están en la sesión"}
+                    </p>
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickCreate(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+                      >
+                        <Plus className="size-3.5" />
+                        Crear ejercicio rápido
+                      </button>
+                      {refreshingLibrary ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <Loader2 className="size-3 animate-spin" />
+                          Actualizando biblioteca…
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  filteredAvailable.map((ex) => (
+                    <div
+                      key={ex.id}
+                      draggable
+                      onDragStart={(e) => onLibraryDragStart(e, ex)}
+                      className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors cursor-grab active:cursor-grabbing"
+                    >
+                      <div
+                        className={cn(
+                          "w-0.5 h-7 rounded-full shrink-0",
+                          CATEGORY_BAR[ex.category] ?? "bg-muted"
+                        )}
+                      />
+                      <GripVertical className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate leading-snug">
+                          {ex.name}
+                        </p>
+                        <span
+                          className={cn(
+                            "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                            CATEGORY_COLORS[ex.category] ??
+                              "text-muted-foreground bg-muted"
+                          )}
+                        >
+                          {CATEGORY_LABELS[ex.category] ?? ex.category}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                        <Clock className="size-3" />
+                        {ex.durationMinutes} min
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => addExercise(ex)}
+                        className="size-6 rounded-md flex items-center justify-center bg-brand/10 text-brand hover:bg-brand/20 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                      >
+                        <Plus className="size-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

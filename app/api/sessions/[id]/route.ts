@@ -14,25 +14,28 @@ import {
   updateSessionSchema,
   zodValidationErrorResponse,
 } from "../validation";
+import {
+  calculateExercisePlanDuration,
+  getAccessibleExerciseDurationMap,
+} from "@/lib/exercise-access";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
 async function calculateDuration(
+  userId: string,
   exerciseItems: { exerciseId: string; durationMinutes?: number | null }[]
-): Promise<number> {
-  if (exerciseItems.length === 0) return 0;
-  const ids = exerciseItems.map((e) => e.exerciseId);
-  const rows = await db
-    .select({ id: exercises.id, durationMinutes: exercises.durationMinutes })
-    .from(exercises)
-    .where(inArray(exercises.id, ids));
-  const durMap = new Map(rows.map((r) => [r.id, r.durationMinutes]));
-  return exerciseItems.reduce((sum, item) => {
-    const dur = item.durationMinutes ?? durMap.get(item.exerciseId) ?? 0;
-    return sum + dur;
-  }, 0);
+): Promise<{ duration: number; inaccessibleIds: string[] }> {
+  const { durationById, inaccessibleIds } =
+    await getAccessibleExerciseDurationMap(
+      userId,
+      exerciseItems.map((item) => item.exerciseId)
+    );
+  return {
+    duration: calculateExercisePlanDuration(exerciseItems, durationById),
+    inaccessibleIds,
+  };
 }
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -216,10 +219,23 @@ export async function PUT(request: Request, context: RouteContext) {
           : null;
     }
 
+    let exerciseAccess:
+      | { duration: number; inaccessibleIds: string[] }
+      | undefined;
+    if (exerciseItems !== undefined) {
+      exerciseAccess = await calculateDuration(user.id, exerciseItems);
+      if (exerciseAccess.inaccessibleIds.length > 0) {
+        return NextResponse.json(
+          { error: "Algunos ejercicios no existen o no son accesibles" },
+          { status: 400 }
+        );
+      }
+    }
+
     if (sessionFields.durationMinutes !== undefined) {
       updateValues.durationMinutes = sessionFields.durationMinutes;
     } else if (exerciseItems !== undefined) {
-      updateValues.durationMinutes = await calculateDuration(exerciseItems);
+      updateValues.durationMinutes = exerciseAccess?.duration ?? 0;
     }
 
     const updatedSession = await db.transaction(async (tx) => {

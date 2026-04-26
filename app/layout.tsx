@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import Script from "next/script";
 import { CookieBanner } from "@/components/app/cookie-banner";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -67,11 +69,13 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.ico" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="es"
@@ -79,8 +83,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-xl focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-brand focus:outline-none"
+        >
+          Ir al contenido principal
+        </a>
         <Script
           id="theme-init"
+          nonce={nonce}
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -88,9 +99,9 @@ export default function RootLayout({
             var t = localStorage.getItem('theme');
             var isDark = t ? t === 'dark' : true;
             document.documentElement.classList.toggle('dark', isDark);
-            var A = { green: ['oklch(0.73 0.19 148)','oklch(0.48 0.18 148)'], blue: ['oklch(0.68 0.18 230)','oklch(0.48 0.18 230)'], violet: ['oklch(0.68 0.18 290)','oklch(0.50 0.18 290)'], amber: ['oklch(0.78 0.18 70)','oklch(0.58 0.18 70)'], rose: ['oklch(0.70 0.20 15)','oklch(0.52 0.20 15)'] };
-            var ac = localStorage.getItem('accent') || 'green';
-            var c = A[ac] || A.green;
+            var A = { blue: ['oklch(0.70 0.18 255)','oklch(0.50 0.20 255)'], green: ['oklch(0.73 0.19 148)','oklch(0.48 0.18 148)'], violet: ['oklch(0.68 0.18 290)','oklch(0.50 0.18 290)'], amber: ['oklch(0.78 0.18 70)','oklch(0.58 0.18 70)'], rose: ['oklch(0.70 0.20 15)','oklch(0.52 0.20 15)'] };
+            var ac = localStorage.getItem('accent') || 'blue';
+            var c = A[ac] || A.blue;
             var v = isDark ? c[0] : c[1];
             var el = document.documentElement;
             el.style.setProperty('--brand', v); el.style.setProperty('--primary', v); el.style.setProperty('--ring', v); el.style.setProperty('--sidebar-primary', v); el.style.setProperty('--sidebar-ring', v);
@@ -103,6 +114,7 @@ export default function RootLayout({
         />
         {children}
         <CookieBanner />
+        <Toaster />
       </body>
     </html>
   );

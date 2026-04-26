@@ -15,6 +15,10 @@ import {
   sessionsListQuerySchema,
   zodValidationErrorResponse,
 } from "./validation";
+import {
+  calculateExercisePlanDuration,
+  getAccessibleExerciseDurationMap,
+} from "@/lib/exercise-access";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -39,19 +43,18 @@ async function ensureUser(user: {
 }
 
 async function calculateDuration(
+  userId: string,
   exerciseItems: { exerciseId: string; durationMinutes?: number | null }[]
-): Promise<number> {
-  if (exerciseItems.length === 0) return 0;
-  const ids = exerciseItems.map((e) => e.exerciseId);
-  const rows = await db
-    .select({ id: exercises.id, durationMinutes: exercises.durationMinutes })
-    .from(exercises)
-    .where(inArray(exercises.id, ids));
-  const durMap = new Map(rows.map((r) => [r.id, r.durationMinutes]));
-  return exerciseItems.reduce((sum, item) => {
-    const dur = item.durationMinutes ?? durMap.get(item.exerciseId) ?? 0;
-    return sum + dur;
-  }, 0);
+): Promise<{ duration: number; inaccessibleIds: string[] }> {
+  const { durationById, inaccessibleIds } =
+    await getAccessibleExerciseDurationMap(
+      userId,
+      exerciseItems.map((item) => item.exerciseId)
+    );
+  return {
+    duration: calculateExercisePlanDuration(exerciseItems, durationById),
+    inaccessibleIds,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -239,7 +242,14 @@ export async function POST(request: Request) {
       }
     }
 
-    const computedDuration = await calculateDuration(exerciseItems);
+    const { duration: computedDuration, inaccessibleIds } =
+      await calculateDuration(user.id, exerciseItems);
+    if (inaccessibleIds.length > 0) {
+      return NextResponse.json(
+        { error: "Algunos ejercicios no existen o no son accesibles" },
+        { status: 400 }
+      );
+    }
     const durationMinutes = providedDuration ?? computedDuration ?? 60;
 
     const normalizedTags =

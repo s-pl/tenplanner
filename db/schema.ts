@@ -40,6 +40,28 @@ export const trainingPhaseEnum = pgEnum("training_phase", [
   "cooldown",
 ]);
 
+export const ejercicioFormatoEnum = pgEnum("ejercicio_formato", [
+  "individual",
+  "parejas",
+  "grupal",
+  "multigrupo",
+]);
+
+export const tipoActividadEnum = pgEnum("tipo_actividad", [
+  "tecnico_tactico",
+  "fisico",
+  "cognitivo",
+  "competitivo",
+  "ludico",
+]);
+
+export const tipoPelotaEnum = pgEnum("tipo_pelota", [
+  "normal",
+  "lenta",
+  "rapida",
+  "sin_pelota",
+]);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -81,6 +103,14 @@ export const exercises = pgTable(
     tips: text("tips"),
     phase: trainingPhaseEnum("phase"),
     intensity: integer("intensity"), // 1-5, app-validated
+    formato: ejercicioFormatoEnum("formato"),
+    numJugadores: integer("num_jugadores"),
+    tipoPelota: tipoPelotaEnum("tipo_pelota"),
+    tipoActividad: tipoActividadEnum("tipo_actividad"),
+    golpes: json("golpes").$type<string[]>(),
+    efecto: json("efecto").$type<string[]>(),
+    variantes: text("variantes"),
+    imageUrls: json("image_urls").$type<string[]>(),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
@@ -269,13 +299,63 @@ export const groupStudents = pgTable(
   ]
 );
 
-// Exercise favorites (coach bookmarks)
-export const exerciseFavorites = pgTable(
-  "exercise_favorites",
+// Exercise ratings (1-5 per user)
+export const exerciseRatings = pgTable(
+  "exercise_ratings",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    exerciseId: uuid("exercise_id")
+      .references(() => exercises.id, { onDelete: "cascade" })
+      .notNull(),
+    rating: integer("rating").notNull(), // 1-5
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("exercise_ratings_user_exercise_uniq").on(
+      t.userId,
+      t.exerciseId
+    ),
+    index("exercise_ratings_exercise_id_idx").on(t.exerciseId),
+    index("exercise_ratings_user_id_idx").on(t.userId),
+  ]
+);
+
+// Exercise lists (named collections of exercises)
+export const exerciseLists = pgTable(
+  "exercise_lists",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    emoji: varchar("emoji", { length: 10 }).default("📋"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("exercise_lists_user_id_idx").on(t.userId),
+  ]
+);
+
+// Exercise list items (exercises in a list)
+export const exerciseListItems = pgTable(
+  "exercise_list_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    listId: uuid("list_id")
+      .references(() => exerciseLists.id, { onDelete: "cascade" })
       .notNull(),
     exerciseId: uuid("exercise_id")
       .references(() => exercises.id, { onDelete: "cascade" })
@@ -285,11 +365,142 @@ export const exerciseFavorites = pgTable(
       .notNull(),
   },
   (t) => [
-    uniqueIndex("exercise_favorites_user_exercise_uniq").on(
-      t.userId,
+    uniqueIndex("exercise_list_items_list_exercise_uniq").on(
+      t.listId,
       t.exerciseId
     ),
-    index("exercise_favorites_user_id_idx").on(t.userId),
+    index("exercise_list_items_list_id_idx").on(t.listId),
+    index("exercise_list_items_exercise_id_idx").on(t.exerciseId),
+  ]
+);
+
+// Exercise drafts (persisted per user)
+export const exerciseDrafts = pgTable(
+  "exercise_drafts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    payload: json("payload").$type<Record<string, unknown>>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("exercise_drafts_user_updated_at_idx").on(t.userId, t.updatedAt),
+  ]
+);
+
+// Session drafts (persisted per user)
+export const sessionDrafts = pgTable(
+  "session_drafts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    payload: json("payload").$type<Record<string, unknown>>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("session_drafts_user_updated_at_idx").on(t.userId, t.updatedAt),
+  ]
+);
+
+// Session templates (marketplace — no scheduledAt, no students)
+export const sessionTemplates = pgTable(
+  "session_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    authorId: uuid("author_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    objective: text("objective"),
+    durationMinutes: integer("duration_minutes").notNull(),
+    intensity: integer("intensity"),
+    tags: json("tags").$type<string[]>(),
+    location: varchar("location", { length: 50 }),
+    adoptionsCount: integer("adoptions_count").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("session_templates_author_id_idx").on(t.authorId),
+    index("session_templates_created_at_idx").on(t.createdAt),
+    index("session_templates_adoptions_count_idx").on(t.adoptionsCount),
+  ]
+);
+
+// Session template exercises
+export const sessionTemplateExercises = pgTable(
+  "session_template_exercises",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .references(() => sessionTemplates.id, { onDelete: "cascade" })
+      .notNull(),
+    exerciseId: uuid("exercise_id")
+      .references(() => exercises.id, { onDelete: "cascade" })
+      .notNull(),
+    orderIndex: integer("order_index").notNull(),
+    durationMinutes: integer("duration_minutes"),
+    notes: text("notes"),
+    phase: trainingPhaseEnum("phase"),
+    intensity: integer("intensity"),
+  },
+  (t) => [
+    uniqueIndex("session_template_exercises_template_order_uniq").on(
+      t.templateId,
+      t.orderIndex
+    ),
+    index("session_template_exercises_template_id_idx").on(t.templateId),
+    index("session_template_exercises_exercise_id_idx").on(t.exerciseId),
+  ]
+);
+
+// Session template adoptions (audit)
+export const sessionTemplateAdoptions = pgTable(
+  "session_template_adoptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .references(() => sessionTemplates.id, { onDelete: "cascade" })
+      .notNull(),
+    coachId: uuid("coach_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("session_template_adoptions_template_session_uniq").on(
+      t.templateId,
+      t.sessionId
+    ),
+    index("session_template_adoptions_template_id_idx").on(t.templateId),
+    index("session_template_adoptions_coach_id_idx").on(t.coachId),
   ]
 );
 
@@ -344,7 +555,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   exercises: many(exercises),
   coachedStudents: many(students),
-  exerciseFavorites: many(exerciseFavorites),
   groups: many(groups),
 }));
 
@@ -354,7 +564,6 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [users.id],
   }),
   sessionExercises: many(sessionExercises),
-  favorites: many(exerciseFavorites),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
@@ -413,20 +622,6 @@ export const groupStudentsRelations = relations(groupStudents, ({ one }) => ({
   student: one(students, { fields: [groupStudents.studentId], references: [students.id] }),
 }));
 
-export const exerciseFavoritesRelations = relations(
-  exerciseFavorites,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [exerciseFavorites.userId],
-      references: [users.id],
-    }),
-    exercise: one(exercises, {
-      fields: [exerciseFavorites.exerciseId],
-      references: [exercises.id],
-    }),
-  })
-);
-
 export const drPlannerChatsRelations = relations(drPlannerChats, ({ many }) => ({
   messages: many(drPlannerMessages),
 }));
@@ -440,3 +635,74 @@ export const drPlannerMessagesRelations = relations(
     }),
   })
 );
+
+export const sessionTemplatesRelations = relations(
+  sessionTemplates,
+  ({ one, many }) => ({
+    author: one(users, {
+      fields: [sessionTemplates.authorId],
+      references: [users.id],
+    }),
+    templateExercises: many(sessionTemplateExercises),
+    adoptions: many(sessionTemplateAdoptions),
+  })
+);
+
+export const sessionTemplateExercisesRelations = relations(
+  sessionTemplateExercises,
+  ({ one }) => ({
+    template: one(sessionTemplates, {
+      fields: [sessionTemplateExercises.templateId],
+      references: [sessionTemplates.id],
+    }),
+    exercise: one(exercises, {
+      fields: [sessionTemplateExercises.exerciseId],
+      references: [exercises.id],
+    }),
+  })
+);
+
+export const sessionTemplateAdoptionsRelations = relations(
+  sessionTemplateAdoptions,
+  ({ one }) => ({
+    template: one(sessionTemplates, {
+      fields: [sessionTemplateAdoptions.templateId],
+      references: [sessionTemplates.id],
+    }),
+    coach: one(users, {
+      fields: [sessionTemplateAdoptions.coachId],
+      references: [users.id],
+    }),
+    session: one(sessions, {
+      fields: [sessionTemplateAdoptions.sessionId],
+      references: [sessions.id],
+    }),
+  })
+);
+
+export const exerciseDraftsRelations = relations(exerciseDrafts, ({ one }) => ({
+  user: one(users, {
+    fields: [exerciseDrafts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const sessionDraftsRelations = relations(sessionDrafts, ({ one }) => ({
+  user: one(users, {
+    fields: [sessionDrafts.userId],
+    references: [users.id],
+  }),
+}));
+
+// Landing page editable content (admin-managed copy)
+export const landingContent = pgTable("landing_content", {
+  key: varchar("key", { length: 80 }).primaryKey(),
+  value: json("value").$type<unknown>().notNull(),
+  type: varchar("type", { length: 20 }).notNull().default("string"),
+  label: varchar("label", { length: 200 }),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+});

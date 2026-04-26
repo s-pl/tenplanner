@@ -1,17 +1,23 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
-import { and, asc, count, eq, inArray, sql, type SQL } from "drizzle-orm";
-import { Plus, ArrowRight, ArrowLeft, ArrowUpRight, Bot } from "lucide-react";
+import { sessions as sessionsTable, sessionExercises, sessionDrafts } from "@/db/schema";
+import { and, asc, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { Plus, ArrowRight, ArrowLeft, ArrowUpRight, Bot, Search } from "lucide-react";
 import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
-
-type Filter = "upcoming" | "past" | "all";
+import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
+import { SessionsSearchInput } from "@/components/app/sessions-search-input";
+type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
 interface PageProps {
-  searchParams: Promise<{ filter?: string; page?: string }>;
+  searchParams: Promise<{
+    filter?: string;
+    page?: string;
+    q?: string;
+  }>;
 }
 
 function formatDayMonth(date: Date) {
@@ -55,11 +61,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const { filter, page } = await searchParams;
+  const { filter, page, q } = await searchParams;
   const activeFilter: Filter =
-    filter === "past" || filter === "upcoming" || filter === "all"
+    filter === "past" || filter === "upcoming" || filter === "all" || filter === "drafts"
       ? filter
       : "all";
+  const searchTerm = q?.trim() ?? "";
 
   const parsedPage = Number(page ?? "1");
   const currentPage =
@@ -70,6 +77,15 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
   else if (activeFilter === "past")
     whereConditions.push(sql`${sessionsTable.scheduledAt} < now()`);
+  if (searchTerm) {
+    const searchWhere = or(
+      ilike(sessionsTable.title, `%${searchTerm}%`),
+      ilike(sessionsTable.description, `%${searchTerm}%`),
+      ilike(sessionsTable.objective, `%${searchTerm}%`),
+      sql`${sessionsTable.tags}::text ILIKE ${`%${searchTerm}%`}`
+    );
+    if (searchWhere) whereConditions.push(searchWhere);
+  }
   const whereClause =
     and(...whereConditions) ?? eq(sessionsTable.userId, user.id);
 
@@ -104,6 +120,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const totalFiltered = Number(filteredCountRows[0]?.total ?? 0);
   const upcomingCount = Number(upcomingCountRows[0]?.total ?? 0);
   const pastCount = Number(pastCountRows[0]?.total ?? 0);
+
+  const [draftCountRows] = await db
+    .select({ total: count() })
+    .from(sessionDrafts)
+    .where(eq(sessionDrafts.userId, user.id));
+  const draftCount = Number(draftCountRows?.total ?? 0);
   const totalPages =
     totalFiltered > 0 ? Math.ceil(totalFiltered / PAGE_SIZE) : 0;
   const safePage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
@@ -139,21 +161,38 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   const now = new Date();
 
-  function sessionsHref(params: { filter?: Filter; page?: number }) {
+  function sessionsHref(opts: {
+    filter?: Filter;
+    page?: number;
+    q?: string;
+  }) {
     const p = new URLSearchParams();
-    const f = params.filter ?? activeFilter;
+    const f = opts.filter ?? activeFilter;
     if (f !== "all") p.set("filter", f);
-    const nextPage = params.page ?? safePage;
+    const nextQuery = Object.prototype.hasOwnProperty.call(opts, "q")
+      ? opts.q
+      : searchTerm;
+    if (nextQuery) p.set("q", nextQuery);
+    const nextPage = opts.page ?? safePage;
     if (nextPage > 1) p.set("page", String(nextPage));
-    const q = p.toString();
-    return q ? `/sessions?${q}` : "/sessions";
+    const qs = p.toString();
+    return qs ? `/sessions?${qs}` : "/sessions";
   }
 
   const FILTERS: { key: Filter; label: string; n: number }[] = [
     { key: "all", label: "Todas", n: totalSessions },
     { key: "upcoming", label: "Próximas", n: upcomingCount },
     { key: "past", label: "Pasadas", n: pastCount },
+    { key: "drafts", label: "Borradores", n: draftCount },
   ];
+  const masthead = {
+    eyebrow: "Planificación · Agenda",
+    accent: "Sesiones",
+    suffix: "de entrenamiento",
+    description:
+      "Cada sesión es una hipótesis: un plan que la pista valida o desmiente. Aquí mantienes ritmo, archivo y continuidad.",
+    statusLabel: `${totalSessions.toString().padStart(3, "0")} registros`,
+  };
 
   return (
     <div className="relative">
@@ -172,22 +211,21 @@ export default async function SessionsPage({ searchParams }: PageProps) {
         <header className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              Planificación · Agenda
+              {masthead.eyebrow}
             </p>
             <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {totalSessions.toString().padStart(3, "0")} registros
+              {masthead.statusLabel}
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
             <div className="max-w-2xl">
               <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">Sesiones</em> de entrenamiento
+                <em className="italic text-brand">{masthead.accent}</em>{" "}
+                {masthead.suffix}
               </h1>
               <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                Cada sesión es una hipótesis: un plan que la pista valida o
-                desmiente. Aquí vives con las que están por venir y las que ya
-                han pasado.
+                {masthead.description}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -199,7 +237,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               </Link>
               <Link
                 href="/sessions/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-foreground text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-foreground/90 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
               >
                 <Plus className="size-4" /> Nueva sesión
               </Link>
@@ -207,37 +245,121 @@ export default async function SessionsPage({ searchParams }: PageProps) {
           </div>
         </header>
 
-        {/* ─── Filter rail ─── */}
-        <nav className="flex items-end gap-8 border-b border-foreground/15">
-          {FILTERS.map(({ key, label, n }) => {
-            const isActive = activeFilter === key;
-            return (
-              <Link
-                key={key}
-                href={sessionsHref({ filter: key, page: 1 })}
-                className={`group pb-3 -mb-px flex items-baseline gap-2 border-b-2 transition-colors ${
-                  isActive
-                    ? "border-brand"
-                    : "border-transparent hover:border-foreground/25"
-                }`}
-              >
-                <span
-                  className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
-                >
-                  {label}
-                </span>
-                <span
-                  className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
-                >
-                  ({n.toString().padStart(2, "0")})
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+        <>
+            {/* ─── Filter rail ─── */}
+            <nav className="flex items-end gap-8 border-b border-foreground/15">
+              {FILTERS.map(({ key, label, n }) => {
+                const isActive = activeFilter === key;
+                return (
+                  <Link
+                    key={key}
+                    href={sessionsHref({ filter: key, page: 1 })}
+                    className={`group pb-3 -mb-px flex items-baseline gap-2 border-b-2 transition-colors ${
+                      isActive
+                        ? "border-brand"
+                        : "border-transparent hover:border-foreground/25"
+                    }`}
+                  >
+                    <span
+                      className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
+                    >
+                      ({n.toString().padStart(2, "0")})
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
 
-        {/* ─── List ─── */}
-        {sessionRows.length === 0 ? (
+            {activeFilter === "drafts" ? (
+              <SessionDraftsPanel showEmptyState />
+            ) : <>
+
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
+                  Agenda total
+                </p>
+                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
+                  {totalSessions.toString().padStart(2, "0")}
+                </p>
+                <p className="mt-2 text-[12px] text-foreground/55">
+                  Todas las sesiones registradas en tu archivo.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
+                  Proximas
+                </p>
+                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
+                  {upcomingCount.toString().padStart(2, "0")}
+                </p>
+                <p className="mt-2 text-[12px] text-foreground/55">
+                  Trabajo futuro ya colocado en la agenda.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
+                  Pasadas
+                </p>
+                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
+                  {pastCount.toString().padStart(2, "0")}
+                </p>
+                <p className="mt-2 text-[12px] text-foreground/55">
+                  Archivo util para revisar carga y continuidad.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-brand/20 bg-brand/[0.06] px-4 py-4">
+                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-brand/80">
+                  Foco actual
+                </p>
+                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
+                  {(searchTerm ? totalFiltered : FILTERS.find((item) => item.key === activeFilter)?.n ?? totalSessions)
+                    .toString()
+                    .padStart(2, "0")}
+                </p>
+                <p className="mt-2 text-[12px] text-foreground/60">
+                  {searchTerm
+                    ? `Coincidencias para «${searchTerm}».`
+                    : activeFilter === "all"
+                      ? "Vista completa del archivo."
+                      : `Sesiones visibles en «${activeFilter === "upcoming" ? "Próximas" : "Pasadas"}».`}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Suspense fallback={
+                <div className="h-10 w-full rounded-md border border-foreground/20 bg-transparent animate-pulse" />
+              }>
+                <SessionsSearchInput defaultValue={searchTerm} />
+              </Suspense>
+
+              {searchTerm ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand/8 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-brand">
+                    Búsqueda: {searchTerm}
+                  </span>
+                  <Link
+                    href={sessionsHref({
+                      filter: activeFilter,
+                      q: undefined,
+                      page: 1,
+                    })}
+                    className="inline-flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 transition-colors hover:text-foreground"
+                  >
+                    Limpiar
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+
+            {/* ─── List ─── */}
+            {sessionRows.length === 0 ? (
           <div className="border-t border-b border-foreground/15 py-20 text-center">
             <p className="font-heading italic text-2xl text-foreground/80 mb-2">
               {activeFilter === "upcoming"
@@ -247,18 +369,28 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   : "Ninguna sesión registrada."}
             </p>
             <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-6">
-              {activeFilter === "all"
+              {searchTerm
+                ? `No hay sesiones para «${searchTerm}» con el filtro actual.`
+                : activeFilter === "all"
                 ? "Diseña tu primera sesión para empezar a dar forma al método."
                 : "Prueba con otro filtro o crea una sesión nueva."}
             </p>
             <Link
-              href="/sessions/new"
+              href={searchTerm ? sessionsHref({ filter: activeFilter, q: undefined, page: 1 }) : "/sessions/new"}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors pb-0.5"
             >
-              <Plus className="size-3.5" /> Crear sesión
+              {searchTerm ? (
+                <>
+                  <Search className="size-3.5" /> Limpiar búsqueda
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" /> Crear sesión
+                </>
+              )}
             </Link>
           </div>
-        ) : (
+            ) : (
           <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
             {sessionRows.map((session, idx) => {
               const date = new Date(session.scheduledAt);
@@ -295,8 +427,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                               : session.status === "cancelled"
                                 ? "text-destructive/70"
                                 : isPast
-                                  ? "text-foreground/40"
-                                  : "text-foreground/60"
+                                  ? "text-foreground/55"
+                                  : "text-foreground/65"
                           }`}
                         >
                           {session.status === "completed"
@@ -336,10 +468,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               );
             })}
           </ul>
-        )}
+            )}
 
-        {/* ─── Pagination ─── */}
-        {totalFiltered > 0 && (
+            {/* ─── Pagination ─── */}
+            {totalFiltered > 0 && (
           <footer className="flex items-center justify-between pt-2 border-t border-foreground/15">
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
               {offset + 1}–{offset + sessionRows.length} / {totalFiltered}
@@ -378,7 +510,9 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               </div>
             )}
           </footer>
-        )}
+            )}
+            </>}
+        </>
       </div>
       <MobileFabSpeedDial
         primaryLabel="Nueva sesión"

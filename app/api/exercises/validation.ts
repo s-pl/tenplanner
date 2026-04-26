@@ -14,6 +14,55 @@ export const difficultySchema = z.enum([
   "advanced",
 ]);
 
+export const trainingPhaseSchema = z.enum(["activation", "main", "cooldown"]);
+
+export const ejercicioFormatoSchema = z.enum([
+  "individual",
+  "parejas",
+  "grupal",
+  "multigrupo",
+]);
+
+export const tipoActividadSchema = z.enum([
+  "tecnico_tactico",
+  "fisico",
+  "cognitivo",
+  "competitivo",
+  "ludico",
+]);
+
+export const tipoPelotaSchema = z.enum([
+  "normal",
+  "lenta",
+  "rapida",
+  "sin_pelota",
+]);
+
+export const GOLPES_VALUES = [
+  "derecha",
+  "reves",
+  "globo",
+  "smash",
+  "bandeja",
+  "volea_dcha",
+  "volea_rev",
+  "bajada_pared",
+  "vibora",
+  "saque",
+  "chiquita",
+  "dejada",
+] as const;
+
+export const EFECTO_VALUES = [
+  "liftado",
+  "cortado",
+  "plano",
+  "sin_efecto",
+] as const;
+
+export const golpeSchema = z.enum(GOLPES_VALUES);
+export const efectoSchema = z.enum(EFECTO_VALUES);
+
 const nameSchema = z
   .string()
   .trim()
@@ -28,8 +77,6 @@ const descriptionSchema = z
 export const exerciseIdParamsSchema = z.object({
   id: z.string().uuid("Exercise id must be a valid UUID"),
 });
-
-export const trainingPhaseSchema = z.enum(["activation", "main", "cooldown"]);
 
 export const exercisesListQuerySchema = z.object({
   category: exerciseCategorySchema.optional(),
@@ -46,6 +93,23 @@ export const exercisesListQuerySchema = z.object({
     .min(1, "Limit must be at least 1")
     .max(100, "Limit must be 100 or fewer")
     .default(10),
+  formato: ejercicioFormatoSchema.optional(),
+  numJugadores: z.coerce.number().int().min(1).max(20).optional(),
+  tipoPelota: tipoPelotaSchema.optional(),
+  tipoActividad: tipoActividadSchema.optional(),
+  golpe: z
+    .union([golpeSchema, z.array(golpeSchema)])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+  efecto: z
+    .union([efectoSchema, z.array(efectoSchema)])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+  minDuracion: z.coerce.number().int().min(1).optional(),
+  maxDuracion: z.coerce.number().int().min(1).optional(),
+  location: z.enum(["indoor", "outdoor", "any"]).optional(),
+  phase: trainingPhaseSchema.optional(),
+  intensity: z.coerce.number().int().min(1).max(5).optional(),
 });
 
 export const createExerciseSchema = z.object({
@@ -71,6 +135,14 @@ export const createExerciseSchema = z.object({
     .max(5, "La intensidad máxima es 5")
     .optional()
     .nullable(),
+  formato: ejercicioFormatoSchema.optional().nullable(),
+  numJugadores: z.number().int().min(1).max(20).optional().nullable(),
+  tipoPelota: tipoPelotaSchema.optional().nullable(),
+  tipoActividad: tipoActividadSchema.optional().nullable(),
+  golpes: z.array(golpeSchema).max(15).optional().nullable(),
+  efecto: z.array(efectoSchema).max(5).optional().nullable(),
+  variantes: z.string().trim().max(2000).optional().nullable(),
+  imageUrls: z.array(z.string().url().max(1000)).max(4).optional().nullable(),
   isGlobal: z.boolean().optional(),
   steps: z
     .array(

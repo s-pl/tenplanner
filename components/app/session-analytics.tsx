@@ -46,7 +46,7 @@ const PHASE_LABELS: Record<TrainingPhase, string> = {
 
 const PHASE_COLORS: Record<TrainingPhase, string> = {
   activation: "#f59e0b",
-  main: "oklch(0.73 0.19 148)",
+  main: "var(--brand)",
   cooldown: "#38bdf8",
 };
 
@@ -73,7 +73,7 @@ const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
   technique: "#60a5fa",
   tactics: "#c084fc",
   fitness: "#fbbf24",
-  "warm-up": "oklch(0.73 0.19 148)",
+  "warm-up": "var(--brand)",
 };
 
 const DIFFICULTY_LABELS: Record<ExerciseDifficulty, string> = {
@@ -83,7 +83,7 @@ const DIFFICULTY_LABELS: Record<ExerciseDifficulty, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<ExerciseDifficulty, string> = {
-  beginner: "oklch(0.73 0.19 148)",
+  beginner: "var(--brand)",
   intermediate: "#fbbf24",
   advanced: "#f87171",
 };
@@ -626,12 +626,12 @@ function IntensityCurveCard({ analytics }: { analytics: SessionAnalytics }) {
                     >
                       <stop
                         offset="0%"
-                        stopColor="oklch(0.73 0.19 148)"
+                        stopColor="var(--brand)"
                         stopOpacity={0.45}
                       />
                       <stop
                         offset="100%"
-                        stopColor="oklch(0.73 0.19 148)"
+                        stopColor="var(--brand)"
                         stopOpacity={0.02}
                       />
                     </linearGradient>
@@ -707,12 +707,12 @@ function IntensityCurveCard({ analytics }: { analytics: SessionAnalytics }) {
                   <Area
                     type="monotone"
                     dataKey="intensity"
-                    stroke="oklch(0.73 0.19 148)"
+                    stroke="var(--brand)"
                     strokeWidth={2.5}
                     fill="url(#intensityFill)"
                     connectNulls={false}
                     dot={{
-                      fill: "oklch(0.73 0.19 148)",
+                      fill: "var(--brand)",
                       r: 3.5,
                       strokeWidth: 0,
                     }}

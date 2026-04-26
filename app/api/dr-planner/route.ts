@@ -16,6 +16,7 @@ import {
   getCoachStats,
 } from "@/lib/dr-planner/insights";
 import { rateLimit, tooManyRequestsResponse } from "@/lib/rate-limit";
+import { getAccessibleExerciseDurationMap } from "@/lib/exercise-access";
 
 export const maxDuration = 300;
 
@@ -659,13 +660,11 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
 
           try {
             const ids = typedList.map((e) => e.id);
-            const exerciseData = ids.length > 0
-              ? await db.select({ id: exercises.id, durationMinutes: exercises.durationMinutes })
-                  .from(exercises).where(inArray(exercises.id, ids))
-              : [];
-            const durMap = new Map(exerciseData.map((e) => [e.id, e.durationMinutes]));
-            const missingIds = ids.filter((id) => !durMap.has(id));
-            if (missingIds.length > 0) {
+            const {
+              durationById: durMap,
+              inaccessibleIds,
+            } = await getAccessibleExerciseDurationMap(user.id, ids);
+            if (inaccessibleIds.length > 0) {
               return { ok: false, error: "Hay ejercicios no válidos en el plan. Revisa los ejercicios seleccionados." };
             }
 
