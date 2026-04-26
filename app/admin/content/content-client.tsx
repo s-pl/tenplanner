@@ -3,11 +3,26 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
-  Trash2, Search, Globe, Lock, Loader2, ExternalLink,
-  Filter, CheckSquare, Square, Bot, Clock, BarChart2,
+  Trash2,
+  Search,
+  Globe,
+  Lock,
+  Loader2,
+  ExternalLink,
+  Filter,
+  CheckSquare,
+  Square,
+  Bot,
+  Clock,
+  BarChart2,
 } from "lucide-react";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -83,11 +98,19 @@ export function AdminContentClient({
   const [exFilter, setExFilter] = useState<ExFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const filteredExercises = useMemo(() => {
     let rows = exercises;
-    if (search) rows = rows.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()) || (e.createdByName ?? "").toLowerCase().includes(search.toLowerCase()));
+    if (search)
+      rows = rows.filter(
+        (e) =>
+          e.name.toLowerCase().includes(search.toLowerCase()) ||
+          (e.createdByName ?? "").toLowerCase().includes(search.toLowerCase())
+      );
     if (exFilter === "global") rows = rows.filter((e) => e.isGlobal);
     if (exFilter === "private") rows = rows.filter((e) => !e.isGlobal);
     if (exFilter === "ai") rows = rows.filter((e) => e.isAiGenerated);
@@ -95,10 +118,12 @@ export function AdminContentClient({
   }, [exercises, search, exFilter]);
 
   const filteredSessions = useMemo(
-    () => sessions.filter((s) =>
-      s.title.toLowerCase().includes(search.toLowerCase()) ||
-      (s.userName ?? "").toLowerCase().includes(search.toLowerCase())
-    ),
+    () =>
+      sessions.filter(
+        (s) =>
+          s.title.toLowerCase().includes(search.toLowerCase()) ||
+          (s.userName ?? "").toLowerCase().includes(search.toLowerCase())
+      ),
     [sessions, search]
   );
 
@@ -117,9 +142,17 @@ export function AdminContentClient({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Error");
       }
-      setExercises((prev) => prev.map((e) => e.id === id ? { ...e, isGlobal: makeGlobal } : e));
-      setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
-      toast.success(makeGlobal ? "Publicado globalmente" : "Marcado como privado");
+      setExercises((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, isGlobal: makeGlobal } : e))
+      );
+      setSelected((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+      toast.success(
+        makeGlobal ? "Publicado globalmente" : "Marcado como privado"
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al actualizar");
     } finally {
@@ -140,14 +173,20 @@ export function AdminContentClient({
           body: JSON.stringify({ isGlobal: makeGlobal }),
         });
         if (res.ok) {
-          setExercises((prev) => prev.map((e) => e.id === id ? { ...e, isGlobal: makeGlobal } : e));
+          setExercises((prev) =>
+            prev.map((e) => (e.id === id ? { ...e, isGlobal: makeGlobal } : e))
+          );
           ok++;
         }
-      } catch { /* continue */ }
+      } catch {
+        /* continue */
+      }
     }
     setSelected(new Set());
     setBusy(null);
-    toast.success(`${ok} ejercicio${ok !== 1 ? "s" : ""} ${makeGlobal ? "publicados" : "marcados privados"}`);
+    toast.success(
+      `${ok} ejercicio${ok !== 1 ? "s" : ""} ${makeGlobal ? "publicados" : "marcados privados"}`
+    );
   }
 
   async function deleteExercise(id: string) {
@@ -156,7 +195,11 @@ export function AdminContentClient({
       const res = await fetch(`/api/exercises/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setExercises((prev) => prev.filter((e) => e.id !== id));
-      setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
+      setSelected((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
       toast.success("Ejercicio eliminado");
     } catch {
       toast.error("Error al eliminar");
@@ -168,7 +211,8 @@ export function AdminContentClient({
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const s = new Set(prev);
-      if (s.has(id)) s.delete(id); else s.add(id);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
       return s;
     });
   }
@@ -181,7 +225,8 @@ export function AdminContentClient({
     }
   }
 
-  const allSelected = filteredExercises.length > 0 && selected.size === filteredExercises.length;
+  const allSelected =
+    filteredExercises.length > 0 && selected.size === filteredExercises.length;
 
   return (
     <div className="space-y-4">
@@ -211,12 +256,15 @@ export function AdminContentClient({
         <TabsContent value="exercises" className="mt-4 space-y-3">
           {/* Filter pills + stats */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               <Filter className="size-3.5 text-foreground/40 shrink-0" />
               {(["all", "global", "private", "ai"] as ExFilter[]).map((f) => (
                 <button
                   key={f}
-                  onClick={() => { setExFilter(f); setSelected(new Set()); }}
+                  onClick={() => {
+                    setExFilter(f);
+                    setSelected(new Set());
+                  }}
                   className={cn(
                     "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors",
                     exFilter === f
@@ -224,10 +272,13 @@ export function AdminContentClient({
                       : "bg-foreground/5 text-foreground/50 hover:text-foreground"
                   )}
                 >
-                  {f === "all" ? `Todos (${exercises.length})` :
-                   f === "global" ? `Globales (${globalCount})` :
-                   f === "private" ? `Privados (${exercises.length - globalCount})` :
-                   `IA (${aiCount})`}
+                  {f === "all"
+                    ? `Todos (${exercises.length})`
+                    : f === "global"
+                      ? `Globales (${globalCount})`
+                      : f === "private"
+                        ? `Privados (${exercises.length - globalCount})`
+                        : `IA (${aiCount})`}
                 </button>
               ))}
             </div>
@@ -235,7 +286,9 @@ export function AdminContentClient({
             {/* Bulk actions */}
             {selected.size > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-foreground/50">{selected.size} seleccionado{selected.size !== 1 ? "s" : ""}</span>
+                <span className="text-xs text-foreground/50">
+                  {selected.size} seleccionado{selected.size !== 1 ? "s" : ""}
+                </span>
                 <button
                   onClick={() => void bulkToggleGlobal(true)}
                   disabled={busy === "bulk"}
@@ -254,29 +307,171 @@ export function AdminContentClient({
             )}
           </div>
 
-          <div className="rounded-2xl border border-foreground/10 overflow-hidden">
+          <div className="grid gap-3 md:hidden">
+            {filteredExercises.length === 0 && (
+              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+                No hay ejercicios
+              </div>
+            )}
+            {filteredExercises.map((e) => (
+              <article
+                key={e.id}
+                className={cn(
+                  "rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4",
+                  selected.has(e.id) && "border-brand/30 bg-brand/[0.03]"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    onClick={() => toggleSelect(e.id)}
+                    className="mt-0.5 text-foreground/40 transition-colors hover:text-brand"
+                    aria-label={
+                      selected.has(e.id)
+                        ? "Deseleccionar ejercicio"
+                        : "Seleccionar ejercicio"
+                    }
+                  >
+                    {selected.has(e.id) ? (
+                      <CheckSquare className="size-4 text-brand" />
+                    ) : (
+                      <Square className="size-4" />
+                    )}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {e.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-foreground/40">
+                      {DIFF_LABEL[e.difficulty] ?? e.difficulty}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "shrink-0 text-[10px] border",
+                      CAT_COLOR[e.category]
+                    )}
+                  >
+                    {CAT_LABEL[e.category] ?? e.category}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {e.isGlobal ? (
+                    <Badge className="bg-brand/10 text-brand border-brand/20 text-[10px] gap-1">
+                      <Globe className="size-2.5" /> Global
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] gap-1 text-foreground/40"
+                    >
+                      <Lock className="size-2.5" /> Privado
+                    </Badge>
+                  )}
+                  {e.isAiGenerated && (
+                    <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-[10px] gap-1">
+                      <Bot className="size-2.5" /> IA
+                    </Badge>
+                  )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/5 px-2 py-0.5 text-[10px] text-foreground/50">
+                    <Clock className="size-2.5" /> {e.durationMinutes}min
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/5 px-2 py-0.5 text-[10px] text-foreground/50">
+                    <BarChart2 className="size-2.5" /> {e.usageCount}
+                  </span>
+                </div>
+
+                <div className="mt-3 min-w-0 border-t border-foreground/10 pt-3">
+                  <p className="truncate text-xs text-foreground/70">
+                    {e.createdByName ?? "—"}
+                  </p>
+                  {e.createdByEmail && (
+                    <p className="truncate text-[10px] text-foreground/35">
+                      {e.createdByEmail}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <Link
+                    href={`/exercises/${e.id}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-foreground/5 px-3 py-2 text-xs font-medium text-foreground/60 transition-colors hover:text-foreground"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Ver
+                  </Link>
+                  <button
+                    onClick={() => void toggleGlobal(e.id, !e.isGlobal)}
+                    disabled={busy === e.id || busy === "bulk"}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand/10 px-3 py-2 text-xs font-medium text-brand transition-colors hover:bg-brand/15 disabled:opacity-40"
+                  >
+                    {busy === e.id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : e.isGlobal ? (
+                      <Lock className="size-3.5" />
+                    ) : (
+                      <Globe className="size-3.5" />
+                    )}
+                    {e.isGlobal ? "Privar" : "Publicar"}
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget({ id: e.id, name: e.name })}
+                    disabled={busy === e.id || busy === "bulk"}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 disabled:opacity-40"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Eliminar
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">
                   <TableHead className="w-10">
-                    <button onClick={toggleSelectAll} className="text-foreground/40 hover:text-foreground transition-colors">
-                      {allSelected ? <CheckSquare className="size-4" /> : <Square className="size-4" />}
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-foreground/40 hover:text-foreground transition-colors"
+                    >
+                      {allSelected ? (
+                        <CheckSquare className="size-4" />
+                      ) : (
+                        <Square className="size-4" />
+                      )}
                     </button>
                   </TableHead>
-                  <TableHead className="text-foreground/50">Ejercicio</TableHead>
-                  <TableHead className="text-foreground/50">Categoría</TableHead>
+                  <TableHead className="text-foreground/50">
+                    Ejercicio
+                  </TableHead>
+                  <TableHead className="text-foreground/50">
+                    Categoría
+                  </TableHead>
                   <TableHead className="text-foreground/50">Autor</TableHead>
-                  <TableHead className="text-foreground/50 text-center">Uso</TableHead>
-                  <TableHead className="text-foreground/50 text-center">Duración</TableHead>
+                  <TableHead className="text-foreground/50 text-center">
+                    Uso
+                  </TableHead>
+                  <TableHead className="text-foreground/50 text-center">
+                    Duración
+                  </TableHead>
                   <TableHead className="text-foreground/50">Estado</TableHead>
                   <TableHead className="text-foreground/50">Creado</TableHead>
-                  <TableHead className="text-foreground/50 text-right">Acciones</TableHead>
+                  <TableHead className="text-foreground/50 text-right">
+                    Acciones
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExercises.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-foreground/40 py-10">
+                    <TableCell
+                      colSpan={9}
+                      className="text-center text-foreground/40 py-10"
+                    >
                       No hay ejercicios
                     </TableCell>
                   </TableRow>
@@ -290,36 +485,66 @@ export function AdminContentClient({
                     )}
                   >
                     <TableCell>
-                      <button onClick={() => toggleSelect(e.id)} className="text-foreground/40 hover:text-brand transition-colors">
-                        {selected.has(e.id) ? <CheckSquare className="size-4 text-brand" /> : <Square className="size-4" />}
+                      <button
+                        onClick={() => toggleSelect(e.id)}
+                        className="text-foreground/40 hover:text-brand transition-colors"
+                      >
+                        {selected.has(e.id) ? (
+                          <CheckSquare className="size-4 text-brand" />
+                        ) : (
+                          <Square className="size-4" />
+                        )}
                       </button>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{e.name}</p>
-                          <p className="text-xs text-foreground/40">{DIFF_LABEL[e.difficulty] ?? e.difficulty}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {e.name}
+                          </p>
+                          <p className="text-xs text-foreground/40">
+                            {DIFF_LABEL[e.difficulty] ?? e.difficulty}
+                          </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn("text-[10px] border", CAT_COLOR[e.category])}>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] border",
+                          CAT_COLOR[e.category]
+                        )}
+                      >
                         {CAT_LABEL[e.category] ?? e.category}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <p className="text-xs text-foreground/70">{e.createdByName ?? "—"}</p>
+                      <p className="text-xs text-foreground/70">
+                        {e.createdByName ?? "—"}
+                      </p>
                       {e.createdByEmail && (
-                        <p className="text-[10px] text-foreground/35">{e.createdByEmail}</p>
+                        <p className="text-[10px] text-foreground/35">
+                          {e.createdByEmail}
+                        </p>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className={cn("text-xs tabular-nums", e.usageCount > 0 ? "text-foreground/70" : "text-foreground/25")}>
+                      <span
+                        className={cn(
+                          "text-xs tabular-nums",
+                          e.usageCount > 0
+                            ? "text-foreground/70"
+                            : "text-foreground/25"
+                        )}
+                      >
                         {e.usageCount > 0 ? (
                           <span className="flex items-center justify-center gap-1">
                             <BarChart2 className="size-3" /> {e.usageCount}
                           </span>
-                        ) : "—"}
+                        ) : (
+                          "—"
+                        )}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
@@ -334,7 +559,10 @@ export function AdminContentClient({
                             <Globe className="size-2.5" /> Global
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] gap-1 text-foreground/40">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] gap-1 text-foreground/40"
+                          >
                             <Lock className="size-2.5" /> Privado
                           </Badge>
                         )}
@@ -361,7 +589,11 @@ export function AdminContentClient({
                         <button
                           onClick={() => void toggleGlobal(e.id, !e.isGlobal)}
                           disabled={busy === e.id || busy === "bulk"}
-                          title={e.isGlobal ? "Hacer privado" : "Publicar globalmente"}
+                          title={
+                            e.isGlobal
+                              ? "Hacer privado"
+                              : "Publicar globalmente"
+                          }
                           className={cn(
                             "p-1.5 rounded-lg transition-colors disabled:opacity-40",
                             e.isGlobal
@@ -378,7 +610,9 @@ export function AdminContentClient({
                           )}
                         </button>
                         <button
-                          onClick={() => setDeleteTarget({ id: e.id, name: e.name })}
+                          onClick={() =>
+                            setDeleteTarget({ id: e.id, name: e.name })
+                          }
                           disabled={busy === e.id || busy === "bulk"}
                           title="Eliminar ejercicio"
                           className="p-1.5 rounded-lg text-foreground/40 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-40"
@@ -396,48 +630,136 @@ export function AdminContentClient({
 
         {/* ── SESSIONS ── */}
         <TabsContent value="sessions" className="mt-4">
-          <div className="rounded-2xl border border-foreground/10 overflow-hidden">
+          <div className="grid gap-3 md:hidden">
+            {filteredSessions.length === 0 && (
+              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+                No hay sesiones
+              </div>
+            )}
+            {filteredSessions.map((s) => (
+              <article
+                key={s.id}
+                className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {s.title}
+                    </p>
+                    <p className="mt-1 text-xs text-foreground/45">
+                      {new Date(s.scheduledAt).toLocaleDateString("es-ES")}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "shrink-0 text-[10px]",
+                      s.status === "completed" && "text-brand border-brand/30",
+                      s.status === "cancelled" &&
+                        "text-red-400 border-red-400/30"
+                    )}
+                  >
+                    {STATUS_LABEL[s.status] ?? s.status}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 border-y border-foreground/10 py-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-foreground/35">
+                      Ejercicios
+                    </p>
+                    <p className="mt-1 text-sm tabular-nums text-foreground/75">
+                      {s.exerciseCount > 0 ? s.exerciseCount : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-foreground/35">
+                      Duración
+                    </p>
+                    <p className="mt-1 text-sm tabular-nums text-foreground/75">
+                      {s.durationMinutes ? `${s.durationMinutes}min` : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 min-w-0">
+                  <p className="truncate text-xs text-foreground/70">
+                    {s.userName ?? "—"}
+                  </p>
+                  {s.userEmail && (
+                    <p className="truncate text-[10px] text-foreground/35">
+                      {s.userEmail}
+                    </p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">
                   <TableHead className="text-foreground/50">Sesión</TableHead>
                   <TableHead className="text-foreground/50">Estado</TableHead>
-                  <TableHead className="text-foreground/50">Entrenador</TableHead>
-                  <TableHead className="text-foreground/50 text-center">Ejercicios</TableHead>
-                  <TableHead className="text-foreground/50 text-center">Duración</TableHead>
-                  <TableHead className="text-foreground/50">Fecha sesión</TableHead>
+                  <TableHead className="text-foreground/50">
+                    Entrenador
+                  </TableHead>
+                  <TableHead className="text-foreground/50 text-center">
+                    Ejercicios
+                  </TableHead>
+                  <TableHead className="text-foreground/50 text-center">
+                    Duración
+                  </TableHead>
+                  <TableHead className="text-foreground/50">
+                    Fecha sesión
+                  </TableHead>
                   <TableHead className="text-foreground/50">Creada</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSessions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-foreground/40 py-10">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center text-foreground/40 py-10"
+                    >
                       No hay sesiones
                     </TableCell>
                   </TableRow>
                 )}
                 {filteredSessions.map((s) => (
-                  <TableRow key={s.id} className="border-foreground/8 hover:bg-foreground/[0.02]">
+                  <TableRow
+                    key={s.id}
+                    className="border-foreground/8 hover:bg-foreground/[0.02]"
+                  >
                     <TableCell>
-                      <p className="text-sm font-medium text-foreground">{s.title}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {s.title}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={cn(
                           "text-[10px]",
-                          s.status === "completed" && "text-brand border-brand/30",
-                          s.status === "cancelled" && "text-red-400 border-red-400/30",
+                          s.status === "completed" &&
+                            "text-brand border-brand/30",
+                          s.status === "cancelled" &&
+                            "text-red-400 border-red-400/30"
                         )}
                       >
                         {STATUS_LABEL[s.status] ?? s.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <p className="text-xs text-foreground/70">{s.userName ?? "—"}</p>
+                      <p className="text-xs text-foreground/70">
+                        {s.userName ?? "—"}
+                      </p>
                       {s.userEmail && (
-                        <p className="text-[10px] text-foreground/35">{s.userEmail}</p>
+                        <p className="text-[10px] text-foreground/35">
+                          {s.userEmail}
+                        </p>
                       )}
                     </TableCell>
                     <TableCell className="text-center text-xs text-foreground/50 tabular-nums">
@@ -461,12 +783,16 @@ export function AdminContentClient({
       </Tabs>
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title={`¿Eliminar "${deleteTarget?.name}"?`}
         description="Esta acción es irreversible y no se puede deshacer."
         confirmLabel="Eliminar"
         destructive
-        onConfirm={() => { if (deleteTarget) void deleteExercise(deleteTarget.id); }}
+        onConfirm={() => {
+          if (deleteTarget) void deleteExercise(deleteTarget.id);
+        }}
       />
     </div>
   );

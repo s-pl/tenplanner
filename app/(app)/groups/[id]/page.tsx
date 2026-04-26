@@ -13,7 +13,9 @@ interface PageProps {
 
 export default async function GroupDetailPage({ params }: PageProps) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { id } = await params;
@@ -41,7 +43,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
   const memberIds = memberRows.map((m) => m.id);
 
   const availableStudents = await db
-    .select({ id: students.id, name: students.name, imageUrl: students.imageUrl, playerLevel: students.playerLevel })
+    .select({
+      id: students.id,
+      name: students.name,
+      imageUrl: students.imageUrl,
+      playerLevel: students.playerLevel,
+    })
     .from(students)
     .where(
       memberIds.length > 0
@@ -64,21 +71,25 @@ export default async function GroupDetailPage({ params }: PageProps) {
           <p className="text-xs text-muted-foreground">Grupos</p>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <div className="size-10 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center shrink-0">
                 <Users className="size-5 text-brand" />
               </div>
-              <h1 className="font-heading text-3xl md:text-4xl tracking-tight text-foreground">
+              <h1 className="min-w-0 break-words font-heading text-3xl tracking-tight text-foreground md:text-4xl">
                 {group.name}
               </h1>
             </div>
             {group.description && (
-              <p className="mt-2 text-sm text-muted-foreground ml-[52px]">{group.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground ml-[52px]">
+                {group.description}
+              </p>
             )}
             <p className="mt-1 text-xs text-muted-foreground ml-[52px] tabular-nums">
-              <span className="font-bold text-foreground">{memberRows.length}</span>{" "}
+              <span className="font-bold text-foreground">
+                {memberRows.length}
+              </span>{" "}
               {memberRows.length === 1 ? "alumno" : "alumnos"}
             </p>
           </div>

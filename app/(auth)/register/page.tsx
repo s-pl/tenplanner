@@ -72,8 +72,18 @@ type AccountValues = z.infer<typeof accountSchema>;
 // ─── Opciones ─────────────────────────────────────────────────────────────
 
 const ROLES: { id: Role; icon: LucideIcon; label: string; desc: string }[] = [
-  { id: "player", icon: Trophy, label: "Jugador", desc: "Quiero mejorar mi juego" },
-  { id: "coach", icon: GraduationCap, label: "Entrenador", desc: "Planifico sesiones para otros" },
+  {
+    id: "player",
+    icon: Trophy,
+    label: "Jugador",
+    desc: "Quiero mejorar mi juego",
+  },
+  {
+    id: "coach",
+    icon: GraduationCap,
+    label: "Entrenador",
+    desc: "Planifico sesiones para otros",
+  },
   { id: "both", icon: Zap, label: "Ambos", desc: "Juego y entreno a otros" },
 ];
 
@@ -128,6 +138,8 @@ const QUICK_CITIES = [
 ];
 
 const TOTAL_STEPS = 4;
+const GENERIC_SIGNUP_ERROR =
+  "No hemos podido completar el registro. Si ya tenías cuenta, inicia sesión o recupera tu contraseña.";
 
 // ─── Password strength ─────────────────────────────────────────────────────
 
@@ -167,7 +179,6 @@ function RegisterPageContent() {
     Math.min(4, Math.max(1, Number(searchParams.get("step")) || 1))
   );
   const [serverError, setServerError] = useState<string | null>(null);
-  const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -207,7 +218,8 @@ function RegisterPageContent() {
 
   function canAdvance(): boolean {
     if (step === 2) return profile.city.trim().length > 0;
-    if (step === 3) return profile.role !== null && profile.playerLevel !== null;
+    if (step === 3)
+      return profile.role !== null && profile.playerLevel !== null;
     return true;
   }
 
@@ -225,7 +237,7 @@ function RegisterPageContent() {
   }
 
   async function handleAccountNext() {
-    setEmailExistsError(null);
+    setServerError(null);
     const valid = await new Promise<boolean>((resolve) => {
       handleSubmit(
         () => resolve(true),
@@ -246,10 +258,11 @@ function RegisterPageContent() {
     setServerError(null);
 
     const values = getValues();
+    const normalizedEmail = values.email.trim().toLowerCase();
     const supabase = createClient();
 
     const { data, error } = await supabase.auth.signUp({
-      email: values.email,
+      email: normalizedEmail,
       password: values.password,
       options: {
         data: { full_name: values.name },
@@ -264,16 +277,23 @@ function RegisterPageContent() {
         error.message.toLowerCase().includes("user already");
 
       if (isEmailTaken) {
-        setEmailExistsError(
-          `Ya existe una cuenta con ${values.email}. ¿Quieres iniciar sesión?`
-        );
+        setServerError(GENERIC_SIGNUP_ERROR);
         setStep(1);
         router.replace("/register?step=1");
         setLoading(false);
         return;
       }
 
-      setServerError(error.message);
+      setServerError(GENERIC_SIGNUP_ERROR);
+      setLoading(false);
+      return;
+    }
+
+    const existingEmailWasObfuscated =
+      data.user && data.user.identities && data.user.identities.length === 0;
+
+    if (existingEmailWasObfuscated) {
+      setEmailSent(normalizedEmail);
       setLoading(false);
       return;
     }
@@ -293,7 +313,7 @@ function RegisterPageContent() {
           body: JSON.stringify({
             id: data.user.id,
             name: values.name,
-            email: values.email,
+            email: normalizedEmail,
             city: profile.city || null,
             role: profile.role,
             playerLevel: profile.playerLevel,
@@ -319,7 +339,7 @@ function RegisterPageContent() {
     }
 
     if (data.session) router.push("/dashboard");
-    else setEmailSent(values.email);
+    else setEmailSent(normalizedEmail);
   }
 
   const levelOptions = profile.role === "coach" ? COACH_LEVELS : LEVELS;
@@ -496,28 +516,19 @@ function RegisterPageContent() {
                 placeholder="you@example.com"
                 autoComplete="email"
                 className="h-10"
-                aria-invalid={!!errors.email || !!emailExistsError}
+                aria-invalid={!!errors.email}
                 {...register("email", {
-                  onChange: () => setEmailExistsError(null),
+                  setValueAs: (value) =>
+                    typeof value === "string"
+                      ? value.trim().toLowerCase()
+                      : value,
+                  onChange: () => setServerError(null),
                 })}
               />
               {errors.email && (
                 <p className="text-xs text-destructive">
                   {errors.email.message}
                 </p>
-              )}
-              {emailExistsError && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 flex items-start gap-2">
-                  <p className="text-xs text-destructive leading-relaxed flex-1">
-                    {emailExistsError}
-                  </p>
-                  <Link
-                    href="/login"
-                    className="text-xs font-semibold text-destructive underline underline-offset-2 shrink-0"
-                  >
-                    Iniciar sesión
-                  </Link>
-                </div>
               )}
             </div>
 
@@ -633,6 +644,26 @@ function RegisterPageContent() {
               )}
             </div>
           </div>
+
+          {serverError && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+              <p className="text-sm text-destructive">{serverError}</p>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                <Link
+                  href="/login"
+                  className="font-semibold text-destructive underline underline-offset-2"
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/forgot-password"
+                  className="font-semibold text-destructive underline underline-offset-2"
+                >
+                  Recuperar contraseña
+                </Link>
+              </div>
+            </div>
+          )}
 
           <Button
             type="button"
@@ -919,8 +950,8 @@ function RegisterPageContent() {
               >
                 política de privacidad
               </a>
-              . Entiendo que, si introduzco datos de alumnos, soy responsable
-              de informarles y, si son menores de 14 años, de obtener el
+              . Entiendo que, si introduzco datos de alumnos, soy responsable de
+              informarles y, si son menores de 14 años, de obtener el
               consentimiento parental.
             </span>
           </label>
@@ -990,7 +1021,6 @@ function StepNav({
     </div>
   );
 }
-
 
 export default function RegisterPage() {
   return (

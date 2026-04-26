@@ -234,7 +234,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-[auto_1fr] gap-6 items-end">
+          <div className="grid grid-cols-[auto_1fr] items-end gap-4 sm:gap-6">
             <div className="size-20 rounded-full border border-foreground/25 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
               {student.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -250,7 +250,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
+              <h1 className="break-words font-heading text-4xl leading-[0.95] tracking-tight text-foreground md:text-5xl">
                 <em className="italic text-brand">{student.name}</em>
               </h1>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3 text-[12px] tabular-nums">
@@ -621,7 +621,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
           )}
         </section>
 
-        <footer className="pt-4 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45 border-t border-foreground/10">
+        <footer className="grid gap-3 border-t border-foreground/10 pt-4 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
           <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
             &ldquo;Entrenar es acompañar — cada ficha, una conversación.&rdquo;
           </p>

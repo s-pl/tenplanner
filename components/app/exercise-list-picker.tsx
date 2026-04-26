@@ -51,10 +51,12 @@ export function ExerciseListPicker({
         const res = await fetch(
           `/api/exercise-lists?exerciseId=${encodeURIComponent(exerciseId)}`
         );
-        const data = await res.json() as { data: ExerciseList[] };
+        const data = (await res.json()) as { data: ExerciseList[] };
         const all = Array.isArray(data.data) ? data.data : [];
         setLists(all);
-        setInLists(new Set(all.filter((l) => l.containsExercise).map((l) => l.id)));
+        setInLists(
+          new Set(all.filter((l) => l.containsExercise).map((l) => l.id))
+        );
       } finally {
         setLoading(false);
       }
@@ -120,7 +122,7 @@ export function ExerciseListPicker({
         body: JSON.stringify({ name }),
       });
       if (!res.ok) return;
-      const data = await res.json() as { data: ExerciseList };
+      const data = (await res.json()) as { data: ExerciseList };
       const created = data.data;
 
       await fetch(`/api/exercise-lists/${created.id}/items`, {
@@ -195,7 +197,8 @@ export function ExerciseListPicker({
           ) : lists.length === 0 && !showNew ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
               <p className="text-sm text-foreground/50 text-center">
-                Aún no tienes ninguna lista.<br />
+                Aún no tienes ninguna lista.
+                <br />
                 Crea una para guardar este ejercicio.
               </p>
               <button
@@ -239,7 +242,9 @@ export function ExerciseListPicker({
                       <div
                         className={cn(
                           "absolute inset-0 flex items-end justify-end p-2 transition-opacity duration-200",
-                          isIn ? "opacity-100" : "opacity-0 group-hover:opacity-40"
+                          isIn
+                            ? "opacity-100"
+                            : "opacity-40 sm:opacity-0 sm:group-hover:opacity-40"
                         )}
                       >
                         <div
@@ -284,8 +289,12 @@ export function ExerciseListPicker({
                   <Plus className="size-7" strokeWidth={1.5} />
                 </div>
                 <div className="px-3 py-2">
-                  <p className="font-heading text-[13px] text-foreground/50">Nueva lista</p>
-                  <p className="font-sans text-[10px] text-foreground/30 mt-0.5">Crear</p>
+                  <p className="font-heading text-[13px] text-foreground/50">
+                    Nueva lista
+                  </p>
+                  <p className="font-sans text-[10px] text-foreground/30 mt-0.5">
+                    Crear
+                  </p>
                 </div>
               </button>
             </div>
@@ -306,7 +315,10 @@ export function ExerciseListPicker({
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void createList();
-                  if (e.key === "Escape") { setShowNew(false); setNewName(""); }
+                  if (e.key === "Escape") {
+                    setShowNew(false);
+                    setNewName("");
+                  }
                 }}
                 placeholder="Ej: Técnica de volea"
                 maxLength={100}
@@ -317,7 +329,11 @@ export function ExerciseListPicker({
                 disabled={!newName.trim() || creating}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand text-background px-4 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors"
               >
-                {creating ? <Loader2 className="size-3.5 animate-spin" /> : "Crear"}
+                {creating ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  "Crear"
+                )}
               </button>
             </div>
           </div>

@@ -36,7 +36,12 @@ type Difficulty = "beginner" | "intermediate" | "advanced";
 type Location = "indoor" | "outdoor" | "any";
 type Phase = "activation" | "main" | "cooldown";
 type Formato = "individual" | "parejas" | "grupal" | "multigrupo";
-type TipoActividad = "tecnico_tactico" | "fisico" | "cognitivo" | "competitivo" | "ludico";
+type TipoActividad =
+  | "tecnico_tactico"
+  | "fisico"
+  | "cognitivo"
+  | "competitivo"
+  | "ludico";
 type TipoPelota = "normal" | "lenta" | "rapida" | "sin_pelota";
 
 export interface ExerciseData {
@@ -81,10 +86,30 @@ const CATEGORY_META: Record<
   Category,
   { label: string; color: string; bg: string; icon: React.ElementType }
 > = {
-  technique: { label: "Técnica", color: "text-blue-400", bg: "bg-blue-400/10", icon: Target },
-  tactics: { label: "Táctica", color: "text-purple-400", bg: "bg-purple-400/10", icon: Brain },
-  fitness: { label: "Fitness", color: "text-amber-400", bg: "bg-amber-400/10", icon: Dumbbell },
-  "warm-up": { label: "Calentamiento", color: "text-brand", bg: "bg-brand/10", icon: Flame },
+  technique: {
+    label: "Técnica",
+    color: "text-blue-400",
+    bg: "bg-blue-400/10",
+    icon: Target,
+  },
+  tactics: {
+    label: "Táctica",
+    color: "text-purple-400",
+    bg: "bg-purple-400/10",
+    icon: Brain,
+  },
+  fitness: {
+    label: "Fitness",
+    color: "text-amber-400",
+    bg: "bg-amber-400/10",
+    icon: Dumbbell,
+  },
+  "warm-up": {
+    label: "Calentamiento",
+    color: "text-brand",
+    bg: "bg-brand/10",
+    icon: Flame,
+  },
 };
 
 const DIFFICULTY_META: Record<Difficulty, { label: string; color: string }> = {
@@ -122,14 +147,25 @@ const TIPO_PELOTA_LABELS: Record<TipoPelota, string> = {
 };
 
 const GOLPE_LABELS: Record<string, string> = {
-  derecha: "Derecha", reves: "Revés", globo: "Globo", smash: "Smash",
-  bandeja: "Bandeja", volea_dcha: "Volea dcha.", volea_rev: "Volea rev.",
-  bajada_pared: "Bajada pared", vibora: "Víbora", saque: "Saque",
-  chiquita: "Chiquita", dejada: "Dejada",
+  derecha: "Derecha",
+  reves: "Revés",
+  globo: "Globo",
+  smash: "Smash",
+  bandeja: "Bandeja",
+  volea_dcha: "Volea dcha.",
+  volea_rev: "Volea rev.",
+  bajada_pared: "Bajada pared",
+  vibora: "Víbora",
+  saque: "Saque",
+  chiquita: "Chiquita",
+  dejada: "Dejada",
 };
 
 const EFECTO_LABELS: Record<string, string> = {
-  liftado: "Liftado", cortado: "Cortado", plano: "Plano", sin_efecto: "Sin efecto",
+  liftado: "Liftado",
+  cortado: "Cortado",
+  plano: "Plano",
+  sin_efecto: "Sin efecto",
 };
 
 export function ExerciseDetailClient({
@@ -205,7 +241,9 @@ export function ExerciseDetailClient({
   async function handleDelete() {
     setDeleting(true);
     setDeleteError(null);
-    const res = await fetch(`/api/exercises/${exercise.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/exercises/${exercise.id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       setDeleteError("No se pudo eliminar el ejercicio. Inténtalo de nuevo.");
       setDeleting(false);
@@ -229,7 +267,9 @@ export function ExerciseDetailClient({
             <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
               Editar ejercicio
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">Modifica los datos del ejercicio</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Modifica los datos del ejercicio
+            </p>
           </div>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
@@ -262,7 +302,10 @@ export function ExerciseDetailClient({
               intensity: exercise.intensity,
               isGlobal: exercise.isGlobal,
             }}
-            onSuccess={() => { setMode("view"); router.refresh(); }}
+            onSuccess={() => {
+              setMode("view");
+              router.refresh();
+            }}
             onCancel={() => setMode("view")}
           />
         </div>
@@ -279,9 +322,9 @@ export function ExerciseDetailClient({
     (exercise.efecto && exercise.efecto.length > 0);
 
   return (
-    <div className="px-4 md:px-8 py-8 space-y-6 max-w-5xl">
+    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/exercises"
@@ -294,26 +337,28 @@ export function ExerciseDetailClient({
           </p>
         </div>
         {canEdit ? (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <button
               onClick={() => setMode("edit")}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex-none"
             >
               <Pencil className="size-3.5" />
               <span className="hidden sm:inline">Editar</span>
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 sm:flex-none"
             >
               <Trash2 className="size-3.5" />
               <span className="hidden sm:inline">Eliminar</span>
             </button>
           </div>
         ) : userId && exercise.isGlobal && !isAdmin ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground border border-border/60 px-3 py-2 rounded-lg bg-muted/30 shrink-0">
+          <div className="flex w-full items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground sm:w-auto sm:shrink-0">
             <ShieldAlert className="size-3.5 shrink-0" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Solo administradores pueden modificar ejercicios globales</span>
+            <span className="hidden sm:inline">
+              Solo administradores pueden modificar ejercicios globales
+            </span>
             <span className="sm:hidden">Solo admins</span>
           </div>
         ) : null}
@@ -322,15 +367,25 @@ export function ExerciseDetailClient({
       {/* Main card */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         {/* Category stripe */}
-        <div className={`${cat.bg} px-6 py-5 border-b border-border/50`}>
+        <div
+          className={`${cat.bg} border-b border-border/50 px-4 py-5 sm:px-6`}
+        >
           <div className="flex items-center gap-3">
-            <div className={`size-11 rounded-xl ${cat.bg} border border-current/10 flex items-center justify-center shrink-0`}>
+            <div
+              className={`size-11 rounded-xl ${cat.bg} border border-current/10 flex items-center justify-center shrink-0`}
+            >
               <CategoryIcon className={`size-5 ${cat.color}`} />
             </div>
             <div>
-              <p className={`text-xs font-bold ${cat.color} uppercase tracking-widest`}>{cat.label}</p>
+              <p
+                className={`text-xs font-bold ${cat.color} uppercase tracking-widest`}
+              >
+                {cat.label}
+              </p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className={`text-xs font-medium ${diff.color}`}>{diff.label}</span>
+                <span className={`text-xs font-medium ${diff.color}`}>
+                  {diff.label}
+                </span>
                 <span className="text-muted-foreground/50 text-xs">·</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="size-3" />
@@ -339,13 +394,17 @@ export function ExerciseDetailClient({
                 {exercise.location && (
                   <>
                     <span className="text-muted-foreground/50 text-xs">·</span>
-                    <span className="text-xs text-muted-foreground">{LOCATION_LABELS[exercise.location]}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {LOCATION_LABELS[exercise.location]}
+                    </span>
                   </>
                 )}
                 {exercise.intensity && (
                   <>
                     <span className="text-muted-foreground/50 text-xs">·</span>
-                    <span className="text-xs text-muted-foreground">Intensidad {exercise.intensity}/5</span>
+                    <span className="text-xs text-muted-foreground">
+                      Intensidad {exercise.intensity}/5
+                    </span>
                   </>
                 )}
               </div>
@@ -356,12 +415,17 @@ export function ExerciseDetailClient({
         {/* Hero image */}
         {exercise.imageUrl && (
           <div className="aspect-video w-full overflow-hidden bg-muted relative">
-            <Image src={exercise.imageUrl} alt={exercise.name} fill className="object-cover" />
+            <Image
+              src={exercise.imageUrl}
+              alt={exercise.name}
+              fill
+              className="object-cover"
+            />
           </div>
         )}
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-4 sm:p-6">
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground leading-snug">
             {exercise.name}
           </h1>
@@ -384,7 +448,10 @@ export function ExerciseDetailClient({
                   href={`/sessions/new?exercises=${exercise.id}`}
                   className="inline-flex items-center gap-2 text-sm font-medium border border-border px-4 py-2 rounded-xl hover:bg-muted transition-colors text-foreground"
                 >
-                  <CalendarPlus className="size-4 text-brand" strokeWidth={1.6} />
+                  <CalendarPlus
+                    className="size-4 text-brand"
+                    strokeWidth={1.6}
+                  />
                   Añadir a sesión
                 </Link>
               </>
@@ -482,30 +549,44 @@ export function ExerciseDetailClient({
                   🎾 {TIPO_PELOTA_LABELS[exercise.tipoPelota]}
                 </span>
               )}
-              {exercise.golpes && exercise.golpes.map((g) => (
-                <span key={g} className="text-xs font-medium bg-blue-400/10 text-blue-400 px-2.5 py-1 rounded-lg">
-                  {GOLPE_LABELS[g] ?? g}
-                </span>
-              ))}
-              {exercise.efecto && exercise.efecto.map((e) => (
-                <span key={e} className="text-xs font-medium bg-purple-400/10 text-purple-400 px-2.5 py-1 rounded-lg">
-                  {EFECTO_LABELS[e] ?? e}
-                </span>
-              ))}
+              {exercise.golpes &&
+                exercise.golpes.map((g) => (
+                  <span
+                    key={g}
+                    className="text-xs font-medium bg-blue-400/10 text-blue-400 px-2.5 py-1 rounded-lg"
+                  >
+                    {GOLPE_LABELS[g] ?? g}
+                  </span>
+                ))}
+              {exercise.efecto &&
+                exercise.efecto.map((e) => (
+                  <span
+                    key={e}
+                    className="text-xs font-medium bg-purple-400/10 text-purple-400 px-2.5 py-1 rounded-lg"
+                  >
+                    {EFECTO_LABELS[e] ?? e}
+                  </span>
+                ))}
             </div>
           )}
 
           {exercise.objectives && (
             <div className="bg-brand/5 border border-brand/20 rounded-xl px-4 py-3">
-              <p className="text-xs font-bold text-brand uppercase tracking-widest mb-1">Objetivo</p>
+              <p className="text-xs font-bold text-brand uppercase tracking-widest mb-1">
+                Objetivo
+              </p>
               <p className="text-sm text-foreground">{exercise.objectives}</p>
             </div>
           )}
 
           {exercise.description && (
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Descripción</p>
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{exercise.description}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                Descripción
+              </p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {exercise.description}
+              </p>
             </div>
           )}
 
@@ -513,7 +594,9 @@ export function ExerciseDetailClient({
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <ListOrdered className="size-4 text-muted-foreground" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pasos de ejecución</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Pasos de ejecución
+                </p>
               </div>
               <div className="space-y-3">
                 {exercise.steps.map((step, idx) => (
@@ -522,9 +605,13 @@ export function ExerciseDetailClient({
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {step.title}
+                      </p>
                       {step.description && (
-                        <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{step.description}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                          {step.description}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -537,11 +624,16 @@ export function ExerciseDetailClient({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Package className="size-4 text-muted-foreground" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Materiales</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Materiales
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {exercise.materials.map((m) => (
-                  <span key={m} className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg">
+                  <span
+                    key={m}
+                    className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg"
+                  >
                     {m}
                   </span>
                 ))}
@@ -553,9 +645,13 @@ export function ExerciseDetailClient({
             <div className="bg-amber-400/5 border border-amber-400/20 rounded-xl px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
                 <Lightbulb className="size-3.5 text-amber-400" />
-                <p className="text-xs font-bold text-amber-400 uppercase tracking-widest">Tips del entrenador</p>
+                <p className="text-xs font-bold text-amber-400 uppercase tracking-widest">
+                  Tips del entrenador
+                </p>
               </div>
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{exercise.tips}</p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {exercise.tips}
+              </p>
             </div>
           )}
 
@@ -563,15 +659,21 @@ export function ExerciseDetailClient({
             <div className="bg-muted/50 border border-border rounded-xl px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
                 <Shuffle className="size-3.5 text-muted-foreground" />
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Variantes</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Variantes
+                </p>
               </div>
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{exercise.variantes}</p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {exercise.variantes}
+              </p>
             </div>
           )}
 
           {exercise.videoUrl && (
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Vídeo de referencia</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                Vídeo de referencia
+              </p>
               <a
                 href={exercise.videoUrl}
                 target="_blank"
@@ -588,16 +690,30 @@ export function ExerciseDetailClient({
           {/* Image gallery */}
           {exercise.imageUrls && exercise.imageUrls.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Galería</p>
-              <div className={cn(
-                "grid gap-2",
-                exercise.imageUrls.length === 1 ? "grid-cols-1" :
-                exercise.imageUrls.length === 2 ? "grid-cols-2" :
-                "grid-cols-2"
-              )}>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
+                Galería
+              </p>
+              <div
+                className={cn(
+                  "grid gap-2",
+                  exercise.imageUrls.length === 1
+                    ? "grid-cols-1"
+                    : exercise.imageUrls.length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-2"
+                )}
+              >
                 {exercise.imageUrls.map((url, idx) => (
-                  <div key={idx} className="aspect-video rounded-xl overflow-hidden bg-muted relative">
-                    <Image src={url} alt={`${exercise.name} ${idx + 1}`} fill className="object-cover" />
+                  <div
+                    key={idx}
+                    className="aspect-video rounded-xl overflow-hidden bg-muted relative"
+                  >
+                    <Image
+                      src={url}
+                      alt={`${exercise.name} ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
                 ))}
               </div>
@@ -619,10 +735,15 @@ export function ExerciseDetailClient({
                 <Trash2 className="size-5 text-destructive" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground">Eliminar ejercicio</h3>
+                <h3 className="font-semibold text-foreground">
+                  Eliminar ejercicio
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   ¿Seguro que quieres eliminar{" "}
-                  <span className="font-medium text-foreground">{exercise.name}</span>? Esta acción no se puede deshacer.
+                  <span className="font-medium text-foreground">
+                    {exercise.name}
+                  </span>
+                  ? Esta acción no se puede deshacer.
                 </p>
               </div>
               <button

@@ -229,24 +229,31 @@ function StudentsSection({
       </div>
       <div className="divide-y divide-border/50">
         {students.length === 0 ? (
-          <p className="px-6 py-4 text-xs text-muted-foreground">Sin alumnos asignados</p>
+          <p className="px-6 py-4 text-xs text-muted-foreground">
+            Sin alumnos asignados
+          </p>
         ) : (
           students.map((s) => {
             const attended = attendance[s.id];
             const isSaving = saving === s.id;
             return (
-              <div
-                key={s.id}
-                className="flex items-center gap-3 px-6 py-3"
-              >
+              <div key={s.id} className="flex items-center gap-3 px-6 py-3">
                 {s.imageUrl ? (
-                  <Image src={s.imageUrl} alt={s.name} width={32} height={32} className="size-8 rounded-full object-cover shrink-0" />
+                  <Image
+                    src={s.imageUrl}
+                    alt={s.name}
+                    width={32}
+                    height={32}
+                    className="size-8 rounded-full object-cover shrink-0"
+                  />
                 ) : (
                   <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
                     {getInitials(s.name)}
                   </span>
                 )}
-                <span className="flex-1 text-sm font-medium text-foreground truncate">{s.name}</span>
+                <span className="flex-1 text-sm font-medium text-foreground truncate">
+                  {s.name}
+                </span>
                 <button
                   onClick={() => toggleAttendance(s.id)}
                   disabled={isSaving}
@@ -263,11 +270,17 @@ function StudentsSection({
                   {isSaving ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : attended === true ? (
-                    <><CheckCircle2 className="size-3" /> Presente</>
+                    <>
+                      <CheckCircle2 className="size-3" /> Presente
+                    </>
                   ) : attended === false ? (
-                    <><XCircle className="size-3" /> Ausente</>
+                    <>
+                      <XCircle className="size-3" /> Ausente
+                    </>
                   ) : (
-                    <><Circle className="size-3" /> Sin marcar</>
+                    <>
+                      <Circle className="size-3" /> Sin marcar
+                    </>
                   )}
                 </button>
               </div>
@@ -417,7 +430,6 @@ export function SessionDetailClient({
   availableExercises,
   analytics,
   students,
-  favoritedExerciseIds,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -432,8 +444,10 @@ export function SessionDetailClient({
   const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [exerciseRatings, setExerciseRatings] = useState<Record<string, number>>(
-    () => Object.fromEntries(
+  const [exerciseRatings, setExerciseRatings] = useState<
+    Record<string, number>
+  >(() =>
+    Object.fromEntries(
       sessionExercises
         .filter((e) => e.coachRating != null)
         .map((e) => [e.exerciseId, e.coachRating!])
@@ -462,7 +476,9 @@ export function SessionDetailClient({
     }
   }
 
-  async function handleStatusChange(newStatus: "completed" | "cancelled" | "scheduled") {
+  async function handleStatusChange(
+    newStatus: "completed" | "cancelled" | "scheduled"
+  ) {
     setUpdatingStatus(true);
     const res = await fetch(`/api/sessions/${session.id}/status`, {
       method: "PATCH",
@@ -488,8 +504,6 @@ export function SessionDetailClient({
     }
     setSavingRating(null);
   }
-
-  const isPast = new Date(session.scheduledAt) < new Date();
 
   async function handleDelete() {
     setDeleting(true);
@@ -519,7 +533,7 @@ export function SessionDetailClient({
           templateDescription: templateDescription.trim() || null,
         }),
       });
-      const json = await res.json() as { data?: { templateId: string } };
+      const json = (await res.json()) as { data?: { templateId: string } };
       if (res.ok && json.data?.templateId) {
         router.push(`/sessions/templates/${json.data.templateId}`);
       }
@@ -574,9 +588,9 @@ export function SessionDetailClient({
   }
 
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6">
+    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/sessions"
@@ -588,7 +602,7 @@ export function SessionDetailClient({
             Sesiones de Entrenamiento
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
           {/* Execute session — only for upcoming/scheduled */}
           {status === "scheduled" && (
             <Link
@@ -646,7 +660,7 @@ export function SessionDetailClient({
       {/* Session card */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         {/* Header stripe */}
-        <div className="px-6 py-5 border-b border-border/50 bg-muted/20">
+        <div className="border-b border-border/50 bg-muted/20 px-4 py-5 sm:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
@@ -662,12 +676,18 @@ export function SessionDetailClient({
                 <span
                   className={cn(
                     "text-xs font-bold uppercase tracking-widest",
-                    status === "completed" ? "text-brand" :
-                    status === "cancelled" ? "text-destructive" :
-                    "text-muted-foreground"
+                    status === "completed"
+                      ? "text-brand"
+                      : status === "cancelled"
+                        ? "text-destructive"
+                        : "text-muted-foreground"
                   )}
                 >
-                  {status === "completed" ? "Completada" : status === "cancelled" ? "Cancelada" : "Programada"}
+                  {status === "completed"
+                    ? "Completada"
+                    : status === "cancelled"
+                      ? "Cancelada"
+                      : "Programada"}
                 </span>
                 <div className="flex items-center gap-3 mt-0.5">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -683,13 +703,17 @@ export function SessionDetailClient({
 
         {/* Status actions */}
         {status !== "completed" && status !== "cancelled" && (
-          <div className="px-6 py-3 border-b border-border/50 flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 border-b border-border/50 px-4 py-3 sm:px-6">
             <button
               onClick={() => handleStatusChange("completed")}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors disabled:opacity-50"
             >
-              {updatingStatus ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+              {updatingStatus ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-3" />
+              )}
               Marcar completada
             </button>
             <button
@@ -703,25 +727,29 @@ export function SessionDetailClient({
           </div>
         )}
         {status === "cancelled" && (
-          <div className="px-6 py-3 border-b border-border/50">
+          <div className="border-b border-border/50 px-4 py-3 sm:px-6">
             <button
               onClick={() => handleStatusChange("scheduled")}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
             >
-              {updatingStatus ? <Loader2 className="size-3 animate-spin" /> : <Circle className="size-3" />}
+              {updatingStatus ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Circle className="size-3" />
+              )}
               Reprogramar
             </button>
           </div>
         )}
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 p-4 sm:p-6">
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground leading-snug">
             {session.title}
           </h1>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="size-3.5" />
               {session.durationMinutes} min
@@ -776,7 +804,8 @@ export function SessionDetailClient({
                 Material necesario
               </h2>
               <span className="ml-auto text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {allMaterials.length} elemento{allMaterials.length !== 1 ? "s" : ""}
+                {allMaterials.length} elemento
+                {allMaterials.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="px-6 py-4 flex flex-wrap gap-2">
@@ -798,9 +827,13 @@ export function SessionDetailClient({
       {sessionExercises.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
-            <h2 className="font-semibold text-sm text-foreground">Ejercicios</h2>
+            <h2 className="font-semibold text-sm text-foreground">
+              Ejercicios
+            </h2>
             {status === "completed" && (
-              <p className="text-[10px] text-muted-foreground">Valoración post-sesión</p>
+              <p className="text-[10px] text-muted-foreground">
+                Valoración post-sesión
+              </p>
             )}
           </div>
           <div className="divide-y divide-border/60">
@@ -825,12 +858,18 @@ export function SessionDetailClient({
                         <span
                           className={cn(
                             "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                            CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
+                            CATEGORY_COLORS[ex.category] ??
+                              "text-muted-foreground bg-muted"
                           )}
                         >
                           {CATEGORY_LABELS[ex.category] ?? ex.category}
                         </span>
-                        <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium",
+                            diff?.color ?? "text-muted-foreground"
+                          )}
+                        >
                           {diff?.label ?? ex.difficulty}
                         </span>
                       </div>
@@ -858,11 +897,16 @@ export function SessionDetailClient({
                         <Clock className="size-3" />
                         {ex.durationMinutes} min
                       </span>
-                      <div className="flex items-center gap-0.5" title="Valorar ejercicio">
+                      <div
+                        className="flex items-center gap-0.5"
+                        title="Valorar ejercicio"
+                      >
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
-                            onClick={() => handleRateExercise(ex.exerciseId, star)}
+                            onClick={() =>
+                              handleRateExercise(ex.exerciseId, star)
+                            }
                             disabled={isSaving}
                             aria-label={`Valorar con ${star} estrellas`}
                             className={cn(
@@ -962,7 +1006,8 @@ export function SessionDetailClient({
                 Compartir en el mercado
               </h2>
               <p className="mt-1 text-[13px] text-foreground/50 leading-relaxed">
-                Se crea una copia pública. Tu información personal no se publica.
+                Se crea una copia pública. Tu información personal no se
+                publica.
               </p>
             </div>
 
@@ -985,7 +1030,9 @@ export function SessionDetailClient({
               <div className="space-y-1.5">
                 <label className="block text-[12px] font-semibold text-foreground/70 uppercase tracking-[0.1em]">
                   Descripción{" "}
-                  <span className="font-normal normal-case tracking-normal text-foreground/40">(opcional)</span>
+                  <span className="font-normal normal-case tracking-normal text-foreground/40">
+                    (opcional)
+                  </span>
                 </label>
                 <textarea
                   value={templateDescription}
@@ -1012,8 +1059,21 @@ export function SessionDetailClient({
                     { label: "Ubicación del entreno", included: false },
                     { label: "Asistencia y notas privadas", included: false },
                   ].map(({ label, included }) => (
-                    <span key={label} className={cn("flex items-center gap-1.5", included ? "text-foreground/70" : "text-foreground/35 line-through")}>
-                      <span className={cn("size-1.5 rounded-full shrink-0", included ? "bg-brand" : "bg-foreground/20")} />
+                    <span
+                      key={label}
+                      className={cn(
+                        "flex items-center gap-1.5",
+                        included
+                          ? "text-foreground/70"
+                          : "text-foreground/35 line-through"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full shrink-0",
+                          included ? "bg-brand" : "bg-foreground/20"
+                        )}
+                      />
                       {label}
                     </span>
                   ))}
@@ -1029,8 +1089,12 @@ export function SessionDetailClient({
                   className="mt-0.5 accent-[var(--brand)]"
                 />
                 <div>
-                  <p className="text-[13px] font-medium text-foreground">Vaciar notas de ejercicios</p>
-                  <p className="text-[12px] text-foreground/50">Elimina anotaciones personales de cada ejercicio.</p>
+                  <p className="text-[13px] font-medium text-foreground">
+                    Vaciar notas de ejercicios
+                  </p>
+                  <p className="text-[12px] text-foreground/50">
+                    Elimina anotaciones personales de cada ejercicio.
+                  </p>
                 </div>
               </label>
             </div>
@@ -1047,7 +1111,11 @@ export function SessionDetailClient({
                 disabled={publishing || !templateTitle.trim()}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-60 transition-colors"
               >
-                {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                {publishing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
                 Publicar plantilla
               </button>
             </div>
