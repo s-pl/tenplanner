@@ -5,7 +5,6 @@ import { eq } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { ExerciseForm } from "@/components/app/exercise-form";
 
 interface PageProps {
@@ -48,8 +47,6 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
           </p>
         </div>
       </div>
-
-      <ExerciseDraftsPanel />
 
       <div className="bg-card border border-border rounded-2xl p-6">
         <ExerciseForm

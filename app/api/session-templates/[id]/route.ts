@@ -1,8 +1,27 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exercises, sessionTemplateExercises, sessionTemplates, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
+
+const updateTemplateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(255).optional(),
+    description: z.string().trim().max(2000).optional().nullable(),
+    objective: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(600).optional(),
+    intensity: z.number().int().min(1).max(5).optional().nullable(),
+    tags: z
+      .array(z.string().trim().min(1).max(30))
+      .max(10)
+      .optional()
+      .nullable(),
+    location: z.string().trim().max(50).optional().nullable(),
+  })
+  .refine((payload) => Object.keys(payload).length > 0, {
+    message: "At least one field is required",
+  });
 
 export async function GET(
   _request: Request,
@@ -107,16 +126,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const parsed = updateTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  }
+
   const { title, description, objective, durationMinutes, intensity, tags, location } =
-    body as Partial<{
-      title: string;
-      description: string;
-      objective: string;
-      durationMinutes: number;
-      intensity: number;
-      tags: string[];
-      location: string;
-    }>;
+    parsed.data;
 
   const [updated] = await db
     .update(sessionTemplates)

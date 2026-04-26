@@ -52,6 +52,7 @@ export default async function SessionPage({ params }: PageProps) {
           exercisePhase: exercises.phase,
           exerciseIntensity: exercises.intensity,
           coachRating: sessionExercises.coachRating,
+          materials: exercises.materials,
         })
         .from(sessionExercises)
         .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -101,6 +102,7 @@ export default async function SessionPage({ params }: PageProps) {
     durationMinutes: e.durationMinutes ?? e.defaultDurationMinutes,
     notes: e.notes,
     coachRating: e.coachRating,
+    materials: Array.isArray(e.materials) ? e.materials : [],
   }));
 
   const analyticsInput: AnalyticsExerciseInput[] = exerciseRows.map((e) => ({

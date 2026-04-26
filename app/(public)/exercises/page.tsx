@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import {
   exercises as exercisesTable,
+  exerciseDrafts,
   exerciseListItems,
   exerciseLists,
 } from "@/db/schema";
@@ -22,6 +23,7 @@ import {
 import { FavoriteToggle } from "@/components/app/favorite-toggle";
 import { ExerciseFilters } from "@/components/app/exercise-filters";
 import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
+import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import {
   Plus,
   ArrowRight,
@@ -76,7 +78,7 @@ const CATEGORIES = [
   "warm-up",
 ] as const;
 const DIFFICULTIES = ["all", "beginner", "intermediate", "advanced"] as const;
-const TABS = ["all", "global", "mine", "favorites"] as const;
+const TABS = ["all", "global", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -84,6 +86,7 @@ const TAB_LABELS: Record<Tab, string> = {
   global: "Globales",
   mine: "Propios",
   favorites: "Favoritos",
+  drafts: "Borradores",
 };
 
 const PAGE_SIZE = 30;
@@ -145,9 +148,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       : "all"
   ) as "all" | Difficulty;
 
-  // Tabs `mine` and `favorites` require auth — fall back to "all" if unauthenticated
+  // Tabs `mine`, `favorites`, `drafts` require auth — fall back to "all" if unauthenticated
   const requestedTab = TABS.includes(params.tab as Tab) ? (params.tab as Tab) : "all";
-  const activeTab: Tab = !user && (requestedTab === "mine" || requestedTab === "favorites")
+  const activeTab: Tab = !user && (requestedTab === "mine" || requestedTab === "favorites" || requestedTab === "drafts")
     ? "all"
     : requestedTab;
 
@@ -301,6 +304,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const listWhere = and(...listConditions);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
+  const draftCountRows = user
+    ? await db.select({ total: count() }).from(exerciseDrafts).where(eq(exerciseDrafts.userId, user.id))
+    : [{ total: 0 }];
+  const draftCount = Number(draftCountRows[0]?.total ?? 0);
+
   const [rowPage, allRows, globalRows, mineRows, categoryRows] =
     await Promise.all([
       db
@@ -386,6 +394,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     global: Number(globalRows[0]?.total ?? 0),
     mine: Number(mineRows[0]?.total ?? 0),
     favorites: favIdArray.length,
+    drafts: draftCount,
   };
   const masthead = {
     eyebrow: "Método · Catálogo",
@@ -510,6 +519,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             {/* ─── Tabs (propiedad) ─── */}
             <nav className="flex items-end gap-8 border-b border-foreground/15">
               {TABS.map((t) => {
+                // Hide drafts tab for unauthenticated users
+                if (t === "drafts" && !user) return null;
+
                 const isActive = activeTab === t;
                 const requiresAuth = !user && (t === "mine" || t === "favorites");
 
@@ -558,7 +570,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
               })}
             </nav>
 
-            {activeTab === "favorites" && user ? (
+            {activeTab === "drafts" && user ? (
+              <ExerciseDraftsPanel showEmptyState />
+            ) : activeTab === "favorites" && user ? (
               <ExerciseListsSection />
             ) : (<>
 

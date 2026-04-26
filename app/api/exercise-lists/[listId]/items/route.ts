@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exerciseLists, exerciseListItems } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getAccessibleExerciseDurationMap } from "@/lib/exercise-access";
 import { z } from "zod";
 
 type Context = { params: Promise<{ listId: string }> };
@@ -32,6 +33,13 @@ export async function POST(request: Request, context: Context) {
 
   const parsed = z.object({ exerciseId: z.string().uuid() }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+
+  const { inaccessibleIds } = await getAccessibleExerciseDurationMap(user.id, [
+    parsed.data.exerciseId,
+  ]);
+  if (inaccessibleIds.length > 0) {
+    return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+  }
 
   await db
     .insert(exerciseListItems)

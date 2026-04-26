@@ -91,6 +91,16 @@ export async function POST(
     .where(eq(sessionExercises.sessionId, sessionId))
     .orderBy(asc(sessionExercises.orderIndex));
 
+  const inaccessibleRows = sessionExerciseRows.filter(
+    (se) => se.createdBy !== null && se.createdBy !== user.id && !se.isGlobal
+  );
+  if (inaccessibleRows.length > 0) {
+    return NextResponse.json(
+      { error: "La sesión contiene ejercicios privados no accesibles." },
+      { status: 400 }
+    );
+  }
+
   if (sessionExerciseRows.length > 0) {
     await db.insert(sessionTemplateExercises).values(
       sessionExerciseRows.map((se) => ({

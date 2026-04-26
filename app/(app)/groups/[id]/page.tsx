@@ -4,21 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
-import { ArrowLeft, Users, UserPlus } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { GroupDetailClient } from "./group-detail-client";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-function initialsFromName(name: string) {
-  return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-}
-
 export default async function GroupDetailPage({ params }: PageProps) {
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { id } = await params;
@@ -45,7 +40,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
   const memberIds = memberRows.map((m) => m.id);
 
-  // Students that can be added
   const availableStudents = await db
     .select({ id: students.id, name: students.name, imageUrl: students.imageUrl, playerLevel: students.playerLevel })
     .from(students)
@@ -57,28 +51,35 @@ export default async function GroupDetailPage({ params }: PageProps) {
     .orderBy(students.name);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-8">
+    <div className="min-h-screen px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14">
       {/* Header */}
-      <header className="space-y-4">
-        <div className="flex items-center gap-3">
+      <header className="mb-10">
+        <div className="flex items-center gap-3 mb-6">
           <Link
             href="/groups"
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted hover:border-foreground/20 transition-colors text-muted-foreground"
           >
             <ArrowLeft className="size-4" />
           </Link>
           <p className="text-xs text-muted-foreground">Grupos</p>
         </div>
+
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-3xl md:text-4xl tracking-tight text-foreground">
-              {group.name}
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="size-10 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center shrink-0">
+                <Users className="size-5 text-brand" />
+              </div>
+              <h1 className="font-heading text-3xl md:text-4xl tracking-tight text-foreground">
+                {group.name}
+              </h1>
+            </div>
             {group.description && (
-              <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground ml-[52px]">{group.description}</p>
             )}
-            <p className="mt-2 text-xs text-muted-foreground tabular-nums">
-              {memberRows.length} {memberRows.length === 1 ? "alumno" : "alumnos"}
+            <p className="mt-1 text-xs text-muted-foreground ml-[52px] tabular-nums">
+              <span className="font-bold text-foreground">{memberRows.length}</span>{" "}
+              {memberRows.length === 1 ? "alumno" : "alumnos"}
             </p>
           </div>
         </div>

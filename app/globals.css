@@ -139,6 +139,13 @@
   }
 }
 
+/* ── View Transitions: theme switch ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 @layer utilities {
   .court-grid {
     background-image:

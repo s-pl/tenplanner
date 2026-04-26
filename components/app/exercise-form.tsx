@@ -281,12 +281,12 @@ function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 pb-4 border-b border-border/60 mb-5">
-      <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-        <Icon className="size-4 text-muted-foreground" />
+    <div className="flex items-center gap-3 pb-4 border-b border-border/50 mb-6">
+      <div className="size-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
+        <Icon className="size-4 text-brand" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-sm font-bold text-foreground uppercase tracking-wide">{title}</p>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         )}
@@ -345,21 +345,42 @@ function AccordionSection({
   onToggle: (next: boolean) => void;
   children: ReactNode;
 }) {
+  const fillPct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  const isComplete = filled === total;
+
   return (
     <details
       open={open}
       onToggle={(event) => onToggle(event.currentTarget.open)}
-      className="rounded-2xl border border-border bg-card"
+      className={cn(
+        "rounded-2xl border bg-card overflow-hidden transition-colors",
+        open ? "border-brand/30" : "border-border"
+      )}
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:content-none">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-              {filled} de {total} rellenos
-            </span>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-bold text-foreground">{title}</p>
+            {isComplete ? (
+              <span className="rounded-full bg-brand/10 border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand uppercase tracking-wide">
+                Completo
+              </span>
+            ) : (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                {filled}/{total}
+              </span>
+            )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <div className="mt-2 h-0.5 rounded-full bg-border overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                isComplete ? "bg-brand" : "bg-brand/50"
+              )}
+              style={{ width: `${fillPct}%` }}
+            />
+          </div>
         </div>
         <div
           className={cn(
@@ -370,7 +391,7 @@ function AccordionSection({
           <ChevronDown className="size-4" />
         </div>
       </summary>
-      <div className="border-t border-border px-4 py-5">{children}</div>
+      <div className="border-t border-border/50 px-4 py-5">{children}</div>
     </details>
   );
 }
@@ -969,6 +990,63 @@ export function ExerciseForm({
               {errors.durationMinutes.message}
             </p>
           ) : null}
+        </div>
+
+        {/* Materials — always visible regardless of mode */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Material necesario{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </label>
+          <div
+            className={cn(
+              "min-h-[42px] flex flex-wrap gap-2 items-center px-3 py-2 bg-background border border-border rounded-xl transition-colors focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand/50"
+            )}
+          >
+            {materials.map((m) => (
+              <span
+                key={m}
+                className="inline-flex items-center gap-1 bg-brand/10 text-brand text-xs font-semibold px-2.5 py-1 rounded-lg"
+              >
+                {m}
+                <button
+                  type="button"
+                  onClick={() => removeMaterial(m)}
+                  className="hover:text-brand/60 transition-colors ml-0.5"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              ref={materialInputRef}
+              type="text"
+              value={materialInput}
+              onChange={(e) => setMaterialInput(e.target.value)}
+              onKeyDown={handleMaterialKey}
+              onBlur={() => {
+                if (materialInput.trim()) addMaterial(materialInput);
+              }}
+              placeholder={
+                materials.length === 0
+                  ? "Escribe y pulsa Enter para añadir…"
+                  : ""
+              }
+              className="flex-1 min-w-[140px] h-7 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {PRESET_MATERIALS.filter((m) => !materials.includes(m)).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => addMaterial(m)}
+                className="text-xs text-muted-foreground border border-border/60 px-2 py-1 rounded-lg hover:bg-brand/10 hover:text-brand hover:border-brand/30 transition-colors"
+              >
+                + {m}
+              </button>
+            ))}
+          </div>
         </div>
 
         {formMode === "full" ? (
@@ -1771,42 +1849,41 @@ export function ExerciseForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-foreground">
-              {mode === "create"
-                ? "Elige el nivel de detalle"
-                : "Editar sin volver al scroll infinito"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {formMode === "quick"
-                ? "Modo rápido: solo nombre, categoría, dificultad y duración."
-                : "Modo completo: el resto se agrupa en bloques plegables para completar lo avanzado cuando haga falta."}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {enableDrafts && mode === "create" && (
-              <DraftStatusPill status={saveStatus} savedAt={savedAt} />
-            )}
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-1">
-              <Button
-                type="button"
-                size="sm"
-                variant={formMode === "quick" ? "default" : "ghost"}
-                onClick={() => updateFormMode("quick")}
-              >
-                Rápido
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={formMode === "full" ? "default" : "ghost"}
-                onClick={() => updateFormMode("full")}
-              >
-                Completo
-              </Button>
-            </div>
+      {/* Mode selector */}
+      <div className="flex items-center justify-between gap-4 py-1">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
+            Modo de creación
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formMode === "quick"
+              ? "Solo lo esencial: nombre, categoría, dificultad y duración."
+              : "Vista completa con todos los campos avanzados agrupados."}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {enableDrafts && mode === "create" && (
+            <DraftStatusPill status={saveStatus} savedAt={savedAt} />
+          )}
+          <div className="flex items-center rounded-xl border border-border bg-muted/30 p-1 gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={formMode === "quick" ? "default" : "ghost"}
+              onClick={() => updateFormMode("quick")}
+              className="rounded-lg text-xs font-bold h-8 px-3"
+            >
+              Rápido
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={formMode === "full" ? "default" : "ghost"}
+              onClick={() => updateFormMode("full")}
+              className="rounded-lg text-xs font-bold h-8 px-3"
+            >
+              Completo
+            </Button>
           </div>
         </div>
       </div>
@@ -1869,16 +1946,16 @@ export function ExerciseForm({
       )}
 
       {serverError ? (
-        <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
-          <p className="text-sm text-destructive">{serverError}</p>
+        <div className="rounded-xl bg-destructive/8 border border-destructive/20 px-4 py-3">
+          <p className="text-sm font-medium text-destructive">{serverError}</p>
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3 pt-2 border-t border-border/60">
+      <div className="flex items-center gap-3 pt-4 border-t border-border/50">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-60"
+          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-bold px-6 py-2.5 rounded-xl shadow-sm hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-55"
         >
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
           {mode === "create" ? "Crear ejercicio" : "Guardar cambios"}

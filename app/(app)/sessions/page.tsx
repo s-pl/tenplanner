@@ -3,13 +3,13 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable, sessionExercises } from "@/db/schema";
+import { sessions as sessionsTable, sessionExercises, sessionDrafts } from "@/db/schema";
 import { and, asc, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Plus, ArrowRight, ArrowLeft, ArrowUpRight, Bot, Search } from "lucide-react";
 import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
-type Filter = "upcoming" | "past" | "all";
+type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
 interface PageProps {
@@ -63,7 +63,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   const { filter, page, q } = await searchParams;
   const activeFilter: Filter =
-    filter === "past" || filter === "upcoming" || filter === "all"
+    filter === "past" || filter === "upcoming" || filter === "all" || filter === "drafts"
       ? filter
       : "all";
   const searchTerm = q?.trim() ?? "";
@@ -120,6 +120,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const totalFiltered = Number(filteredCountRows[0]?.total ?? 0);
   const upcomingCount = Number(upcomingCountRows[0]?.total ?? 0);
   const pastCount = Number(pastCountRows[0]?.total ?? 0);
+
+  const [draftCountRows] = await db
+    .select({ total: count() })
+    .from(sessionDrafts)
+    .where(eq(sessionDrafts.userId, user.id));
+  const draftCount = Number(draftCountRows?.total ?? 0);
   const totalPages =
     totalFiltered > 0 ? Math.ceil(totalFiltered / PAGE_SIZE) : 0;
   const safePage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
@@ -177,6 +183,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     { key: "all", label: "Todas", n: totalSessions },
     { key: "upcoming", label: "Próximas", n: upcomingCount },
     { key: "past", label: "Pasadas", n: pastCount },
+    { key: "drafts", label: "Borradores", n: draftCount },
   ];
   const masthead = {
     eyebrow: "Planificación · Agenda",
@@ -239,9 +246,6 @@ export default async function SessionsPage({ searchParams }: PageProps) {
         </header>
 
         <>
-            {/* ─── Drafts panel (client component, renders only if there are drafts) ─── */}
-            <SessionDraftsPanel />
-
             {/* ─── Filter rail ─── */}
             <nav className="flex items-end gap-8 border-b border-foreground/15">
               {FILTERS.map(({ key, label, n }) => {
@@ -270,6 +274,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 );
               })}
             </nav>
+
+            {activeFilter === "drafts" ? (
+              <SessionDraftsPanel showEmptyState />
+            ) : <>
 
             <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
@@ -503,6 +511,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             )}
           </footer>
             )}
+            </>}
         </>
       </div>
       <MobileFabSpeedDial

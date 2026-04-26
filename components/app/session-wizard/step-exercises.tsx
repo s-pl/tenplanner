@@ -384,13 +384,13 @@ export function StepExercises({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 min-h-[440px]">
         {/* LEFT: timeline */}
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-            <CalendarDays className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+            <CalendarDays className="size-4 text-brand" />
+            <span className="text-sm font-bold text-foreground uppercase tracking-wide">
               Plan de entrenamiento
             </span>
             {totalDuration > 0 && (
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
+              <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
                 <Clock className="size-3" />
                 {formatMinutes(totalDuration)}
               </span>
@@ -700,7 +700,7 @@ export function StepExercises({
 
         {/* RIGHT: sources */}
         <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
             <div className="inline-flex rounded-full border border-border bg-background p-1">
               <button
                 type="button"
@@ -729,11 +729,21 @@ export function StepExercises({
                 Listas
               </button>
             </div>
-            {sourceTab === "library" && filteredAvailable.length > 0 ? (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {filteredAvailable.length} disponibles
-              </span>
-            ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              {sourceTab === "library" && filteredAvailable.length > 0 ? (
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {filteredAvailable.length} disponibles
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowQuickCreate(true)}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 hover:bg-brand/20 px-2 py-1 rounded-lg transition-colors"
+              >
+                <Plus className="size-3" />
+                Nuevo
+              </button>
+            </div>
           </div>
 
           {sourceTab === "lists" ? (

@@ -29,7 +29,7 @@ import {
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
-import { Target, Flame, MapPin, Hash } from "lucide-react";
+import { Target, Flame, MapPin, Hash, Package } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -83,6 +83,7 @@ export interface SessionExerciseData {
   durationMinutes: number;
   notes: string | null;
   coachRating: number | null;
+  materials: string[];
 }
 
 function formatDate(isoString: string) {
@@ -761,6 +762,38 @@ export function SessionDetailClient({
         />
       )}
 
+      {/* Materials summary */}
+      {(() => {
+        const allMaterials = Array.from(
+          new Set(sessionExercises.flatMap((e) => e.materials ?? []))
+        );
+        if (allMaterials.length === 0) return null;
+        return (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center gap-2">
+              <Package className="size-4 text-brand" />
+              <h2 className="font-semibold text-sm text-foreground">
+                Material necesario
+              </h2>
+              <span className="ml-auto text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {allMaterials.length} elemento{allMaterials.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="px-6 py-4 flex flex-wrap gap-2">
+              {allMaterials.map((m) => (
+                <span
+                  key={m}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold bg-brand/10 text-brand border border-brand/15 px-3 py-1.5 rounded-full"
+                >
+                  <Package className="size-3 opacity-70" />
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Exercises list */}
       {sessionExercises.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -776,53 +809,73 @@ export function SessionDetailClient({
               const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
               const isSaving = savingRating === ex.exerciseId;
               return (
-                <div key={ex.exerciseId} className="flex items-center gap-4 px-6 py-4">
-                  <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/exercises/${ex.exerciseId}`}
-                      className="text-sm font-medium text-foreground hover:text-brand transition-colors"
-                    >
-                      {ex.name}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span
-                        className={cn(
-                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                          CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
-                        )}
-                      >
-                        {CATEGORY_LABELS[ex.category] ?? ex.category}
-                      </span>
-                      <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
-                        {diff?.label ?? ex.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
-                      <Clock className="size-3" />
-                      {ex.durationMinutes} min
+                <div key={ex.exerciseId} className="px-6 py-4">
+                  <div className="flex items-start gap-4">
+                    <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right mt-0.5">
+                      {idx + 1}
                     </span>
-                    <div className="flex items-center gap-0.5" title="Valorar ejercicio">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onClick={() => handleRateExercise(ex.exerciseId, star)}
-                          disabled={isSaving}
-                          aria-label={`Valorar con ${star} estrellas`}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/exercises/${ex.exerciseId}`}
+                        className="text-sm font-medium text-foreground hover:text-brand transition-colors"
+                      >
+                        {ex.name}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span
                           className={cn(
-                            "p-0.5 transition-colors disabled:opacity-50 touch-manipulation",
-                            star <= currentRating
-                              ? "text-amber-400"
-                              : "text-muted-foreground/25 hover:text-amber-400/60"
+                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                            CATEGORY_COLORS[ex.category] ?? "text-muted-foreground bg-muted"
                           )}
                         >
-                          <Star className="size-4 fill-current" />
-                        </button>
-                      ))}
+                          {CATEGORY_LABELS[ex.category] ?? ex.category}
+                        </span>
+                        <span className={cn("text-[10px] font-medium", diff?.color ?? "text-muted-foreground")}>
+                          {diff?.label ?? ex.difficulty}
+                        </span>
+                      </div>
+                      {ex.materials && ex.materials.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {ex.materials.map((m) => (
+                            <span
+                              key={m}
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-full"
+                            >
+                              <Package className="size-2.5 opacity-60" />
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {ex.notes && (
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed italic">
+                          {ex.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                        <Clock className="size-3" />
+                        {ex.durationMinutes} min
+                      </span>
+                      <div className="flex items-center gap-0.5" title="Valorar ejercicio">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onClick={() => handleRateExercise(ex.exerciseId, star)}
+                            disabled={isSaving}
+                            aria-label={`Valorar con ${star} estrellas`}
+                            className={cn(
+                              "p-0.5 transition-colors disabled:opacity-50 touch-manipulation",
+                              star <= currentRating
+                                ? "text-amber-400"
+                                : "text-muted-foreground/25 hover:text-amber-400/60"
+                            )}
+                          >
+                            <Star className="size-4 fill-current" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

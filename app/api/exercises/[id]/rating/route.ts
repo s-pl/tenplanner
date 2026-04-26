@@ -1,8 +1,9 @@
 import { and, avg, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exerciseRatings, exercises } from "@/db/schema";
+import { exerciseRatings } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getAccessibleExerciseDurationMap } from "@/lib/exercise-access";
 import { z } from "zod";
 
 type Context = { params: Promise<{ id: string }> };
@@ -22,8 +23,11 @@ export async function POST(request: Request, context: Context) {
   const parsed = z.object({ rating: z.number().int().min(1).max(5) }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Rating must be 1-5" }, { status: 400 });
 
-  const [exercise] = await db.select({ id: exercises.id }).from(exercises).where(eq(exercises.id, id)).limit(1);
-  if (!exercise) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { inaccessibleIds } = await getAccessibleExerciseDurationMap(user.id, [
+    id,
+  ]);
+  if (inaccessibleIds.length > 0)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await db.insert(exerciseRatings).values({
     userId: user.id,

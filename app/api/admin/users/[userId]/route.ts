@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -28,6 +28,33 @@ export async function PATCH(request: Request, context: Context) {
 
   const parsed = z.object({ isAdmin: z.boolean() }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+
+  if (userId === admin.id && parsed.data.isAdmin === false) {
+    return NextResponse.json(
+      { error: "No puedes revocar tu propio rol admin" },
+      { status: 400 }
+    );
+  }
+
+  if (parsed.data.isAdmin === false) {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(users)
+      .where(and(eq(users.isAdmin, true), eq(users.id, userId)));
+
+    if (Number(total) > 0) {
+      const [{ total: adminTotal }] = await db
+        .select({ total: count() })
+        .from(users)
+        .where(eq(users.isAdmin, true));
+      if (Number(adminTotal) <= 1) {
+        return NextResponse.json(
+          { error: "Debe quedar al menos un administrador" },
+          { status: 409 }
+        );
+      }
+    }
+  }
 
   const [updated] = await db
     .update(users)

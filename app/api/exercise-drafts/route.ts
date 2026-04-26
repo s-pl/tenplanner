@@ -47,17 +47,16 @@ export async function POST(request: Request) {
   }
 
   if (id) {
-    const [updated] = await db
-      .update(exerciseDrafts)
-      .set({ payload, updatedAt: new Date() })
-      .where(eq(exerciseDrafts.id, id))
+    const [upserted] = await db
+      .insert(exerciseDrafts)
+      .values({ id, userId: user.id, payload })
+      .onConflictDoUpdate({
+        target: exerciseDrafts.id,
+        set: { payload, updatedAt: new Date() },
+      })
       .returning();
 
-    if (!updated) {
-      return NextResponse.json({ error: "Draft not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ data: updated });
+    return NextResponse.json({ data: upserted });
   }
 
   const [created] = await db

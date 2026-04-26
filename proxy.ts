@@ -20,6 +20,43 @@ const RECOVERABLE_REFRESH_TOKEN_ERRORS = new Set([
   "refresh_token_not_found",
   "invalid_refresh_token",
 ]);
+const isProd = process.env.NODE_ENV === "production";
+
+function buildCsp(nonce: string): string {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob: https://*.supabase.co https://images.pexels.com",
+    "font-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? "" : " 'unsafe-eval'"}`,
+    "connect-src 'self' https://*.supabase.co https://api.anthropic.com https://api.pexels.com",
+    "media-src 'self' blob: https://*.supabase.co",
+    "object-src 'none'",
+    "worker-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+function withSecurityHeaders(response: NextResponse, csp: string): NextResponse {
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+  );
+  if (isProd) {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
+  return response;
+}
 
 function isRecoverableAuthError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -64,8 +101,36 @@ function clearSupabaseAuthCookies(
   });
 }
 
+function isSameOriginRequest(request: NextRequest): boolean {
+  const expected = request.nextUrl.origin;
+  const origin = request.headers.get("origin");
+  if (origin) return origin === expected;
+
+  const referer = request.headers.get("referer");
+  if (!referer) return false;
+
+  try {
+    return new URL(referer).origin === expected;
+  } catch {
+    return false;
+  }
+}
+
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
+  const createResponse = () =>
+    withSecurityHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      csp
+    );
+
+  let supabaseResponse = createResponse();
+  let shouldClearAuthCookies = false;
 
   const { pathname } = request.nextUrl;
 
@@ -81,7 +146,7 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = createResponse();
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -94,17 +159,13 @@ export async function proxy(request: NextRequest) {
   const method = request.method.toUpperCase();
   const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
   if (isMutation && pathname.startsWith("/api/")) {
-    const origin = request.headers.get("origin");
-    const referer = request.headers.get("referer");
-    const host = request.headers.get("host");
-    const expected = host ? `${request.nextUrl.protocol}//${host}` : null;
-    const sourceOk =
-      (origin && expected && origin === expected) ||
-      (referer && expected && referer.startsWith(expected));
-    if (!sourceOk) {
-      return NextResponse.json(
-        { error: "Cross-origin request blocked" },
-        { status: 403 }
+    if (!isSameOriginRequest(request)) {
+      return withSecurityHeaders(
+        NextResponse.json(
+          { error: "Cross-origin request blocked" },
+          { status: 403 }
+        ),
+        csp
       );
     }
   }
@@ -137,6 +198,7 @@ export async function proxy(request: NextRequest) {
       user = currentUser;
     } catch (error) {
       if (isRecoverableAuthError(error)) {
+        shouldClearAuthCookies = true;
         clearSupabaseAuthCookies(request, supabaseResponse);
       } else {
         console.error("Unexpected Supabase auth error in proxy", error);
@@ -146,20 +208,27 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !isPublic) {
     if (isApiRoute) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const response = NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+      if (shouldClearAuthCookies) clearSupabaseAuthCookies(request, response);
+      return withSecurityHeaders(response, csp);
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    if (shouldClearAuthCookies) clearSupabaseAuthCookies(request, response);
+    return withSecurityHeaders(response, csp);
   }
 
   if (user && (pathname === "/login" || pathname === "/register")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url), csp);
   }
 
-  return supabaseResponse;
+  return withSecurityHeaders(supabaseResponse, csp);
 }
 
 export const config = {

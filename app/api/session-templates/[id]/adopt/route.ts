@@ -11,6 +11,18 @@ import {
   users,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
+
+const adoptTemplateSchema = z.object({
+  scheduledAt: z
+    .string()
+    .trim()
+    .max(40)
+    .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+      message: "Invalid scheduledAt",
+    })
+    .optional(),
+});
 
 export async function POST(
   request: Request,
@@ -44,7 +56,12 @@ export async function POST(
     body = {};
   }
 
-  const { scheduledAt } = body as { scheduledAt?: string };
+  const parsed = adoptTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  }
+
+  const { scheduledAt } = parsed.data;
 
   // Ensure coach user row exists
   if (user.email) {
@@ -88,7 +105,19 @@ export async function POST(
 
       if (!original) continue;
 
-      const { id: _id, createdAt: _ca, updatedAt: _ua, isGlobal: _ig, createdBy: _cb, ...rest } = original;
+      const {
+        id: originalId,
+        createdAt: originalCreatedAt,
+        updatedAt: originalUpdatedAt,
+        isGlobal: originalIsGlobal,
+        createdBy: originalCreatedBy,
+        ...rest
+      } = original;
+      void originalId;
+      void originalCreatedAt;
+      void originalUpdatedAt;
+      void originalIsGlobal;
+      void originalCreatedBy;
       const [cloned] = await db
         .insert(exercises)
         .values({ ...rest, isGlobal: false, createdBy: user.id })

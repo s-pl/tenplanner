@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Clock3, FilePenLine, Trash2 } from "lucide-react";
+import { Clock3, FilePenLine, Trash2, FileX } from "lucide-react";
 import { listExerciseDrafts, removeExerciseDraft, type ExerciseDraft } from "@/lib/drafts";
 
 function formatUpdatedAt(value: string) {
@@ -12,29 +12,65 @@ function formatUpdatedAt(value: string) {
   }).format(new Date(value));
 }
 
-export function ExerciseDraftsPanel() {
+interface Props {
+  showEmptyState?: boolean;
+}
+
+export function ExerciseDraftsPanel({ showEmptyState = false }: Props) {
   const [drafts, setDrafts] = useState<ExerciseDraft[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const refreshRef = useRef<() => void>(null!);
 
   useEffect(() => {
     async function refresh() {
       setDrafts(await listExerciseDrafts());
+      setLoaded(true);
     }
     refreshRef.current = () => void refresh();
     refreshRef.current();
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") refreshRef.current();
+    }
+
     window.addEventListener("focus", refreshRef.current);
     window.addEventListener("tenplanner:drafts-updated", refreshRef.current);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       window.removeEventListener("focus", refreshRef.current);
       window.removeEventListener("tenplanner:drafts-updated", refreshRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
-
-  if (drafts.length === 0) return null;
 
   async function handleRemove(id: string) {
     await removeExerciseDraft(id);
     setDrafts(await listExerciseDrafts());
+  }
+
+  if (!loaded) return null;
+
+  if (drafts.length === 0) {
+    if (!showEmptyState) return null;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center border-t border-foreground/15">
+        <div className="size-14 rounded-2xl bg-foreground/5 border border-foreground/10 flex items-center justify-center">
+          <FileX className="size-6 text-foreground/20" />
+        </div>
+        <div>
+          <p className="text-base font-semibold text-foreground/40">Sin borradores</p>
+          <p className="text-sm text-foreground/30 mt-1">
+            Los ejercicios que guardes como borrador aparecerán aquí.
+          </p>
+        </div>
+        <Link
+          href="/exercises/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand text-background px-4 py-2 text-[13px] font-semibold hover:bg-brand/90 transition-colors mt-1"
+        >
+          Crear ejercicio
+        </Link>
+      </div>
+    );
   }
 
   return (

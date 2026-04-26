@@ -430,10 +430,23 @@ export function SessionWizard({
   const visibleErrors = showErrors ? errors : {};
 
   return (
-    <div className="flex flex-col gap-6 pb-28 md:pb-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col gap-8 pb-28 md:pb-6">
+      {/* Header: step indicator + draft status */}
+      <div className="flex items-start justify-between gap-4">
         <ProgressIndicator step={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
-        <DraftStatusPill status={saveStatus} savedAt={savedAt} className="shrink-0" />
+        <DraftStatusPill status={saveStatus} savedAt={savedAt} className="shrink-0 mt-1" />
+      </div>
+
+      {/* Step heading */}
+      <div className="space-y-1">
+        <h2 className="font-heading text-2xl font-semibold text-foreground">
+          {step === 1 ? "Configura tu sesión" : "Añade ejercicios"}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {step === 1
+            ? "Define los datos básicos de la sesión de entrenamiento."
+            : "Selecciona y ordena los ejercicios del plan."}
+        </p>
       </div>
 
       <div className="min-h-[320px]">
@@ -453,22 +466,23 @@ export function SessionWizard({
       </div>
 
       {showErrors && visibleErrors.exercises ? (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3">
-          <p className="text-sm text-destructive">{visibleErrors.exercises}</p>
+        <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3">
+          <p className="text-sm font-medium text-destructive">{visibleErrors.exercises}</p>
         </div>
       ) : null}
 
       {serverError ? (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3">
-          <p className="text-sm text-destructive">{serverError}</p>
+        <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3">
+          <p className="text-sm font-medium text-destructive">{serverError}</p>
         </div>
       ) : null}
 
+      {/* Navigation bar */}
       <div
         className={cn(
           "flex items-center justify-between gap-3",
           "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:border-t max-md:border-border max-md:bg-background/95 max-md:px-4 max-md:py-3 max-md:backdrop-blur",
-          "md:border-t md:border-border/60 md:pt-4"
+          "md:border-t md:border-border/50 md:pt-5"
         )}
       >
         {step === 1 ? (
@@ -485,7 +499,7 @@ export function SessionWizard({
             className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronLeft className="size-4" />
-            Anterior
+            Atrás
           </button>
         )}
 
@@ -493,12 +507,11 @@ export function SessionWizard({
           <button
             type="button"
             onClick={onNext}
-            disabled={!canProceed && showErrors}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-all duration-150",
+              "inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-sm transition-all duration-150",
               canProceed
                 ? "hover:bg-brand/90 active:scale-95"
-                : "opacity-60 hover:bg-brand"
+                : "opacity-55 cursor-not-allowed"
             )}
           >
             Siguiente
@@ -507,17 +520,21 @@ export function SessionWizard({
         ) : (
           <div className="flex items-center gap-3">
             {state.exercises.length > 0 && (
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
                 {state.exercises.length} ejercicio{state.exercises.length !== 1 ? "s" : ""}
                 {" · "}
-                {state.exercises.reduce((sum, e) => sum + (e.overrideDuration ?? e.durationMinutes), 0)} min
+                {state.exercises.reduce(
+                  (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
+                  0
+                )}{" "}
+                min
               </span>
             )}
             <button
               type="button"
               onClick={onSubmit}
               disabled={submitting || state.exercises.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground transition-all duration-150 hover:bg-brand/90 active:scale-95 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-sm transition-all duration-150 hover:bg-brand/90 active:scale-95 disabled:opacity-55"
             >
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               Crear sesión

@@ -81,6 +81,7 @@ export async function GET(_request: Request, context: RouteContext) {
       exerciseCategory: exercises.category,
       exerciseDifficulty: exercises.difficulty,
       exerciseDurationMinutes: exercises.durationMinutes,
+      exerciseMaterials: exercises.materials,
     })
     .from(sessionExercises)
     .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
@@ -115,6 +116,7 @@ export async function GET(_request: Request, context: RouteContext) {
       notes: e.notes,
       phase: e.phase,
       intensity: e.intensity,
+      materials: Array.isArray(e.exerciseMaterials) ? e.exerciseMaterials : [],
     })),
     students: studentRows,
   };

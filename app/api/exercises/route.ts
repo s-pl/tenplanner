@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import {
   createExerciseSchema,
   exercisesListQuerySchema,
@@ -14,6 +15,11 @@ function internalServerError() {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const parsedQuery = exercisesListQuerySchema.safeParse({
     category: request.nextUrl.searchParams.get("category") ?? undefined,
     search: request.nextUrl.searchParams.get("search") ?? undefined,
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const { category, search, page, limit } = parsedQuery.data;
   const offset = (page - 1) * limit;
-  const whereConditions: SQL[] = [];
+  const whereConditions: SQL[] = [exerciseVisibleToUserCondition(user?.id)];
 
   if (category) {
     whereConditions.push(eq(exercises.category, category));
