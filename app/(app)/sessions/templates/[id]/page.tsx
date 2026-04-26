@@ -2,7 +2,12 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { exercises, sessionTemplateExercises, sessionTemplates, users } from "@/db/schema";
+import {
+  exercises,
+  sessionTemplateExercises,
+  sessionTemplates,
+  users,
+} from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, Clock, Zap, MapPin, Download } from "lucide-react";
 import { AdoptTemplateButton } from "@/components/app/session-templates/adopt-template-button";
@@ -132,7 +137,8 @@ export default async function SessionTemplatePage({ params }: PageProps) {
                 </span>
                 {template.intensity != null && (
                   <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55">
-                    <Zap className="size-3.5" /> Intensidad {template.intensity}/5
+                    <Zap className="size-3.5" /> Intensidad {template.intensity}
+                    /5
                   </span>
                 )}
                 {template.location && (
@@ -146,21 +152,22 @@ export default async function SessionTemplatePage({ params }: PageProps) {
                   </span>
                 )}
               </div>
-              {Array.isArray(template.tags) && (template.tags as string[]).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {(template.tags as string[]).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-brand/8 border border-brand/20 px-2.5 py-0.5 text-[11px] font-sans text-brand"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {Array.isArray(template.tags) &&
+                (template.tags as string[]).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {(template.tags as string[]).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-brand/8 border border-brand/20 px-2.5 py-0.5 text-[11px] font-sans text-brand"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex w-full items-center gap-2 sm:w-auto md:shrink-0">
               {isAuthor ? (
                 <PublishTemplateActions templateId={template.id} />
               ) : (
@@ -177,7 +184,9 @@ export default async function SessionTemplatePage({ params }: PageProps) {
           </p>
 
           {templateExercises.length === 0 ? (
-            <p className="text-[14px] text-foreground/45">Esta plantilla no tiene ejercicios.</p>
+            <p className="text-[14px] text-foreground/45">
+              Esta plantilla no tiene ejercicios.
+            </p>
           ) : (
             <div className="space-y-2">
               {templateExercises.map((te, i) => (
@@ -195,7 +204,8 @@ export default async function SessionTemplatePage({ params }: PageProps) {
                     <div className="flex flex-wrap items-center gap-2">
                       {te.exercise?.category && (
                         <span className="text-[11px] text-foreground/45">
-                          {CATEGORY_LABEL[te.exercise.category] ?? te.exercise.category}
+                          {CATEGORY_LABEL[te.exercise.category] ??
+                            te.exercise.category}
                         </span>
                       )}
                       {te.phase && (
@@ -211,7 +221,8 @@ export default async function SessionTemplatePage({ params }: PageProps) {
                     )}
                   </div>
                   <span className="text-[11px] text-foreground/40 tabular-nums shrink-0">
-                    {te.durationMinutes ?? te.exercise?.durationMinutes ?? "—"} min
+                    {te.durationMinutes ?? te.exercise?.durationMinutes ?? "—"}{" "}
+                    min
                   </span>
                 </div>
               ))}

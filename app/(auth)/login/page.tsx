@@ -20,6 +20,9 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+const GENERIC_LOGIN_ERROR =
+  "No hemos podido iniciar sesión con esos datos. Revisa el correo y la contraseña.";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,9 +30,6 @@ function LoginForm() {
   const registeredEmail = searchParams.get("email") ?? undefined;
 
   const [serverError, setServerError] = useState<string | null>(null);
-  const [passwordFieldError, setPasswordFieldError] = useState<string | null>(
-    null
-  );
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -45,21 +45,18 @@ function LoginForm() {
   async function onSubmit(values: LoginValues) {
     setLoading(true);
     setServerError(null);
-    setPasswordFieldError(null);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
+      email: values.email.trim().toLowerCase(),
       password: values.password,
     });
     if (error) {
       if (error.message === "Invalid login credentials") {
-        setPasswordFieldError(
-          "Contraseña incorrecta. Comprueba que la has escrito bien."
-        );
+        setServerError(GENERIC_LOGIN_ERROR);
       } else if (error.message === "Email not confirmed") {
         setServerError("Debes verificar tu correo antes de iniciar sesión.");
       } else {
-        setServerError(error.message);
+        setServerError(GENERIC_LOGIN_ERROR);
       }
       setLoading(false);
       return;
@@ -182,9 +179,9 @@ function LoginForm() {
               placeholder="••••••••"
               autoComplete="current-password"
               className="h-10 pr-10"
-              aria-invalid={!!errors.password || !!passwordFieldError}
+              aria-invalid={!!errors.password}
               {...register("password", {
-                onChange: () => setPasswordFieldError(null),
+                onChange: () => setServerError(null),
               })}
             />
             <button
@@ -207,9 +204,6 @@ function LoginForm() {
             <p className="text-xs text-destructive">
               {errors.password.message}
             </p>
-          )}
-          {passwordFieldError && (
-            <p className="text-xs text-destructive">{passwordFieldError}</p>
           )}
         </div>
 

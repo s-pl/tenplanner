@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Calendar, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface Props {
   templateId: string;
@@ -25,7 +24,10 @@ export function AdoptTemplateButton({ templateId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scheduledAt ? { scheduledAt } : {}),
       });
-      const json = await res.json() as { data?: { sessionId: string }; error?: string };
+      const json = (await res.json()) as {
+        data?: { sessionId: string };
+        error?: string;
+      };
       if (!res.ok) {
         setError(json.error ?? "Error al adoptar la plantilla");
         return;
@@ -42,7 +44,7 @@ export function AdoptTemplateButton({ templateId }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-[13px] font-semibold text-background transition-colors hover:bg-brand/90 sm:w-auto"
       >
         <Download className="size-4" /> Adoptar plantilla
       </button>
@@ -81,9 +83,7 @@ export function AdoptTemplateButton({ templateId }: Props) {
               />
             </div>
 
-            {error && (
-              <p className="text-[12px] text-red-500">{error}</p>
-            )}
+            {error && <p className="text-[12px] text-red-500">{error}</p>}
 
             <div className="flex gap-2 pt-1">
               <button

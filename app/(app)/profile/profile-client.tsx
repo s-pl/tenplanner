@@ -766,7 +766,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               ].map(({ label, value }) => (
                 <div
                   key={label}
-                  className="grid grid-cols-[1fr_auto] gap-4 py-3.5 items-baseline"
+                  className="grid gap-1 py-3.5 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4"
                 >
                   <dt className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
                     {label}
@@ -852,7 +852,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 Zona de peligro
               </p>
             </div>
-            <div className="mt-5 grid grid-cols-[1fr_auto] gap-6 items-start border-l-2 border-destructive/40 pl-4 py-2">
+            <div className="mt-5 grid gap-4 border-l-2 border-destructive/40 py-2 pl-4 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6">
               <div>
                 <p className="font-heading italic text-[15px] text-foreground">
                   Eliminar cuenta

@@ -4,7 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { UserPlus, UserMinus, Trash2, Loader2, Users, Search, ChevronRight } from "lucide-react";
+import {
+  UserPlus,
+  UserMinus,
+  Trash2,
+  Loader2,
+  Users,
+  Search,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LEVEL_LABEL: Record<string, string> = {
@@ -37,8 +45,22 @@ interface Props {
   availableStudents: Student[];
 }
 
-function Avatar({ name, imageUrl, size = 36 }: { name: string; imageUrl: string | null; size?: number }) {
-  const text = name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+function Avatar({
+  name,
+  imageUrl,
+  size = 36,
+}: {
+  name: string;
+  imageUrl: string | null;
+  size?: number;
+}) {
+  const text = name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
   if (imageUrl) {
     return (
       <Image
@@ -61,7 +83,12 @@ function Avatar({ name, imageUrl, size = 36 }: { name: string; imageUrl: string 
   );
 }
 
-export function GroupDetailClient({ groupId, groupName, members, availableStudents }: Props) {
+export function GroupDetailClient({
+  groupId,
+  groupName,
+  members,
+  availableStudents,
+}: Props) {
   const router = useRouter();
   const [currentMembers, setCurrentMembers] = useState(members);
   const [available, setAvailable] = useState(availableStudents);
@@ -76,7 +103,9 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
 
   async function addStudent(student: Student) {
     setLoadingId(student.id);
-    const newMembers = [...currentMembers, student].sort((a, b) => a.name.localeCompare(b.name));
+    const newMembers = [...currentMembers, student].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
     const res = await fetch(`/api/groups/${groupId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,7 +129,9 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
     if (res.ok) {
       const removed = currentMembers.find((m) => m.id === studentId)!;
       setCurrentMembers(newMembers);
-      setAvailable((prev) => [...prev, removed].sort((a, b) => a.name.localeCompare(b.name)));
+      setAvailable((prev) =>
+        [...prev, removed].sort((a, b) => a.name.localeCompare(b.name))
+      );
     }
     setLoadingId(null);
   }
@@ -108,7 +139,10 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
   async function deleteGroup() {
     setDeletingGroup(true);
     const res = await fetch(`/api/groups/${groupId}`, { method: "DELETE" });
-    if (res.ok) { router.push("/groups"); router.refresh(); }
+    if (res.ok) {
+      router.push("/groups");
+      router.refresh();
+    }
     setDeletingGroup(false);
   }
 
@@ -116,7 +150,7 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
       {/* Members roster */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2">
             <Users className="size-4 text-brand" />
             <h2 className="font-bold text-[13px] text-foreground uppercase tracking-wide">
@@ -134,8 +168,12 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
               <Users className="size-5 text-foreground/20" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground/40">Sin alumnos todavía</p>
-              <p className="text-xs text-foreground/25 mt-0.5">Añade alumnos desde el panel de la derecha.</p>
+              <p className="text-sm font-medium text-foreground/40">
+                Sin alumnos todavía
+              </p>
+              <p className="text-xs text-foreground/25 mt-0.5">
+                Añade alumnos desde el panel de la derecha.
+              </p>
             </div>
           </div>
         ) : (
@@ -143,7 +181,7 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
             {currentMembers.map((m, i) => (
               <div
                 key={m.id}
-                className="group/row flex items-center gap-3 px-5 py-3 hover:bg-muted/20 transition-colors"
+                className="group/row flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/20 sm:px-5"
               >
                 {/* Position number */}
                 <span className="font-mono text-[10px] text-foreground/20 tabular-nums w-5 shrink-0 text-right">
@@ -161,10 +199,13 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                     <ChevronRight className="size-3 opacity-0 group-hover/link:opacity-100 -translate-x-1 group-hover/link:translate-x-0 transition-all" />
                   </Link>
                   {m.playerLevel && (
-                    <span className={cn(
-                      "inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-md mt-0.5",
-                      LEVEL_COLOR[m.playerLevel] ?? "bg-foreground/8 text-foreground/40"
-                    )}>
+                    <span
+                      className={cn(
+                        "inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-md mt-0.5",
+                        LEVEL_COLOR[m.playerLevel] ??
+                          "bg-foreground/8 text-foreground/40"
+                      )}
+                    >
                       {LEVEL_LABEL[m.playerLevel] ?? m.playerLevel}
                     </span>
                   )}
@@ -174,11 +215,13 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                   onClick={() => removeStudent(m.id)}
                   disabled={loadingId === m.id}
                   aria-label="Quitar del grupo"
-                  className="size-8 flex items-center justify-center rounded-lg text-muted-foreground opacity-0 group-hover/row:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-40 touch-manipulation"
+                  className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 md:opacity-0 md:group-hover/row:opacity-100"
                 >
-                  {loadingId === m.id
-                    ? <Loader2 className="size-4 animate-spin" />
-                    : <UserMinus className="size-4" />}
+                  {loadingId === m.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <UserMinus className="size-4" />
+                  )}
                 </button>
               </div>
             ))}
@@ -228,7 +271,9 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                 >
                   <Avatar name={s.name} imageUrl={s.imageUrl} size={30} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">{s.name}</p>
+                    <p className="text-[13px] font-medium text-foreground truncate">
+                      {s.name}
+                    </p>
                     {s.playerLevel && (
                       <p className="text-[10px] text-muted-foreground">
                         {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
@@ -236,9 +281,11 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                     )}
                   </div>
                   <div className="size-7 flex items-center justify-center rounded-lg text-brand shrink-0">
-                    {loadingId === s.id
-                      ? <Loader2 className="size-4 animate-spin" />
-                      : <UserPlus className="size-4" />}
+                    {loadingId === s.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="size-4" />
+                    )}
                   </div>
                 </button>
               ))
@@ -254,7 +301,8 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
           {showDeleteConfirm ? (
             <div className="space-y-3">
               <p className="text-sm text-foreground leading-relaxed">
-                ¿Eliminar <strong>{groupName}</strong>? Esta acción no se puede deshacer.
+                ¿Eliminar <strong>{groupName}</strong>? Esta acción no se puede
+                deshacer.
               </p>
               <div className="flex gap-2">
                 <button
@@ -268,7 +316,9 @@ export function GroupDetailClient({ groupId, groupName, members, availableStuden
                   disabled={deletingGroup}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 bg-destructive text-destructive-foreground text-[13px] font-semibold px-3 py-2 rounded-xl hover:bg-destructive/90 disabled:opacity-60 transition-colors"
                 >
-                  {deletingGroup && <Loader2 className="size-3.5 animate-spin" />}
+                  {deletingGroup && (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  )}
                   Eliminar
                 </button>
               </div>

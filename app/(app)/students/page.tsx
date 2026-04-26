@@ -126,7 +126,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
               № {String(totalStudents).padStart(3, "0")}
             </p>
           </div>
-          <div className="grid grid-cols-[1fr_auto] items-end gap-6">
+          <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-end md:gap-6">
             <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
               Tus <em className="italic text-brand">alumnos</em>,
               <br />
@@ -143,19 +143,19 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             )}
           </div>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-              {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
-            {totalStudents !== 1 ? "s" : ""} · fichas individuales con histórico y
-            nivel.
+            {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
+            {totalStudents !== 1 ? "s" : ""} · fichas individuales con histórico
+            y nivel.
           </p>
         </header>
 
         {/* Level strip */}
         {totalStudents > 0 && (
-          <section className="grid grid-cols-5 border-b border-foreground/15">
-            {(Object.keys(LEVEL_LABEL) as PlayerLevel[]).map((lvl, i) => (
+          <section className="grid grid-cols-2 border-b border-foreground/15 sm:grid-cols-3 lg:grid-cols-5">
+            {(Object.keys(LEVEL_LABEL) as PlayerLevel[]).map((lvl) => (
               <div
                 key={lvl}
-                className={`px-4 py-5 ${i > 0 ? "border-l border-foreground/10" : ""}`}
+                className="border-t border-foreground/10 px-3 py-4 first:border-t-0 sm:px-4 sm:py-5 sm:[&:nth-child(-n+3)]:border-t-0 lg:border-l lg:border-t-0 lg:first:border-l-0"
               >
                 <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
                   {LEVEL_CODE[lvl]} · {LEVEL_LABEL[lvl]}
@@ -248,9 +248,9 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                   >
                     <Link
                       href={`/students/${student.id}`}
-                      className="group grid grid-cols-[auto_auto_1fr_auto_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] transition-colors px-1"
+                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-5 transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[auto_auto_1fr_auto_auto] sm:gap-5"
                     >
-                      <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 w-8">
+                      <span className="hidden w-8 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
                         {n}
                       </span>
                       <div className="size-10 rounded-full border border-foreground/20 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
@@ -304,7 +304,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
         {/* Pagination */}
         {(currentPage > 1 || hasNextPage) && (
-          <nav className="flex items-center justify-between pt-4 border-t border-foreground/15">
+          <nav className="flex flex-col gap-3 border-t border-foreground/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
               {filtered.length > 0
                 ? `${offset + 1}–${offset + filtered.length}`
@@ -347,7 +347,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
         )}
 
         {/* Footnote */}
-        <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
+        <footer className="grid gap-3 pt-8 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
           <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
             &ldquo;Un buen entrenador conoce a sus alumnos antes de diseñar su
             primera sesión.&rdquo;

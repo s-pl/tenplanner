@@ -671,7 +671,7 @@ export function SessionForm({
                               "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
                               isExpanded || ex.notes
                                 ? "text-brand bg-brand/10"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
                             )}
                           >
                             <StickyNote className="size-3.5" />
@@ -680,7 +680,7 @@ export function SessionForm({
                           <button
                             type="button"
                             onClick={() => removeExercise(ex.exerciseId)}
-                            className="size-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                           >
                             <X className="size-3.5" />
                           </button>
@@ -819,7 +819,7 @@ export function SessionForm({
                   <button
                     type="button"
                     onClick={() => addExercise(ex)}
-                    className="size-6 rounded-md flex items-center justify-center bg-brand/10 text-brand hover:bg-brand/20 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand transition-colors hover:bg-brand/20 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <Plus className="size-3.5" />
                   </button>

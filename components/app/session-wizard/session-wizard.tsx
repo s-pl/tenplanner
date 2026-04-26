@@ -154,7 +154,9 @@ function sanitizeDraftPayload(
         ? payload.durationMinutes
         : fallback.durationMinutes,
     location:
-      typeof payload.location === "string" ? payload.location : fallback.location,
+      typeof payload.location === "string"
+        ? payload.location
+        : fallback.location,
     objective:
       typeof payload.objective === "string"
         ? payload.objective
@@ -209,7 +211,9 @@ export function SessionWizard({
   const [serverError, setServerError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+    "idle"
+  );
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const draftReadyRef = useRef(false);
   const draftIdRef = useRef<string | null>(null);
@@ -257,7 +261,9 @@ export function SessionWizard({
           window.history.replaceState(
             null,
             "",
-            next ? `${window.location.pathname}?${next}` : window.location.pathname
+            next
+              ? `${window.location.pathname}?${next}`
+              : window.location.pathname
           );
           draftReadyRef.current = true;
         }
@@ -267,7 +273,9 @@ export function SessionWizard({
     }
 
     void hydrate();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const draftPayload = useMemo(() => toDraftPayload(state), [state]);
@@ -284,7 +292,9 @@ export function SessionWizard({
     saveTimerRef.current = window.setTimeout(() => {
       saveTimerRef.current = null;
 
-      if (!hasMeaningfulSessionDraft(draftPayload, baselinePayloadRef.current)) {
+      if (
+        !hasMeaningfulSessionDraft(draftPayload, baselinePayloadRef.current)
+      ) {
         if (draftIdRef.current) {
           void removeSessionDraft(draftIdRef.current);
           draftIdRef.current = null;
@@ -296,7 +306,9 @@ export function SessionWizard({
             window.history.replaceState(
               null,
               "",
-              next ? `${window.location.pathname}?${next}` : window.location.pathname
+              next
+                ? `${window.location.pathname}?${next}`
+                : window.location.pathname
             );
           }
         }
@@ -405,7 +417,9 @@ export function SessionWizard({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg =
-          data.details?.map((detail: { message: string }) => detail.message).join(". ") ??
+          data.details
+            ?.map((detail: { message: string }) => detail.message)
+            .join(". ") ??
           data.error ??
           "Ha ocurrido un error.";
         setServerError(msg);
@@ -432,9 +446,17 @@ export function SessionWizard({
   return (
     <div className="flex flex-col gap-8 pb-28 md:pb-6">
       {/* Header: step indicator + draft status */}
-      <div className="flex items-start justify-between gap-4">
-        <ProgressIndicator step={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
-        <DraftStatusPill status={saveStatus} savedAt={savedAt} className="shrink-0 mt-1" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <ProgressIndicator
+          step={step}
+          total={TOTAL_STEPS}
+          labels={STEP_LABELS}
+        />
+        <DraftStatusPill
+          status={saveStatus}
+          savedAt={savedAt}
+          className="mt-1 sm:shrink-0"
+        />
       </div>
 
       {/* Step heading */}
@@ -467,7 +489,9 @@ export function SessionWizard({
 
       {showErrors && visibleErrors.exercises ? (
         <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3">
-          <p className="text-sm font-medium text-destructive">{visibleErrors.exercises}</p>
+          <p className="text-sm font-medium text-destructive">
+            {visibleErrors.exercises}
+          </p>
         </div>
       ) : null}
 
@@ -521,7 +545,8 @@ export function SessionWizard({
           <div className="flex items-center gap-3">
             {state.exercises.length > 0 && (
               <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
-                {state.exercises.length} ejercicio{state.exercises.length !== 1 ? "s" : ""}
+                {state.exercises.length} ejercicio
+                {state.exercises.length !== 1 ? "s" : ""}
                 {" · "}
                 {state.exercises.reduce(
                   (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),

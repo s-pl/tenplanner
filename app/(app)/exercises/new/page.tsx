@@ -30,7 +30,7 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
     mode === "full" || mode === "quick" ? mode : undefined;
 
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6">
+    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-8">
       <div className="flex items-center gap-4">
         <Link
           href="/exercises"
@@ -48,7 +48,7 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <ExerciseForm
           mode="create"
           isAdmin={isAdmin}

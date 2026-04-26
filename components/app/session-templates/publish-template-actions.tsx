@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Loader2, X, Pencil } from "lucide-react";
+import { Trash2, Loader2, X } from "lucide-react";
 
 interface Props {
   templateId: string;
@@ -24,20 +24,26 @@ export function PublishTemplateActions({ templateId }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/8 border border-brand/20 px-2.5 py-1 text-[11px] font-sans text-brand">
         Tu plantilla
       </span>
 
       {confirmDelete ? (
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] text-foreground/60">¿Eliminar plantilla?</span>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <span className="text-[12px] text-foreground/60">
+            ¿Eliminar plantilla?
+          </span>
           <button
             onClick={handleDelete}
             disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 px-3 py-1.5 text-[12px] font-medium hover:bg-red-500/20 disabled:opacity-60 transition-colors"
           >
-            {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+            {loading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
             Confirmar
           </button>
           <button

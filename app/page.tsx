@@ -929,10 +929,10 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-background text-foreground selection:bg-brand/25">
       {/* ── Masthead ──────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b border-foreground/10">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-end justify-between py-4">
             <Link href="/" className="flex items-baseline gap-2">
-              <span className="font-heading text-[34px] leading-none tracking-tight">
+              <span className="font-heading text-[28px] leading-none tracking-tight sm:text-[34px]">
                 Ten<span className="italic text-brand">planner</span>
               </span>
               <span className="font-sans text-[10px] tracking-[0.18em] text-foreground/40 pb-1">
@@ -956,7 +956,7 @@ export default async function LandingPage() {
                 </a>
               ))}
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link
                 href="/login"
                 className="hidden sm:inline text-sm text-foreground/55 hover:text-foreground transition-colors"
@@ -965,7 +965,7 @@ export default async function LandingPage() {
               </Link>
               <Link
                 href="/register"
-                className="group inline-flex items-center gap-1.5 rounded-full bg-foreground text-background text-sm font-medium pl-4 pr-1.5 py-1.5 hover:bg-brand hover:text-brand-foreground transition-colors"
+                className="group inline-flex items-center gap-1.5 rounded-full bg-foreground text-background text-xs font-medium pl-3 pr-1.5 py-1.5 hover:bg-brand hover:text-brand-foreground transition-colors sm:text-sm sm:pl-4"
               >
                 Probar gratis
                 <span className="inline-flex items-center justify-center size-6 rounded-full bg-background/15">
@@ -986,13 +986,13 @@ export default async function LandingPage() {
         {/* faint court */}
         <CourtLines className="absolute -right-32 -bottom-24 w-[900px] text-brand/10 hidden lg:block" />
 
-        <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 pt-10 lg:pt-14 pb-16 lg:pb-20">
+        <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-9 lg:pt-14 pb-14 lg:pb-20">
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-20 items-start">
             {/* Headline */}
             <div>
               <h1
                 className="mt-1 font-heading font-normal text-foreground leading-[0.88] tracking-[-0.02em]"
-                style={{ fontSize: "clamp(3.2rem, 9vw, 8.25rem)" }}
+                style={{ fontSize: "clamp(2.6rem, 9vw, 8.25rem)" }}
               >
                 <CopyLines text={copy.hero_title} />
               </h1>
@@ -1001,7 +1001,7 @@ export default async function LandingPage() {
                 <p className="text-[15px] leading-relaxed text-foreground/70 max-w-md">
                   {copy.hero_subtitle}
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <Link
                     href="/register"
                     className="group inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground font-medium text-sm pl-5 pr-1.5 py-1.5"
@@ -1031,7 +1031,7 @@ export default async function LandingPage() {
 
       {/* ── Specs strip ──────────────────────────────────────── */}
       <section className="border-b border-foreground/10 bg-foreground/[0.015]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-6 grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-5 sm:gap-x-8">
           {[...copy.specs_strip].map((s) => (
             <div key={s.k} className="flex flex-col">
               <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/45">
@@ -1050,7 +1050,7 @@ export default async function LandingPage() {
 
       {/* ── Dr. Planner ───────────────────────────────────────── */}
       <section id="planner" className="relative border-b border-foreground/10">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-28">
           <div className="mt-2 grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-20 items-start">
             <div className="lg:sticky lg:top-40">
               <h2
@@ -1085,7 +1085,7 @@ export default async function LandingPage() {
                 ].map(([k, v]) => (
                   <div
                     key={k}
-                    className="grid grid-cols-[130px_1fr] gap-6 border-b border-foreground/15 py-4"
+                    className="grid gap-2 border-b border-foreground/15 py-4 sm:grid-cols-[130px_1fr] sm:gap-6"
                   >
                     <dt className="font-sans text-[11px] uppercase tracking-[0.15em] text-foreground/55">
                       {k}
@@ -1110,7 +1110,7 @@ export default async function LandingPage() {
         id="biblioteca"
         className="relative border-b border-foreground/10 bg-foreground/[0.015]"
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-28">
           <div className="mt-2 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-20 items-start">
             <div>
               <div className="relative">
@@ -1136,7 +1136,7 @@ export default async function LandingPage() {
 
       {/* ── Anatomía de una sesión ───────────────────────────── */}
       <section id="anatomia" className="relative border-b border-foreground/10">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-28">
           <div className="mt-2 grid lg:grid-cols-12 gap-8 lg:gap-12">
             <div className="lg:col-span-4">
               <h2
@@ -1259,7 +1259,7 @@ export default async function LandingPage() {
         id="alumnos"
         className="relative border-b border-foreground/10 bg-foreground/[0.015]"
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-28">
           <div className="mt-2 grid lg:grid-cols-[1fr_1.3fr] gap-12 lg:gap-20 items-start">
             <div className="lg:sticky lg:top-40">
               <h2
@@ -1296,7 +1296,7 @@ export default async function LandingPage() {
         id="calendario"
         className="relative border-b border-foreground/10"
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-28">
           <div className="mt-2 grid lg:grid-cols-[1.3fr_1fr] gap-12 lg:gap-20 items-start">
             <div className="relative">
               <CalendarMonth />
@@ -1347,7 +1347,7 @@ export default async function LandingPage() {
       {/* ── Manifesto / CTA ──────────────────────────────────── */}
       <section className="relative border-b border-foreground/10">
         <CourtLines className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[700px] text-brand/8 hidden md:block" />
-        <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 py-24 lg:py-36 text-center">
+        <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-20 lg:py-36 text-center">
           <h2
             className="mt-2 font-heading font-normal leading-[0.9] tracking-[-0.02em] max-w-4xl mx-auto"
             style={{ fontSize: "clamp(2.6rem, 7vw, 6rem)" }}
@@ -1359,7 +1359,7 @@ export default async function LandingPage() {
             {copy.manifesto_sub}
           </p>
 
-          <div className="mt-12 flex items-center justify-center gap-4">
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/register"
               className="group inline-flex items-center gap-2 rounded-full bg-foreground text-background text-[15px] font-medium pl-6 pr-2 py-2 hover:bg-brand hover:text-brand-foreground transition-colors"
@@ -1380,7 +1380,7 @@ export default async function LandingPage() {
             </Link>
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-6 font-sans text-[10px] tracking-[0.18em] uppercase text-foreground/40">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
             <span>Gratis para empezar</span>
             <span className="size-1 rounded-full bg-foreground/20" />
             <span>Sin tarjeta</span>
@@ -1392,7 +1392,7 @@ export default async function LandingPage() {
 
       {/* ── Footer ───────────────────────────────────────────── */}
       <footer className="bg-background">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-10">
           <div className="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10 pb-10 border-b border-foreground/10">
             <div>
               <span className="font-heading text-[28px] leading-none tracking-tight">

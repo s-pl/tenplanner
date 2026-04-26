@@ -13,7 +13,7 @@ export default async function NewStudentPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="px-6 md:px-8 py-8 space-y-6 max-w-4xl">
+    <div className="max-w-4xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
       <div className="flex items-center gap-4">
         <Link
           href="/students"
@@ -31,7 +31,7 @@ export default async function NewStudentPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <StudentForm mode="create" />
       </div>
     </div>

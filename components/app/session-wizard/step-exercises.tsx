@@ -15,7 +15,10 @@ import {
   StickyNote,
   X,
 } from "lucide-react";
-import { ExerciseForm, type ExerciseFormResult } from "@/components/app/exercise-form";
+import {
+  ExerciseForm,
+  type ExerciseFormResult,
+} from "@/components/app/exercise-form";
 import { SessionExerciseLists } from "@/components/app/session-exercise-lists";
 import {
   Dialog,
@@ -261,7 +264,9 @@ export function StepExercises({
           };
 
           setLibraryExercises((current) => {
-            const next = current.filter((exercise) => exercise.id !== fallbackExercise.id);
+            const next = current.filter(
+              (exercise) => exercise.id !== fallbackExercise.id
+            );
             return [fallbackExercise, ...next];
           });
           addExercise(fallbackExercise);
@@ -331,7 +336,9 @@ export function StepExercises({
         };
 
         setLibraryExercises((current) => {
-          const next = current.filter((exercise) => exercise.id !== fallbackExercise.id);
+          const next = current.filter(
+            (exercise) => exercise.id !== fallbackExercise.id
+          );
           return [fallbackExercise, ...next];
         });
         addExercise(fallbackExercise);
@@ -370,496 +377,502 @@ export function StepExercises({
       </Dialog>
 
       <div className="space-y-4">
-      {selected.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {selected.length} ejercicio{selected.length !== 1 ? "s" : ""}
-          </span>
-          <span className="font-semibold text-foreground">
-            {formatMinutes(totalDuration)}
-          </span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 min-h-[440px]">
-        {/* LEFT: timeline */}
-        <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
-            <CalendarDays className="size-4 text-brand" />
-            <span className="text-sm font-bold text-foreground uppercase tracking-wide">
-              Plan de entrenamiento
+        {selected.length > 0 && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {selected.length} ejercicio{selected.length !== 1 ? "s" : ""}
             </span>
-            {totalDuration > 0 && (
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
-                <Clock className="size-3" />
-                {formatMinutes(totalDuration)}
-              </span>
-            )}
+            <span className="font-semibold text-foreground">
+              {formatMinutes(totalDuration)}
+            </span>
           </div>
+        )}
 
-          <div
-            className={cn(
-              "flex-1 p-3 transition-colors overflow-y-auto",
-              isDropZoneActive && selected.length === 0 && "bg-brand/5",
-              selected.length === 0 && "flex items-center justify-center"
-            )}
-            onDragOver={(e) => e.preventDefault()}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              dragCounter.current++;
-              setIsDropZoneActive(true);
-            }}
-            onDragLeave={() => {
-              dragCounter.current--;
-              if (dragCounter.current <= 0) {
-                dragCounter.current = 0;
-                setIsDropZoneActive(false);
-              }
-            }}
-            onDrop={onDropZoneDrop}
-          >
-            {selected.length === 0 ? (
-              <div
-                className={cn(
-                  "w-full max-w-xs mx-auto flex flex-col items-center text-center py-10 rounded-xl border-2 border-dashed transition-colors",
-                  isDropZoneActive ? "border-brand bg-brand/5" : "border-border"
-                )}
-              >
-                <Dumbbell
-                  className={cn(
-                    "size-8 mb-3",
-                    isDropZoneActive ? "text-brand" : "text-muted-foreground"
-                  )}
-                />
-                <p className="text-sm font-medium text-foreground mb-1">
-                  {isDropZoneActive ? "¡Suelta aquí!" : "Sin ejercicios aún"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Arrastra ejercicios desde la biblioteca o pulsa{" "}
-                  <Plus className="size-3 inline" />
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {selected.map((ex, idx) => {
-                  const effectiveDuration =
-                    ex.overrideDuration ?? ex.durationMinutes;
-                  const isEditingDuration = editingDurationIdx === idx;
-                  const isExpanded = expandedIdx === idx;
-                  const isDragging = dragSrcIdx === idx;
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 min-h-[440px]">
+          {/* LEFT: timeline */}
+          <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+              <CalendarDays className="size-4 text-brand" />
+              <span className="text-sm font-bold text-foreground uppercase tracking-wide">
+                Plan de entrenamiento
+              </span>
+              {totalDuration > 0 && (
+                <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
+                  <Clock className="size-3" />
+                  {formatMinutes(totalDuration)}
+                </span>
+              )}
+            </div>
 
-                  return (
-                    <div key={`${ex.exerciseId}-${idx}`}>
-                      <div
-                        className={cn(
-                          "h-0.5 rounded-full transition-all mb-1",
-                          dragOverIdx === idx ? "bg-brand" : "bg-transparent"
-                        )}
-                      />
-                      <div
-                        draggable={!isEditingDuration}
-                        onDragStart={(e) =>
-                          !isEditingDuration && onTimelineDragStart(e, idx)
-                        }
-                        onDragEnd={() => {
-                          setDragSrcIdx(null);
-                          setDragOverIdx(null);
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setDragOverIdx(idx);
-                        }}
-                        onDragLeave={() => setDragOverIdx(null)}
-                        onDrop={(e) => onTimelineItemDrop(e, idx)}
-                        className={cn(
-                          "group bg-card border rounded-xl transition-all",
-                          isDragging
-                            ? "opacity-40 border-dashed border-border cursor-grabbing"
-                            : "border-border hover:border-brand/30 hover:shadow-sm cursor-grab active:cursor-grabbing"
-                        )}
-                      >
-                        <div className="flex items-center gap-2 px-3 py-2.5">
-                          <div
-                            className={cn(
-                              "w-0.5 h-8 rounded-full shrink-0",
-                              CATEGORY_BAR[ex.category] ?? "bg-muted"
-                            )}
-                          />
-                          <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate leading-snug">
-                              {ex.name}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span
-                                className={cn(
-                                  "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                                  CATEGORY_COLORS[ex.category] ??
-                                    "text-muted-foreground bg-muted"
-                                )}
-                              >
-                                {CATEGORY_LABELS[ex.category] ?? ex.category}
-                              </span>
-                              {ex.phase && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
-                                  {PHASE_LABELS[ex.phase]}
-                                </span>
-                              )}
-                              {ex.intensity !== null && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
-                                  Int. {ex.intensity}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {isEditingDuration ? (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <input
-                                ref={durationInputRef}
-                                type="number"
-                                min={1}
-                                max={300}
-                                value={durationEditValue}
-                                onChange={(e) =>
-                                  setDurationEditValue(e.target.value)
-                                }
-                                onBlur={() => commitDurationEdit(idx)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    commitDurationEdit(idx);
-                                  }
-                                  if (e.key === "Escape")
-                                    setEditingDurationIdx(null);
-                                }}
-                                className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                min
-                              </span>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => startEditDuration(idx)}
-                              title="Editar duración"
-                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
-                            >
-                              <Clock className="size-3" />
-                              <span>{effectiveDuration} min</span>
-                              <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedIdx(isExpanded ? null : idx)
-                            }
-                            title="Ajustes"
-                            className={cn(
-                              "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
-                              isExpanded ||
-                                ex.notes ||
-                                ex.phase ||
-                                ex.intensity !== null
-                                ? "text-brand bg-brand/10"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100"
-                            )}
-                          >
-                            <StickyNote className="size-3.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => removeExercise(ex.exerciseId)}
-                            className="size-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        </div>
-
-                        {isExpanded && (
-                          <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                Fase
-                              </label>
-                              <div className="flex flex-wrap gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    patchItem(idx, { phase: null })
-                                  }
-                                  className={cn(
-                                    "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                    ex.phase === null
-                                      ? "bg-muted border-border text-foreground"
-                                      : "border-transparent text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  Auto
-                                </button>
-                                {(
-                                  Object.keys(PHASE_LABELS) as TrainingPhase[]
-                                ).map((p) => (
-                                  <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() => patchItem(idx, { phase: p })}
-                                    className={cn(
-                                      "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                      ex.phase === p
-                                        ? "bg-brand text-brand-foreground border-brand"
-                                        : "bg-background border-border text-muted-foreground hover:text-foreground"
-                                    )}
-                                  >
-                                    {PHASE_LABELS[p]}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                Intensidad
-                              </label>
-                              <div className="flex flex-wrap gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    patchItem(idx, { intensity: null })
-                                  }
-                                  className={cn(
-                                    "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                    ex.intensity === null
-                                      ? "bg-muted border-border text-foreground"
-                                      : "border-transparent text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  Auto
-                                </button>
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    onClick={() =>
-                                      patchItem(idx, { intensity: n })
-                                    }
-                                    className={cn(
-                                      "size-7 text-[10px] font-bold rounded-full border transition-colors",
-                                      ex.intensity === n
-                                        ? "bg-brand text-brand-foreground border-brand"
-                                        : "bg-background border-border text-muted-foreground hover:text-foreground"
-                                    )}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <textarea
-                              value={ex.notes}
-                              onChange={(e) =>
-                                patchItem(idx, { notes: e.target.value })
-                              }
-                              placeholder="Notas para este ejercicio…"
-                              rows={2}
-                              className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
+            <div
+              className={cn(
+                "flex-1 p-3 transition-colors overflow-y-auto",
+                isDropZoneActive && selected.length === 0 && "bg-brand/5",
+                selected.length === 0 && "flex items-center justify-center"
+              )}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                dragCounter.current++;
+                setIsDropZoneActive(true);
+              }}
+              onDragLeave={() => {
+                dragCounter.current--;
+                if (dragCounter.current <= 0) {
+                  dragCounter.current = 0;
+                  setIsDropZoneActive(false);
+                }
+              }}
+              onDrop={onDropZoneDrop}
+            >
+              {selected.length === 0 ? (
                 <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={onDropZoneDrop}
                   className={cn(
-                    "h-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-colors mt-2",
+                    "w-full max-w-xs mx-auto flex flex-col items-center text-center py-10 rounded-xl border-2 border-dashed transition-colors",
                     isDropZoneActive
                       ? "border-brand bg-brand/5"
-                      : "border-border/40"
+                      : "border-border"
                   )}
                 >
+                  <Dumbbell
+                    className={cn(
+                      "size-8 mb-3",
+                      isDropZoneActive ? "text-brand" : "text-muted-foreground"
+                    )}
+                  />
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    {isDropZoneActive ? "¡Suelta aquí!" : "Sin ejercicios aún"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {isDropZoneActive
-                      ? "Suelta aquí"
-                      : "Arrastra más ejercicios aquí"}
+                    Arrastra ejercicios desde la biblioteca o pulsa{" "}
+                    <Plus className="size-3 inline" />
                   </p>
                 </div>
+              ) : (
+                <div className="space-y-1">
+                  {selected.map((ex, idx) => {
+                    const effectiveDuration =
+                      ex.overrideDuration ?? ex.durationMinutes;
+                    const isEditingDuration = editingDurationIdx === idx;
+                    const isExpanded = expandedIdx === idx;
+                    const isDragging = dragSrcIdx === idx;
+
+                    return (
+                      <div key={`${ex.exerciseId}-${idx}`}>
+                        <div
+                          className={cn(
+                            "h-0.5 rounded-full transition-all mb-1",
+                            dragOverIdx === idx ? "bg-brand" : "bg-transparent"
+                          )}
+                        />
+                        <div
+                          draggable={!isEditingDuration}
+                          onDragStart={(e) =>
+                            !isEditingDuration && onTimelineDragStart(e, idx)
+                          }
+                          onDragEnd={() => {
+                            setDragSrcIdx(null);
+                            setDragOverIdx(null);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverIdx(idx);
+                          }}
+                          onDragLeave={() => setDragOverIdx(null)}
+                          onDrop={(e) => onTimelineItemDrop(e, idx)}
+                          className={cn(
+                            "group bg-card border rounded-xl transition-all",
+                            isDragging
+                              ? "opacity-40 border-dashed border-border cursor-grabbing"
+                              : "border-border hover:border-brand/30 hover:shadow-sm cursor-grab active:cursor-grabbing"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 px-3 py-2.5">
+                            <div
+                              className={cn(
+                                "w-0.5 h-8 rounded-full shrink-0",
+                                CATEGORY_BAR[ex.category] ?? "bg-muted"
+                              )}
+                            />
+                            <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate leading-snug">
+                                {ex.name}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span
+                                  className={cn(
+                                    "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                                    CATEGORY_COLORS[ex.category] ??
+                                      "text-muted-foreground bg-muted"
+                                  )}
+                                >
+                                  {CATEGORY_LABELS[ex.category] ?? ex.category}
+                                </span>
+                                {ex.phase && (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
+                                    {PHASE_LABELS[ex.phase]}
+                                  </span>
+                                )}
+                                {ex.intensity !== null && (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
+                                    Int. {ex.intensity}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {isEditingDuration ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <input
+                                  ref={durationInputRef}
+                                  type="number"
+                                  min={1}
+                                  max={300}
+                                  value={durationEditValue}
+                                  onChange={(e) =>
+                                    setDurationEditValue(e.target.value)
+                                  }
+                                  onBlur={() => commitDurationEdit(idx)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      commitDurationEdit(idx);
+                                    }
+                                    if (e.key === "Escape")
+                                      setEditingDurationIdx(null);
+                                  }}
+                                  className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  min
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => startEditDuration(idx)}
+                                title="Editar duración"
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
+                              >
+                                <Clock className="size-3" />
+                                <span>{effectiveDuration} min</span>
+                                <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedIdx(isExpanded ? null : idx)
+                              }
+                              title="Ajustes"
+                              className={cn(
+                                "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
+                                isExpanded ||
+                                  ex.notes ||
+                                  ex.phase ||
+                                  ex.intensity !== null
+                                  ? "text-brand bg-brand/10"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
+                              )}
+                            >
+                              <StickyNote className="size-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => removeExercise(ex.exerciseId)}
+                              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
+                            >
+                              <X className="size-3.5" />
+                            </button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                  Fase
+                                </label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      patchItem(idx, { phase: null })
+                                    }
+                                    className={cn(
+                                      "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
+                                      ex.phase === null
+                                        ? "bg-muted border-border text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    Auto
+                                  </button>
+                                  {(
+                                    Object.keys(PHASE_LABELS) as TrainingPhase[]
+                                  ).map((p) => (
+                                    <button
+                                      key={p}
+                                      type="button"
+                                      onClick={() =>
+                                        patchItem(idx, { phase: p })
+                                      }
+                                      className={cn(
+                                        "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
+                                        ex.phase === p
+                                          ? "bg-brand text-brand-foreground border-brand"
+                                          : "bg-background border-border text-muted-foreground hover:text-foreground"
+                                      )}
+                                    >
+                                      {PHASE_LABELS[p]}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                  Intensidad
+                                </label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      patchItem(idx, { intensity: null })
+                                    }
+                                    className={cn(
+                                      "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
+                                      ex.intensity === null
+                                        ? "bg-muted border-border text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    Auto
+                                  </button>
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      onClick={() =>
+                                        patchItem(idx, { intensity: n })
+                                      }
+                                      className={cn(
+                                        "size-7 text-[10px] font-bold rounded-full border transition-colors",
+                                        ex.intensity === n
+                                          ? "bg-brand text-brand-foreground border-brand"
+                                          : "bg-background border-border text-muted-foreground hover:text-foreground"
+                                      )}
+                                    >
+                                      {n}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <textarea
+                                value={ex.notes}
+                                onChange={(e) =>
+                                  patchItem(idx, { notes: e.target.value })
+                                }
+                                placeholder="Notas para este ejercicio…"
+                                rows={2}
+                                className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={onDropZoneDrop}
+                    className={cn(
+                      "h-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-colors mt-2",
+                      isDropZoneActive
+                        ? "border-brand bg-brand/5"
+                        : "border-border/40"
+                    )}
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      {isDropZoneActive
+                        ? "Suelta aquí"
+                        : "Arrastra más ejercicios aquí"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: sources */}
+          <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+              <div className="inline-flex rounded-full border border-border bg-background p-1">
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("library")}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                    sourceTab === "library"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <BookOpen className="size-3.5" />
+                  Biblioteca
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("lists")}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                    sourceTab === "lists"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <CalendarDays className="size-3.5" />
+                  Listas
+                </button>
               </div>
+              <div className="ml-auto flex items-center gap-2">
+                {sourceTab === "library" && filteredAvailable.length > 0 ? (
+                  <span className="text-xs text-muted-foreground hidden sm:block">
+                    {filteredAvailable.length} disponibles
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowQuickCreate(true)}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 hover:bg-brand/20 px-2 py-1 rounded-lg transition-colors"
+                >
+                  <Plus className="size-3" />
+                  Nuevo
+                </button>
+              </div>
+            </div>
+
+            {sourceTab === "lists" ? (
+              <div className="flex-1 overflow-y-auto max-h-[360px] lg:max-h-none">
+                <SessionExerciseLists
+                  selectedExerciseIds={Array.from(selectedIds)}
+                  onApplyList={addExercisesFromList}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="px-3 pt-2 pb-1.5 border-b border-border shrink-0">
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Buscar ejercicios…"
+                      className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="flex gap-1 overflow-x-auto pb-0.5">
+                    {["all", ...availableCategories].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setLibCategoryFilter(cat)}
+                        className={cn(
+                          "shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full transition-colors whitespace-nowrap",
+                          libCategoryFilter === cat
+                            ? "bg-brand text-brand-foreground"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {cat === "all"
+                          ? "Todos"
+                          : (CATEGORY_LABELS[cat] ?? cat)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto divide-y divide-border/50 max-h-[360px] lg:max-h-none">
+                  {filteredAvailable.length === 0 ? (
+                    <div className="text-center py-8 px-4">
+                      <Filter className="size-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {search || libCategoryFilter !== "all"
+                          ? "Sin resultados para ese filtro"
+                          : libraryExercises.length === 0
+                            ? "No hay ejercicios en la biblioteca"
+                            : "Todos los ejercicios están en la sesión"}
+                      </p>
+                      <div className="mt-4 flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickCreate(true)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+                        >
+                          <Plus className="size-3.5" />
+                          Crear ejercicio rápido
+                        </button>
+                        {refreshingLibrary ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <Loader2 className="size-3 animate-spin" />
+                            Actualizando biblioteca…
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    filteredAvailable.map((ex) => (
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={(e) => onLibraryDragStart(e, ex)}
+                        className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors cursor-grab active:cursor-grabbing"
+                      >
+                        <div
+                          className={cn(
+                            "w-0.5 h-7 rounded-full shrink-0",
+                            CATEGORY_BAR[ex.category] ?? "bg-muted"
+                          )}
+                        />
+                        <GripVertical className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate leading-snug">
+                            {ex.name}
+                          </p>
+                          <span
+                            className={cn(
+                              "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                              CATEGORY_COLORS[ex.category] ??
+                                "text-muted-foreground bg-muted"
+                            )}
+                          >
+                            {CATEGORY_LABELS[ex.category] ?? ex.category}
+                          </span>
+                        </div>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                          <Clock className="size-3" />
+                          {ex.durationMinutes} min
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => addExercise(ex)}
+                          className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand transition-colors hover:bg-brand/20 sm:opacity-0 sm:group-hover:opacity-100"
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
-
-        {/* RIGHT: sources */}
-        <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
-            <div className="inline-flex rounded-full border border-border bg-background p-1">
-              <button
-                type="button"
-                onClick={() => setSourceTab("library")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  sourceTab === "library"
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <BookOpen className="size-3.5" />
-                Biblioteca
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourceTab("lists")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  sourceTab === "lists"
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <CalendarDays className="size-3.5" />
-                Listas
-              </button>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              {sourceTab === "library" && filteredAvailable.length > 0 ? (
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {filteredAvailable.length} disponibles
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setShowQuickCreate(true)}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 hover:bg-brand/20 px-2 py-1 rounded-lg transition-colors"
-              >
-                <Plus className="size-3" />
-                Nuevo
-              </button>
-            </div>
-          </div>
-
-          {sourceTab === "lists" ? (
-            <div className="flex-1 overflow-y-auto max-h-[360px] lg:max-h-none">
-              <SessionExerciseLists
-                selectedExerciseIds={Array.from(selectedIds)}
-                onApplyList={addExercisesFromList}
-              />
-            </div>
-          ) : (
-            <>
-              <div className="px-3 pt-2 pb-1.5 border-b border-border shrink-0">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar ejercicios…"
-                    className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div className="flex gap-1 overflow-x-auto pb-0.5">
-                  {["all", ...availableCategories].map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setLibCategoryFilter(cat)}
-                      className={cn(
-                        "shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full transition-colors whitespace-nowrap",
-                        libCategoryFilter === cat
-                          ? "bg-brand text-brand-foreground"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {cat === "all" ? "Todos" : (CATEGORY_LABELS[cat] ?? cat)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto divide-y divide-border/50 max-h-[360px] lg:max-h-none">
-                {filteredAvailable.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <Filter className="size-6 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {search || libCategoryFilter !== "all"
-                        ? "Sin resultados para ese filtro"
-                        : libraryExercises.length === 0
-                          ? "No hay ejercicios en la biblioteca"
-                          : "Todos los ejercicios están en la sesión"}
-                    </p>
-                    <div className="mt-4 flex flex-col items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickCreate(true)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
-                      >
-                        <Plus className="size-3.5" />
-                        Crear ejercicio rápido
-                      </button>
-                      {refreshingLibrary ? (
-                        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <Loader2 className="size-3 animate-spin" />
-                          Actualizando biblioteca…
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : (
-                  filteredAvailable.map((ex) => (
-                    <div
-                      key={ex.id}
-                      draggable
-                      onDragStart={(e) => onLibraryDragStart(e, ex)}
-                      className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors cursor-grab active:cursor-grabbing"
-                    >
-                      <div
-                        className={cn(
-                          "w-0.5 h-7 rounded-full shrink-0",
-                          CATEGORY_BAR[ex.category] ?? "bg-muted"
-                        )}
-                      />
-                      <GripVertical className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate leading-snug">
-                          {ex.name}
-                        </p>
-                        <span
-                          className={cn(
-                            "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                            CATEGORY_COLORS[ex.category] ??
-                              "text-muted-foreground bg-muted"
-                          )}
-                        >
-                          {CATEGORY_LABELS[ex.category] ?? ex.category}
-                        </span>
-                      </div>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                        <Clock className="size-3" />
-                        {ex.durationMinutes} min
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => addExercise(ex)}
-                        className="size-6 rounded-md flex items-center justify-center bg-brand/10 text-brand hover:bg-brand/20 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                      >
-                        <Plus className="size-3.5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
       </div>
     </>
   );

@@ -90,7 +90,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               № {String(chats.length).padStart(3, "0")}
             </p>
           </div>
-          <div className="grid grid-cols-[1fr_auto] items-end gap-6">
+          <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-6">
             <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
               Conversaciones con el{" "}
               <em className="italic text-brand">doctor</em>.
@@ -183,7 +183,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
                     <button
                       onClick={(e) => handleDelete(chat.id, e)}
                       disabled={deletingId === chat.id}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-foreground/35 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center text-foreground/35 transition-colors hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                       aria-label="Eliminar"
                     >
                       {deletingId === chat.id ? (
@@ -199,7 +199,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
           </section>
         )}
 
-        <footer className="pt-8 grid grid-cols-[1fr_auto] items-end gap-4 text-[11px] text-foreground/45">
+        <footer className="grid gap-3 pt-8 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
           <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
             &ldquo;La mejor sesión empieza con una buena pregunta.&rdquo;
           </p>

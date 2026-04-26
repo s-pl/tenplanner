@@ -96,8 +96,8 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
   return (
     <div className="space-y-6">
       {/* Calendar header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center justify-between gap-3 sm:justify-start">
           <button
             onClick={goToPrev}
             className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
@@ -105,7 +105,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h2 className="font-heading text-xl font-bold text-foreground min-w-[180px] text-center">
+          <h2 className="min-w-0 flex-1 text-center font-heading text-xl font-bold text-foreground sm:min-w-[180px] sm:flex-none">
             {MONTHS[viewMonth]} {viewYear}
           </h2>
           <button
@@ -116,7 +116,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
             <ChevronRight className="size-4" />
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:justify-end">
           <button
             onClick={goToToday}
             className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"

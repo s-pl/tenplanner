@@ -8,15 +8,7 @@ import {
   exercises as exercisesTable,
 } from "@/db/schema";
 import { and, asc, count, desc, eq, gte, lt, sql } from "drizzle-orm";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Plus,
-  Clock,
-  CalendarDays,
-  Dumbbell,
-  Bot,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, Plus, Clock, Bot } from "lucide-react";
 import { AiInsightsWidget } from "@/components/app/dashboard/ai-insights-widget";
 
 function formatDayMonth(date: Date) {
@@ -100,7 +92,10 @@ function AiInsightsSkeleton() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="border border-foreground/15 bg-foreground/[0.02] p-4 space-y-2">
+          <div
+            key={i}
+            className="border border-foreground/15 bg-foreground/[0.02] p-4 space-y-2"
+          >
             <div className="h-2.5 w-16 rounded bg-foreground/10 animate-pulse" />
             <div className="h-5 w-28 rounded bg-foreground/10 animate-pulse" />
             <div className="h-3 w-40 rounded bg-foreground/10 animate-pulse" />
@@ -183,240 +178,239 @@ async function DashboardBody({ userId }: { userId: string }) {
     <>
       {/* ─── STATS — monocromo, hairline grid ─── */}
       <section aria-labelledby="stats-heading" className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline gap-3">
+            <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+              01
+            </span>
+            <h2
+              id="stats-heading"
+              className="font-heading italic text-[17px] text-foreground/90"
+            >
+              Panorámica
+            </h2>
+          </div>
+          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+            Resumen operativo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-foreground/15 divide-foreground/10 lg:divide-x divide-y lg:divide-y-0">
+          {stats.map(({ label, value, unit }, idx) => (
+            <div key={label} className="px-5 py-6 relative">
+              <p className="font-sans text-[9px] uppercase tracking-[0.2em] text-foreground/45 mb-3">
+                {String(idx + 1).padStart(2, "0")} · {label}
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="font-heading text-5xl text-foreground tabular-nums leading-none">
+                  {value}
+                </span>
+                <span className="font-sans text-[11px] italic text-foreground/50">
+                  {unit}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── AGENDA + ACCIONES ─── */}
+      <section className="grid lg:grid-cols-12 gap-10 lg:gap-14">
+        {/* Upcoming — agenda editorial */}
+        <div className="lg:col-span-7 space-y-5">
           <div className="flex items-baseline justify-between">
             <div className="flex items-baseline gap-3">
               <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                01
+                02
               </span>
-              <h2
-                id="stats-heading"
-                className="font-heading italic text-[17px] text-foreground/90"
-              >
-                Panorámica
+              <h2 className="font-heading italic text-[17px] text-foreground/90">
+                En el horizonte
               </h2>
             </div>
-            <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-              Resumen operativo
-            </span>
+            <Link
+              href="/sessions?filter=upcoming"
+              className="group font-sans text-[11px] uppercase tracking-[0.18em] text-foreground/55 hover:text-brand transition-colors inline-flex items-center gap-1.5"
+            >
+              Agenda completa
+              <ArrowUpRight className="size-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-foreground/15 divide-foreground/10 lg:divide-x divide-y lg:divide-y-0">
-            {stats.map(({ label, value, unit }, idx) => (
-              <div key={label} className="px-5 py-6 relative">
-                <p className="font-sans text-[9px] uppercase tracking-[0.2em] text-foreground/45 mb-3">
-                  {String(idx + 1).padStart(2, "0")} · {label}
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-heading text-5xl text-foreground tabular-nums leading-none">
-                    {value}
-                  </span>
-                  <span className="font-sans text-[11px] italic text-foreground/50">
-                    {unit}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ─── AGENDA + ACCIONES ─── */}
-        <section className="grid lg:grid-cols-12 gap-10 lg:gap-14">
-          {/* Upcoming — agenda editorial */}
-          <div className="lg:col-span-7 space-y-5">
-            <div className="flex items-baseline justify-between">
-              <div className="flex items-baseline gap-3">
-                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                  02
-                </span>
-                <h2 className="font-heading italic text-[17px] text-foreground/90">
-                  En el horizonte
-                </h2>
-              </div>
+          {upcomingSessions.length === 0 ? (
+            <div className="border-t border-b border-foreground/15 py-14 text-center">
+              <p className="font-heading italic text-xl text-foreground/80 mb-2">
+                Ninguna sesión en el radar.
+              </p>
+              <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
+                Cuando planifiques entrenamientos aparecerán aquí ordenados por
+                fecha.
+              </p>
               <Link
-                href="/sessions?filter=upcoming"
-                className="group font-sans text-[11px] uppercase tracking-[0.18em] text-foreground/55 hover:text-brand transition-colors inline-flex items-center gap-1.5"
+                href="/sessions/new"
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors"
               >
-                Agenda completa
-                <ArrowUpRight className="size-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                <Plus className="size-3.5" /> Crear la primera
               </Link>
             </div>
+          ) : (
+            <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
+              {upcomingSessions.map((session, idx) => {
+                const date = new Date(session.scheduledAt);
+                return (
+                  <li key={session.id}>
+                    <Link
+                      href="/sessions"
+                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5"
+                    >
+                      <span className="hidden font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-[76px] border-l border-foreground/15 pl-3 sm:min-w-[92px] sm:pl-5">
+                        <p className="font-heading text-[20px] tabular-nums leading-none text-foreground sm:text-[22px]">
+                          {formatDayMonth(date)}
+                        </p>
+                        <p className="mt-1 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
+                          {formatWeekday(date).slice(0, 3)} · {formatTime(date)}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[15px] text-foreground leading-tight truncate">
+                          {session.title}
+                        </p>
+                        <p className="mt-1.5 font-sans text-[10px] uppercase tracking-[0.15em] text-foreground/40 tabular-nums">
+                          <Clock className="inline size-3 mr-1 -translate-y-px" />
+                          {session.durationMinutes} min
+                        </p>
+                      </div>
+                      <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
-            {upcomingSessions.length === 0 ? (
-              <div className="border-t border-b border-foreground/15 py-14 text-center">
-                <p className="font-heading italic text-xl text-foreground/80 mb-2">
-                  Ninguna sesión en el radar.
-                </p>
-                <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
-                  Cuando planifiques entrenamientos aparecerán aquí ordenados
-                  por fecha.
-                </p>
-                <Link
-                  href="/sessions/new"
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors"
-                >
-                  <Plus className="size-3.5" /> Crear la primera
-                </Link>
+        {/* Side column — tools + recent */}
+        <aside className="lg:col-span-5 space-y-10">
+          {/* Tools / quick actions */}
+          <div className="space-y-4">
+            <div className="flex items-baseline gap-3">
+              <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                03
+              </span>
+              <h2 className="font-heading italic text-[17px] text-foreground/90">
+                Herramientas
+              </h2>
+            </div>
+
+            <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
+              {[
+                {
+                  href: "/sessions/dr-planner",
+                  label: "Dr. Planner",
+                  desc: "Diseña con IA, tú confirmas",
+                  tag: "IA",
+                  accent: true,
+                },
+                {
+                  href: "/sessions/new",
+                  label: "Nueva sesión",
+                  desc: "Plan manual paso a paso",
+                  tag: "MAN",
+                },
+                {
+                  href: "/exercises",
+                  label: "Biblioteca",
+                  desc: "Explora y crea ejercicios",
+                  tag: "LIB",
+                },
+                {
+                  href: "/calendar",
+                  label: "Calendario",
+                  desc: "Vista mensual y semanal",
+                  tag: "CAL",
+                },
+              ].map(({ href, label, desc, tag, accent }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3.5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors"
+                  >
+                    <span
+                      className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/40"}`}
+                    >
+                      ▸
+                    </span>
+                    <div className="min-w-0">
+                      <p
+                        className={`text-[14px] leading-tight ${accent ? "text-brand" : "text-foreground/90"}`}
+                      >
+                        {label}
+                      </p>
+                      <p className="text-[11px] text-foreground/55 mt-0.5">
+                        {desc}
+                      </p>
+                    </div>
+                    <span
+                      className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/35"} group-hover:text-brand transition-colors`}
+                    >
+                      {tag}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Recent activity — archive */}
+          {recentSessions.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-baseline gap-3">
+                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+                  04
+                </span>
+                <h2 className="font-heading italic text-[17px] text-foreground/90">
+                  Archivo reciente
+                </h2>
               </div>
-            ) : (
+
               <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-                {upcomingSessions.map((session, idx) => {
+                {recentSessions.map((session) => {
                   const date = new Date(session.scheduledAt);
                   return (
-                    <li key={session.id}>
-                      <Link
-                        href="/sessions"
-                        className="group grid grid-cols-[auto_auto_1fr_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors"
-                      >
-                        <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
-                          {String(idx + 1).padStart(2, "0")}
-                        </span>
-                        <div className="border-l border-foreground/15 pl-5 min-w-[92px]">
-                          <p className="font-heading text-[22px] tabular-nums leading-none text-foreground">
-                            {formatDayMonth(date)}
-                          </p>
-                          <p className="mt-1 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
-                            {formatWeekday(date).slice(0, 3)} ·{" "}
-                            {formatTime(date)}
-                          </p>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[15px] text-foreground leading-tight truncate">
-                            {session.title}
-                          </p>
-                          <p className="mt-1.5 font-sans text-[10px] uppercase tracking-[0.15em] text-foreground/40 tabular-nums">
-                            <Clock className="inline size-3 mr-1 -translate-y-px" />
-                            {session.durationMinutes} min
-                          </p>
-                        </div>
-                        <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
-                      </Link>
+                    <li
+                      key={session.id}
+                      className="py-3 grid grid-cols-[auto_1fr_auto] items-baseline gap-4"
+                    >
+                      <span className="font-sans text-[10px] tracking-[0.14em] tabular-nums text-foreground/45 uppercase">
+                        {formatDayMonth(date)}
+                      </span>
+                      <p className="text-[13px] text-foreground/85 truncate italic">
+                        {session.title}
+                      </p>
+                      <span className="font-sans text-[10px] tabular-nums text-foreground/35">
+                        {session.durationMinutes}&prime;
+                      </span>
                     </li>
                   );
                 })}
               </ul>
-            )}
+            </div>
+          )}
+
+          {/* Editorial footnote */}
+          <div className="pt-6 border-t border-foreground/10">
+            <p className="font-heading italic text-[13px] text-foreground/45 leading-relaxed">
+              &ldquo;La repetición no es memoria: es escultura. Cada sesión
+              talla un gesto que acabará siendo instinto.&rdquo;
+            </p>
+            <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/35">
+              Cuaderno · tenplanner
+            </p>
           </div>
-
-          {/* Side column — tools + recent */}
-          <aside className="lg:col-span-5 space-y-10">
-            {/* Tools / quick actions */}
-            <div className="space-y-4">
-              <div className="flex items-baseline gap-3">
-                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                  03
-                </span>
-                <h2 className="font-heading italic text-[17px] text-foreground/90">
-                  Herramientas
-                </h2>
-              </div>
-
-              <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-                {[
-                  {
-                    href: "/sessions/dr-planner",
-                    label: "Dr. Planner",
-                    desc: "Diseña con IA, tú confirmas",
-                    tag: "IA",
-                    accent: true,
-                  },
-                  {
-                    href: "/sessions/new",
-                    label: "Nueva sesión",
-                    desc: "Plan manual paso a paso",
-                    tag: "MAN",
-                  },
-                  {
-                    href: "/exercises",
-                    label: "Biblioteca",
-                    desc: "Explora y crea ejercicios",
-                    tag: "LIB",
-                  },
-                  {
-                    href: "/calendar",
-                    label: "Calendario",
-                    desc: "Vista mensual y semanal",
-                    tag: "CAL",
-                  },
-                ].map(({ href, label, desc, tag, accent }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3.5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors"
-                    >
-                      <span
-                        className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/40"}`}
-                      >
-                        ▸
-                      </span>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-[14px] leading-tight ${accent ? "text-brand" : "text-foreground/90"}`}
-                        >
-                          {label}
-                        </p>
-                        <p className="text-[11px] text-foreground/55 mt-0.5">
-                          {desc}
-                        </p>
-                      </div>
-                      <span
-                        className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/35"} group-hover:text-brand transition-colors`}
-                      >
-                        {tag}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Recent activity — archive */}
-            {recentSessions.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-baseline gap-3">
-                  <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                    04
-                  </span>
-                  <h2 className="font-heading italic text-[17px] text-foreground/90">
-                    Archivo reciente
-                  </h2>
-                </div>
-
-                <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-                  {recentSessions.map((session) => {
-                    const date = new Date(session.scheduledAt);
-                    return (
-                      <li
-                        key={session.id}
-                        className="py-3 grid grid-cols-[auto_1fr_auto] items-baseline gap-4"
-                      >
-                        <span className="font-sans text-[10px] tracking-[0.14em] tabular-nums text-foreground/45 uppercase">
-                          {formatDayMonth(date)}
-                        </span>
-                        <p className="text-[13px] text-foreground/85 truncate italic">
-                          {session.title}
-                        </p>
-                        <span className="font-sans text-[10px] tabular-nums text-foreground/35">
-                          {session.durationMinutes}&prime;
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-            {/* Editorial footnote */}
-            <div className="pt-6 border-t border-foreground/10">
-              <p className="font-heading italic text-[13px] text-foreground/45 leading-relaxed">
-                &ldquo;La repetición no es memoria: es escultura. Cada sesión
-                talla un gesto que acabará siendo instinto.&rdquo;
-              </p>
-              <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/35">
-                Cuaderno · tenplanner
-              </p>
-            </div>
-          </aside>
-        </section>
+        </aside>
+      </section>
     </>
   );
 }
@@ -448,10 +442,10 @@ export default async function DashboardPage() {
         }}
       />
 
-      <div className="relative px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-14">
+      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-8 md:py-14 space-y-10 md:space-y-14">
         {/* ─── MASTHEAD ─── */}
         <header className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 tabular-nums">
               {formatLongDate(now)}
             </p>
@@ -471,17 +465,17 @@ export default async function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 md:flex md:shrink-0">
               <Link
                 href="/sessions/dr-planner"
-                className="group inline-flex items-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 hover:border-brand/40 hover:text-brand transition-colors"
+                className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 hover:border-brand/40 hover:text-brand transition-colors"
               >
                 <Bot className="size-4 text-brand" />
                 Dr. Planner
               </Link>
               <Link
                 href="/sessions/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-foreground text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-foreground/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-foreground/90 transition-colors"
               >
                 <Plus className="size-4" />
                 Nueva sesión

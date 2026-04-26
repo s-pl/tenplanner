@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,9 +16,7 @@ import {
   RotateCcw,
   Package,
   Timer,
-  ChevronRight,
   Dumbbell,
-  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -119,16 +117,19 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     return () => clearInterval(interval);
   }, [timerRunning, countdownMode]);
 
-  // Reset timer when exercise changes
-  useEffect(() => {
-    if (!started) return;
+  function resetTimerForExercise(exercise = current) {
     setTimerRunning(false);
-    if (countdownMode && current) {
-      setTimerSeconds((current.durationMinutes ?? 0) * 60);
+    if (countdownMode && exercise) {
+      setTimerSeconds((exercise.durationMinutes ?? 0) * 60);
     } else {
       setTimerSeconds(0);
     }
-  }, [currentIdx, started]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
+
+  function handleStart() {
+    resetTimerForExercise(current);
+    setStarted(true);
+  }
 
   function toggleCountdown() {
     const next = !countdownMode;
@@ -152,14 +153,25 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
   function goNext() {
     if (current) markDone(current.exerciseId);
     if (currentIdx < totalExercises - 1) {
-      setCurrentIdx((i) => i + 1);
+      const nextIdx = currentIdx + 1;
+      resetTimerForExercise(exercises[nextIdx]);
+      setCurrentIdx(nextIdx);
     } else {
       setShowFinish(true);
     }
   }
 
   function goPrev() {
-    if (currentIdx > 0) setCurrentIdx((i) => i - 1);
+    if (currentIdx > 0) {
+      const nextIdx = currentIdx - 1;
+      resetTimerForExercise(exercises[nextIdx]);
+      setCurrentIdx(nextIdx);
+    }
+  }
+
+  function selectExercise(idx: number) {
+    resetTimerForExercise(exercises[idx]);
+    setCurrentIdx(idx);
   }
 
   async function handleFinish() {
@@ -217,7 +229,9 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             <h1 className="font-heading text-3xl font-semibold text-foreground leading-tight">
               {session.title}
             </h1>
-            <p className="text-sm text-muted-foreground">{formatDate(session.scheduledAt)}</p>
+            <p className="text-sm text-muted-foreground">
+              {formatDate(session.scheduledAt)}
+            </p>
             <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Clock className="size-3.5 text-brand" />
@@ -264,7 +278,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             </div>
             <div className="divide-y divide-border/50">
               {exercises.map((ex, idx) => (
-                <div key={ex.exerciseId} className="flex items-center gap-3 px-5 py-3">
+                <div
+                  key={ex.exerciseId}
+                  className="flex items-center gap-3 px-5 py-3"
+                >
                   <span className="text-[10px] font-mono text-muted-foreground/50 w-4 shrink-0 text-right">
                     {idx + 1}
                   </span>
@@ -275,12 +292,21 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                       ex.category === "tactics" && "bg-purple-400",
                       ex.category === "fitness" && "bg-amber-400",
                       ex.category === "warm-up" && "bg-brand",
-                      !["technique", "tactics", "fitness", "warm-up"].includes(ex.category) && "bg-muted"
+                      !["technique", "tactics", "fitness", "warm-up"].includes(
+                        ex.category
+                      ) && "bg-muted"
                     )}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{ex.name}</p>
-                    <p className={cn("text-[10px] font-semibold", CATEGORY_ACCENT[ex.category] ?? "text-muted-foreground")}>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {ex.name}
+                    </p>
+                    <p
+                      className={cn(
+                        "text-[10px] font-semibold",
+                        CATEGORY_ACCENT[ex.category] ?? "text-muted-foreground"
+                      )}
+                    >
                       {CATEGORY_LABELS[ex.category] ?? ex.category}
                     </p>
                   </div>
@@ -295,7 +321,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
         <footer className="px-4 py-5 border-t border-border pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <button
-            onClick={() => setStarted(true)}
+            onClick={handleStart}
             className="w-full h-14 flex items-center justify-center gap-2.5 rounded-2xl bg-brand text-brand-foreground font-bold text-base shadow-sm hover:bg-brand/90 active:scale-[0.98] transition-all"
           >
             <Play className="size-5 translate-x-0.5" />
@@ -311,8 +337,6 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     countdownMode && current
       ? Math.min(100, (timerSeconds / (current.durationMinutes * 60)) * 100)
       : 0;
-  const isOvertime = countdownMode && timerSeconds === 0 && timerRunning === false && done.has(current?.exerciseId ?? "");
-
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Top bar */}
@@ -325,7 +349,9 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         </Link>
 
         <div className="text-center">
-          <p className="text-xs font-semibold text-foreground truncate max-w-[160px]">{session.title}</p>
+          <p className="text-xs font-semibold text-foreground truncate max-w-[160px]">
+            {session.title}
+          </p>
           <p className="text-[10px] text-muted-foreground tabular-nums">
             {currentIdx + 1} / {totalExercises}
           </p>
@@ -357,7 +383,12 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             CATEGORY_COLORS[current.category] ?? "border-border bg-card"
           )}
         >
-          <p className={cn("text-[10px] font-bold uppercase tracking-widest mb-2", CATEGORY_ACCENT[current.category] ?? "text-brand")}>
+          <p
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-widest mb-2",
+              CATEGORY_ACCENT[current.category] ?? "text-brand"
+            )}
+          >
             {CATEGORY_LABELS[current.category] ?? current.category}
           </p>
           <h1 className="font-heading text-3xl text-foreground leading-tight mb-3">
@@ -385,7 +416,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               <div
                 className={cn(
                   "h-full transition-all duration-1000",
-                  countdownPct > 30 ? "bg-brand" : countdownPct > 10 ? "bg-amber-400" : "bg-red-400"
+                  countdownPct > 30
+                    ? "bg-brand"
+                    : countdownPct > 10
+                      ? "bg-amber-400"
+                      : "bg-red-400"
                 )}
                 style={{ width: `${countdownPct}%` }}
               />
@@ -395,7 +430,9 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             <span
               className={cn(
                 "font-mono text-3xl tabular-nums flex-1",
-                countdownMode && timerSeconds === 0 ? "text-red-400" : "text-foreground"
+                countdownMode && timerSeconds === 0
+                  ? "text-red-400"
+                  : "text-foreground"
               )}
             >
               {formatTime(timerSeconds)}
@@ -406,12 +443,18 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                 className="size-11 flex items-center justify-center rounded-xl bg-brand text-background hover:bg-brand/90 active:scale-95 transition-all"
                 aria-label={timerRunning ? "Pausar" : "Iniciar"}
               >
-                {timerRunning ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
+                {timerRunning ? (
+                  <Pause className="size-5" />
+                ) : (
+                  <Play className="size-5 translate-x-0.5" />
+                )}
               </button>
               <button
                 onClick={() => {
                   setTimerRunning(false);
-                  setTimerSeconds(countdownMode ? current.durationMinutes * 60 : 0);
+                  setTimerSeconds(
+                    countdownMode ? current.durationMinutes * 60 : 0
+                  );
                 }}
                 className="size-11 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 aria-label="Reiniciar"
@@ -420,14 +463,20 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               </button>
               <button
                 onClick={toggleCountdown}
-                title={countdownMode ? "Cambiar a cronómetro" : "Cambiar a cuenta atrás"}
+                title={
+                  countdownMode
+                    ? "Cambiar a cronómetro"
+                    : "Cambiar a cuenta atrás"
+                }
                 className={cn(
                   "size-11 flex items-center justify-center rounded-xl border transition-colors",
                   countdownMode
                     ? "border-brand bg-brand/10 text-brand"
                     : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
-                aria-label={countdownMode ? "Modo cronómetro" : "Modo cuenta atrás"}
+                aria-label={
+                  countdownMode ? "Modo cronómetro" : "Modo cuenta atrás"
+                }
               >
                 <Timer className="size-4" />
               </button>
@@ -472,9 +521,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     {i + 1}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {step.title}
+                    </p>
                     {step.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{step.description}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {step.description}
+                      </p>
                     )}
                   </div>
                 </li>
@@ -489,15 +542,21 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/70 mb-1.5">
               Notas del entrenador
             </p>
-            <p className="text-sm text-foreground/80 leading-relaxed">{current.notes}</p>
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              {current.notes}
+            </p>
           </div>
         )}
 
         {/* Tips */}
         {current.tips && (
           <div className="bg-muted/40 border border-border rounded-xl p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Tips</p>
-            <p className="text-sm text-foreground/70 leading-relaxed">{current.tips}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+              Tips
+            </p>
+            <p className="text-sm text-foreground/70 leading-relaxed">
+              {current.tips}
+            </p>
           </div>
         )}
       </main>
@@ -510,7 +569,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           return (
             <button
               key={ex.exerciseId}
-              onClick={() => setCurrentIdx(idx)}
+              onClick={() => selectExercise(idx)}
               title={ex.name}
               className={cn(
                 "shrink-0 size-8 rounded-full text-[10px] font-mono transition-all flex items-center justify-center",
@@ -521,7 +580,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     : "bg-muted text-muted-foreground hover:bg-muted/60"
               )}
             >
-              {isDone && !isCurrent ? <CheckCircle2 className="size-3.5" /> : idx + 1}
+              {isDone && !isCurrent ? (
+                <CheckCircle2 className="size-3.5" />
+              ) : (
+                idx + 1
+              )}
             </button>
           );
         })}

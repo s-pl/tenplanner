@@ -53,7 +53,12 @@ type Phase = "activation" | "main" | "cooldown";
 type ExerciseFormMode = "quick" | "full";
 type AccordionSectionId = "essential" | "pedagogical" | "params" | "media";
 type Formato = "individual" | "parejas" | "grupal" | "multigrupo";
-type TipoActividad = "tecnico_tactico" | "fisico" | "cognitivo" | "competitivo" | "ludico";
+type TipoActividad =
+  | "tecnico_tactico"
+  | "fisico"
+  | "cognitivo"
+  | "competitivo"
+  | "ludico";
 type TipoPelota = "normal" | "lenta" | "rapida" | "sin_pelota";
 const FORM_MODE_STORAGE_KEY = "exercise-form-mode";
 
@@ -286,7 +291,9 @@ function SectionHeader({
         <Icon className="size-4 text-brand" />
       </div>
       <div>
-        <p className="text-sm font-bold text-foreground uppercase tracking-wide">{title}</p>
+        <p className="text-sm font-bold text-foreground uppercase tracking-wide">
+          {title}
+        </p>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         )}
@@ -312,8 +319,9 @@ function buildImageSlots(initialData?: ExerciseFormProps["initialData"]) {
   const images = [
     initialData?.imageUrl ?? null,
     ...(initialData?.imageUrls ?? []),
-  ].filter((value, index, current): value is string =>
-    !!value && current.indexOf(value) === index
+  ].filter(
+    (value, index, current): value is string =>
+      !!value && current.indexOf(value) === index
   );
 
   return [
@@ -424,7 +432,9 @@ export function ExerciseForm({
   const draftHydratedRef = useRef(false);
   const draftIdRef = useRef<string | null>(null);
   const saveTimerRef = useRef<number | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+    "idle"
+  );
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   const [imageSlots, setImageSlots] = useState<Array<string | null>>(() =>
@@ -479,8 +489,8 @@ export function ExerciseForm({
     },
   });
   const watchedValues = watch();
-  const normalizedImages = imageSlots.filter(
-    (value): value is string => Boolean(value)
+  const normalizedImages = imageSlots.filter((value): value is string =>
+    Boolean(value)
   );
 
   useEffect(() => {
@@ -501,7 +511,9 @@ export function ExerciseForm({
     let hydrationTimeout: number | null = null;
     let cancelled = false;
 
-    const draftId = new URLSearchParams(window.location.search).get(draftQueryParam);
+    const draftId = new URLSearchParams(window.location.search).get(
+      draftQueryParam
+    );
     draftIdRef.current = draftId;
     if (!draftId) {
       draftHydratedRef.current = true;
@@ -532,8 +544,8 @@ export function ExerciseForm({
         formato: (draft.payload.formato ?? null) as Formato | null,
         numJugadores: draft.payload.numJugadores ?? null,
         tipoPelota: (draft.payload.tipoPelota ?? null) as TipoPelota | null,
-        tipoActividad:
-          (draft.payload.tipoActividad ?? null) as TipoActividad | null,
+        tipoActividad: (draft.payload.tipoActividad ??
+          null) as TipoActividad | null,
         isGlobal: draft.payload.isGlobal ?? false,
       });
       setFormMode(draft.payload.formMode);
@@ -673,7 +685,9 @@ export function ExerciseForm({
           window.history.replaceState(
             null,
             "",
-            nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname
+            nextQuery
+              ? `${window.location.pathname}?${nextQuery}`
+              : window.location.pathname
           );
         }
         return;
@@ -812,7 +826,9 @@ export function ExerciseForm({
         window.history.replaceState(
           null,
           "",
-          nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname
+          nextQuery
+            ? `${window.location.pathname}?${nextQuery}`
+            : window.location.pathname
         );
       }
 
@@ -996,7 +1012,9 @@ export function ExerciseForm({
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
             Material necesario{" "}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
           </label>
           <div
             className={cn(
@@ -1572,7 +1590,7 @@ export function ExerciseForm({
                     <button
                       type="button"
                       onClick={() => removeStep(step.id)}
-                      className="size-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 mt-0.5 opacity-0 group-hover:opacity-100"
+                      className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <X className="size-3.5" />
                     </button>
@@ -1850,7 +1868,7 @@ export function ExerciseForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
       {/* Mode selector */}
-      <div className="flex items-center justify-between gap-4 py-1">
+      <div className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
             Modo de creación
@@ -1861,7 +1879,7 @@ export function ExerciseForm({
               : "Vista completa con todos los campos avanzados agrupados."}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {enableDrafts && mode === "create" && (
             <DraftStatusPill status={saveStatus} savedAt={savedAt} />
           )}

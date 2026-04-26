@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { exercises, sessions, sessionExercises, users } from "@/db/schema";
-import { count, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { AdminContentClient } from "./content-client";
 
 export default async function AdminContentPage() {
@@ -48,7 +48,7 @@ export default async function AdminContentPage() {
   ]);
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-semibold text-foreground">
           Contenido
