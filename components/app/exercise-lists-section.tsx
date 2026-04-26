@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ListedExercise {
   id: string;
@@ -53,7 +54,7 @@ const ACCENT_PALETTE = [
   { bg: "bg-amber-500/8", border: "border-amber-500/20", text: "text-amber-400", dot: "bg-amber-400" },
   { bg: "bg-rose-500/8", border: "border-rose-500/20", text: "text-rose-400", dot: "bg-rose-400" },
   { bg: "bg-cyan-500/8", border: "border-cyan-500/20", text: "text-cyan-400", dot: "bg-cyan-400" },
-  { bg: "bg-emerald-500/8", border: "border-emerald-500/20", text: "text-emerald-400", dot: "bg-emerald-400" },
+  { bg: "bg-sky-500/8", border: "border-sky-500/20", text: "text-sky-400", dot: "bg-sky-400" },
 ];
 
 function CollectionCard({
@@ -360,6 +361,7 @@ export function ExerciseListsSection() {
   const [removingKey, setRemovingKey] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
 
   const totalSaved = useMemo(
@@ -417,7 +419,6 @@ export function ExerciseListsSection() {
   }
 
   async function deleteList(listId: string) {
-    if (!window.confirm("¿Eliminar esta colección?")) return;
     setDeletingId(listId);
     try {
       const res = await fetch(`/api/exercise-lists/${listId}`, { method: "DELETE" });
@@ -473,7 +474,7 @@ export function ExerciseListsSection() {
           className="relative rounded-3xl border border-dashed border-foreground/15 overflow-hidden"
           style={{
             backgroundImage:
-              "linear-gradient(oklch(0.73 0.19 148 / 0.04) 1px, transparent 1px), linear-gradient(90deg, oklch(0.73 0.19 148 / 0.04) 1px, transparent 1px)",
+              "linear-gradient(oklch(0.70 0.18 255 / 0.04) 1px, transparent 1px), linear-gradient(90deg, oklch(0.70 0.18 255 / 0.04) 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
         >
@@ -571,7 +572,7 @@ export function ExerciseListsSection() {
             key={list.id}
             list={list}
             index={i}
-            onDelete={deleteList}
+            onDelete={(id) => setDeleteTarget(id)}
             onRename={handleRename}
             onRemoveItem={removeFromList}
             deletingId={deletingId}
@@ -579,6 +580,15 @@ export function ExerciseListsSection() {
           />
         ))}
       </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="¿Eliminar esta colección?"
+        description="Se eliminará la colección y todos sus ejercicios guardados. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => { if (deleteTarget) void deleteList(deleteTarget); }}
+      />
     </div>
   );
 }

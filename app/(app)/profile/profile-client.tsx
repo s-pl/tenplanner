@@ -557,11 +557,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               ) : null}
               {saving ? "Guardando…" : saved ? "Guardado" : "Guardar cambios"}
             </button>
-            {saved && (
-              <p className="text-[12px] text-brand font-sans tracking-wide uppercase">
-                ◆ Cambios guardados
-              </p>
-            )}
+            <p
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-[12px] text-brand font-sans tracking-wide uppercase"
+            >
+              {saved ? "◆ Cambios guardados" : ""}
+            </p>
           </div>
         </div>
       )}

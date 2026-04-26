@@ -13,10 +13,7 @@ const MAX_SESSIONS = 1000;
 
 export default async function CalendarPage() {
   const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
@@ -83,7 +80,21 @@ export default async function CalendarPage() {
             viene.
           </p>
         </header>
-        <CalendarClient sessions={serialized} />
+        {total === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+            <p className="text-foreground/50 text-sm max-w-xs">
+              Aún no tienes sesiones planificadas. Crea tu primera sesión para verla aquí.
+            </p>
+            <a
+              href="/sessions/new"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              Crear primera sesión
+            </a>
+          </div>
+        ) : (
+          <CalendarClient sessions={serialized} />
+        )}
       </div>
     </div>
   );

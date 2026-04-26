@@ -5,9 +5,10 @@ interface AppShellProps {
   children: React.ReactNode;
   user: User | null;
   avatarUrl: string | null;
+  isAdmin?: boolean;
 }
 
-export default function AppShell({ children, user, avatarUrl }: AppShellProps) {
+export default function AppShell({ children, user, avatarUrl, isAdmin = false }: AppShellProps) {
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
       <div
@@ -27,9 +28,9 @@ export default function AppShell({ children, user, avatarUrl }: AppShellProps) {
           backgroundSize: "calc(100%/18) 100%",
         }}
       />
-      <SidebarNav user={user} avatarUrl={avatarUrl} />
+      <SidebarNav user={user} avatarUrl={avatarUrl} isAdmin={isAdmin} />
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main id="main" className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

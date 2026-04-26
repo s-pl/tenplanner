@@ -26,7 +26,7 @@ const LIST_TINTS = [
   "from-amber-500/20 to-amber-500/5",
   "from-rose-500/20 to-rose-500/5",
   "from-cyan-500/20 to-cyan-500/5",
-  "from-emerald-500/20 to-emerald-500/5",
+  "from-sky-500/20 to-sky-500/5",
 ];
 
 export function ExerciseListPicker({

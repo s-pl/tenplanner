@@ -8,18 +8,18 @@ export interface AccentColor {
 
 export const ACCENT_COLORS: AccentColor[] = [
   {
+    id: "blue",
+    label: "Azul Cobalto",
+    dark: "oklch(0.70 0.18 255)",
+    light: "oklch(0.50 0.20 255)",
+    preview: "#3b82f6",
+  },
+  {
     id: "green",
     label: "Verde Pádel",
     dark: "oklch(0.73 0.19 148)",
     light: "oklch(0.48 0.18 148)",
     preview: "#4ade80",
-  },
-  {
-    id: "blue",
-    label: "Azul Océano",
-    dark: "oklch(0.68 0.18 230)",
-    light: "oklch(0.48 0.18 230)",
-    preview: "#60a5fa",
   },
   {
     id: "violet",

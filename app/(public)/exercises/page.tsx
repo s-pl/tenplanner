@@ -387,21 +387,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     mine: Number(mineRows[0]?.total ?? 0),
     favorites: favIdArray.length,
   };
-  const activeFilterCount =
-    (searchTerm ? 1 : 0) +
-    (activeCategory !== "all" ? 1 : 0) +
-    (activeDifficulty !== "all" ? 1 : 0) +
-    (activeFormato ? 1 : 0) +
-    (activeNumJugadores != null ? 1 : 0) +
-    (activeTipoPelota ? 1 : 0) +
-    (activeTipoActividad ? 1 : 0) +
-    activeGolpes.length +
-    activeEfecto.length +
-    (activeMinDuracion != null ? 1 : 0) +
-    (activeMaxDuracion != null ? 1 : 0) +
-    (activeLocation ? 1 : 0) +
-    (activePhase ? 1 : 0) +
-    (activeIntensity != null ? 1 : 0);
   const masthead = {
     eyebrow: "Método · Catálogo",
     accent: "Biblioteca",
@@ -576,48 +561,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
             {activeTab === "favorites" && user ? (
               <ExerciseListsSection />
             ) : (<>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
-                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                  Vista activa
-                </p>
-                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                  {tabCounts[activeTab].toString().padStart(2, "0")}
-                </p>
-                <p className="mt-2 text-[12px] text-foreground/55">
-                  {TAB_LABELS[activeTab]} dentro del catálogo visible.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
-                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                  Propiedad
-                </p>
-                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                  {(user ? tabCounts.mine : tabCounts.global)
-                    .toString()
-                    .padStart(2, "0")}
-                </p>
-                <p className="mt-2 text-[12px] text-foreground/55">
-                  {user
-                    ? "Ejercicios propios disponibles para reutilizar."
-                    : "Ejercicios globales abiertos al catálogo público."}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-brand/20 bg-brand/[0.06] px-4 py-4">
-                <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-brand/80">
-                  Señal actual
-                </p>
-                <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                  {activeFilterCount.toString().padStart(2, "0")}
-                </p>
-                <p className="mt-2 text-[12px] text-foreground/60">
-                  {activeFilterCount > 0
-                    ? "Ajustes afinando el catálogo en esta vista."
-                    : "Sin filtros extra: lectura completa del material."}
-                </p>
-              </div>
-            </div>
 
             {/* ─── Category strip ─── */}
             {tabCounts[activeTab] > 0 && (

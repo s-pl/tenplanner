@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 import { applyAccentColor } from "@/lib/accent-colors";
 
+type VTDocument = Document & {
+  startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+};
+
 export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [isDark, setIsDark] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -16,14 +20,49 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  function toggle() {
-    const next = !isDark;
+  function applyTheme(next: boolean) {
     setIsDark(next);
     localStorage.setItem("theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
-    // Re-apply accent color since light/dark values differ
-    const accent = localStorage.getItem("accent") ?? "green";
+    const accent = localStorage.getItem("accent") ?? "blue";
     applyAccentColor(accent);
+  }
+
+  async function toggle(e: React.MouseEvent<HTMLButtonElement>) {
+    const next = !isDark;
+    const vtDoc = document as VTDocument;
+
+    if (!vtDoc.startViewTransition) {
+      applyTheme(next);
+      return;
+    }
+
+    const { clientX: x, clientY: y } = e;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = vtDoc.startViewTransition(() => applyTheme(next));
+
+    try {
+      await transition.ready;
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 420,
+          easing: "ease-in-out",
+          pseudoElement: "::view-transition-new(root)",
+        }
+      );
+    } catch {
+      // Transición interrumpida o no compatible
+    }
   }
 
   if (!mounted) return <div className={compact ? "size-8" : "h-10"} />;

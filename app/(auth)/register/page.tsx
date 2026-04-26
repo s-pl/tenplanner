@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +20,14 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Trophy,
+  GraduationCap,
+  Zap,
+  Diamond,
+  Sprout,
+  Building2,
+  Globe,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,20 +71,10 @@ type AccountValues = z.infer<typeof accountSchema>;
 
 // ─── Opciones ─────────────────────────────────────────────────────────────
 
-const ROLES: { id: Role; emoji: string; label: string; desc: string }[] = [
-  {
-    id: "player",
-    emoji: "🎾",
-    label: "Jugador",
-    desc: "Quiero mejorar mi juego",
-  },
-  {
-    id: "coach",
-    emoji: "🏋️",
-    label: "Entrenador",
-    desc: "Planifico sesiones para otros",
-  },
-  { id: "both", emoji: "⚡", label: "Ambos", desc: "Juego y entreno a otros" },
+const ROLES: { id: Role; icon: LucideIcon; label: string; desc: string }[] = [
+  { id: "player", icon: Trophy, label: "Jugador", desc: "Quiero mejorar mi juego" },
+  { id: "coach", icon: GraduationCap, label: "Entrenador", desc: "Planifico sesiones para otros" },
+  { id: "both", icon: Zap, label: "Ambos", desc: "Juego y entreno a otros" },
 ];
 
 const LEVELS: { id: Level; label: string; desc: string }[] = [
@@ -103,11 +101,11 @@ const COACH_LEVELS: { id: Level; label: string; desc: string }[] = [
   { id: "competitive", label: "Experto", desc: "Entrenador profesional" },
 ];
 
-const SURFACES: { id: Surface; emoji: string; label: string }[] = [
-  { id: "crystal", emoji: "🔷", label: "Cristal" },
-  { id: "turf", emoji: "🟩", label: "Hierba artif." },
-  { id: "cement", emoji: "⬜", label: "Hormigón" },
-  { id: "any", emoji: "🌐", label: "Todas" },
+const SURFACES: { id: Surface; icon: LucideIcon; label: string }[] = [
+  { id: "crystal", icon: Diamond, label: "Cristal" },
+  { id: "turf", icon: Sprout, label: "Hierba artif." },
+  { id: "cement", icon: Building2, label: "Hormigón" },
+  { id: "any", icon: Globe, label: "Todas" },
 ];
 
 const GOAL_OPTIONS = [
@@ -162,9 +160,12 @@ const STRENGTH_CONFIG: Record<
 
 // ─── Componente principal ─────────────────────────────────────────────────
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  const [step, setStep] = useState(() =>
+    Math.min(4, Math.max(1, Number(searchParams.get("step")) || 1))
+  );
   const [serverError, setServerError] = useState<string | null>(null);
   const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -211,10 +212,16 @@ export default function RegisterPage() {
   }
 
   function next() {
-    if (canAdvance()) setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    if (canAdvance()) {
+      const newStep = Math.min(step + 1, TOTAL_STEPS);
+      setStep(newStep);
+      router.replace(`/register?step=${newStep}`);
+    }
   }
   function back() {
-    setStep((s) => Math.max(s - 1, 1));
+    const newStep = Math.max(step - 1, 1);
+    setStep(newStep);
+    router.replace(`/register?step=${newStep}`);
   }
 
   async function handleAccountNext() {
@@ -261,6 +268,7 @@ export default function RegisterPage() {
           `Ya existe una cuenta con ${values.email}. ¿Quieres iniciar sesión?`
         );
         setStep(1);
+        router.replace("/register?step=1");
         setLoading(false);
         return;
       }
@@ -693,7 +701,7 @@ export default function RegisterPage() {
               Rol
             </p>
             <div className="grid gap-2">
-              {ROLES.map(({ id, emoji, label, desc }) => (
+              {ROLES.map(({ id, icon: RoleIcon, label, desc }) => (
                 <button
                   key={id}
                   type="button"
@@ -716,7 +724,7 @@ export default function RegisterPage() {
                       : "border-border hover:bg-muted hover:border-border"
                   )}
                 >
-                  <span className="text-2xl shrink-0">{emoji}</span>
+                  <RoleIcon className="size-5 shrink-0" strokeWidth={1.6} />
                   <div className="flex-1 min-w-0">
                     <p
                       className={cn(
@@ -868,7 +876,7 @@ export default function RegisterPage() {
               </span>
             </label>
             <div className="grid grid-cols-4 gap-2">
-              {SURFACES.map(({ id, emoji, label }) => (
+              {SURFACES.map(({ id, icon: SurfaceIcon, label }) => (
                 <button
                   key={id}
                   type="button"
@@ -885,7 +893,7 @@ export default function RegisterPage() {
                       : "border-border text-muted-foreground hover:bg-muted"
                   )}
                 >
-                  <span className="text-lg">{emoji}</span>
+                  <SurfaceIcon className="size-4" strokeWidth={1.6} />
                   <span className="text-xs font-medium text-center leading-tight">
                     {label}
                   </span>
@@ -943,7 +951,7 @@ export default function RegisterPage() {
                   Creando cuenta…
                 </>
               ) : (
-                "Crear cuenta y empezar 🎾"
+                "Crear cuenta y empezar"
               )}
             </Button>
           </div>
@@ -980,5 +988,14 @@ function StepNav({
         Continuar <ChevronRight className="size-4" />
       </button>
     </div>
+  );
+}
+
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

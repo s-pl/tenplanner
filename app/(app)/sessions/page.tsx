@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
@@ -7,6 +8,7 @@ import { and, asc, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-
 import { Plus, ArrowRight, ArrowLeft, ArrowUpRight, Bot, Search } from "lucide-react";
 import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
+import { SessionsSearchInput } from "@/components/app/sessions-search-input";
 type Filter = "upcoming" | "past" | "all";
 const PAGE_SIZE = 20;
 
@@ -323,22 +325,11 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             </div>
 
             <div className="space-y-3">
-              <form className="relative" action="/sessions" method="get">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/40"
-                  strokeWidth={1.6}
-                />
-                <input
-                  type="search"
-                  name="q"
-                  placeholder="Buscar por título, objetivo, descripción o etiquetas…"
-                  defaultValue={searchTerm}
-                  className="h-10 w-full rounded-md border border-foreground/20 bg-transparent pl-9 pr-4 text-[13px] text-foreground placeholder:text-foreground/40 transition-colors focus:border-brand/60 focus:outline-none"
-                />
-                {activeFilter !== "all" ? (
-                  <input type="hidden" name="filter" value={activeFilter} />
-                ) : null}
-              </form>
+              <Suspense fallback={
+                <div className="h-10 w-full rounded-md border border-foreground/20 bg-transparent animate-pulse" />
+              }>
+                <SessionsSearchInput defaultValue={searchTerm} />
+              </Suspense>
 
               {searchTerm ? (
                 <div className="flex flex-wrap items-center gap-2">
@@ -428,8 +419,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                               : session.status === "cancelled"
                                 ? "text-destructive/70"
                                 : isPast
-                                  ? "text-foreground/40"
-                                  : "text-foreground/60"
+                                  ? "text-foreground/55"
+                                  : "text-foreground/65"
                           }`}
                         >
                           {session.status === "completed"

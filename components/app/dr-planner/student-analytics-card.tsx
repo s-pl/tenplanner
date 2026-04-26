@@ -59,7 +59,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
 };
 
 const CATEGORY_COLOR: Record<Category, string> = {
-  technique: "oklch(0.62 0.14 148)",
+  technique: "var(--brand)",
   tactics: "oklch(0.65 0.15 260)",
   fitness: "oklch(0.68 0.16 40)",
   "warm-up": "oklch(0.72 0.13 85)",
@@ -263,7 +263,7 @@ export function StudentAnalyticsCard({
                     <Line
                       type="monotone"
                       dataKey="sessions"
-                      stroke="oklch(0.48 0.18 148)"
+                      stroke="var(--brand)"
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       animationDuration={800}

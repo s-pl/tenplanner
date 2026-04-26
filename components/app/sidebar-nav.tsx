@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,6 +21,7 @@ import {
   Heart,
   BookOpen,
   Store,
+  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,7 @@ const navItems: NavItem[] = [
 interface SidebarNavProps {
   user: { email?: string | null; user_metadata?: { full_name?: string } } | null;
   avatarUrl?: string | null;
+  isAdmin?: boolean;
 }
 
 function NavContent({
@@ -100,12 +102,14 @@ function NavContent({
   onNavigate,
   user,
   avatarUrl,
+  isAdmin,
   onSignOut,
 }: {
   pathname: string;
   onNavigate?: () => void;
   user: SidebarNavProps["user"];
   avatarUrl?: string | null;
+  isAdmin?: boolean;
   onSignOut: () => void;
 }) {
   const displayName =
@@ -117,9 +121,15 @@ function NavContent({
     .slice(0, 2)
     .toUpperCase();
 
-  const sessionsOpen = !!user && pathname.startsWith("/sessions");
-  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>({
-    "/sessions": sessionsOpen,
+  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(() => {
+    if (!user) return {};
+    const initial: Record<string, boolean> = {};
+    for (const item of navItems) {
+      if (item.submenu && pathname.startsWith(item.href)) {
+        initial[item.href] = true;
+      }
+    }
+    return initial;
   });
 
   function toggleSubmenu(href: string) {
@@ -348,6 +358,23 @@ function NavContent({
 
       {/* ── User footer ── */}
       <div className="border-t border-sidebar-border">
+        {isAdmin && (
+          <div className="px-4 pt-3">
+            <Link
+              href="/admin"
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[12px] font-medium transition-colors",
+                pathname.startsWith("/admin")
+                  ? "bg-brand/10 text-brand border border-brand/20"
+                  : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.04] border border-transparent"
+              )}
+            >
+              <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
+              Panel de administración
+            </Link>
+          </div>
+        )}
         {user ? (
           <>
             <div className="px-4 pt-4 pb-3">
@@ -414,9 +441,57 @@ function NavContent({
   );
 }
 
-export function SidebarNav({ user, avatarUrl }: SidebarNavProps) {
+export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const prevOpenRef = useRef(false);
+
+  const activeLabel =
+    navItems.find(
+      (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+    )?.label ?? "TenPlanner";
+
+  useEffect(() => {
+    if (mobileOpen) {
+      closeButtonRef.current?.focus();
+
+      function handleKeyDown(e: KeyboardEvent) {
+        if (e.key === "Escape") {
+          setMobileOpen(false);
+          return;
+        }
+        if (e.key !== "Tab" || !drawerRef.current) return;
+        const focusable = Array.from(
+          drawerRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    } else if (prevOpenRef.current) {
+      triggerRef.current?.focus();
+    }
+    prevOpenRef.current = mobileOpen;
+  }, [mobileOpen]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -432,25 +507,33 @@ export function SidebarNav({ user, avatarUrl }: SidebarNavProps) {
           pathname={pathname}
           user={user}
           avatarUrl={avatarUrl}
+          isAdmin={isAdmin}
           onSignOut={handleSignOut}
         />
       </aside>
 
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_92%,var(--background))]/95 px-5 backdrop-blur">
-        <Link href="/dashboard" className="flex items-baseline gap-1">
-          <span className="font-heading text-lg tracking-tight text-foreground">
-            ten
-          </span>
-          <em className="font-heading italic text-lg text-brand">planner</em>
-        </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link href="/dashboard" className="flex items-baseline gap-1 shrink-0">
+            <span className="font-heading text-base tracking-tight text-foreground">
+              ten
+            </span>
+            <em className="font-heading italic text-base text-brand">planner</em>
+          </Link>
+          <span className="text-foreground/25 text-sm select-none">/</span>
+          <span className="font-heading text-sm text-foreground/70 truncate">{activeLabel}</span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
           <ThemeToggle compact />
           <button
+            ref={triggerRef}
             type="button"
             onClick={() => setMobileOpen(true)}
             className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
             aria-label="Abrir menú"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-drawer"
           >
             <Menu className="size-5" strokeWidth={1.6} />
           </button>
@@ -459,14 +542,23 @@ export function SidebarNav({ user, avatarUrl }: SidebarNavProps) {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div
+          ref={drawerRef}
+          id="mobile-nav-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menú de navegación"
+          className="md:hidden fixed inset-0 z-50 flex"
+        >
           <div
             className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
           />
           <aside className="relative flex h-full w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_94%,var(--background))] backdrop-blur">
             <div className="absolute top-4 right-4">
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
@@ -480,6 +572,7 @@ export function SidebarNav({ user, avatarUrl }: SidebarNavProps) {
               onNavigate={() => setMobileOpen(false)}
               user={user}
               avatarUrl={avatarUrl}
+              isAdmin={isAdmin}
               onSignOut={handleSignOut}
             />
           </aside>
