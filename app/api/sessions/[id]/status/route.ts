@@ -16,7 +16,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await context.params;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -30,7 +31,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 422 }
+    );
   }
 
   const [existing] = await db
@@ -39,8 +43,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     .where(eq(sessions.id, id))
     .limit(1);
 
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (existing.userId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!existing)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (existing.userId !== user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [updated] = await db
     .update(sessions)

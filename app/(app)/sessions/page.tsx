@@ -25,11 +25,12 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Bot,
+  Lock,
   Search,
 } from "lucide-react";
-import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
+import { getAppSettings } from "@/lib/app-settings";
 type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
@@ -81,6 +82,13 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
+  const settings = await getAppSettings([
+    "feature.dr_planner_enabled",
+    "feature.session_creation_enabled",
+  ]);
+  const drPlannerEnabled = settings.get("feature.dr_planner_enabled") !== false;
+  const sessionCreationEnabled =
+    settings.get("feature.session_creation_enabled") !== false;
 
   const { filter, page, q } = await searchParams;
   const activeFilter: Filter =
@@ -216,16 +224,6 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
       <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
         {/* ─── Masthead ─── */}
         <header className="space-y-6">
@@ -249,18 +247,30 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               </p>
             </div>
             <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 md:flex md:shrink-0">
-              <Link
-                href="/sessions/dr-planner"
-                className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 hover:border-brand/40 hover:text-brand transition-colors"
-              >
-                <Bot className="size-4 text-brand" /> Dr. Planner
-              </Link>
-              <Link
-                href="/sessions/new"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
-              >
-                <Plus className="size-4" /> Nueva sesión
-              </Link>
+              {drPlannerEnabled ? (
+                <Link
+                  href="/sessions/dr-planner"
+                  className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 transition-colors hover:border-brand/40 hover:text-brand"
+                >
+                  <Bot className="size-4 text-brand" /> Dr. Planner
+                </Link>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2.5 text-[13px] font-medium text-foreground/38">
+                  <Lock className="size-4" /> IA próximamente
+                </span>
+              )}
+              {sessionCreationEnabled ? (
+                <Link
+                  href="/sessions/new"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+                >
+                  <Plus className="size-4" /> Nueva sesión
+                </Link>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2.5 text-[13px] font-medium text-foreground/38">
+                  <Lock className="size-4" /> Crear sesiones bloqueado
+                </span>
+              )}
             </div>
           </div>
         </header>
@@ -300,7 +310,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
                   <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
                     Agenda total
                   </p>
@@ -311,7 +321,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     Todas las sesiones registradas en tu archivo.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
                   <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
                     Proximas
                   </p>
@@ -322,7 +332,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     Trabajo futuro ya colocado en la agenda.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
+                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
                   <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
                     Pasadas
                   </p>
@@ -333,7 +343,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     Archivo util para revisar carga y continuidad.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-brand/20 bg-brand/[0.06] px-4 py-4">
+                <div className="rounded-md border border-brand/25 bg-brand/[0.07] px-4 py-4">
                   <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-brand/80">
                     Foco actual
                   </p>
@@ -425,7 +435,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
+                <ul className="flex flex-col gap-3">
                   {sessionRows.map((session, idx) => {
                     const date = new Date(session.scheduledAt);
                     const isPast = date < now;
@@ -434,10 +444,13 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     const globalIdx = offset + idx + 1;
 
                     return (
-                      <li key={session.id}>
+                      <li
+                        key={session.id}
+                        className="overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
+                      >
                         <Link
                           href={`/sessions/${session.id}`}
-                          className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-6 -mx-3 px-3 hover:bg-foreground/[0.02] transition-colors sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5 md:gap-8"
+                          className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-5 transition-colors hover:bg-brand/[0.025] sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5 md:gap-8"
                         >
                           <span className="hidden w-6 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
                             {String(globalIdx).padStart(2, "0")}
@@ -553,13 +566,6 @@ export default async function SessionsPage({ searchParams }: PageProps) {
           )}
         </>
       </div>
-      <MobileFabSpeedDial
-        primaryLabel="Nueva sesión"
-        actions={[
-          { href: "/sessions/dr-planner", label: "Dr. Planner", icon: "bot" },
-          { href: "/sessions/new", label: "Nueva sesión", icon: "plus" },
-        ]}
-      />
     </div>
   );
 }

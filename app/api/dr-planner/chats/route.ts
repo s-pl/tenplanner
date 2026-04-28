@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { drPlannerChats, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { isDrPlannerEnabled } from "@/lib/app-settings";
 
 function getDbErrorCode(error: unknown): string | null {
   if (
@@ -23,6 +24,12 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isDrPlannerEnabled())) {
+    return NextResponse.json(
+      { error: "Dr. Planner está desactivado." },
+      { status: 403 }
+    );
+  }
 
   const chats = await db
     .select({
@@ -45,6 +52,12 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isDrPlannerEnabled())) {
+    return NextResponse.json(
+      { error: "Dr. Planner está desactivado." },
+      { status: 403 }
+    );
+  }
 
   if (!user.email) {
     return NextResponse.json(
@@ -60,9 +73,7 @@ export async function POST() {
       .values({
         id: user.id,
         name:
-          user.user_metadata.full_name ??
-          user.email.split("@")[0] ??
-          "Usuario",
+          user.user_metadata.full_name ?? user.email.split("@")[0] ?? "Usuario",
         email: user.email,
         image: user.user_metadata.avatar_url ?? null,
       })
@@ -91,7 +102,9 @@ export async function POST() {
 
     if (code === "42501") {
       return NextResponse.json(
-        { error: "Permisos insuficientes en base de datos para crear el chat." },
+        {
+          error: "Permisos insuficientes en base de datos para crear el chat.",
+        },
         { status: 500 }
       );
     }

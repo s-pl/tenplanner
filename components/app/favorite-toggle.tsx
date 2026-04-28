@@ -35,7 +35,10 @@ export function FavoriteToggle({
           size === "sm" ? "size-7" : "size-9"
         )}
       >
-        <Lock className={cn(size === "sm" ? "size-3" : "size-4")} strokeWidth={1.8} />
+        <Lock
+          className={cn(size === "sm" ? "size-3" : "size-4")}
+          strokeWidth={1.8}
+        />
       </Link>
     );
   }
@@ -60,7 +63,10 @@ export function FavoriteToggle({
         )}
       >
         <Heart
-          className={cn(size === "sm" ? "size-3.5" : "size-5", favorited && "fill-current")}
+          className={cn(
+            size === "sm" ? "size-3.5" : "size-5",
+            favorited && "fill-current"
+          )}
         />
       </button>
 

@@ -12,6 +12,8 @@ import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, Clock, Zap, MapPin, Download } from "lucide-react";
 import { AdoptTemplateButton } from "@/components/app/session-templates/adopt-template-button";
 import { PublishTemplateActions } from "@/components/app/session-templates/publish-template-actions";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,6 +39,20 @@ export default async function SessionTemplatePage({ params }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
+
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return (
+      <FeatureLocked
+        title="Plantillas desactivadas"
+        description="El administrador ha pausado temporalmente el mercado de plantillas de sesión."
+        href="/sessions"
+        cta="Volver a sesiones"
+      />
+    );
+  }
 
   const { id } = await params;
 
@@ -88,16 +104,6 @@ export default async function SessionTemplatePage({ params }: PageProps) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
       <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
         {/* Back */}
         <Link

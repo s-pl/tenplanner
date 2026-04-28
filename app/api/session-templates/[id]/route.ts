@@ -1,7 +1,12 @@
 import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exercises, sessionTemplateExercises, sessionTemplates, users } from "@/db/schema";
+import {
+  exercises,
+  sessionTemplateExercises,
+  sessionTemplates,
+  users,
+} from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -87,7 +92,9 @@ export async function GET(
     .where(eq(sessionTemplateExercises.templateId, id))
     .orderBy(asc(sessionTemplateExercises.orderIndex));
 
-  return NextResponse.json({ data: { ...template, exercises: templateExercises } });
+  return NextResponse.json({
+    data: { ...template, exercises: templateExercises },
+  });
 }
 
 export async function PATCH(
@@ -131,8 +138,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
-  const { title, description, objective, durationMinutes, intensity, tags, location } =
-    parsed.data;
+  const {
+    title,
+    description,
+    objective,
+    durationMinutes,
+    intensity,
+    tags,
+    location,
+  } = parsed.data;
 
   const [updated] = await db
     .update(sessionTemplates)

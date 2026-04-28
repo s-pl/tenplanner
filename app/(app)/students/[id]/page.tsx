@@ -193,14 +193,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
-        }}
-      />
       <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-10">
         {/* Masthead */}
         <header className="pb-6 border-b border-foreground/15">

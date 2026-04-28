@@ -42,19 +42,43 @@ const CATEGORY_LABELS: Record<string, string> = {
   "warm-up": "Calentamiento",
 };
 
-const DIFF_LABELS: Record<string, string> = {
-  beginner: "Inicio",
-  intermediate: "Medio",
-  advanced: "Avanzado",
-};
-
 const ACCENT_PALETTE = [
-  { bg: "bg-brand/8", border: "border-brand/20", text: "text-brand", dot: "bg-brand" },
-  { bg: "bg-violet-500/8", border: "border-violet-500/20", text: "text-violet-400", dot: "bg-violet-400" },
-  { bg: "bg-amber-500/8", border: "border-amber-500/20", text: "text-amber-400", dot: "bg-amber-400" },
-  { bg: "bg-rose-500/8", border: "border-rose-500/20", text: "text-rose-400", dot: "bg-rose-400" },
-  { bg: "bg-cyan-500/8", border: "border-cyan-500/20", text: "text-cyan-400", dot: "bg-cyan-400" },
-  { bg: "bg-sky-500/8", border: "border-sky-500/20", text: "text-sky-400", dot: "bg-sky-400" },
+  {
+    bg: "bg-brand/8",
+    border: "border-brand/20",
+    text: "text-brand",
+    dot: "bg-brand",
+  },
+  {
+    bg: "bg-violet-500/8",
+    border: "border-violet-500/20",
+    text: "text-violet-400",
+    dot: "bg-violet-400",
+  },
+  {
+    bg: "bg-amber-500/8",
+    border: "border-amber-500/20",
+    text: "text-amber-400",
+    dot: "bg-amber-400",
+  },
+  {
+    bg: "bg-rose-500/8",
+    border: "border-rose-500/20",
+    text: "text-rose-400",
+    dot: "bg-rose-400",
+  },
+  {
+    bg: "bg-cyan-500/8",
+    border: "border-cyan-500/20",
+    text: "text-cyan-400",
+    dot: "bg-cyan-400",
+  },
+  {
+    bg: "bg-sky-500/8",
+    border: "border-sky-500/20",
+    text: "text-sky-400",
+    dot: "bg-sky-400",
+  },
 ];
 
 function CollectionCard({
@@ -82,9 +106,10 @@ function CollectionCard({
 
   const accent = ACCENT_PALETTE[index % ACCENT_PALETTE.length];
   const chapterNum = String(index + 1).padStart(2, "0");
-  const sessionHref = list.items.length > 0
-    ? `/sessions/new?exercises=${list.items.map((i) => i.id).join(",")}`
-    : "/sessions/new";
+  const sessionHref =
+    list.items.length > 0
+      ? `/sessions/new?exercises=${list.items.map((i) => i.id).join(",")}`
+      : "/sessions/new";
 
   useEffect(() => {
     if (renaming) setTimeout(() => renameRef.current?.focus(), 40);
@@ -92,7 +117,10 @@ function CollectionCard({
 
   async function saveRename() {
     const name = renameVal.trim();
-    if (!name || name === list.name) { setRenaming(false); return; }
+    if (!name || name === list.name) {
+      setRenaming(false);
+      return;
+    }
     setRenameSaving(true);
     try {
       const res = await fetch(`/api/exercise-lists/${list.id}`, {
@@ -100,7 +128,10 @@ function CollectionCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      if (res.ok) { onRename(list.id, name); setRenaming(false); }
+      if (res.ok) {
+        onRename(list.id, name);
+        setRenaming(false);
+      }
     } finally {
       setRenameSaving(false);
     }
@@ -110,7 +141,9 @@ function CollectionCard({
     <article
       className={cn(
         "group relative border border-foreground/10 rounded-2xl overflow-hidden transition-all duration-300",
-        expanded ? "shadow-lg shadow-foreground/5" : "hover:border-foreground/20"
+        expanded
+          ? "shadow-lg shadow-foreground/5"
+          : "hover:border-foreground/20"
       )}
     >
       {/* Chapter header */}
@@ -149,7 +182,8 @@ function CollectionCard({
             <span
               className={cn(
                 "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl text-xl border transition-colors",
-                accent.bg, accent.border
+                accent.bg,
+                accent.border
               )}
             >
               {list.emoji ?? "📋"}
@@ -167,7 +201,10 @@ function CollectionCard({
                     onChange={(e) => setRenameVal(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") void saveRename();
-                      if (e.key === "Escape") { setRenaming(false); setRenameVal(list.name); }
+                      if (e.key === "Escape") {
+                        setRenaming(false);
+                        setRenameVal(list.name);
+                      }
                     }}
                     className="h-8 flex-1 min-w-0 rounded-lg border border-brand/40 bg-background px-3 text-sm text-foreground focus:outline-none focus:border-brand"
                   />
@@ -176,10 +213,17 @@ function CollectionCard({
                     disabled={renameSaving}
                     className="text-[11px] font-semibold text-brand hover:text-brand/80 disabled:opacity-50 shrink-0"
                   >
-                    {renameSaving ? <Loader2 className="size-3 animate-spin" /> : "OK"}
+                    {renameSaving ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      "OK"
+                    )}
                   </button>
                   <button
-                    onClick={() => { setRenaming(false); setRenameVal(list.name); }}
+                    onClick={() => {
+                      setRenaming(false);
+                      setRenameVal(list.name);
+                    }}
                     className="text-[11px] text-foreground/40 hover:text-foreground shrink-0"
                   >
                     ✕
@@ -199,7 +243,12 @@ function CollectionCard({
               )}
 
               <div className="mt-1 flex items-center gap-3">
-                <span className={cn("font-sans text-[10px] tabular-nums", accent.text)}>
+                <span
+                  className={cn(
+                    "font-sans text-[10px] tabular-nums",
+                    accent.text
+                  )}
+                >
                   {list.itemsCount} ejercicio{list.itemsCount !== 1 ? "s" : ""}
                 </span>
                 {!renaming && (
@@ -224,7 +273,13 @@ function CollectionCard({
             className={cn(
               "hidden sm:inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-semibold transition-colors",
               list.items.length > 0
-                ? cn("border", accent.border, accent.text, accent.bg, "hover:opacity-80")
+                ? cn(
+                    "border",
+                    accent.border,
+                    accent.text,
+                    accent.bg,
+                    "hover:opacity-80"
+                  )
                 : "border border-foreground/10 text-foreground/25 cursor-default pointer-events-none"
             )}
           >
@@ -233,7 +288,10 @@ function CollectionCard({
 
           <button
             title="Renombrar"
-            onClick={() => { setRenaming(true); setRenameVal(list.name); }}
+            onClick={() => {
+              setRenaming(true);
+              setRenameVal(list.name);
+            }}
             className="p-2 rounded-xl text-foreground/25 hover:text-foreground hover:bg-foreground/8 transition-colors"
           >
             <Pencil className="size-3.5" />
@@ -246,9 +304,11 @@ function CollectionCard({
               disabled={deletingId === list.id}
               className="p-2 rounded-xl text-foreground/25 hover:text-red-400 hover:bg-red-400/8 transition-colors disabled:opacity-40"
             >
-              {deletingId === list.id
-                ? <Loader2 className="size-3.5 animate-spin" />
-                : <Trash2 className="size-3.5" />}
+              {deletingId === list.id ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="size-3.5" />
+              )}
             </button>
           )}
         </div>
@@ -299,9 +359,11 @@ function CollectionCard({
                           disabled={removingKey === removeKey}
                           className="absolute top-1.5 right-1.5 size-6 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white hover:bg-red-500/80 opacity-0 group-hover/item:opacity-100 transition-all duration-200 disabled:opacity-50"
                         >
-                          {removingKey === removeKey
-                            ? <Loader2 className="size-3 animate-spin" />
-                            : <X className="size-3" />}
+                          {removingKey === removeKey ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <X className="size-3" />
+                          )}
                         </button>
                       </div>
 
@@ -314,10 +376,13 @@ function CollectionCard({
                           {item.name}
                         </Link>
                         <div className="mt-1 flex items-center gap-1.5">
-                          <span className={cn(
-                            "font-sans text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5 rounded",
-                            accent.bg, accent.text
-                          )}>
+                          <span
+                            className={cn(
+                              "font-sans text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5 rounded",
+                              accent.bg,
+                              accent.text
+                            )}
+                          >
                             {CATEGORY_LABELS[item.category] ?? item.category}
                           </span>
                           <span className="font-sans text-[9px] text-foreground/30 tabular-nums">
@@ -333,13 +398,16 @@ function CollectionCard({
               {/* Collection footer */}
               <div className="flex items-center justify-between px-5 py-3 border-t border-foreground/8 bg-foreground/[0.01]">
                 <span className="font-sans text-[10px] text-foreground/35">
-                  {list.itemsCount} ejercicio{list.itemsCount !== 1 ? "s" : ""} en esta colección
+                  {list.itemsCount} ejercicio{list.itemsCount !== 1 ? "s" : ""}{" "}
+                  en esta colección
                 </span>
                 <Link
                   href={sessionHref}
                   className={cn(
                     "inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors",
-                    list.items.length > 0 ? cn(accent.text, "hover:opacity-70") : "text-foreground/25 pointer-events-none"
+                    list.items.length > 0
+                      ? cn(accent.text, "hover:opacity-70")
+                      : "text-foreground/25 pointer-events-none"
                   )}
                 >
                   Crear sesión <ArrowRight className="size-3" />
@@ -372,8 +440,12 @@ export function ExerciseListsSection() {
   async function loadLists() {
     setLoading(true);
     try {
-      const res = await fetch("/api/exercise-lists?includeExercises=true", { cache: "no-store" });
-      const payload = (await res.json().catch(() => ({}))) as { data?: ExerciseListWithItems[] };
+      const res = await fetch("/api/exercise-lists?includeExercises=true", {
+        cache: "no-store",
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        data?: ExerciseListWithItems[];
+      };
       setLists(Array.isArray(payload.data) ? payload.data : []);
     } finally {
       setLoading(false);
@@ -382,7 +454,9 @@ export function ExerciseListsSection() {
 
   useEffect(() => {
     void loadLists();
-    const refresh = () => { if (document.visibilityState !== "hidden") void loadLists(); };
+    const refresh = () => {
+      if (document.visibilityState !== "hidden") void loadLists();
+    };
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
@@ -407,10 +481,19 @@ export function ExerciseListsSection() {
       });
       if (!res.ok) return;
       const payload = (await res.json().catch(() => ({}))) as {
-        data?: { id: string; name: string; emoji: string | null; isDefault: boolean; createdAt: string };
+        data?: {
+          id: string;
+          name: string;
+          emoji: string | null;
+          isDefault: boolean;
+          createdAt: string;
+        };
       };
       if (!payload.data) return;
-      setLists((prev) => [{ ...payload.data!, itemsCount: 0, items: [] }, ...prev]);
+      setLists((prev) => [
+        { ...payload.data!, itemsCount: 0, items: [] },
+        ...prev,
+      ]);
       setNewListName("");
       setShowCreate(false);
     } finally {
@@ -421,7 +504,9 @@ export function ExerciseListsSection() {
   async function deleteList(listId: string) {
     setDeletingId(listId);
     try {
-      const res = await fetch(`/api/exercise-lists/${listId}`, { method: "DELETE" });
+      const res = await fetch(`/api/exercise-lists/${listId}`, {
+        method: "DELETE",
+      });
       if (res.ok) setLists((prev) => prev.filter((l) => l.id !== listId));
     } finally {
       setDeletingId(null);
@@ -429,7 +514,7 @@ export function ExerciseListsSection() {
   }
 
   function handleRename(listId: string, name: string) {
-    setLists((prev) => prev.map((l) => l.id === listId ? { ...l, name } : l));
+    setLists((prev) => prev.map((l) => (l.id === listId ? { ...l, name } : l)));
   }
 
   async function removeFromList(listId: string, exerciseId: string) {
@@ -445,7 +530,11 @@ export function ExerciseListsSection() {
         setLists((prev) =>
           prev.map((l) =>
             l.id === listId
-              ? { ...l, itemsCount: Math.max(l.itemsCount - 1, 0), items: l.items.filter((i) => i.id !== exerciseId) }
+              ? {
+                  ...l,
+                  itemsCount: Math.max(l.itemsCount - 1, 0),
+                  items: l.items.filter((i) => i.id !== exerciseId),
+                }
               : l
           )
         );
@@ -460,7 +549,10 @@ export function ExerciseListsSection() {
     return (
       <div className="pt-10 pb-6 space-y-4">
         {[1, 2].map((i) => (
-          <div key={i} className="h-[72px] rounded-2xl border border-foreground/8 bg-foreground/[0.02] animate-pulse" />
+          <div
+            key={i}
+            className="h-[72px] rounded-2xl border border-foreground/8 bg-foreground/[0.02] animate-pulse"
+          />
         ))}
       </div>
     );
@@ -470,14 +562,7 @@ export function ExerciseListsSection() {
   if (lists.length === 0 && !showCreate) {
     return (
       <div className="pt-10 pb-6">
-        <div
-          className="relative rounded-3xl border border-dashed border-foreground/15 overflow-hidden"
-          style={{
-            backgroundImage:
-              "linear-gradient(oklch(0.70 0.18 255 / 0.04) 1px, transparent 1px), linear-gradient(90deg, oklch(0.70 0.18 255 / 0.04) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        >
+        <div className="relative overflow-hidden rounded-lg border border-dashed border-foreground/15 bg-card">
           <div className="relative px-8 py-16 text-center">
             {/* Decorative heart */}
             <div className="mx-auto mb-6 size-14 rounded-2xl border border-red-400/20 bg-red-400/8 flex items-center justify-center">
@@ -529,7 +614,12 @@ export function ExerciseListsSection() {
               : "border-foreground/15 text-foreground/50 hover:border-brand/30 hover:text-brand hover:bg-brand/5"
           )}
         >
-          <Plus className={cn("size-3.5 transition-transform duration-200", showCreate && "rotate-45")} />
+          <Plus
+            className={cn(
+              "size-3.5 transition-transform duration-200",
+              showCreate && "rotate-45"
+            )}
+          />
           Nueva colección
         </button>
       </div>
@@ -548,7 +638,10 @@ export function ExerciseListsSection() {
               onChange={(e) => setNewListName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void createList();
-                if (e.key === "Escape") { setShowCreate(false); setNewListName(""); }
+                if (e.key === "Escape") {
+                  setShowCreate(false);
+                  setNewListName("");
+                }
               }}
               placeholder="Ej: Técnica de volea, Calentamiento tipo A…"
               maxLength={100}
@@ -559,7 +652,11 @@ export function ExerciseListsSection() {
               disabled={!newListName.trim() || creating}
               className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-brand text-background px-4 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors shrink-0"
             >
-              {creating ? <Loader2 className="size-3.5 animate-spin" /> : "Crear"}
+              {creating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                "Crear"
+              )}
             </button>
           </div>
         </div>
@@ -582,12 +679,16 @@ export function ExerciseListsSection() {
       </div>
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="¿Eliminar esta colección?"
         description="Se eliminará la colección y todos sus ejercicios guardados. Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
         destructive
-        onConfirm={() => { if (deleteTarget) void deleteList(deleteTarget); }}
+        onConfirm={() => {
+          if (deleteTarget) void deleteList(deleteTarget);
+        }}
       />
     </div>
   );

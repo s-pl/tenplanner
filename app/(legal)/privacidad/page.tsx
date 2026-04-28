@@ -37,13 +37,7 @@ function P({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Table({
-  headers,
-  rows,
-}: {
-  headers: string[];
-  rows: string[][];
-}) {
+function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
     <div className="overflow-x-auto border border-foreground/15 rounded-md my-4">
       <table className="w-full text-[13px]">
@@ -99,16 +93,30 @@ export default function PrivacidadPage() {
       </div>
 
       <H2 id="responsable">1. Responsable del tratamiento</H2>
-      <P>
-        El responsable del tratamiento de tus datos personales es:
-      </P>
+      <P>El responsable del tratamiento de tus datos personales es:</P>
       <div className="border border-foreground/15 rounded-md px-4 py-3 my-4 text-[13px] text-foreground/80 space-y-1">
-        <p><strong>Titular:</strong> {legal.companyName}</p>
-        <p><strong>NIF / CIF:</strong> {legal.nif}</p>
-        <p><strong>Domicilio:</strong> {legal.address}</p>
-        <p><strong>Correo de contacto:</strong> <a href={`mailto:${legal.privacyEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.privacyEmail}</a></p>
+        <p>
+          <strong>Titular:</strong> {legal.companyName}
+        </p>
+        <p>
+          <strong>NIF / CIF:</strong> {legal.nif}
+        </p>
+        <p>
+          <strong>Domicilio:</strong> {legal.address}
+        </p>
+        <p>
+          <strong>Correo de contacto:</strong>{" "}
+          <a
+            href={`mailto:${legal.privacyEmail}`}
+            className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground"
+          >
+            {legal.privacyEmail}
+          </a>
+        </p>
         {legal.dpo && (
-          <p><strong>Delegado de Protección de Datos (DPO):</strong> {legal.dpo}</p>
+          <p>
+            <strong>Delegado de Protección de Datos (DPO):</strong> {legal.dpo}
+          </p>
         )}
       </div>
 
@@ -177,8 +185,8 @@ export default function PrivacidadPage() {
         <strong>Nota sobre datos de salud.</strong> Altura, peso y observaciones
         libres del entrenador pueden constituir categorías especiales de datos
         (art. 9 RGPD) si permiten inferir información sobre el estado físico.
-        Solo se tratan con consentimiento explícito del alumno (art. 9.2.a
-        RGPD) y exclusivamente para la finalidad deportiva.
+        Solo se tratan con consentimiento explícito del alumno (art. 9.2.a RGPD)
+        y exclusivamente para la finalidad deportiva.
       </P>
 
       <H2 id="finalidades">3. Finalidades y bases jurídicas</H2>
@@ -272,8 +280,8 @@ export default function PrivacidadPage() {
         Anthropic y Vercel tratan datos en Estados Unidos. La transferencia está
         amparada por las Cláusulas Contractuales Tipo aprobadas por la Comisión
         Europea (Decisión de Ejecución 2021/914), firmadas en los contratos
-        (DPA) con cada proveedor. Puedes solicitarnos una copia de las
-        garantías en el correo de contacto.
+        (DPA) con cada proveedor. Puedes solicitarnos una copia de las garantías
+        en el correo de contacto.
       </P>
 
       <H2 id="conservacion">7. Plazos de conservación</H2>
@@ -337,7 +345,12 @@ export default function PrivacidadPage() {
       </ul>
       <P>
         Para ejercerlos, escribe a{" "}
-        <a href={`mailto:${legal.privacyEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.privacyEmail}</a>{" "}
+        <a
+          href={`mailto:${legal.privacyEmail}`}
+          className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground"
+        >
+          {legal.privacyEmail}
+        </a>{" "}
         acreditando tu identidad. Responderemos en un plazo máximo de 30 días.
       </P>
       <P>
@@ -356,7 +369,9 @@ export default function PrivacidadPage() {
 
       <H2 id="seguridad">9. Medidas de seguridad</H2>
       <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-foreground/80 my-3">
-        <li>Cifrado TLS en tránsito y cifrado en reposo en la base de datos.</li>
+        <li>
+          Cifrado TLS en tránsito y cifrado en reposo en la base de datos.
+        </li>
         <li>
           Row Level Security (RLS) de PostgreSQL: cada entrenador solo accede a
           sus propios registros.
@@ -371,8 +386,8 @@ export default function PrivacidadPage() {
 
       <H2 id="brechas">10. Notificación de brechas</H2>
       <P>
-        En caso de brecha de seguridad que suponga un riesgo para tus derechos
-        y libertades, la notificaremos a la AEPD en un plazo máximo de 72 horas
+        En caso de brecha de seguridad que suponga un riesgo para tus derechos y
+        libertades, la notificaremos a la AEPD en un plazo máximo de 72 horas
         (art. 33 RGPD) y, cuando el riesgo sea alto, también a las personas
         afectadas (art. 34).
       </P>
@@ -380,9 +395,9 @@ export default function PrivacidadPage() {
       <H2 id="cambios">11. Cambios en esta política</H2>
       <P>
         Podemos actualizar esta política para reflejar cambios legales o
-        técnicos. Publicaremos la versión vigente en esta página con la fecha
-        de actualización. Los cambios sustanciales se comunicarán por correo a
-        los usuarios registrados.
+        técnicos. Publicaremos la versión vigente en esta página con la fecha de
+        actualización. Los cambios sustanciales se comunicarán por correo a los
+        usuarios registrados.
       </P>
     </article>
   );

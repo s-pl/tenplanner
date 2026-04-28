@@ -49,7 +49,11 @@ type Analytics = {
 
 type Gap = { label: string; severity: "alto" | "medio" | "bajo"; kind: string };
 
-type Progress = { month: string; sessions: number; avgIntensity: number | null }[];
+type Progress = {
+  month: string;
+  sessions: number;
+  avgIntensity: number | null;
+}[];
 
 const CATEGORY_LABEL: Record<Category, string> = {
   technique: "Técnica",
@@ -113,7 +117,10 @@ export function StudentAnalyticsCard({
   }
 
   const a = data.analytics;
-  const totalMinutes = a.categoriesLast60d.reduce((acc, c) => acc + c.minutes, 0);
+  const totalMinutes = a.categoriesLast60d.reduce(
+    (acc, c) => acc + c.minutes,
+    0
+  );
   const donutData = a.categoriesLast60d
     .filter((c) => c.minutes > 0)
     .map((c) => ({
@@ -342,7 +349,9 @@ export function StudentAnalyticsCard({
         </button>
         <button
           type="button"
-          onClick={() => onSend(`Muéstrame el progreso mensual de ${a.student.name}.`)}
+          onClick={() =>
+            onSend(`Muéstrame el progreso mensual de ${a.student.name}.`)
+          }
           className="inline-flex items-center gap-2 border border-foreground/20 text-[11px] font-semibold tracking-[0.18em] uppercase px-3 py-2 hover:border-foreground/40 transition-colors"
         >
           Ver progreso

@@ -210,7 +210,7 @@ export function SessionWizard({
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
-  const [hasDraft, setHasDraft] = useState(false);
+  const [, setHasDraft] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
     "idle"
   );
@@ -220,10 +220,9 @@ export function SessionWizard({
   const baselinePayloadRef = useRef<SessionDraftPayload>(
     toDraftPayload(baselineState)
   );
-  const saveTimerRef = useRef<number | null>(null);
 
   // One-time mount hydration — intentionally empty deps to avoid re-running
-  // when the URL is updated by the auto-save effect below.
+  // when the URL is updated by manual draft save.
   useEffect(() => {
     let cancelled = false;
 
@@ -280,80 +279,66 @@ export function SessionWizard({
 
   const draftPayload = useMemo(() => toDraftPayload(state), [state]);
 
-  // Debounced auto-save — uses window.history.replaceState instead of router.replace
-  // to avoid triggering searchParams changes that would re-run this effect.
-  useEffect(() => {
-    if (!draftReadyRef.current) return;
-
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-    }
-
-    saveTimerRef.current = window.setTimeout(() => {
-      saveTimerRef.current = null;
-
-      if (
-        !hasMeaningfulSessionDraft(draftPayload, baselinePayloadRef.current)
-      ) {
-        if (draftIdRef.current) {
-          void removeSessionDraft(draftIdRef.current);
-          draftIdRef.current = null;
-          setHasDraft(false);
-          const params = new URLSearchParams(window.location.search);
-          if (params.has("draft")) {
-            params.delete("draft");
-            const next = params.toString();
-            window.history.replaceState(
-              null,
-              "",
-              next
-                ? `${window.location.pathname}?${next}`
-                : window.location.pathname
-            );
-          }
-        }
-        return;
-      }
-
-      let nextDraftId = draftIdRef.current;
-      if (!nextDraftId) {
-        nextDraftId = generateDraftId();
-        draftIdRef.current = nextDraftId;
-        setHasDraft(true);
-        const params = new URLSearchParams(window.location.search);
-        params.set("draft", nextDraftId);
-        window.history.replaceState(
-          null,
-          "",
-          `${window.location.pathname}?${params.toString()}`
-        );
-      }
-
-      setSaveStatus("saving");
-      void upsertSessionDraft({
-        id: nextDraftId,
-        title: draftPayload.title.trim() || "Sesión sin título",
-        updatedAt: new Date().toISOString(),
-        payload: draftPayload,
-      }).then(() => {
-        setSaveStatus("saved");
-        setSavedAt(new Date());
-      });
-    }, 800);
-
-    return () => {
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [draftPayload]);
-
   const errors = useMemo(() => validateStep(step, state), [step, state]);
   const canProceed = Object.keys(errors).length === 0;
 
   function update(patch: Partial<WizardState>) {
     setState((prev) => ({ ...prev, ...patch }));
+  }
+
+  async function handleSaveDraft() {
+    if (!draftReadyRef.current) return;
+
+    if (!hasMeaningfulSessionDraft(draftPayload, baselinePayloadRef.current)) {
+      if (draftIdRef.current) {
+        await removeSessionDraft(draftIdRef.current);
+        draftIdRef.current = null;
+        setHasDraft(false);
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("draft")) {
+          params.delete("draft");
+          const next = params.toString();
+          window.history.replaceState(
+            null,
+            "",
+            next
+              ? `${window.location.pathname}?${next}`
+              : window.location.pathname
+          );
+        }
+      }
+      setSaveStatus("idle");
+      setSavedAt(null);
+      return;
+    }
+
+    let nextDraftId = draftIdRef.current;
+    if (!nextDraftId) {
+      nextDraftId = generateDraftId();
+      draftIdRef.current = nextDraftId;
+      setHasDraft(true);
+      const params = new URLSearchParams(window.location.search);
+      params.set("draft", nextDraftId);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}?${params.toString()}`
+      );
+    }
+
+    setSaveStatus("saving");
+    try {
+      await upsertSessionDraft({
+        id: nextDraftId,
+        title: draftPayload.title.trim() || "Sesión sin título",
+        updatedAt: new Date().toISOString(),
+        payload: draftPayload,
+      });
+      setSaveStatus("saved");
+      setSavedAt(new Date());
+    } catch {
+      setSaveStatus("idle");
+    }
   }
 
   function goToStep(next: number) {
@@ -414,8 +399,31 @@ export function SessionWizard({
         }),
       });
 
+      const data = (await res.json().catch(() => ({}))) as {
+        details?: Array<{ message: string }>;
+        error?: string;
+        inaccessibleExerciseIds?: string[];
+      };
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        if (
+          Array.isArray(data.inaccessibleExerciseIds) &&
+          data.inaccessibleExerciseIds.length > 0
+        ) {
+          const blockedIds = new Set(data.inaccessibleExerciseIds);
+          setState((prev) => ({
+            ...prev,
+            exercises: prev.exercises.filter(
+              (exercise) => !blockedIds.has(exercise.exerciseId)
+            ),
+          }));
+          setShowErrors(true);
+          setServerError(
+            "Se quitaron ejercicios que ya no existen o a los que no tienes acceso. Revisa el plan y vuelve a intentarlo."
+          );
+          return;
+        }
+
         const msg =
           data.details
             ?.map((detail: { message: string }) => detail.message)
@@ -445,30 +453,36 @@ export function SessionWizard({
 
   return (
     <div className="flex flex-col gap-8 pb-28 md:pb-6">
-      {/* Header: step indicator + draft status */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <ProgressIndicator
           step={step}
           total={TOTAL_STEPS}
           labels={STEP_LABELS}
         />
-        <DraftStatusPill
-          status={saveStatus}
-          savedAt={savedAt}
-          className="mt-1 sm:shrink-0"
-        />
+        <div className="mt-1 flex items-center gap-2 sm:shrink-0">
+          <button
+            type="button"
+            onClick={() => void handleSaveDraft()}
+            disabled={saveStatus === "saving" || submitting}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-[11px] font-bold text-foreground transition-colors hover:bg-muted disabled:opacity-55"
+          >
+            {saveStatus === "saving" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : null}
+            Borrador
+          </button>
+          <DraftStatusPill
+            status={saveStatus}
+            savedAt={savedAt}
+            className="sm:shrink-0"
+          />
+        </div>
       </div>
 
-      {/* Step heading */}
-      <div className="space-y-1">
+      <div>
         <h2 className="font-heading text-2xl font-semibold text-foreground">
-          {step === 1 ? "Configura tu sesión" : "Añade ejercicios"}
+          {step === 1 ? "Configuración" : "Ejercicios"}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          {step === 1
-            ? "Define los datos básicos de la sesión de entrenamiento."
-            : "Selecciona y ordena los ejercicios del plan."}
-        </p>
       </div>
 
       <div className="min-h-[320px]">
@@ -532,10 +546,8 @@ export function SessionWizard({
             type="button"
             onClick={onNext}
             className={cn(
-              "inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-sm transition-all duration-150",
-              canProceed
-                ? "hover:bg-brand/90 active:scale-95"
-                : "opacity-55 cursor-not-allowed"
+              "inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-colors",
+              canProceed ? "hover:bg-brand/90" : "opacity-55 cursor-not-allowed"
             )}
           >
             Siguiente
@@ -559,7 +571,7 @@ export function SessionWizard({
               type="button"
               onClick={onSubmit}
               disabled={submitting || state.exercises.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-sm transition-all duration-150 hover:bg-brand/90 active:scale-95 disabled:opacity-55"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-55"
             >
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               Crear sesión

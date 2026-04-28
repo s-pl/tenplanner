@@ -11,8 +11,6 @@ import {
   User,
   Ruler,
   Mail,
-  Hash,
-  ChevronDown,
   Trophy,
   FileText,
   ImageIcon,

@@ -23,7 +23,8 @@ export default function GlobalError({
       <div className="space-y-2">
         <h1 className="font-heading text-2xl font-semibold">Algo ha fallado</h1>
         <p className="text-muted-foreground text-sm max-w-sm">
-          Ha ocurrido un error inesperado. Puedes intentar de nuevo o volver al inicio.
+          Ha ocurrido un error inesperado. Puedes intentar de nuevo o volver al
+          inicio.
         </p>
         {error.digest && (
           <p className="text-muted-foreground/50 text-xs font-mono">

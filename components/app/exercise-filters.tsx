@@ -125,7 +125,10 @@ function FilterGroup({
   );
 }
 
-export function ExerciseFilters({ currentFilters, preserved }: ExerciseFiltersProps) {
+export function ExerciseFilters({
+  currentFilters,
+  preserved,
+}: ExerciseFiltersProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -169,7 +172,11 @@ export function ExerciseFilters({ currentFilters, preserved }: ExerciseFiltersPr
     intensity != null ? "x" : "",
   ].filter(Boolean).length;
 
-  function toggleSet(set: Set<string>, setter: (s: Set<string>) => void, value: string) {
+  function toggleSet(
+    set: Set<string>,
+    setter: (s: Set<string>) => void,
+    value: string
+  ) {
     const next = new Set(set);
     if (next.has(value)) next.delete(value);
     else next.add(value);
@@ -299,7 +306,9 @@ export function ExerciseFilters({ currentFilters, preserved }: ExerciseFiltersPr
                 <ChipButton
                   key={id}
                   active={tipoActividad === id}
-                  onClick={() => setTipoActividad(tipoActividad === id ? "" : id)}
+                  onClick={() =>
+                    setTipoActividad(tipoActividad === id ? "" : id)
+                  }
                 >
                   {label}
                 </ChipButton>

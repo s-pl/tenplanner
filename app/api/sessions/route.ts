@@ -1,4 +1,5 @@
 import { and, asc, count, eq, gt, inArray, lt, type SQL } from "drizzle-orm";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -19,6 +20,8 @@ import {
   calculateExercisePlanDuration,
   getAccessibleExerciseDurationMap,
 } from "@/lib/exercise-access";
+import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
+import { embedSession } from "@/lib/ai/semantic-search";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -195,6 +198,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const sessionCreationEnabled = await getBooleanSetting(
+    "feature.session_creation_enabled"
+  );
+  if (!sessionCreationEnabled) {
+    return NextResponse.json(
+      { error: "La creación de sesiones está desactivada." },
+      { status: 403 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -223,6 +236,23 @@ export async function POST(request: Request) {
   try {
     await ensureUser(user);
 
+    const maxSessionsPerUser = await getNumberSetting(
+      "system.max_sessions_per_user",
+      0
+    );
+    if (maxSessionsPerUser > 0) {
+      const [currentCount] = await db
+        .select({ total: count() })
+        .from(sessions)
+        .where(eq(sessions.userId, user.id));
+      if (Number(currentCount?.total ?? 0) >= maxSessionsPerUser) {
+        return NextResponse.json(
+          { error: "Has alcanzado el límite de sesiones de tu cuenta." },
+          { status: 403 }
+        );
+      }
+    }
+
     const uniqueStudentIds = Array.from(new Set(studentIds ?? []));
     if (uniqueStudentIds.length > 0) {
       const ownedRows = await db
@@ -246,7 +276,10 @@ export async function POST(request: Request) {
       await calculateDuration(user.id, exerciseItems);
     if (inaccessibleIds.length > 0) {
       return NextResponse.json(
-        { error: "Algunos ejercicios no existen o no son accesibles" },
+        {
+          error: "Algunos ejercicios no existen o no son accesibles",
+          inaccessibleExerciseIds: inaccessibleIds,
+        },
         { status: 400 }
       );
     }
@@ -298,6 +331,8 @@ export async function POST(request: Request) {
 
       return session;
     });
+
+    after(() => embedSession(result.id, user.id).catch(console.error));
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch {

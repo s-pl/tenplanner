@@ -19,10 +19,16 @@ export function GroupCreateForm() {
     const res = await fetch("/api/groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
+      body: JSON.stringify({
+        name: name.trim(),
+        description: description.trim() || undefined,
+      }),
     });
     setSaving(false);
-    if (!res.ok) { setError("No se pudo crear el grupo."); return; }
+    if (!res.ok) {
+      setError("No se pudo crear el grupo.");
+      return;
+    }
     const { data } = await res.json();
     router.push(`/groups/${data.id}`);
     router.refresh();
@@ -45,7 +51,10 @@ export function GroupCreateForm() {
       </div>
       <div className="space-y-1.5">
         <label className="text-[11px] font-bold uppercase tracking-widest text-foreground/40">
-          Descripción <span className="text-foreground/25 normal-case font-normal">opcional</span>
+          Descripción{" "}
+          <span className="text-foreground/25 normal-case font-normal">
+            opcional
+          </span>
         </label>
         <input
           value={description}
@@ -65,7 +74,11 @@ export function GroupCreateForm() {
         disabled={saving || !name.trim()}
         className="w-full inline-flex items-center justify-center gap-2 bg-brand text-brand-foreground text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
       >
-        {saving ? <Loader2 className="size-4 animate-spin" /> : <Users className="size-4" />}
+        {saving ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Users className="size-4" />
+        )}
         Crear grupo
       </button>
     </form>

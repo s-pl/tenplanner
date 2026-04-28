@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -18,6 +19,7 @@ import {
   calculateExercisePlanDuration,
   getAccessibleExerciseDurationMap,
 } from "@/lib/exercise-access";
+import { embedSession } from "@/lib/ai/semantic-search";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -75,6 +77,11 @@ export async function GET(_request: Request, context: RouteContext) {
         notes: sessionExercises.notes,
         phase: sessionExercises.phase,
         intensity: sessionExercises.intensity,
+        coachRating: sessionExercises.coachRating,
+        actualDurationSeconds: sessionExercises.actualDurationSeconds,
+        completedAt: sessionExercises.completedAt,
+        executionNotes: sessionExercises.executionNotes,
+        wasSkipped: sessionExercises.wasSkipped,
         exerciseId: exercises.id,
         exerciseName: exercises.name,
         exerciseCategory: exercises.category,
@@ -120,6 +127,11 @@ export async function GET(_request: Request, context: RouteContext) {
           notes: e.notes,
           phase: e.phase,
           intensity: e.intensity,
+          coachRating: e.coachRating,
+          actualDurationSeconds: e.actualDurationSeconds,
+          completedAt: e.completedAt,
+          executionNotes: e.executionNotes,
+          wasSkipped: e.wasSkipped,
         })),
         students: studentRows,
       },
@@ -279,6 +291,12 @@ export async function PUT(request: Request, context: RouteContext) {
 
       return session;
     });
+
+    if (updatedSession) {
+      after(() =>
+        embedSession(updatedSession.id, user.id).catch(console.error)
+      );
+    }
 
     return NextResponse.json({ data: updatedSession });
   } catch {

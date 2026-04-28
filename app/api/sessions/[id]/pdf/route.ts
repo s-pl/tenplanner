@@ -13,19 +13,24 @@ import {
   users,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { sessionIdParamsSchema, zodValidationErrorResponse } from "../../validation";
+import {
+  sessionIdParamsSchema,
+  zodValidationErrorResponse,
+} from "../../validation";
 import { SessionPdf, type PdfSession } from "@/lib/sessions/pdf";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "session";
+  return (
+    input
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "session"
+  );
 }
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -122,9 +127,13 @@ export async function GET(_request: Request, context: RouteContext) {
   };
 
   try {
-    const element = createElement(SessionPdf, { session: data }) as unknown as ReactElement<DocumentProps>;
+    const element = createElement(SessionPdf, {
+      session: data,
+    }) as unknown as ReactElement<DocumentProps>;
     const stream = await renderToStream(element);
-    const buffer = await streamToBuffer(stream as unknown as NodeJS.ReadableStream);
+    const buffer = await streamToBuffer(
+      stream as unknown as NodeJS.ReadableStream
+    );
     const filename = `sesion-${slugify(session.title)}-${
       new Date(session.scheduledAt).toISOString().split("T")[0]
     }.pdf`;

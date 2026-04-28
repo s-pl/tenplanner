@@ -4,7 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition, useCallback, useRef } from "react";
 import { Search } from "lucide-react";
 
-export function SessionsSearchInput({ defaultValue }: { defaultValue: string }) {
+export function SessionsSearchInput({
+  defaultValue,
+}: {
+  defaultValue: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();

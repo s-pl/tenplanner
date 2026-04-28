@@ -42,12 +42,17 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       addTag(tagInput);
-    } else if (e.key === "Backspace" && tagInput === "" && state.tags.length > 0) {
+    } else if (
+      e.key === "Backspace" &&
+      tagInput === "" &&
+      state.tags.length > 0
+    ) {
       removeTag(state.tags.length - 1);
     }
   }
 
-  const intensityColor = state.intensity !== null ? INTENSITY_COLORS[state.intensity - 1] : null;
+  const intensityColor =
+    state.intensity !== null ? INTENSITY_COLORS[state.intensity - 1] : null;
 
   return (
     <div className="space-y-6">
@@ -58,7 +63,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
           className="block text-xs font-bold uppercase tracking-widest text-muted-foreground"
         >
           Objetivo{" "}
-          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">opcional</span>
+          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">
+            opcional
+          </span>
         </label>
         <textarea
           id="objective"
@@ -75,7 +82,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
       <div className="space-y-3">
         <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Intensidad{" "}
-          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">opcional</span>
+          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">
+            opcional
+          </span>
         </label>
 
         {/* Visual bar */}
@@ -87,17 +96,26 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
                 <button
                   key={n}
                   type="button"
-                  onClick={() => update({ intensity: n === state.intensity ? null : n })}
+                  onClick={() =>
+                    update({ intensity: n === state.intensity ? null : n })
+                  }
                   className={cn(
                     "h-2 flex-1 rounded-full transition-all duration-200",
-                    n <= (state.intensity ?? 0) ? intensityColor?.bar : "bg-border hover:bg-muted-foreground/30"
+                    n <= (state.intensity ?? 0)
+                      ? intensityColor?.bar
+                      : "bg-border hover:bg-muted-foreground/30"
                   )}
                   aria-label={INTENSITY_LABELS[n - 1]}
                 />
               ))}
             </div>
             {intensityColor && (
-              <p className={cn("text-xs font-bold whitespace-nowrap min-w-[70px] text-right", intensityColor.text)}>
+              <p
+                className={cn(
+                  "text-xs font-bold whitespace-nowrap min-w-[70px] text-right",
+                  intensityColor.text
+                )}
+              >
                 {INTENSITY_LABELS[(state.intensity ?? 1) - 1]}
               </p>
             )}
@@ -127,13 +145,17 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
                   )}
                 />
                 <span>{n}</span>
-                <span className="hidden sm:inline">{INTENSITY_LABELS[n - 1]}</span>
+                <span className="hidden sm:inline">
+                  {INTENSITY_LABELS[n - 1]}
+                </span>
               </button>
             );
           })}
         </div>
         {errors.intensity && (
-          <p className="text-xs text-destructive font-medium">{errors.intensity}</p>
+          <p className="text-xs text-destructive font-medium">
+            {errors.intensity}
+          </p>
         )}
       </div>
 
@@ -144,7 +166,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
           className="block text-xs font-bold uppercase tracking-widest text-muted-foreground"
         >
           Etiquetas{" "}
-          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">máx. 10</span>
+          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">
+            máx. 10
+          </span>
         </label>
         <div className="flex flex-wrap gap-2 p-2.5 min-h-11 bg-background border border-border rounded-xl focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand/50 transition-colors">
           {state.tags.map((tag, i) => (
@@ -170,7 +194,9 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={onTagKeyDown}
             onBlur={() => tagInput && addTag(tagInput)}
-            placeholder={state.tags.length === 0 ? "Ej: bandeja, derecha, presión…" : ""}
+            placeholder={
+              state.tags.length === 0 ? "Ej: bandeja, derecha, presión…" : ""
+            }
             disabled={state.tags.length >= 10}
             className="flex-1 min-w-[120px] h-7 px-1 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground/50"
           />

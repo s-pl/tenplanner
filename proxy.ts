@@ -40,7 +40,10 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function withSecurityHeaders(response: NextResponse, csp: string): NextResponse {
+function withSecurityHeaders(
+  response: NextResponse,
+  csp: string
+): NextResponse {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -183,7 +186,8 @@ export async function proxy(request: NextRequest) {
     isExercisesReadApi ||
     isProfileBootstrapApi;
   const isApiRoute = pathname.startsWith("/api/");
-  const shouldCheckUser = !isPublic || pathname === "/login" || pathname === "/register";
+  const shouldCheckUser =
+    !isPublic || pathname === "/login" || pathname === "/register";
 
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] =
     null;

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { sessionTemplateExercises, sessionTemplates, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getAccessibleExerciseDurationMap } from "@/lib/exercise-access";
+import { getBooleanSetting } from "@/lib/app-settings";
 import { z } from "zod";
 
 const phaseSchema = z.enum(["activation", "main", "cooldown"]);
@@ -23,11 +24,7 @@ const createTemplateSchema = z.object({
   objective: z.string().trim().max(2000).optional().nullable(),
   durationMinutes: z.number().int().min(1).max(600),
   intensity: z.number().int().min(1).max(5).optional().nullable(),
-  tags: z
-    .array(z.string().trim().min(1).max(30))
-    .max(10)
-    .optional()
-    .nullable(),
+  tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().nullable(),
   location: z.string().trim().max(50).optional().nullable(),
   exercises: z.array(templateExerciseSchema).max(40).optional().default([]),
 });
@@ -40,6 +37,16 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return NextResponse.json(
+      { error: "Las plantillas de sesión están desactivadas." },
+      { status: 403 }
+    );
   }
 
   const q = request.nextUrl.searchParams.get("q") ?? undefined;
@@ -74,7 +81,10 @@ export async function GET(request: NextRequest) {
     .from(sessionTemplates)
     .leftJoin(users, eq(sessionTemplates.authorId, users.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(sessionTemplates.adoptionsCount), desc(sessionTemplates.createdAt))
+    .orderBy(
+      desc(sessionTemplates.adoptionsCount),
+      desc(sessionTemplates.createdAt)
+    )
     .limit(50);
 
   const filtered = tag
@@ -94,6 +104,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return NextResponse.json(
+      { error: "Las plantillas de sesión están desactivadas." },
+      { status: 403 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -103,10 +123,7 @@ export async function POST(request: Request) {
 
   const parsed = createTemplateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid data" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
   const {

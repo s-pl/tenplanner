@@ -43,7 +43,7 @@ export async function POST(
   let templateTitle: string | null = null;
   let templateDescription: string | null = null;
   try {
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       sanitizeNotes?: boolean;
       templateTitle?: string;
       templateDescription?: string | null;
@@ -52,7 +52,10 @@ export async function POST(
     if (typeof body.templateTitle === "string" && body.templateTitle.trim()) {
       templateTitle = body.templateTitle.trim().slice(0, 255);
     }
-    if (typeof body.templateDescription === "string" && body.templateDescription.trim()) {
+    if (
+      typeof body.templateDescription === "string" &&
+      body.templateDescription.trim()
+    ) {
       templateDescription = body.templateDescription.trim().slice(0, 500);
     }
   } catch {
@@ -115,5 +118,8 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ data: { templateId: template.id } }, { status: 201 });
+  return NextResponse.json(
+    { data: { templateId: template.id } },
+    { status: 201 }
+  );
 }

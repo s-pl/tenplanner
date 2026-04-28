@@ -5,7 +5,6 @@ import { Plus, Search, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
-import { MobileFab } from "@/components/app/mobile-fab";
 
 const PAGE_SIZE = 30;
 
@@ -107,14 +106,6 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
-        }}
-      />
       <div className="relative px-4 sm:px-6 md:px-10 py-10">
         {/* Masthead */}
         <header className="pb-6 border-b border-foreground/15">
@@ -135,7 +126,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             {totalStudents > 0 && (
               <Link
                 href="/students/new"
-                className="hidden md:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase"
+                className="inline-flex w-full items-center justify-center gap-2 border border-brand bg-brand px-4 py-2.5 text-[12px] font-semibold tracking-wide text-brand-foreground uppercase transition-colors hover:bg-brand/90 md:w-auto md:shrink-0"
               >
                 <Plus className="size-3.5" strokeWidth={2} />
                 Nuevo alumno
@@ -248,12 +239,12 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                   >
                     <Link
                       href={`/students/${student.id}`}
-                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-5 transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[auto_auto_1fr_auto_auto] sm:gap-5"
+                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-5 transition-colors hover:bg-brand/[0.025] sm:grid-cols-[auto_auto_1fr_auto_auto] sm:gap-5"
                     >
                       <span className="hidden w-8 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
                         {n}
                       </span>
-                      <div className="size-10 rounded-full border border-foreground/20 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="size-10 rounded-full border border-foreground/20 bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                         {student.imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
@@ -357,7 +348,6 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </p>
         </footer>
       </div>
-      <MobileFab href="/students/new" icon="user-plus" label="Nuevo alumno" />
     </div>
   );
 }

@@ -52,6 +52,10 @@ export default async function SessionPage({ params }: PageProps) {
           exercisePhase: exercises.phase,
           exerciseIntensity: exercises.intensity,
           coachRating: sessionExercises.coachRating,
+          actualDurationSeconds: sessionExercises.actualDurationSeconds,
+          completedAt: sessionExercises.completedAt,
+          executionNotes: sessionExercises.executionNotes,
+          wasSkipped: sessionExercises.wasSkipped,
           materials: exercises.materials,
         })
         .from(sessionExercises)
@@ -83,7 +87,10 @@ export default async function SessionPage({ params }: PageProps) {
       db
         .select({ exerciseId: exerciseListItems.exerciseId })
         .from(exerciseListItems)
-        .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+        .innerJoin(
+          exerciseLists,
+          eq(exerciseLists.id, exerciseListItems.listId)
+        )
         .where(eq(exerciseLists.userId, user.id)),
     ]);
 
@@ -102,6 +109,10 @@ export default async function SessionPage({ params }: PageProps) {
     durationMinutes: e.durationMinutes ?? e.defaultDurationMinutes,
     notes: e.notes,
     coachRating: e.coachRating,
+    actualDurationSeconds: e.actualDurationSeconds,
+    completedAt: e.completedAt ? e.completedAt.toISOString() : null,
+    executionNotes: e.executionNotes,
+    wasSkipped: e.wasSkipped,
     materials: Array.isArray(e.materials) ? e.materials : [],
   }));
 

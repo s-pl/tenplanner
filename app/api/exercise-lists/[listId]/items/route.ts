@@ -19,20 +19,26 @@ async function assertOwner(userId: string, listId: string) {
 
 export async function POST(request: Request, context: Context) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { listId } = await context.params;
   if (!(await assertOwner(user.id, listId)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = z.object({ exerciseId: z.string().uuid() }).safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   const { inaccessibleIds } = await getAccessibleExerciseDurationMap(user.id, [
     parsed.data.exerciseId,
@@ -51,27 +57,35 @@ export async function POST(request: Request, context: Context) {
 
 export async function DELETE(request: Request, context: Context) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { listId } = await context.params;
   if (!(await assertOwner(user.id, listId)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = z.object({ exerciseId: z.string().uuid() }).safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
-  await db.delete(exerciseListItems).where(
-    and(
-      eq(exerciseListItems.listId, listId),
-      eq(exerciseListItems.exerciseId, parsed.data.exerciseId)
-    )
-  );
+  await db
+    .delete(exerciseListItems)
+    .where(
+      and(
+        eq(exerciseListItems.listId, listId),
+        eq(exerciseListItems.exerciseId, parsed.data.exerciseId)
+      )
+    );
 
   return NextResponse.json({ ok: true });
 }

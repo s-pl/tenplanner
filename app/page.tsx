@@ -47,18 +47,8 @@ function CourtLines({ className = "" }: { className?: string }) {
   );
 }
 
-function HairlineGrid({ className = "" }: { className?: string }) {
-  return (
-    <div
-      aria-hidden
-      className={`pointer-events-none absolute inset-0 ${className}`}
-      style={{
-        backgroundImage:
-          "linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px)",
-        backgroundSize: "calc(100%/12) 100%",
-      }}
-    />
-  );
+function HairlineGrid() {
+  return null;
 }
 
 /* ─── Small primitives ────────────────────────────────────────── */

@@ -8,8 +8,29 @@ import {
   exercises as exercisesTable,
 } from "@/db/schema";
 import { and, asc, count, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { ArrowRight, ArrowUpRight, Plus, Clock, Bot } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Plus,
+  Clock,
+  Bot,
+  Lock,
+  CalendarClock,
+  BookOpen,
+  History,
+  MapPin,
+  Radio,
+  Target,
+} from "lucide-react";
 import { AiInsightsWidget } from "@/components/app/dashboard/ai-insights-widget";
+import { TimeGreeting } from "@/components/app/dashboard/time-greeting";
+import { Skeleton } from "@/components/ui/skeleton";
+import { greetingForHour } from "@/lib/time-greeting";
+import {
+  areAiInsightsEnabled,
+  getBooleanSetting,
+  isDrPlannerEnabled,
+} from "@/lib/app-settings";
 
 function formatDayMonth(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
@@ -37,68 +58,101 @@ function formatLongDate(date: Date) {
   }).format(date);
 }
 
+function SectionTitle({
+  number,
+  title,
+  meta,
+  id,
+}: {
+  number: string;
+  title: string;
+  meta?: string;
+  id?: string;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4">
+      <div className="flex items-baseline gap-3">
+        <span className="font-mono text-[10px] tabular-nums text-brand">
+          {number}
+        </span>
+        <h2 id={id} className="font-heading text-[18px] italic text-foreground">
+          {title}
+        </h2>
+      </div>
+      {meta && (
+        <span className="hidden font-mono text-[10px] uppercase text-foreground/42 sm:inline">
+          {meta}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function DashboardBodySkeleton() {
   return (
-    <>
-      <section className="space-y-4">
-        <div className="h-3 w-32 rounded bg-foreground/10 animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-foreground/15 divide-foreground/10 lg:divide-x divide-y lg:divide-y-0">
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col gap-4">
+        <Skeleton className="h-4 w-36 rounded-none" />
+        <div className="grid grid-cols-2 border border-foreground/12 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="px-5 py-6 space-y-3">
-              <div className="h-2.5 w-20 rounded bg-foreground/10 animate-pulse" />
-              <div className="h-10 w-16 rounded bg-foreground/10 animate-pulse" />
+            <div
+              key={i}
+              className="border-b border-r border-foreground/10 p-5 last:border-r-0 lg:border-b-0"
+            >
+              <Skeleton className="h-3 w-24 rounded-none" />
+              <Skeleton className="mt-6 h-12 w-20 rounded-none" />
             </div>
           ))}
         </div>
       </section>
-      <section className="grid lg:grid-cols-12 gap-10 lg:gap-14">
-        <div className="lg:col-span-7 space-y-5">
-          <div className="h-3 w-32 rounded bg-foreground/10 animate-pulse" />
-          <div className="border-t border-foreground/15 divide-y divide-foreground/10">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-4 w-40 rounded-none" />
+          <div className="border border-foreground/12">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="py-5 grid grid-cols-[auto_1fr_auto] items-center gap-5"
+                className="grid grid-cols-[84px_1fr_auto] items-center gap-5 border-b border-foreground/10 p-5 last:border-b-0"
               >
-                <div className="h-12 w-20 rounded bg-foreground/10 animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-3 w-40 rounded bg-foreground/10 animate-pulse" />
-                  <div className="h-2.5 w-24 rounded bg-foreground/10 animate-pulse" />
+                <Skeleton className="h-14 w-20 rounded-none" />
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-3 w-48 rounded-none" />
+                  <Skeleton className="h-3 w-28 rounded-none" />
                 </div>
-                <div className="h-3 w-3 rounded bg-foreground/10 animate-pulse" />
+                <Skeleton className="size-4 rounded-none" />
               </div>
             ))}
           </div>
         </div>
-        <aside className="lg:col-span-5 space-y-4">
-          <div className="h-3 w-24 rounded bg-foreground/10 animate-pulse" />
-          <div className="border-t border-foreground/15 divide-y divide-foreground/10">
+        <aside className="flex flex-col gap-4">
+          <Skeleton className="h-4 w-28 rounded-none" />
+          <div className="border border-foreground/12">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-14 animate-pulse" />
+              <Skeleton
+                key={i}
+                className="h-16 rounded-none border-b border-foreground/10 last:border-b-0"
+              />
             ))}
           </div>
         </aside>
       </section>
-    </>
+    </div>
   );
 }
 
 function AiInsightsSkeleton() {
   return (
-    <section className="space-y-4">
-      <div className="flex items-baseline justify-between gap-4 pb-2 border-b border-foreground/10">
-        <div className="h-3 w-32 rounded bg-foreground/10 animate-pulse" />
-        <div className="h-3 w-28 rounded bg-foreground/10 animate-pulse" />
+    <section className="flex flex-col gap-4">
+      <div className="flex items-baseline justify-between gap-4 border-b border-foreground/10 pb-2">
+        <Skeleton className="h-3 w-32 rounded-none" />
+        <Skeleton className="h-3 w-28 rounded-none" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="border border-foreground/15 bg-foreground/[0.02] p-4 space-y-2"
-          >
-            <div className="h-2.5 w-16 rounded bg-foreground/10 animate-pulse" />
-            <div className="h-5 w-28 rounded bg-foreground/10 animate-pulse" />
-            <div className="h-3 w-40 rounded bg-foreground/10 animate-pulse" />
+          <div key={i} className="border border-foreground/12 p-4">
+            <Skeleton className="h-3 w-16 rounded-none" />
+            <Skeleton className="mt-3 h-6 w-28 rounded-none" />
+            <Skeleton className="mt-3 h-3 w-40 rounded-none" />
           </div>
         ))}
       </div>
@@ -106,7 +160,15 @@ function AiInsightsSkeleton() {
   );
 }
 
-async function DashboardBody({ userId }: { userId: string }) {
+async function DashboardBody({
+  userId,
+  drPlannerEnabled,
+  sessionCreationEnabled,
+}: {
+  userId: string;
+  drPlannerEnabled: boolean;
+  sessionCreationEnabled: boolean;
+}) {
   const now = new Date();
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
@@ -164,48 +226,106 @@ async function DashboardBody({ userId }: { userId: string }) {
   const totalHours = Math.round(totalMinutes / 60);
 
   const stats = [
-    { label: "Semana en curso", value: thisWeekCount, unit: "sesiones" },
+    {
+      label: "Semana en curso",
+      value: thisWeekCount,
+      unit: "sesiones",
+      icon: CalendarClock,
+      cue: "carga viva",
+    },
     {
       label: "Biblioteca",
       value: exerciseCount[0]?.count ?? 0,
       unit: "ejercicios",
+      icon: BookOpen,
+      cue: "arsenal",
     },
-    { label: "Tiempo pista", value: totalHours, unit: "horas" },
-    { label: "Histórico", value: totalSessions, unit: "sesiones" },
+    {
+      label: "Tiempo pista",
+      value: totalHours,
+      unit: "horas",
+      icon: Clock,
+      cue: "volumen",
+    },
+    {
+      label: "Histórico",
+      value: totalSessions,
+      unit: "sesiones",
+      icon: History,
+      cue: "archivo",
+    },
+  ];
+
+  const actions = [
+    ...(drPlannerEnabled
+      ? [
+          {
+            href: "/sessions/dr-planner",
+            label: "Dr. Planner",
+            desc: "Diseña una sesión con contexto real",
+            tag: "IA",
+            icon: Bot,
+            accent: true,
+          },
+        ]
+      : []),
+    ...(sessionCreationEnabled
+      ? [
+          {
+            href: "/sessions/new",
+            label: "Nueva sesión",
+            desc: "Construcción manual por bloques",
+            tag: "PLAN",
+            icon: Plus,
+          },
+        ]
+      : []),
+    {
+      href: "/exercises",
+      label: "Biblioteca",
+      desc: "Selecciona, filtra y reutiliza ejercicios",
+      tag: "LIB",
+      icon: Target,
+    },
+    {
+      href: "/calendar",
+      label: "Calendario",
+      desc: "Ordena la semana de pista",
+      tag: "CAL",
+      icon: CalendarClock,
+    },
   ];
 
   return (
-    <>
-      {/* ─── STATS — monocromo, hairline grid ─── */}
-      <section aria-labelledby="stats-heading" className="space-y-4">
-        <div className="flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-              01
-            </span>
-            <h2
-              id="stats-heading"
-              className="font-heading italic text-[17px] text-foreground/90"
-            >
-              Panorámica
-            </h2>
-          </div>
-          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-            Resumen operativo
-          </span>
-        </div>
+    <div className="flex flex-col gap-10 md:gap-12">
+      <section aria-labelledby="stats-heading" className="flex flex-col gap-4">
+        <SectionTitle
+          id="stats-heading"
+          number="01"
+          title="Marcador operativo"
+          meta="resumen vivo"
+        />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-foreground/15 divide-foreground/10 lg:divide-x divide-y lg:divide-y-0">
-          {stats.map(({ label, value, unit }, idx) => (
-            <div key={label} className="px-5 py-6 relative">
-              <p className="font-sans text-[9px] uppercase tracking-[0.2em] text-foreground/45 mb-3">
-                {String(idx + 1).padStart(2, "0")} · {label}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <span className="font-heading text-5xl text-foreground tabular-nums leading-none">
+        <div className="ink-panel grid grid-cols-1 border border-foreground/12 bg-card/90 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map(({ label, value, unit, icon: Icon, cue }, idx) => (
+            <div
+              key={label}
+              className="relative min-h-36 border-b border-r border-foreground/10 p-5 last:border-r-0 sm:[&:nth-child(2n)]:border-r-0 xl:border-b-0 xl:[&:nth-child(2n)]:border-r xl:last:border-r-0"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono text-[10px] uppercase text-foreground/45">
+                    {String(idx + 1).padStart(2, "0")} / {cue}
+                  </p>
+                  <p className="mt-2 text-[13px] text-foreground/72">{label}</p>
+                </div>
+                <Icon className="size-4 text-brand" strokeWidth={1.7} />
+              </div>
+              <div className="mt-7 flex items-end justify-between gap-3">
+                <span className="font-heading text-6xl leading-none text-foreground tabular-nums">
                   {value}
                 </span>
-                <span className="font-sans text-[11px] italic text-foreground/50">
+                <span className="pb-1 font-mono text-[10px] uppercase text-foreground/45">
                   {unit}
                 </span>
               </div>
@@ -214,182 +334,145 @@ async function DashboardBody({ userId }: { userId: string }) {
         </div>
       </section>
 
-      {/* ─── AGENDA + ACCIONES ─── */}
-      <section className="grid lg:grid-cols-12 gap-10 lg:gap-14">
-        {/* Upcoming — agenda editorial */}
-        <div className="lg:col-span-7 space-y-5">
-          <div className="flex items-baseline justify-between">
-            <div className="flex items-baseline gap-3">
-              <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                02
-              </span>
-              <h2 className="font-heading italic text-[17px] text-foreground/90">
-                En el horizonte
-              </h2>
-            </div>
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-end justify-between gap-4">
+            <SectionTitle number="02" title="Horizonte de pista" />
             <Link
               href="/sessions?filter=upcoming"
-              className="group font-sans text-[11px] uppercase tracking-[0.18em] text-foreground/55 hover:text-brand transition-colors inline-flex items-center gap-1.5"
+              className="group inline-flex items-center gap-1.5 font-mono text-[10px] uppercase text-foreground/55 transition-colors hover:text-brand"
             >
               Agenda completa
-              <ArrowUpRight className="size-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <ArrowUpRight className="size-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </Link>
           </div>
 
-          {upcomingSessions.length === 0 ? (
-            <div className="border-t border-b border-foreground/15 py-14 text-center">
-              <p className="font-heading italic text-xl text-foreground/80 mb-2">
-                Ninguna sesión en el radar.
-              </p>
-              <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
-                Cuando planifiques entrenamientos aparecerán aquí ordenados por
-                fecha.
-              </p>
-              <Link
-                href="/sessions/new"
-                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors"
-              >
-                <Plus className="size-3.5" /> Crear la primera
-              </Link>
-            </div>
-          ) : (
-            <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-              {upcomingSessions.map((session, idx) => {
-                const date = new Date(session.scheduledAt);
-                return (
-                  <li key={session.id}>
-                    <Link
-                      href="/sessions"
-                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5"
-                    >
-                      <span className="hidden font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-[76px] border-l border-foreground/15 pl-3 sm:min-w-[92px] sm:pl-5">
-                        <p className="font-heading text-[20px] tabular-nums leading-none text-foreground sm:text-[22px]">
-                          {formatDayMonth(date)}
+          <div className="ink-panel overflow-hidden border border-foreground/12 bg-card/90">
+            {upcomingSessions.length === 0 ? (
+              <div className="flex min-h-80 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+                <Radio className="size-8 text-brand" strokeWidth={1.6} />
+                <div>
+                  <p className="font-heading text-2xl italic text-foreground">
+                    Radar limpio.
+                  </p>
+                  <p className="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-foreground/58">
+                    Crea la siguiente sesión y la agenda se convertirá en una
+                    línea de mando.
+                  </p>
+                </div>
+                <Link
+                  href="/sessions/new"
+                  className="inline-flex items-center gap-2 border border-brand/45 bg-brand px-4 py-2 text-[12px] font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+                >
+                  <Plus className="size-3.5" />
+                  Crear sesión
+                </Link>
+              </div>
+            ) : (
+              <ol className="divide-y divide-foreground/10">
+                {upcomingSessions.map((session, idx) => {
+                  const date = new Date(session.scheduledAt);
+                  return (
+                    <li key={session.id}>
+                      <Link
+                        href={`/sessions/${session.id}`}
+                        className="group grid min-h-24 grid-cols-[88px_1fr_auto] items-center gap-4 px-4 py-4 transition-colors hover:bg-foreground/[0.025] sm:grid-cols-[110px_1fr_130px_auto] sm:px-5"
+                      >
+                        <div className="border-r border-foreground/12 pr-4">
+                          <p className="font-mono text-[10px] tabular-nums text-brand">
+                            {String(idx + 1).padStart(2, "0")}
+                          </p>
+                          <p className="mt-2 font-heading text-2xl leading-none text-foreground tabular-nums">
+                            {formatDayMonth(date)}
+                          </p>
+                          <p className="mt-1 font-mono text-[10px] uppercase text-foreground/45">
+                            {formatWeekday(date).slice(0, 3)} {formatTime(date)}
+                          </p>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-[15px] leading-tight text-foreground">
+                            {session.title}
+                          </p>
+                          <p className="mt-2 flex items-center gap-2 text-[12px] text-foreground/55">
+                            <Clock className="size-3.5 text-brand" />
+                            {session.durationMinutes} min
+                          </p>
+                        </div>
+                        <p className="hidden items-center gap-2 truncate font-mono text-[10px] uppercase text-foreground/45 sm:flex">
+                          <MapPin className="size-3 text-foreground/35" />
+                          {session.location || "pista"}
                         </p>
-                        <p className="mt-1 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
-                          {formatWeekday(date).slice(0, 3)} · {formatTime(date)}
-                        </p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[15px] text-foreground leading-tight truncate">
-                          {session.title}
-                        </p>
-                        <p className="mt-1.5 font-sans text-[10px] uppercase tracking-[0.15em] text-foreground/40 tabular-nums">
-                          <Clock className="inline size-3 mr-1 -translate-y-px" />
-                          {session.durationMinutes} min
-                        </p>
-                      </div>
-                      <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                        <ArrowRight className="size-4 text-foreground/30 transition-all group-hover:translate-x-1 group-hover:text-brand" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
         </div>
 
-        {/* Side column — tools + recent */}
-        <aside className="lg:col-span-5 space-y-10">
-          {/* Tools / quick actions */}
-          <div className="space-y-4">
-            <div className="flex items-baseline gap-3">
-              <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                03
-              </span>
-              <h2 className="font-heading italic text-[17px] text-foreground/90">
-                Herramientas
-              </h2>
-            </div>
-
-            <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-              {[
-                {
-                  href: "/sessions/dr-planner",
-                  label: "Dr. Planner",
-                  desc: "Diseña con IA, tú confirmas",
-                  tag: "IA",
-                  accent: true,
-                },
-                {
-                  href: "/sessions/new",
-                  label: "Nueva sesión",
-                  desc: "Plan manual paso a paso",
-                  tag: "MAN",
-                },
-                {
-                  href: "/exercises",
-                  label: "Biblioteca",
-                  desc: "Explora y crea ejercicios",
-                  tag: "LIB",
-                },
-                {
-                  href: "/calendar",
-                  label: "Calendario",
-                  desc: "Vista mensual y semanal",
-                  tag: "CAL",
-                },
-              ].map(({ href, label, desc, tag, accent }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3.5 hover:bg-foreground/[0.02] -mx-3 px-3 transition-colors"
+        <aside className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
+            <SectionTitle number="03" title="Carril de decisiones" />
+            <div className="ink-panel border border-foreground/12 bg-card/90">
+              {actions.map(({ href, label, desc, tag, icon: Icon, accent }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-foreground/10 px-4 py-4 transition-colors last:border-b-0 hover:bg-foreground/[0.025]"
+                >
+                  <span
+                    className={`flex size-9 items-center justify-center border ${
+                      accent
+                        ? "border-brand/45 bg-brand/10 text-brand"
+                        : "border-foreground/12 text-foreground/58"
+                    }`}
                   >
+                    <Icon className="size-4" strokeWidth={1.7} />
+                  </span>
+                  <span className="min-w-0">
                     <span
-                      className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/40"}`}
+                      className={`block text-[14px] leading-tight ${
+                        accent ? "text-brand" : "text-foreground"
+                      }`}
                     >
-                      ▸
+                      {label}
                     </span>
-                    <div className="min-w-0">
-                      <p
-                        className={`text-[14px] leading-tight ${accent ? "text-brand" : "text-foreground/90"}`}
-                      >
-                        {label}
-                      </p>
-                      <p className="text-[11px] text-foreground/55 mt-0.5">
-                        {desc}
-                      </p>
-                    </div>
-                    <span
-                      className={`font-sans text-[9px] tracking-[0.18em] ${accent ? "text-brand" : "text-foreground/35"} group-hover:text-brand transition-colors`}
-                    >
-                      {tag}
+                    <span className="mt-1 block truncate text-[12px] text-foreground/55">
+                      {desc}
                     </span>
-                  </Link>
-                </li>
+                  </span>
+                  <span
+                    className={`font-mono text-[10px] uppercase transition-colors ${
+                      accent ? "text-brand" : "text-foreground/35"
+                    } group-hover:text-brand`}
+                  >
+                    {tag}
+                  </span>
+                </Link>
               ))}
-            </ul>
+            </div>
           </div>
 
-          {/* Recent activity — archive */}
           {recentSessions.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-baseline gap-3">
-                <span className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                  04
-                </span>
-                <h2 className="font-heading italic text-[17px] text-foreground/90">
-                  Archivo reciente
-                </h2>
-              </div>
-
-              <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
+            <div className="flex flex-col gap-4">
+              <SectionTitle number="04" title="Archivo fresco" />
+              <ul className="border border-foreground/12 bg-card/70">
                 {recentSessions.map((session) => {
                   const date = new Date(session.scheduledAt);
                   return (
                     <li
                       key={session.id}
-                      className="py-3 grid grid-cols-[auto_1fr_auto] items-baseline gap-4"
+                      className="grid grid-cols-[74px_1fr_auto] items-center gap-3 border-b border-foreground/10 px-4 py-3 last:border-b-0"
                     >
-                      <span className="font-sans text-[10px] tracking-[0.14em] tabular-nums text-foreground/45 uppercase">
+                      <span className="font-mono text-[10px] uppercase text-foreground/45 tabular-nums">
                         {formatDayMonth(date)}
                       </span>
-                      <p className="text-[13px] text-foreground/85 truncate italic">
+                      <p className="truncate text-[13px] italic text-foreground/82">
                         {session.title}
                       </p>
-                      <span className="font-sans text-[10px] tabular-nums text-foreground/35">
+                      <span className="font-mono text-[10px] tabular-nums text-foreground/35">
                         {session.durationMinutes}&prime;
                       </span>
                     </li>
@@ -399,19 +482,18 @@ async function DashboardBody({ userId }: { userId: string }) {
             </div>
           )}
 
-          {/* Editorial footnote */}
-          <div className="pt-6 border-t border-foreground/10">
-            <p className="font-heading italic text-[13px] text-foreground/45 leading-relaxed">
+          <div className="ledger-surface border border-foreground/12 p-5">
+            <p className="font-heading text-[15px] italic leading-relaxed text-foreground/58">
               &ldquo;La repetición no es memoria: es escultura. Cada sesión
               talla un gesto que acabará siendo instinto.&rdquo;
             </p>
-            <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/35">
-              Cuaderno · tenplanner
+            <p className="mt-4 font-mono text-[10px] uppercase text-foreground/40">
+              Cuaderno / tenplanner
             </p>
           </div>
         </aside>
       </section>
-    </>
+    </div>
   );
 }
 
@@ -427,69 +509,88 @@ export default async function DashboardPage() {
     user.user_metadata?.full_name?.split(" ")[0] ||
     user.email?.split("@")[0] ||
     "Coach";
-
   const now = new Date();
+  const [drPlannerEnabled, aiInsightsEnabled, sessionCreationEnabled] =
+    await Promise.all([
+      isDrPlannerEnabled(),
+      areAiInsightsEnabled(),
+      getBooleanSetting("feature.session_creation_enabled"),
+    ]);
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-8 md:py-14 space-y-10 md:space-y-14">
-        {/* ─── MASTHEAD ─── */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 tabular-nums">
-              {formatLongDate(now)}
-            </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 hidden md:block">
-              Pista · Despacho
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
-            <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                Hola, <em className="italic text-brand">{displayName}</em>.
-              </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                Aquí está tu despacho — agenda, biblioteca y asistente, todo a
-                un paso.
+    <div className="relative min-h-full">
+      <div className="relative flex flex-col gap-10 px-4 py-6 sm:px-6 md:px-10 md:py-10 lg:px-14 xl:gap-12">
+        <header className="ink-panel overflow-hidden border border-foreground/12 bg-card/90">
+          <div className="flex min-h-[260px] flex-col gap-9 p-5 sm:p-7 lg:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <p className="font-mono text-[10px] uppercase text-foreground/45">
+                {formatLongDate(now)}
+              </p>
+              <p className="hidden font-mono text-[10px] uppercase text-foreground/38 sm:block">
+                Pista · despacho
               </p>
             </div>
 
-            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 md:flex md:shrink-0">
-              <Link
-                href="/sessions/dr-planner"
-                className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 hover:border-brand/40 hover:text-brand transition-colors"
-              >
-                <Bot className="size-4 text-brand" />
-                Dr. Planner
-              </Link>
-              <Link
-                href="/sessions/new"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-foreground/90 transition-colors"
-              >
-                <Plus className="size-4" />
-                Nueva sesión
-              </Link>
+            <div className="grid flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div className="max-w-4xl">
+                <TimeGreeting
+                  name={displayName}
+                  initialGreeting={greetingForHour(now.getHours())}
+                />
+                <p className="mt-5 max-w-3xl text-[15px] leading-relaxed text-foreground/62 sm:text-base">
+                  Aquí está tu despacho: agenda, biblioteca y asistente, todo a
+                  un paso.
+                </p>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[360px]">
+                {drPlannerEnabled ? (
+                  <Link
+                    href="/sessions/dr-planner"
+                    className="group inline-flex h-11 items-center justify-center gap-2 border border-brand/45 bg-brand/10 px-4 text-[13px] font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-foreground"
+                  >
+                    <Bot className="size-4" />
+                    Dr. Planner
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-11 items-center justify-center gap-2 border border-foreground/12 bg-foreground/[0.03] px-4 text-[13px] font-semibold text-foreground/38">
+                    <Lock className="size-4" />
+                    IA próximamente
+                  </span>
+                )}
+                {sessionCreationEnabled ? (
+                  <Link
+                    href="/sessions/new"
+                    className="inline-flex h-11 items-center justify-center gap-2 border border-foreground bg-foreground px-4 text-[13px] font-semibold text-background transition-colors hover:bg-foreground/90"
+                  >
+                    <Plus className="size-4" />
+                    Nueva sesión
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-11 items-center justify-center gap-2 border border-foreground/12 bg-foreground/[0.03] px-4 text-[13px] font-semibold text-foreground/38">
+                    <Lock className="size-4" />
+                    Sesiones bloqueadas
+                  </span>
+                )}
+              </div>
             </div>
+
+            <div className="border-t border-foreground/12" />
           </div>
         </header>
 
-        <Suspense fallback={<AiInsightsSkeleton />}>
-          <AiInsightsWidget coachId={user.id} />
-        </Suspense>
+        {drPlannerEnabled && aiInsightsEnabled && (
+          <Suspense fallback={<AiInsightsSkeleton />}>
+            <AiInsightsWidget coachId={user.id} />
+          </Suspense>
+        )}
 
         <Suspense fallback={<DashboardBodySkeleton />}>
-          <DashboardBody userId={user.id} />
+          <DashboardBody
+            userId={user.id}
+            drPlannerEnabled={drPlannerEnabled}
+            sessionCreationEnabled={sessionCreationEnabled}
+          />
         </Suspense>
       </div>
     </div>

@@ -8,10 +8,10 @@ import {
   useEffect,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Send,
   Loader2,
   Bot,
@@ -180,12 +180,6 @@ async function fetchWithChatTimeout(
 }
 
 // ─── Mention chip (inline in user messages) ──────────────────────────────────
-
-const MENTION_ICONS: Record<string, React.ReactNode> = {
-  ejercicio: <Dumbbell className="size-2.5" />,
-  sesion: <Calendar className="size-2.5" />,
-  alumno: <GraduationCap className="size-2.5" />,
-};
 
 // Matches both @[nombre] (new) and @[tipo:nombre] (legacy stored messages)
 const MENTION_RE = /(@\[(?:(?:ejercicio|sesion|alumno):)?[^\]]+\])/g;
@@ -493,10 +487,10 @@ function MarkdownBubble({ role, content }: { role: string; content: string }) {
       )}
       <div
         className={cn(
-          "max-w-[85%] px-4 py-3",
+          "max-w-[85%] rounded-lg px-4 py-3 shadow-sm",
           isAssistant
-            ? "border-l-2 border-brand/50 bg-foreground/[0.02] text-foreground"
-            : "bg-brand text-brand-foreground text-[14px] leading-relaxed"
+            ? "border border-l-2 border-foreground/12 border-l-brand/50 bg-card text-foreground"
+            : "border border-brand bg-brand text-[14px] leading-relaxed text-brand-foreground"
         )}
       >
         {isAssistant ? (
@@ -531,7 +525,7 @@ function ExerciseCard({
     <div
       onClick={onToggle}
       className={cn(
-        "relative flex flex-col gap-2 p-3.5 border cursor-pointer transition-all group pl-4",
+        "relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3.5 pl-4 shadow-sm transition-all group",
         selected
           ? "bg-brand/[0.06] border-brand"
           : "bg-card border-foreground/15 hover:border-foreground/35"
@@ -868,7 +862,8 @@ function StudentPickerCard({
   function toggle(id: string) {
     setSelected((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }
@@ -1616,6 +1611,22 @@ function MentionPopover({
 
 // ─── Main chat component ───────────────────────────────────────────────────────
 
+type ModelMode = "auto" | "reasoning" | "rapido";
+
+const MODEL_MODES: { id: ModelMode; label: string; desc: string }[] = [
+  {
+    id: "auto",
+    label: "Automático",
+    desc: "El sistema elige el modelo según la complejidad",
+  },
+  {
+    id: "reasoning",
+    label: "Razonamiento",
+    desc: "Sonnet — respuestas más profundas",
+  },
+  { id: "rapido", label: "Rapidez", desc: "Haiku — respuestas más rápidas" },
+];
+
 export function DrPlannerChat({
   chatId,
   initialTitle,
@@ -1626,17 +1637,40 @@ export function DrPlannerChat({
   initialMessages: Record<string, unknown>[];
 }) {
   const router = useRouter();
-  const { messages, sendMessage, status, setMessages, stop, error, clearError } =
-    useChat({
-      transport: new DefaultChatTransport({
+  const [modelMode, setModelMode] = useState<ModelMode>("auto");
+
+  function updateModelMode(mode: ModelMode) {
+    setModelMode(mode);
+  }
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
         api: "/api/dr-planner",
+        body: { chatId, modelMode },
         fetch: fetchWithChatTimeout,
+        prepareSendMessagesRequest: ({ body, messages }) => ({
+          body: { ...body, messages },
+        }),
       }),
-      messages: initialMessages as unknown as UIMessage[],
-      onError: (chatError) => {
-        console.error("[Dr. Planner] chat error:", chatError);
-      },
-    });
+    [chatId, modelMode]
+  );
+
+  const {
+    messages,
+    sendMessage,
+    status,
+    setMessages,
+    stop,
+    error,
+    clearError,
+  } = useChat({
+    transport,
+    messages: initialMessages as unknown as UIMessage[],
+    onError: (chatError) => {
+      console.error("[Dr. Planner] chat error:", chatError);
+    },
+  });
 
   const [input, setInput] = useState("");
   const [title, setTitle] = useState(initialTitle);
@@ -1692,7 +1726,7 @@ export function DrPlannerChat({
         .catch(() => {});
     }
     prevStatus.current = status;
-  }, [status]);
+  }, [chatId, messages, status, title]);
 
   // Auto-save every 10s while streaming so work isn't lost mid-generation
   useEffect(() => {
@@ -1834,7 +1868,8 @@ export function DrPlannerChat({
   const toggleExercise = useCallback((id: string) => {
     setSelectedExercises((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }, []);
@@ -2325,9 +2360,29 @@ export function DrPlannerChat({
               </button>
             )}
           </div>
-          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 text-center mt-2">
-            Intro enviar · Shift+Intro nueva línea · @ mencionar
-          </p>
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
+              Intro enviar · Shift+Intro nueva línea · @ mencionar
+            </p>
+            <div className="flex items-center gap-1">
+              {MODEL_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  title={m.desc}
+                  onClick={() => updateModelMode(m.id)}
+                  className={cn(
+                    "font-sans text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 border transition-colors",
+                    modelMode === m.id
+                      ? "border-brand text-brand bg-brand/10"
+                      : "border-foreground/15 text-foreground/40 hover:text-foreground/70 hover:border-foreground/30"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

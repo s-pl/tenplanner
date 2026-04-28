@@ -72,8 +72,8 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Chat Dr. Planner:</strong> mensajes enviados al
                 asistente de IA. Se procesan por Anthropic PBC para responder.
-                Base legal: ejecución del contrato + interés legítimo en
-                mejorar el servicio.
+                Base legal: ejecución del contrato + interés legítimo en mejorar
+                el servicio.
               </li>
               <li>
                 <strong>Datos técnicos:</strong> IP y cookies técnicas de
@@ -112,9 +112,9 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               Conservamos los datos mientras tu cuenta esté activa. Puedes
-              solicitar el borrado en cualquier momento desde tu perfil. Tras
-              la eliminación, los datos quedan suprimidos en un plazo máximo de
-              30 días, salvo obligación legal de conservación.
+              solicitar el borrado en cualquier momento desde tu perfil. Tras la
+              eliminación, los datos quedan suprimidos en un plazo máximo de 30
+              días, salvo obligación legal de conservación.
             </p>
           </section>
 
@@ -159,8 +159,8 @@ export default function PrivacyPolicyPage() {
               7. Cambios en esta política
             </h2>
             <p>
-              Publicaremos cualquier cambio material en esta página. La fecha
-              de última actualización se muestra al inicio.
+              Publicaremos cualquier cambio material en esta página. La fecha de
+              última actualización se muestra al inicio.
             </p>
           </section>
         </div>

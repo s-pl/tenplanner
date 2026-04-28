@@ -17,11 +17,11 @@ Brecha = incidente de seguridad que ocasione destrucción, pérdida, alteración
 
 ## 3. Roles
 
-| Rol | Quién | Responsabilidad |
-| --- | --- | --- |
-| Primer respondedor | Quien detecta la brecha. | Registrar en log interno, alertar al responsable. |
-| Coordinador | `<!-- TODO: nombre del titular -->` | Valorar impacto, decidir notificación AEPD e interesados, liderar contención. |
-| DPO (si aplica) | `<!-- TODO -->` | Asesoría legal, enlace con AEPD. |
+| Rol                | Quién                               | Responsabilidad                                                               |
+| ------------------ | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Primer respondedor | Quien detecta la brecha.            | Registrar en log interno, alertar al responsable.                             |
+| Coordinador        | `<!-- TODO: nombre del titular -->` | Valorar impacto, decidir notificación AEPD e interesados, liderar contención. |
+| DPO (si aplica)    | `<!-- TODO -->`                     | Asesoría legal, enlace con AEPD.                                              |
 
 ## 4. Flujo
 

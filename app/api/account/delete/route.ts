@@ -76,9 +76,7 @@ export async function POST(request: Request) {
     if (path) exerciseMediaPaths.push(path);
   }
   if (exerciseMediaPaths.length > 0) {
-    await admin.storage
-      .from(EXERCISE_MEDIA_BUCKET)
-      .remove(exerciseMediaPaths);
+    await admin.storage.from(EXERCISE_MEDIA_BUCKET).remove(exerciseMediaPaths);
   }
 
   const userStudents = await db

@@ -19,7 +19,10 @@ export default function LegalLayout({
         <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="size-7 rounded-lg bg-brand flex items-center justify-center">
-              <Zap className="size-3.5 text-brand-foreground" strokeWidth={2.5} />
+              <Zap
+                className="size-3.5 text-brand-foreground"
+                strokeWidth={2.5}
+              />
             </div>
             <span className="font-heading text-lg">
               ten<span className="italic text-brand">planner</span>

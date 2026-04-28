@@ -41,7 +41,9 @@ export async function listCoachStudentsSummary(
     id: r.id,
     name: r.name,
     playerLevel: r.playerLevel,
-    lastSessionAt: r.lastSessionAt ? new Date(r.lastSessionAt).toISOString() : null,
+    lastSessionAt: r.lastSessionAt
+      ? new Date(r.lastSessionAt).toISOString()
+      : null,
     sessionsLast30d: Number(r.sessionsLast30d ?? 0),
   }));
 }
@@ -102,7 +104,10 @@ export type StudentAnalytics = {
   avgIntensity: number | null;
   attendanceRate: number | null;
   categoriesLast60d: CategoryBreakdown[];
-  phasesLast60d: { phase: "activation" | "main" | "cooldown"; minutes: number }[];
+  phasesLast60d: {
+    phase: "activation" | "main" | "cooldown";
+    minutes: number;
+  }[];
   topTags: { tag: string; count: number }[];
   recentSessions: {
     id: string;
@@ -168,12 +173,19 @@ export async function getStudentAnalytics(
     .map((s) => s.intensity)
     .filter((n): n is number => typeof n === "number");
   const avgIntensity = intensities.length
-    ? Number((intensities.reduce((a, b) => a + b, 0) / intensities.length).toFixed(2))
+    ? Number(
+        (intensities.reduce((a, b) => a + b, 0) / intensities.length).toFixed(2)
+      )
     : null;
 
-  const attendedCount = allSessionsRows.filter((s) => s.attended === true).length;
-  const trackedCount = allSessionsRows.filter((s) => s.attended !== null).length;
-  const attendanceRate = trackedCount > 0 ? Math.round((attendedCount / trackedCount) * 100) : null;
+  const attendedCount = allSessionsRows.filter(
+    (s) => s.attended === true
+  ).length;
+  const trackedCount = allSessionsRows.filter(
+    (s) => s.attended !== null
+  ).length;
+  const attendanceRate =
+    trackedCount > 0 ? Math.round((attendedCount / trackedCount) * 100) : null;
 
   // Categories + phases last 60d
   const recentIds = allSessionsRows
@@ -181,7 +193,10 @@ export async function getStudentAnalytics(
     .map((s) => s.id);
 
   let categoriesLast60d: CategoryBreakdown[] = [];
-  let phasesLast60d: { phase: "activation" | "main" | "cooldown"; minutes: number }[] = [];
+  let phasesLast60d: {
+    phase: "activation" | "main" | "cooldown";
+    minutes: number;
+  }[] = [];
 
   if (recentIds.length > 0) {
     const catRows = await db
@@ -282,7 +297,9 @@ export async function detectTrainingGaps(
     "warm-up",
   ];
 
-  const byCat = new Map(analytics.categoriesLast60d.map((c) => [c.category, c.minutes]));
+  const byCat = new Map(
+    analytics.categoriesLast60d.map((c) => [c.category, c.minutes])
+  );
   const gaps: TrainingGap[] = [];
 
   for (const cat of allCategories) {
@@ -303,7 +320,9 @@ export async function detectTrainingGaps(
     main: "Principal",
     cooldown: "Vuelta a la calma",
   };
-  const byPhase = new Map(analytics.phasesLast60d.map((p) => [p.phase, p.minutes]));
+  const byPhase = new Map(
+    analytics.phasesLast60d.map((p) => [p.phase, p.minutes])
+  );
   for (const ph of ["activation", "main", "cooldown"] as const) {
     const minutes = byPhase.get(ph) ?? 0;
     if (minutes === 0 && analytics.sessionsLast60d > 0) {
@@ -352,7 +371,10 @@ export async function getStudentProgress(
       )
     );
 
-  const bucket = new Map<string, { sessions: number; intensitySum: number; intensityN: number }>();
+  const bucket = new Map<
+    string,
+    { sessions: number; intensitySum: number; intensityN: number }
+  >();
   const now = new Date();
   for (let i = 0; i < 6; i += 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -375,7 +397,10 @@ export async function getStudentProgress(
   return [...bucket.entries()].map(([month, b]) => ({
     month,
     sessions: b.sessions,
-    avgIntensity: b.intensityN > 0 ? Number((b.intensitySum / b.intensityN).toFixed(2)) : null,
+    avgIntensity:
+      b.intensityN > 0
+        ? Number((b.intensitySum / b.intensityN).toFixed(2))
+        : null,
   }));
 }
 
@@ -394,7 +419,14 @@ export async function getCoachStats(coachId: string): Promise<CoachStats> {
   const now = new Date();
   const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  const endOfPrevMonth = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    0,
+    23,
+    59,
+    59
+  );
 
   const [
     thisMonthSessions,
@@ -411,7 +443,12 @@ export async function getCoachStats(coachId: string): Promise<CoachStats> {
         intensity: sessions.intensity,
       })
       .from(sessions)
-      .where(and(eq(sessions.userId, coachId), gte(sessions.scheduledAt, startOfThisMonth))),
+      .where(
+        and(
+          eq(sessions.userId, coachId),
+          gte(sessions.scheduledAt, startOfThisMonth)
+        )
+      ),
 
     db
       .select({ id: sessions.id })
@@ -512,7 +549,9 @@ export async function recommendNextSession(
   const validStudents = await db
     .select({ id: students.id, name: students.name })
     .from(students)
-    .where(and(inArray(students.id, studentIds), eq(students.coachId, coachId)));
+    .where(
+      and(inArray(students.id, studentIds), eq(students.coachId, coachId))
+    );
 
   if (validStudents.length === 0) return null;
 

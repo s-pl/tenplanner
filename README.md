@@ -57,15 +57,15 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Copy `.env.example` to `.env.local` and fill in:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon (client-safe) key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ (producción) | Service-role key. **Solo servidor.** Necesaria para el endpoint de borrado de cuenta (`/api/account/delete`). |
-| `DATABASE_URL` | ✅ | Postgres connection string para Drizzle. |
-| `NEXT_ANTHROPIC_API_KEY` | ✅ | Clave API de Anthropic (Dr. Planner). |
-| `CRON_SECRET` | ✅ (producción) | Bearer token para autenticar `/api/cron/cleanup`. Vercel lo pasa automáticamente si está configurado. |
-| `NEXT_DEV_ALLOWED_ORIGINS` | opcional | Lista de orígenes permitidos en dev. |
+| Variable                        | Required        | Purpose                                                                                                       |
+| ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | ✅              | Supabase project URL.                                                                                         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅              | Supabase anon (client-safe) key.                                                                              |
+| `SUPABASE_SERVICE_ROLE_KEY`     | ✅ (producción) | Service-role key. **Solo servidor.** Necesaria para el endpoint de borrado de cuenta (`/api/account/delete`). |
+| `DATABASE_URL`                  | ✅              | Postgres connection string para Drizzle.                                                                      |
+| `NEXT_ANTHROPIC_API_KEY`        | ✅              | Clave API de Anthropic (Dr. Planner).                                                                         |
+| `CRON_SECRET`                   | ✅ (producción) | Bearer token para autenticar `/api/cron/cleanup`. Vercel lo pasa automáticamente si está configurado.         |
+| `NEXT_DEV_ALLOWED_ORIGINS`      | opcional        | Lista de orígenes permitidos en dev.                                                                          |
 
 ## CI
 

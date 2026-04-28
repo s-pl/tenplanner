@@ -83,6 +83,10 @@ export interface SessionExerciseData {
   durationMinutes: number;
   notes: string | null;
   coachRating: number | null;
+  actualDurationSeconds: number | null;
+  completedAt: string | null;
+  executionNotes: string | null;
+  wasSkipped: boolean;
   materials: string[];
 }
 
@@ -109,6 +113,14 @@ function formatTime(isoString: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(isoString));
+}
+
+function formatSeconds(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes === 0) return `${rest}s`;
+  if (rest === 0) return `${minutes}min`;
+  return `${minutes}min ${rest}s`;
 }
 
 interface Props {
@@ -836,13 +848,16 @@ export function SessionDetailClient({
               </p>
             )}
           </div>
-          <div className="divide-y divide-border/60">
+          <div className="flex flex-col gap-3 p-4 sm:p-5">
             {sessionExercises.map((ex, idx) => {
               const diff = DIFFICULTY_META[ex.difficulty];
               const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
               const isSaving = savingRating === ex.exerciseId;
               return (
-                <div key={ex.exerciseId} className="px-6 py-4">
+                <div
+                  key={ex.exerciseId}
+                  className="rounded-lg border border-border/80 bg-background px-4 py-4 shadow-sm transition-colors hover:border-brand/30"
+                >
                   <div className="flex items-start gap-4">
                     <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right mt-0.5">
                       {idx + 1}
@@ -890,6 +905,37 @@ export function SessionDetailClient({
                         <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed italic">
                           {ex.notes}
                         </p>
+                      )}
+                      {(ex.completedAt ||
+                        ex.actualDurationSeconds != null ||
+                        ex.executionNotes ||
+                        ex.wasSkipped) && (
+                        <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                            {ex.wasSkipped ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-amber-500">
+                                <XCircle className="size-3" />
+                                Saltado
+                              </span>
+                            ) : ex.completedAt ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-brand">
+                                <CheckCircle2 className="size-3" />
+                                Ejecutado
+                              </span>
+                            ) : null}
+                            {ex.actualDurationSeconds != null && (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                Real: {formatSeconds(ex.actualDurationSeconds)}
+                              </span>
+                            )}
+                          </div>
+                          {ex.executionNotes && (
+                            <p className="mt-1.5 text-xs leading-relaxed text-foreground/65">
+                              {ex.executionNotes}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">

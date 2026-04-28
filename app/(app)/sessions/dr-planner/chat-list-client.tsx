@@ -60,14 +60,6 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
-        }}
-      />
       <div className="relative px-4 sm:px-6 md:px-10 py-10">
         {/* Masthead */}
         <header className="pb-6 border-b border-foreground/15">
@@ -95,18 +87,20 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               Conversaciones con el{" "}
               <em className="italic text-brand">doctor</em>.
             </h1>
-            <button
-              onClick={handleNewChat}
-              disabled={creating}
-              className="hidden sm:inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-4 py-2.5 hover:bg-brand/90 transition-colors shrink-0 uppercase disabled:opacity-50"
-            >
-              {creating ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Plus className="size-3.5" strokeWidth={2} />
-              )}
-              Nueva conversación
-            </button>
+            {chats.length > 0 && (
+              <button
+                onClick={handleNewChat}
+                disabled={creating}
+                className="inline-flex w-full items-center justify-center gap-2 border border-brand bg-brand px-4 py-2.5 text-[12px] font-semibold tracking-wide text-brand-foreground uppercase transition-colors hover:bg-brand/90 disabled:opacity-50 sm:w-auto sm:shrink-0"
+              >
+                {creating ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Plus className="size-3.5" strokeWidth={2} />
+                )}
+                Nueva conversación
+              </button>
+            )}
           </div>
           <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
             Asistente de diseño de sesiones de pádel. Explícale contexto,
@@ -154,16 +148,16 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
                 {chats.length}
               </p>
             </div>
-            <ul>
+            <ul className="mt-4 flex flex-col gap-3">
               {chats.map((chat, idx) => (
                 <li
                   key={chat.id}
-                  className="border-b border-foreground/10 group"
+                  className="group overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
                 >
                   <div className="relative">
                     <Link
                       href={`/sessions/dr-planner/${chat.id}`}
-                      className="grid grid-cols-[auto_1fr_auto] items-center gap-5 py-5 hover:bg-foreground/[0.02] transition-colors px-1"
+                      className="grid grid-cols-[auto_1fr_auto] items-center gap-5 px-4 py-4 transition-colors hover:bg-brand/[0.025]"
                     >
                       <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 w-8">
                         {String(idx + 1).padStart(3, "0")}

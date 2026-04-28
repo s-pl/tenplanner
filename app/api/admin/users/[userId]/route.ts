@@ -10,9 +10,15 @@ type Context = { params: Promise<{ userId: string }> };
 
 async function requireAdmin() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
-  const [row] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, user.id)).limit(1);
+  const [row] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
   return row?.isAdmin ? user : null;
 }
 
@@ -22,12 +28,15 @@ export async function PATCH(request: Request, context: Context) {
 
   const { userId } = await context.params;
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = z.object({ isAdmin: z.boolean() }).safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   if (userId === admin.id && parsed.data.isAdmin === false) {
     return NextResponse.json(
@@ -62,7 +71,8 @@ export async function PATCH(request: Request, context: Context) {
     .where(eq(users.id, userId))
     .returning({ id: users.id, isAdmin: users.isAdmin });
 
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!updated)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json({ data: updated });
 }
@@ -75,13 +85,17 @@ export async function DELETE(_request: Request, context: Context) {
 
   // Prevent self-delete
   if (userId === admin.id) {
-    return NextResponse.json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+    return NextResponse.json(
+      { error: "No puedes eliminarte a ti mismo" },
+      { status: 400 }
+    );
   }
 
   // Delete via service-role Supabase client (removes from auth.users + cascades to public.users via trigger)
   const adminClient = createAdminClient();
   const { error } = await adminClient.auth.admin.deleteUser(userId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

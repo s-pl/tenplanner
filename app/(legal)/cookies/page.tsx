@@ -39,9 +39,10 @@ export default function CookiesPage() {
       </p>
 
       <div className="mt-8 border-l-2 border-brand pl-4 py-1 text-[13px] text-foreground/70">
-        Actualmente TenPlanner <strong>no utiliza cookies de analítica ni de
-        publicidad</strong>. Solo se emplean cookies y almacenamiento local
-        estrictamente necesarios para el funcionamiento del servicio.
+        Actualmente TenPlanner{" "}
+        <strong>no utiliza cookies de analítica ni de publicidad</strong>. Solo
+        se emplean cookies y almacenamiento local estrictamente necesarios para
+        el funcionamiento del servicio.
       </div>
 
       <H2 id="que-son">1. Qué es una cookie</H2>
@@ -57,20 +58,16 @@ export default function CookiesPage() {
         <table className="w-full text-[13px]">
           <thead className="bg-foreground/[0.03] border-b border-foreground/15">
             <tr>
-              {[
-                "Nombre",
-                "Tipo",
-                "Finalidad",
-                "Titular",
-                "Duración",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="text-left font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/55 px-3 py-2.5"
-                >
-                  {h}
-                </th>
-              ))}
+              {["Nombre", "Tipo", "Finalidad", "Titular", "Duración"].map(
+                (h) => (
+                  <th
+                    key={h}
+                    className="text-left font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/55 px-3 py-2.5"
+                  >
+                    {h}
+                  </th>
+                )
+              )}
             </tr>
           </thead>
           <tbody>
@@ -134,9 +131,9 @@ export default function CookiesPage() {
 
       <H2 id="control">3. Cómo desactivarlas</H2>
       <P>
-        Puedes borrar o bloquear las cookies y el almacenamiento local desde
-        los ajustes de tu navegador. Si las deshabilitas, es posible que no
-        puedas iniciar sesión o que pierdas preferencias visuales.
+        Puedes borrar o bloquear las cookies y el almacenamiento local desde los
+        ajustes de tu navegador. Si las deshabilitas, es posible que no puedas
+        iniciar sesión o que pierdas preferencias visuales.
       </P>
 
       <H2 id="futuro">4. Cambios futuros</H2>

@@ -69,7 +69,13 @@ export interface SessionDraft {
 export async function listExerciseDrafts(): Promise<ExerciseDraft[]> {
   const res = await fetch("/api/exercise-drafts");
   if (!res.ok) return [];
-  const json = await res.json() as { data: Array<{ id: string; payload: ExerciseDraftPayload; updatedAt: string }> };
+  const json = (await res.json()) as {
+    data: Array<{
+      id: string;
+      payload: ExerciseDraftPayload;
+      updatedAt: string;
+    }>;
+  };
   return json.data.map((d) => ({
     id: d.id,
     name: d.payload.name ?? "",
@@ -78,7 +84,9 @@ export async function listExerciseDrafts(): Promise<ExerciseDraft[]> {
   }));
 }
 
-export async function getExerciseDraft(id: string): Promise<ExerciseDraft | null> {
+export async function getExerciseDraft(
+  id: string
+): Promise<ExerciseDraft | null> {
   const drafts = await listExerciseDrafts();
   return drafts.find((d) => d.id === id) ?? null;
 }
@@ -89,12 +97,20 @@ export async function upsertExerciseDraft(draft: ExerciseDraft): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id: draft.id, payload: draft.payload }),
   });
-  window.dispatchEvent(new CustomEvent("tenplanner:drafts-updated", { detail: { key: EXERCISE_DRAFTS_STORAGE_KEY } }));
+  window.dispatchEvent(
+    new CustomEvent("tenplanner:drafts-updated", {
+      detail: { key: EXERCISE_DRAFTS_STORAGE_KEY },
+    })
+  );
 }
 
 export async function removeExerciseDraft(id: string): Promise<void> {
   await fetch(`/api/exercise-drafts/${id}`, { method: "DELETE" });
-  window.dispatchEvent(new CustomEvent("tenplanner:drafts-updated", { detail: { key: EXERCISE_DRAFTS_STORAGE_KEY } }));
+  window.dispatchEvent(
+    new CustomEvent("tenplanner:drafts-updated", {
+      detail: { key: EXERCISE_DRAFTS_STORAGE_KEY },
+    })
+  );
 }
 
 // ── Session drafts ───────────────────────────────────────────────────────────
@@ -102,7 +118,13 @@ export async function removeExerciseDraft(id: string): Promise<void> {
 export async function listSessionDrafts(): Promise<SessionDraft[]> {
   const res = await fetch("/api/session-drafts");
   if (!res.ok) return [];
-  const json = await res.json() as { data: Array<{ id: string; payload: SessionDraftPayload; updatedAt: string }> };
+  const json = (await res.json()) as {
+    data: Array<{
+      id: string;
+      payload: SessionDraftPayload;
+      updatedAt: string;
+    }>;
+  };
   return json.data.map((d) => ({
     id: d.id,
     title: d.payload.title ?? "",
@@ -111,7 +133,9 @@ export async function listSessionDrafts(): Promise<SessionDraft[]> {
   }));
 }
 
-export async function getSessionDraft(id: string): Promise<SessionDraft | null> {
+export async function getSessionDraft(
+  id: string
+): Promise<SessionDraft | null> {
   const drafts = await listSessionDrafts();
   return drafts.find((d) => d.id === id) ?? null;
 }
@@ -122,12 +146,20 @@ export async function upsertSessionDraft(draft: SessionDraft): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id: draft.id, payload: draft.payload }),
   });
-  window.dispatchEvent(new CustomEvent("tenplanner:drafts-updated", { detail: { key: SESSION_DRAFTS_STORAGE_KEY } }));
+  window.dispatchEvent(
+    new CustomEvent("tenplanner:drafts-updated", {
+      detail: { key: SESSION_DRAFTS_STORAGE_KEY },
+    })
+  );
 }
 
 export async function removeSessionDraft(id: string): Promise<void> {
   await fetch(`/api/session-drafts/${id}`, { method: "DELETE" });
-  window.dispatchEvent(new CustomEvent("tenplanner:drafts-updated", { detail: { key: SESSION_DRAFTS_STORAGE_KEY } }));
+  window.dispatchEvent(
+    new CustomEvent("tenplanner:drafts-updated", {
+      detail: { key: SESSION_DRAFTS_STORAGE_KEY },
+    })
+  );
 }
 
 // ── One-time migration: localStorage → DB ───────────────────────────────────
@@ -186,7 +218,10 @@ export async function migrateLocalStorageDrafts(): Promise<void> {
 // ── Legacy sync helpers (kept for components that haven't been refactored yet) ──
 
 export function generateDraftId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -195,27 +230,29 @@ export function generateDraftId() {
 export function hasMeaningfulExerciseDraft(payload: ExerciseDraftPayload) {
   return Boolean(
     payload.name.trim() ||
-      payload.description.trim() ||
-      payload.objectives.trim() ||
-      payload.tips.trim() ||
-      payload.variantes.trim() ||
-      payload.category ||
-      payload.difficulty ||
-      payload.durationMinutes != null ||
-      payload.location ||
-      payload.videoUrl?.trim() ||
-      payload.phase ||
-      payload.intensity != null ||
-      payload.formato ||
-      payload.numJugadores != null ||
-      payload.tipoPelota ||
-      payload.tipoActividad ||
-      payload.isGlobal ||
-      payload.steps.some((step) => step.title.trim() || step.description.trim()) ||
-      payload.materials.length > 0 ||
-      payload.images.some(Boolean) ||
-      payload.golpes.length > 0 ||
-      payload.efecto.length > 0
+    payload.description.trim() ||
+    payload.objectives.trim() ||
+    payload.tips.trim() ||
+    payload.variantes.trim() ||
+    payload.category ||
+    payload.difficulty ||
+    payload.durationMinutes != null ||
+    payload.location ||
+    payload.videoUrl?.trim() ||
+    payload.phase ||
+    payload.intensity != null ||
+    payload.formato ||
+    payload.numJugadores != null ||
+    payload.tipoPelota ||
+    payload.tipoActividad ||
+    payload.isGlobal ||
+    payload.steps.some(
+      (step) => step.title.trim() || step.description.trim()
+    ) ||
+    payload.materials.length > 0 ||
+    payload.images.some(Boolean) ||
+    payload.golpes.length > 0 ||
+    payload.efecto.length > 0
   );
 }
 
@@ -226,12 +263,12 @@ export function hasMeaningfulSessionDraft(
   if (!baseline) {
     return Boolean(
       payload.title.trim() ||
-        payload.location.trim() ||
-        payload.objective.trim() ||
-        payload.intensity != null ||
-        payload.tags.length > 0 ||
-        payload.studentIds.length > 0 ||
-        payload.exercises.length > 0
+      payload.location.trim() ||
+      payload.objective.trim() ||
+      payload.intensity != null ||
+      payload.tags.length > 0 ||
+      payload.studentIds.length > 0 ||
+      payload.exercises.length > 0
     );
   }
   return JSON.stringify(payload) !== JSON.stringify(baseline);

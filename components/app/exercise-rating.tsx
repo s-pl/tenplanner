@@ -31,7 +31,9 @@ export function ExerciseRating({
     try {
       if (userRating === stars) {
         // toggle off
-        const res = await fetch(`/api/exercises/${exerciseId}/rating`, { method: "DELETE" });
+        const res = await fetch(`/api/exercises/${exerciseId}/rating`, {
+          method: "DELETE",
+        });
         if (res.ok) {
           const data = await res.json();
           setUserRating(null);
@@ -104,7 +106,9 @@ export function ExerciseRating({
           </span>
         )}
         {userRating && !readonly && (
-          <span className="font-sans text-[10px] text-brand ml-1">· Tu nota: {userRating}★</span>
+          <span className="font-sans text-[10px] text-brand ml-1">
+            · Tu nota: {userRating}★
+          </span>
         )}
       </div>
     </div>

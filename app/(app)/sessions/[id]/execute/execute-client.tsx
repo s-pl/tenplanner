@@ -68,6 +68,14 @@ interface Props {
   exercises: ExerciseData[];
 }
 
+type ExerciseExecution = {
+  actualDurationSeconds: number;
+  completed: boolean;
+  skipped: boolean;
+  rating: number | null;
+  notes: string;
+};
+
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -94,6 +102,9 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
   const [countdownMode, setCountdownMode] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
+  const [executionById, setExecutionById] = useState<
+    Record<string, ExerciseExecution>
+  >({});
 
   const current = exercises[currentIdx];
   const totalExercises = exercises.length;
@@ -150,8 +161,60 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     });
   }
 
+  function elapsedSecondsFor(exercise = current) {
+    if (!exercise) return 0;
+    if (!countdownMode) return timerSeconds;
+    return Math.max(exercise.durationMinutes * 60 - timerSeconds, 0);
+  }
+
+  function updateExecution(
+    exerciseId: string,
+    patch: Partial<ExerciseExecution>
+  ) {
+    setExecutionById((prev) => {
+      const currentEntry = prev[exerciseId] ?? {
+        actualDurationSeconds: 0,
+        completed: false,
+        skipped: false,
+        rating: null,
+        notes: "",
+      };
+      return {
+        ...prev,
+        [exerciseId]: { ...currentEntry, ...patch },
+      };
+    });
+  }
+
+  function recordCurrent({
+    completed,
+    skipped = false,
+  }: {
+    completed: boolean;
+    skipped?: boolean;
+  }) {
+    if (!current) return;
+    updateExecution(current.exerciseId, {
+      actualDurationSeconds: elapsedSecondsFor(current),
+      completed,
+      skipped,
+    });
+    if (completed) markDone(current.exerciseId);
+  }
+
   function goNext() {
-    if (current) markDone(current.exerciseId);
+    recordCurrent({ completed: true });
+    if (currentIdx < totalExercises - 1) {
+      const nextIdx = currentIdx + 1;
+      resetTimerForExercise(exercises[nextIdx]);
+      setCurrentIdx(nextIdx);
+    } else {
+      setShowFinish(true);
+    }
+  }
+
+  function skipCurrent() {
+    recordCurrent({ completed: true, skipped: true });
     if (currentIdx < totalExercises - 1) {
       const nextIdx = currentIdx + 1;
       resetTimerForExercise(exercises[nextIdx]);
@@ -176,12 +239,33 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
   async function handleFinish() {
     setFinishing(true);
-    if (current) markDone(current.exerciseId);
-    await fetch(`/api/sessions/${session.id}/status`, {
+    const currentElapsed = current ? elapsedSecondsFor(current) : 0;
+    const payload = exercises.map((exercise) => {
+      const existing = executionById[exercise.exerciseId];
+      const isCurrent = current?.exerciseId === exercise.exerciseId;
+      const completed =
+        done.has(exercise.exerciseId) || isCurrent || existing?.completed;
+      return {
+        exerciseId: exercise.exerciseId,
+        actualDurationSeconds: isCurrent
+          ? currentElapsed
+          : (existing?.actualDurationSeconds ?? 0),
+        completed: Boolean(completed),
+        skipped: existing?.skipped ?? false,
+        rating: existing?.rating ?? null,
+        notes: existing?.notes ?? null,
+      };
+    });
+
+    const res = await fetch(`/api/sessions/${session.id}/execution`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ exercises: payload, completeSession: true }),
     });
+    if (!res.ok) {
+      setFinishing(false);
+      return;
+    }
     router.push(`/sessions/${session.id}`);
     router.refresh();
   }
@@ -337,6 +421,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     countdownMode && current
       ? Math.min(100, (timerSeconds / (current.durationMinutes * 60)) * 100)
       : 0;
+  const currentExecution = executionById[current.exerciseId] ?? {
+    actualDurationSeconds: 0,
+    completed: false,
+    skipped: false,
+    rating: null,
+    notes: "",
+  };
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Top bar */}
@@ -484,6 +575,50 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           </div>
         </div>
 
+        {/* Live execution notes */}
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Registro de pista
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Se guarda al completar la sesión.
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    updateExecution(current.exerciseId, { rating: value })
+                  }
+                  className={cn(
+                    "size-8 rounded-lg border text-xs font-bold transition-colors",
+                    currentExecution.rating === value
+                      ? "border-brand bg-brand text-background"
+                      : "border-border text-muted-foreground hover:border-brand/40 hover:text-foreground"
+                  )}
+                  aria-label={`Valorar ejercicio con ${value}`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+          <textarea
+            value={currentExecution.notes}
+            onChange={(event) =>
+              updateExecution(current.exerciseId, { notes: event.target.value })
+            }
+            rows={3}
+            maxLength={1000}
+            placeholder="Notas rápidas: ajuste aplicado, respuesta del alumno, variante usada..."
+            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-brand/50 focus:ring-2 focus:ring-brand/20"
+          />
+        </div>
+
         {/* Materials for this exercise */}
         {current.materials && current.materials.length > 0 && (
           <div className="flex items-start gap-3 px-4 py-3 bg-muted/30 border border-border/50 rounded-xl">
@@ -598,6 +733,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           className="size-12 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="size-5" />
+        </button>
+
+        <button
+          onClick={skipCurrent}
+          className="h-12 shrink-0 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          Saltar
         </button>
 
         <button

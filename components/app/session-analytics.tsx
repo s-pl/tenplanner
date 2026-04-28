@@ -82,12 +82,6 @@ const DIFFICULTY_LABELS: Record<ExerciseDifficulty, string> = {
   advanced: "Avanzado",
 };
 
-const DIFFICULTY_COLORS: Record<ExerciseDifficulty, string> = {
-  beginner: "var(--brand)",
-  intermediate: "#fbbf24",
-  advanced: "#f87171",
-};
-
 const DIFFICULTY_BG: Record<ExerciseDifficulty, string> = {
   beginner: "bg-brand",
   intermediate: "bg-amber-400",
@@ -110,7 +104,11 @@ function getLoadCategory(load: number): {
   if (load < 200)
     return { label: "Moderada", color: "text-brand", bg: "bg-brand/15" };
   if (load < 400)
-    return { label: "Exigente", color: "text-amber-400", bg: "bg-amber-400/15" };
+    return {
+      label: "Exigente",
+      color: "text-amber-400",
+      bg: "bg-amber-400/15",
+    };
   return { label: "Muy alta", color: "text-red-400", bg: "bg-red-400/15" };
 }
 
@@ -407,10 +405,7 @@ function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
             </div>
             <div className="flex flex-col gap-2 flex-1 min-w-0">
               {data.map((p) => (
-                <div
-                  key={p.phase}
-                  className="flex items-center gap-2 text-xs"
-                >
+                <div key={p.phase} className="flex items-center gap-2 text-xs">
                   <div
                     className="size-2.5 rounded-sm shrink-0"
                     style={{ background: PHASE_COLORS[p.phase] }}

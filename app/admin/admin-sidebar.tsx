@@ -8,17 +8,39 @@ import {
   Users,
   FileText,
   Sparkles,
+  SlidersHorizontal,
+  Bot,
   ChevronLeft,
   Menu,
   X,
+  Layers,
+  MessageSquare,
+  Palette,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNav = [
   { href: "/admin", label: "Métricas", icon: LayoutDashboard, exact: true },
+  { href: "/admin/ai", label: "IA", icon: Bot, exact: false },
+  { href: "/admin/chats", label: "Chats", icon: MessageSquare, exact: false },
   { href: "/admin/users", label: "Usuarios", icon: Users, exact: false },
   { href: "/admin/content", label: "Contenido", icon: FileText, exact: false },
+  {
+    href: "/admin/embeddings",
+    label: "Embeddings",
+    icon: Layers,
+    exact: false,
+  },
   { href: "/admin/landing", label: "Landing", icon: Sparkles, exact: false },
+  { href: "/admin/branding", label: "Marca", icon: Palette, exact: false },
+  { href: "/admin/tools", label: "Herramientas", icon: Wrench, exact: false },
+  {
+    href: "/admin/settings",
+    label: "Ajustes",
+    icon: SlidersHorizontal,
+    exact: false,
+  },
 ];
 
 function AdminNavLinks({

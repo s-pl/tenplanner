@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -198,7 +198,7 @@ export function ExerciseDetailClient({
   const diff = DIFFICULTY_META[exercise.difficulty];
   const CategoryIcon = cat.icon;
 
-  async function refreshSavedLists() {
+  const refreshSavedLists = useCallback(async () => {
     if (!userId) return;
 
     setLoadingLists(true);
@@ -232,11 +232,11 @@ export function ExerciseDetailClient({
     } finally {
       setLoadingLists(false);
     }
-  }
+  }, [exercise.id, userId]);
 
   useEffect(() => {
     void refreshSavedLists();
-  }, [exercise.id, userId]);
+  }, [refreshSavedLists]);
 
   async function handleDelete() {
     setDeleting(true);

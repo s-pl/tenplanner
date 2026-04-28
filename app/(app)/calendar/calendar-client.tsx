@@ -281,7 +281,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                     </p>
                   </div>
                   <Link
-                    href="/sessions"
+                    href={`/sessions/${s.id}`}
                     className="text-xs font-medium text-brand hover:text-brand/80 transition-colors"
                   >
                     Ver

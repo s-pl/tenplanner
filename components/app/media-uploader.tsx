@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Dynamic upload/blob previews cannot be optimized reliably by next/image. */
+
 import { useState, useRef, DragEvent, KeyboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {

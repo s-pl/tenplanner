@@ -4,14 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessionTemplates, users } from "@/db/schema";
 import { and, desc, eq, ilike } from "drizzle-orm";
-import {
-  Clock,
-  Zap,
-  Download,
-  Plus,
-  Search,
-  BookOpen,
-} from "lucide-react";
+import { Clock, Zap, Download, Plus, Search, BookOpen } from "lucide-react";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 interface PageProps {
   searchParams: Promise<{ q?: string; filter?: string; tag?: string }>;
@@ -25,7 +20,9 @@ const INTENSITY_LABEL: Record<number, string> = {
   5: "Muy alta",
 };
 
-export default async function SessionTemplatesPage({ searchParams }: PageProps) {
+export default async function SessionTemplatesPage({
+  searchParams,
+}: PageProps) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -33,13 +30,28 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return (
+      <FeatureLocked
+        title="Plantillas desactivadas"
+        description="El administrador ha pausado temporalmente el mercado de plantillas de sesión."
+        href="/sessions"
+        cta="Volver a sesiones"
+      />
+    );
+  }
+
   const { q, filter, tag } = await searchParams;
   const isMine = filter === "mine";
   const searchTerm = q?.trim() ?? "";
 
   const conditions = [];
   if (isMine) conditions.push(eq(sessionTemplates.authorId, user.id));
-  if (searchTerm) conditions.push(ilike(sessionTemplates.title, `%${searchTerm}%`));
+  if (searchTerm)
+    conditions.push(ilike(sessionTemplates.title, `%${searchTerm}%`));
 
   const rows = await db
     .select({
@@ -59,7 +71,10 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
     .from(sessionTemplates)
     .leftJoin(users, eq(sessionTemplates.authorId, users.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(sessionTemplates.adoptionsCount), desc(sessionTemplates.createdAt))
+    .orderBy(
+      desc(sessionTemplates.adoptionsCount),
+      desc(sessionTemplates.createdAt)
+    )
     .limit(60);
 
   const templates = tag
@@ -68,16 +83,6 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
       <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
         {/* Masthead */}
         <header className="space-y-6">
@@ -93,11 +98,11 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
             <div className="max-w-2xl">
               <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">Plantillas</em>{" "}
-                de sesión
+                <em className="italic text-brand">Plantillas</em> de sesión
               </h1>
               <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                Sesiones publicadas por entrenadores. Adóptalas, adáptalas a tu grupo y asígnalas a tus alumnos.
+                Sesiones publicadas por entrenadores. Adóptalas, adáptalas a tu
+                grupo y asígnalas a tus alumnos.
               </p>
             </div>
             <Link
@@ -111,10 +116,12 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
 
         {/* Filter tabs */}
         <nav className="flex items-end gap-8 border-b border-foreground/15">
-          {([
-            ["all", "Todas"],
-            ["mine", "Mis plantillas"],
-          ] as const).map(([key, label]) => {
+          {(
+            [
+              ["all", "Todas"],
+              ["mine", "Mis plantillas"],
+            ] as const
+          ).map(([key, label]) => {
             const isActive = key === "mine" ? isMine : !isMine;
             const href =
               key === "mine"

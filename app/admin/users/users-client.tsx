@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Shield,
   ShieldOff,
@@ -12,6 +14,9 @@ import {
   Copy,
   CheckSquare,
   Square,
+  ArrowLeft,
+  ArrowRight,
+  Download,
 } from "lucide-react";
 import {
   Table,
@@ -40,35 +45,76 @@ interface User {
 
 type UserFilter = "all" | "admins" | "active";
 
-export function AdminUsersClient({ users: initial }: { users: User[] }) {
+interface Props {
+  users: User[];
+  total: number;
+  page: number;
+  totalPages: number;
+  perPage: number;
+  q: string;
+  filter: UserFilter;
+}
+
+function buildHref(opts: { q?: string; filter?: string; page?: number }) {
+  const p = new URLSearchParams();
+  if (opts.q) p.set("q", opts.q);
+  if (opts.filter && opts.filter !== "all") p.set("filter", opts.filter);
+  if (opts.page && opts.page > 1) p.set("page", String(opts.page));
+  const qs = p.toString();
+  return `/admin/users${qs ? `?${qs}` : ""}`;
+}
+
+export function AdminUsersClient({
+  users: initial,
+  total,
+  page,
+  totalPages,
+  q,
+  filter,
+}: Props) {
+  const router = useRouter();
   const [users, setUsers] = useState(initial);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<UserFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     email: string;
   } | null>(null);
+  const [searchDraft, setSearchDraft] = useState(q);
 
-  const filtered = useMemo(() => {
-    let rows = users;
-    if (search)
-      rows = rows.filter(
-        (u) =>
-          u.email.toLowerCase().includes(search.toLowerCase()) ||
-          u.name.toLowerCase().includes(search.toLowerCase())
-      );
-    if (filter === "admins") rows = rows.filter((u) => u.isAdmin);
-    if (filter === "active")
-      rows = rows.filter((u) => u.exerciseCount > 0 || u.sessionCount > 0);
-    return rows;
-  }, [users, search, filter]);
+  function navigate(opts: { q?: string; filter?: string; page?: number }) {
+    router.push(buildHref(opts));
+  }
 
-  const adminCount = users.filter((u) => u.isAdmin).length;
-  const activeCount = users.filter(
-    (u) => u.exerciseCount > 0 || u.sessionCount > 0
-  ).length;
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    navigate({ q: searchDraft, filter, page: 1 });
+  }
+
+  function exportCsv() {
+    const header =
+      "Nombre,Email,Rol,Admin,Ejercicios,Globales,Sesiones,Registro";
+    const rows = users.map((u) =>
+      [
+        `"${(u.name ?? "").replace(/"/g, '""')}"`,
+        `"${u.email.replace(/"/g, '""')}"`,
+        `"${(u.role ?? "").replace(/"/g, '""')}"`,
+        u.isAdmin ? "Sí" : "No",
+        u.exerciseCount,
+        u.globalExerciseCount,
+        u.sessionCount,
+        new Date(u.createdAt).toLocaleDateString("es-ES"),
+      ].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `usuarios-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function toggleAdmin(userId: string, makeAdmin: boolean) {
     setBusy(userId);
@@ -130,63 +176,72 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
   }
 
   function toggleSelectAll() {
-    if (selected.size === filtered.length) {
+    if (selected.size === users.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(filtered.map((u) => u.id)));
+      setSelected(new Set(users.map((u) => u.id)));
     }
   }
 
-  const allSelected = filtered.length > 0 && selected.size === filtered.length;
+  const allSelected = users.length > 0 && selected.size === users.length;
+
+  const filters: [UserFilter, string][] = [
+    ["all", "Todos"],
+    ["admins", "Admins"],
+    ["active", "Activos"],
+  ];
 
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="relative">
+      <form onSubmit={handleSearchSubmit} className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-foreground/40" />
         <input
           type="text"
           placeholder="Buscar por nombre o email…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
           className="w-full pl-9 pr-4 py-2 rounded-xl border border-foreground/15 bg-foreground/[0.02] text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50"
         />
-      </div>
+      </form>
 
       {/* Filter pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {(
-          [
-            ["all", `Todos (${users.length})`],
-            ["admins", `Admins (${adminCount})`],
-            ["active", `Activos (${activeCount})`],
-          ] as [UserFilter, string][]
-        ).map(([f, label]) => (
-          <button
+        {filters.map(([f, label]) => (
+          <Link
             key={f}
-            onClick={() => {
-              setFilter(f);
-              setSelected(new Set());
-            }}
+            href={buildHref({ q, filter: f, page: 1 })}
             className={cn(
-              "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors",
+              "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap",
               filter === f
                 ? "bg-brand text-brand-foreground"
                 : "bg-foreground/5 text-foreground/50 hover:text-foreground"
             )}
           >
             {label}
-          </button>
+          </Link>
         ))}
+        <span className="ml-auto text-[11px] text-foreground/35 tabular-nums">
+          {total.toLocaleString("es-ES")} total
+        </span>
+        <button
+          onClick={exportCsv}
+          title="Exportar página actual a CSV"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-foreground/12 bg-foreground/[0.02] px-2.5 py-1 text-[11px] text-foreground/50 transition-colors hover:bg-foreground/[0.05] hover:text-foreground"
+        >
+          <Download className="size-3" />
+          CSV
+        </button>
       </div>
 
+      {/* Mobile cards */}
       <div className="grid gap-3 md:hidden">
-        {filtered.length === 0 && (
+        {users.length === 0 && (
           <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
             No hay usuarios
           </div>
         )}
-        {filtered.map((u) => (
+        {users.map((u) => (
           <article
             key={u.id}
             className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
@@ -279,6 +334,7 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
         ))}
       </div>
 
+      {/* Desktop table */}
       <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
         <Table>
           <TableHeader>
@@ -316,7 +372,7 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
+            {users.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -326,7 +382,7 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((u) => (
+            {users.map((u) => (
               <TableRow
                 key={u.id}
                 className={cn(
@@ -347,26 +403,24 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
                   </button>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-foreground">
-                          {u.name || "—"}
-                        </p>
-                        {u.isAdmin && (
-                          <Badge className="bg-brand/15 text-brand border-brand/20 text-[9px] py-0">
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => void copyEmail(u.email)}
-                        className="flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground/70 transition-colors group"
-                      >
-                        <span>{u.email}</span>
-                        <Copy className="size-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-foreground">
+                        {u.name || "—"}
+                      </p>
+                      {u.isAdmin && (
+                        <Badge className="bg-brand/15 text-brand border-brand/20 text-[9px] py-0">
+                          Admin
+                        </Badge>
+                      )}
                     </div>
+                    <button
+                      onClick={() => void copyEmail(u.email)}
+                      className="flex items-center gap-1 text-[11px] text-foreground/40 hover:text-foreground/70 transition-colors group"
+                    >
+                      <span>{u.email}</span>
+                      <Copy className="size-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -449,6 +503,42 @@ export function AdminUsersClient({ users: initial }: { users: User[] }) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <footer className="flex items-center justify-between pt-1">
+          <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
+            Pág. {page} / {totalPages}
+          </p>
+          <div className="flex items-center gap-4">
+            {page > 1 ? (
+              <Link
+                href={buildHref({ q, filter, page: page - 1 })}
+                className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+              >
+                <ArrowLeft className="size-3" /> Anterior
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                <ArrowLeft className="size-3" /> Anterior
+              </span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={buildHref({ q, filter, page: page + 1 })}
+                className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+              >
+                Siguiente <ArrowRight className="size-3" />
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                Siguiente <ArrowRight className="size-3" />
+              </span>
+            )}
+          </div>
+        </footer>
+      )}
+
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {

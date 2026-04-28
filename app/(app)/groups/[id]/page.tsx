@@ -6,6 +6,8 @@ import { groups, groupStudents, students } from "@/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
 import { ArrowLeft, Users } from "lucide-react";
 import { GroupDetailClient } from "./group-detail-client";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,18 @@ export default async function GroupDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (!groupsEnabled) {
+    return (
+      <FeatureLocked
+        title="Grupos desactivados"
+        description="El administrador ha pausado temporalmente la organización por grupos."
+        href="/students"
+        cta="Volver a alumnos"
+      />
+    );
+  }
 
   const { id } = await params;
 

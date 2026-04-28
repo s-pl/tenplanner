@@ -361,7 +361,7 @@ export function StepExercises({
           <DialogHeader>
             <DialogTitle>Crear ejercicio rápido</DialogTitle>
             <DialogDescription>
-              Crea un ejercicio mínimo sin salir del wizard y añádelo
+              Crea un ejercicio mínimo sin salir de la sesión y añádelo
               automáticamente a esta sesión.
             </DialogDescription>
           </DialogHeader>
@@ -485,7 +485,7 @@ export function StepExercises({
                             "group bg-card border rounded-xl transition-all",
                             isDragging
                               ? "opacity-40 border-dashed border-border cursor-grabbing"
-                              : "border-border hover:border-brand/30 hover:shadow-sm cursor-grab active:cursor-grabbing"
+                              : "border-border hover:border-brand/30 cursor-grab active:cursor-grabbing"
                           )}
                         >
                           <div className="flex items-center gap-2 px-3 py-2.5">

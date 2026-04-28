@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
@@ -59,20 +59,20 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [sessionReady, setSessionReady] = useState<"checking" | "ok" | "missing">(
-    "checking"
-  );
+  const [sessionReady, setSessionReady] = useState<
+    "checking" | "ok" | "missing"
+  >("checking");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<Values>({ resolver: zodResolver(schema) });
 
-  const passwordValue = watch("password", "");
+  const passwordValue = useWatch({ control, name: "password" }) ?? "";
   const strength = getPasswordStrength(passwordValue);
   const strengthCfg = STRENGTH_CONFIG[strength];
 

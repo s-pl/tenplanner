@@ -44,6 +44,17 @@ const FONT_SIZES = [
   { id: "lg", label: "A", size: "text-base", desc: "Grande" },
 ];
 
+function getTimeBasedDarkMode() {
+  const hour = new Date().getHours();
+  return hour < 7 || hour >= 21;
+}
+
+function applyThemePreference(isDark: boolean) {
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+  document.documentElement.classList.toggle("dark", isDark);
+  applyAccentColor(localStorage.getItem("accent") ?? "green");
+}
+
 type Tab = "profile" | "appearance" | "stats" | "data";
 
 interface ProfileClientProps {
@@ -95,6 +106,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   // Appearance state
   const [accent, setAccent] = useState("green");
   const [fontSize, setFontSize] = useState("md");
+  const [autoTheme, setAutoTheme] = useState(true);
 
   // Export state
   const [exportingJson, setExportingJson] = useState(false);
@@ -136,8 +148,19 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   }
 
   useEffect(() => {
-    setAccent(localStorage.getItem("accent") ?? "green");
-    setFontSize(localStorage.getItem("font-size") ?? "md");
+    function syncAppearance() {
+      setAccent(localStorage.getItem("accent") ?? "green");
+      setFontSize(localStorage.getItem("font-size") ?? "md");
+      setAutoTheme(localStorage.getItem("theme-auto") !== "false");
+    }
+
+    syncAppearance();
+    window.addEventListener("storage", syncAppearance);
+    window.addEventListener("theme-auto-change", syncAppearance);
+    return () => {
+      window.removeEventListener("storage", syncAppearance);
+      window.removeEventListener("theme-auto-change", syncAppearance);
+    };
   }, []);
 
   function handleAccentChange(id: string) {
@@ -150,6 +173,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     setFontSize(id);
     localStorage.setItem("font-size", id);
     applyFontSize(id);
+  }
+
+  function handleAutoThemeChange(next: boolean) {
+    setAutoTheme(next);
+    localStorage.setItem("theme-auto", next ? "true" : "false");
+    if (next) applyThemePreference(getTimeBasedDarkMode());
+    window.dispatchEvent(new Event("theme-auto-change"));
   }
 
   async function handleAvatarUpload(file: File) {
@@ -265,32 +295,16 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   return (
     <div className="space-y-8">
       {/* Identity hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-foreground/15 bg-foreground/[0.015]">
-        {/* Gradient banner */}
-        <div className="relative h-28 sm:h-32 overflow-hidden">
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-br from-brand/30 via-brand/10 to-transparent"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 opacity-[0.08]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 14px)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute -top-16 -right-10 size-56 rounded-full bg-brand/25 blur-3xl"
-          />
+      <section className="relative overflow-hidden rounded-lg border border-foreground/15 bg-card">
+        <div className="relative h-24 overflow-hidden border-b border-foreground/12 bg-brand/[0.07] sm:h-28">
+          <div className="absolute inset-x-6 bottom-5 h-px bg-foreground/16" />
         </div>
 
         <div className="px-5 sm:px-8 pb-6 -mt-14">
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] md:items-end gap-5">
             {/* Avatar */}
             <div className="relative w-fit">
-              <div className="size-28 rounded-full border-4 border-background bg-foreground/[0.04] overflow-hidden shadow-xl shadow-brand/10 ring-1 ring-brand/30 flex items-center justify-center">
+              <div className="size-28 rounded-full border-4 border-background bg-muted overflow-hidden ring-1 ring-brand/25 flex items-center justify-center">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -309,7 +323,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
                 title="Cambiar foto"
-                className="absolute bottom-1 right-1 size-8 rounded-full bg-background border border-foreground/20 shadow-sm flex items-center justify-center text-foreground/65 hover:text-brand hover:border-brand transition-colors disabled:opacity-60"
+                className="absolute bottom-1 right-1 flex size-8 items-center justify-center rounded-full border border-foreground/20 bg-background text-foreground/65 transition-colors hover:border-brand hover:text-brand disabled:opacity-60"
               >
                 {avatarUploading ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -380,7 +394,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="text-right bg-background/60 backdrop-blur border border-foreground/12 rounded-xl px-3 py-2.5 min-w-[76px]"
+                  className="min-w-[76px] rounded-lg border border-foreground/12 bg-card px-3 py-2.5 text-right"
                 >
                   <div className="flex items-center justify-end gap-1 text-foreground/45">
                     <Icon className="size-3" strokeWidth={1.6} />
@@ -581,10 +595,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 Color de acento
               </p>
             </div>
-            <p className="text-[12px] text-foreground/55 mt-3 mb-5">
-              Se aplica a botones, estados activos y destacados.
-            </p>
-            <div className="flex flex-wrap gap-0 border border-foreground/15 w-fit">
+            <div className="mt-4 flex flex-wrap gap-0 border border-foreground/15 w-fit">
               {ACCENT_COLORS.map((c, i) => (
                 <button
                   key={c.id}
@@ -657,11 +668,24 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 Tema
               </p>
             </div>
-            <p className="text-[12px] text-foreground/55 mt-3 mb-4">
-              El modo oscuro está pensado para sesiones de entrenamiento
-              nocturnas.
-            </p>
-            <div className="w-fit">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                aria-pressed={autoTheme}
+                onClick={() => handleAutoThemeChange(!autoTheme)}
+                className={cn(
+                  "inline-flex h-10 w-fit items-center gap-2 border px-3 text-[12px] font-semibold transition-colors",
+                  autoTheme
+                    ? "border-brand/45 bg-brand/10 text-brand"
+                    : "border-foreground/15 text-foreground/60 hover:border-brand/45 hover:text-brand"
+                )}
+              >
+                <Clock className="size-3.5" strokeWidth={1.6} />
+                Auto por hora
+                <span className="font-mono text-[10px]">
+                  {autoTheme ? "ON" : "OFF"}
+                </span>
+              </button>
               <ThemeToggle />
             </div>
           </div>
@@ -902,8 +926,8 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 </p>
                 <p className="text-[13px] text-foreground/70 mt-1 leading-relaxed">
                   Esta acción es <strong>irreversible</strong>. Se eliminarán
-                  tus sesiones, alumnos, ejercicios propios, conversaciones
-                  con Dr. Planner y tu cuenta de autenticación.
+                  tus sesiones, alumnos, ejercicios propios, conversaciones con
+                  Dr. Planner y tu cuenta de autenticación.
                 </p>
               </div>
             </div>

@@ -22,17 +22,27 @@ import {
   BookOpen,
   Store,
   ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
+type FeatureKey =
+  | "drPlanner"
+  | "sessionTemplates"
+  | "exerciseCreation"
+  | "groups"
+  | "calendar";
+
+type FeatureMap = Record<FeatureKey, boolean>;
+
 interface SubItem {
   href: string;
   label: string;
-  tag?: string;
   accent?: boolean;
   icon?: React.ElementType;
+  feature?: FeatureKey;
 }
 
 interface NavItem {
@@ -41,6 +51,7 @@ interface NavItem {
   icon: React.ElementType;
   index: string;
   publicAccess?: boolean;
+  feature?: FeatureKey;
   submenu?: SubItem[];
 }
 
@@ -54,9 +65,14 @@ const navItems: NavItem[] = [
     publicAccess: true,
     submenu: [
       { href: "/exercises", label: "Biblioteca", icon: BookOpen },
-      { href: "/exercises?tab=mine", label: "Mis ejercicios", tag: "MÍOS", icon: Dumbbell },
-      { href: "/exercises?tab=favorites", label: "Favoritos", tag: "♥", icon: Heart },
-      { href: "/exercises/new", label: "Nuevo ejercicio", tag: "MAN", icon: Plus },
+      { href: "/exercises?tab=mine", label: "Mis ejercicios", icon: Dumbbell },
+      { href: "/exercises?tab=favorites", label: "Favoritos", icon: Heart },
+      {
+        href: "/exercises/new",
+        label: "Nuevo ejercicio",
+        icon: Plus,
+        feature: "exerciseCreation",
+      },
     ],
   },
   {
@@ -66,14 +82,19 @@ const navItems: NavItem[] = [
     index: "03",
     submenu: [
       { href: "/sessions", label: "Mis sesiones", icon: ClipboardList },
-      { href: "/sessions/templates", label: "Plantillas", tag: "MERCADO", icon: Store },
-      { href: "/sessions/new", label: "Nueva sesión", tag: "MAN", icon: Plus },
+      {
+        href: "/sessions/templates",
+        label: "Plantillas",
+        icon: Store,
+        feature: "sessionTemplates",
+      },
+      { href: "/sessions/new", label: "Nueva sesión", icon: Plus },
       {
         href: "/sessions/dr-planner",
         label: "Dr. Planner",
-        tag: "IA",
         icon: Bot,
         accent: true,
+        feature: "drPlanner",
       },
     ],
   },
@@ -84,17 +105,30 @@ const navItems: NavItem[] = [
     index: "04",
     submenu: [
       { href: "/students", label: "Lista de alumnos", icon: Users },
-      { href: "/groups", label: "Grupos", icon: Users2 },
+      { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
     ],
   },
-  { href: "/calendar", label: "Calendario", icon: CalendarDays, index: "05" },
+  {
+    href: "/calendar",
+    label: "Calendario",
+    icon: CalendarDays,
+    index: "05",
+    feature: "calendar",
+  },
   { href: "/profile", label: "Perfil", icon: UserCircle, index: "06" },
 ];
 
 interface SidebarNavProps {
-  user: { email?: string | null; user_metadata?: { full_name?: string } } | null;
+  user: {
+    email?: string | null;
+    user_metadata?: { full_name?: string };
+  } | null;
   avatarUrl?: string | null;
   isAdmin?: boolean;
+  drPlannerEnabled?: boolean;
+  features?: Partial<FeatureMap>;
+  appName?: string;
+  appTagline?: string;
 }
 
 function NavContent({
@@ -103,14 +137,20 @@ function NavContent({
   user,
   avatarUrl,
   isAdmin,
+  features,
   onSignOut,
+  appName,
+  appTagline,
 }: {
   pathname: string;
   onNavigate?: () => void;
   user: SidebarNavProps["user"];
   avatarUrl?: string | null;
   isAdmin?: boolean;
+  features: FeatureMap;
   onSignOut: () => void;
+  appName?: string;
+  appTagline?: string;
 }) {
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
@@ -121,16 +161,18 @@ function NavContent({
     .slice(0, 2)
     .toUpperCase();
 
-  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(() => {
-    if (!user) return {};
-    const initial: Record<string, boolean> = {};
-    for (const item of navItems) {
-      if (item.submenu && pathname.startsWith(item.href)) {
-        initial[item.href] = true;
+  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(
+    () => {
+      if (!user) return {};
+      const initial: Record<string, boolean> = {};
+      for (const item of navItems) {
+        if (item.submenu && pathname.startsWith(item.href)) {
+          initial[item.href] = true;
+        }
       }
+      return initial;
     }
-    return initial;
-  });
+  );
 
   function toggleSubmenu(href: string) {
     setSubmenuOpen((prev) => ({ ...prev, [href]: !prev[href] }));
@@ -138,77 +180,253 @@ function NavContent({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Wordmark ── */}
-      <div className="px-6 pt-7 pb-5 border-b border-sidebar-border">
+      {/* Wordmark */}
+      <div className="relative border-b border-sidebar-border px-5 pb-5 pt-6">
+        <div
+          aria-hidden
+          className="absolute left-0 top-0 h-full w-1 bg-brand"
+        />
         <Link href="/dashboard" className="block group" onClick={onNavigate}>
-          <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-foreground/45 mb-1.5">
-            Planner &amp; Coach
+          <p className="font-heading text-3xl leading-none text-foreground">
+            {appName && appName !== "TenPlanner" ? (
+              <span className="text-brand">{appName}</span>
+            ) : (
+              <>
+                ten<em className="italic text-brand">planner</em>
+              </>
+            )}
           </p>
-          <p className="font-heading text-2xl leading-none tracking-tight text-foreground">
-            ten<em className="italic text-brand">planner</em>
-          </p>
-          <p className="mt-2 max-w-[14rem] text-[11px] leading-relaxed text-foreground/45">
-            Planifica con estructura, archiva con criterio y reutiliza lo que ya funciona.
-          </p>
+          {appTagline && (
+            <p className="mt-1 font-sans text-[11px] text-foreground/40">
+              {appTagline}
+            </p>
+          )}
         </Link>
       </div>
 
-      {/* ── Nav ── */}
-      <nav className="flex-1 px-4 py-5 overflow-y-auto">
-        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 px-2 mb-3">
-          Navegación
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <p className="mb-3 px-2 font-mono text-[10px] uppercase text-foreground/45">
+          Navegacion
         </p>
-        <ul>
-          {navItems.map(({ href, label, icon: Icon, submenu, index, publicAccess }) => {
-            const isActive =
-              pathname === href || pathname.startsWith(href + "/");
-            const isOpen = !!submenuOpen[href];
-            const isLocked = !user && !publicAccess;
+        <ul className="flex flex-col gap-1">
+          {navItems.map(
+            ({
+              href,
+              label,
+              icon: Icon,
+              submenu,
+              index,
+              publicAccess,
+              feature,
+            }) => {
+              const isActive =
+                pathname === href || pathname.startsWith(href + "/");
+              const isOpen = !!submenuOpen[href];
+              const isLocked = !user && !publicAccess;
+              const featureLocked = feature ? !features[feature] : false;
 
-            if (isLocked) {
+              if (isLocked) {
+                return (
+                  <li
+                    key={href}
+                    className="border border-transparent border-b-sidebar-border/70"
+                  >
+                    <Link
+                      href="/login"
+                      onClick={onNavigate}
+                      className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-foreground/35 transition-colors hover:border-sidebar-border hover:bg-sidebar-accent/55 hover:text-foreground/55"
+                    >
+                      <span className="font-mono text-[10px] tabular-nums text-foreground/20">
+                        {index}
+                      </span>
+                      <Icon
+                        className="size-[15px] text-foreground/25"
+                        strokeWidth={1.6}
+                      />
+                      <span className="text-[14px]">{label}</span>
+                      <Lock
+                        className="size-[11px] text-foreground/30"
+                        strokeWidth={1.8}
+                      />
+                    </Link>
+                  </li>
+                );
+              }
+
+              if (featureLocked) {
+                return (
+                  <li
+                    key={href}
+                    className="border border-transparent border-b-sidebar-border/70"
+                  >
+                    <span className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-foreground/35">
+                      <span className="font-mono text-[10px] tabular-nums text-foreground/20">
+                        {index}
+                      </span>
+                      <Icon
+                        className="size-[15px] text-foreground/25"
+                        strokeWidth={1.6}
+                      />
+                      <span className="text-[14px]">{label}</span>
+                      <Lock
+                        className="size-[11px] text-foreground/30"
+                        strokeWidth={1.8}
+                      />
+                    </span>
+                  </li>
+                );
+              }
+
+              if (submenu) {
+                return (
+                  <li
+                    key={href}
+                    className={cn(
+                      "border border-transparent border-b-sidebar-border/70",
+                      isActive && "border-sidebar-border bg-sidebar-accent/60"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSubmenu(href)}
+                      className={cn(
+                        "grid w-full grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-left transition-colors",
+                        isActive
+                          ? "text-foreground"
+                          : "text-foreground/65 hover:bg-sidebar-accent/45 hover:text-foreground"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "font-mono text-[10px] tabular-nums",
+                          isActive ? "text-brand" : "text-foreground/35"
+                        )}
+                      >
+                        {index}
+                      </span>
+                      <Icon
+                        className={cn(
+                          "size-[15px]",
+                          isActive ? "text-brand" : "text-foreground/55"
+                        )}
+                        strokeWidth={1.6}
+                      />
+                      <span
+                        className={cn(
+                          "text-[14px]",
+                          isActive && "font-heading italic text-foreground"
+                        )}
+                      >
+                        {label}
+                      </span>
+                      <ChevronRight
+                        className={cn(
+                          "size-3.5 text-foreground/35 transition-transform",
+                          isOpen && "rotate-90 text-brand"
+                        )}
+                        strokeWidth={1.8}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <ul className="flex flex-col gap-0.5 pb-3 pl-12 pr-2">
+                        <li>
+                          <Link
+                            href={href}
+                            onClick={onNavigate}
+                            className={cn(
+                              "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
+                              pathname === href
+                                ? "text-brand"
+                                : "text-foreground/55 hover:text-foreground"
+                            )}
+                          >
+                            <span>Ver todas</span>
+                          </Link>
+                        </li>
+                        {submenu.map(
+                          ({
+                            href: subHref,
+                            label: subLabel,
+                            accent,
+                            feature,
+                          }) => {
+                            const isSubActive =
+                              pathname === subHref ||
+                              pathname.startsWith(subHref + "/");
+                            const featureLocked = feature
+                              ? !features[feature]
+                              : false;
+
+                            if (featureLocked) {
+                              return (
+                                <li key={subHref}>
+                                  <span className="grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] text-foreground/35">
+                                    <span>{subLabel}</span>
+                                    <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase text-foreground/30">
+                                      <Lock className="size-3" />
+                                      Desactivado
+                                    </span>
+                                  </span>
+                                </li>
+                              );
+                            }
+
+                            return (
+                              <li key={subHref}>
+                                <Link
+                                  href={subHref}
+                                  onClick={onNavigate}
+                                  className={cn(
+                                    "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
+                                    isSubActive
+                                      ? "text-brand"
+                                      : accent
+                                        ? "text-brand/75 hover:text-brand"
+                                        : "text-foreground/55 hover:text-foreground"
+                                  )}
+                                >
+                                  <span
+                                    className={cn(
+                                      isSubActive &&
+                                        "italic font-heading text-[13px]"
+                                    )}
+                                  >
+                                    {subLabel}
+                                  </span>
+                                </Link>
+                              </li>
+                            );
+                          }
+                        )}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+
               return (
                 <li
                   key={href}
-                  className="border-b border-foreground/8 last:border-0"
+                  className={cn(
+                    "border border-transparent border-b-sidebar-border/70",
+                    isActive && "border-sidebar-border bg-sidebar-accent/60"
+                  )}
                 >
                   <Link
-                    href="/login"
+                    href={href}
                     onClick={onNavigate}
-                    className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 transition-colors text-foreground/35 hover:text-foreground/55"
-                  >
-                    <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/20">
-                      {index}
-                    </span>
-                    <Icon
-                      className="size-[15px] text-foreground/25"
-                      strokeWidth={1.6}
-                    />
-                    <span className="text-[14px]">{label}</span>
-                    <Lock className="size-[11px] text-foreground/30" strokeWidth={1.8} />
-                  </Link>
-                </li>
-              );
-            }
-
-            if (submenu) {
-              return (
-                <li
-                  key={href}
-                  className="border-b border-foreground/8 last:border-0"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleSubmenu(href)}
                     className={cn(
-                      "w-full grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 text-left transition-colors",
+                      "grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 transition-colors",
                       isActive
                         ? "text-foreground"
-                        : "text-foreground/65 hover:text-foreground"
+                        : "text-foreground/65 hover:bg-sidebar-accent/45 hover:text-foreground"
                     )}
                   >
                     <span
                       className={cn(
-                        "font-sans text-[10px] tabular-nums tracking-[0.18em]",
+                        "font-mono text-[10px] tabular-nums",
                         isActive ? "text-brand" : "text-foreground/35"
                       )}
                     >
@@ -229,134 +447,18 @@ function NavContent({
                     >
                       {label}
                     </span>
-                    <span
-                      className={cn(
-                        "font-sans text-[9px] tracking-[0.18em] text-foreground/35 transition-transform",
-                        isOpen && "rotate-90"
-                      )}
-                    >
-                      ▸
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <ul className="pb-2 pl-10 pr-2 space-y-0.5">
-                      <li>
-                        <Link
-                          href={href}
-                          onClick={onNavigate}
-                          className={cn(
-                            "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
-                            pathname === href
-                              ? "text-brand"
-                              : "text-foreground/55 hover:text-foreground"
-                          )}
-                        >
-                          <span>Ver todas</span>
-                          <span className="font-sans text-[9px] tracking-[0.18em] text-foreground/30">
-                            ALL
-                          </span>
-                        </Link>
-                      </li>
-                      {submenu.map(
-                        ({ href: subHref, label: subLabel, tag, accent }) => {
-                          const isSubActive =
-                            pathname === subHref ||
-                            pathname.startsWith(subHref + "/");
-                          return (
-                            <li key={subHref}>
-                              <Link
-                                href={subHref}
-                                onClick={onNavigate}
-                                className={cn(
-                                  "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
-                                  isSubActive
-                                    ? "text-brand"
-                                    : accent
-                                      ? "text-brand/75 hover:text-brand"
-                                      : "text-foreground/55 hover:text-foreground"
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    isSubActive &&
-                                      "italic font-heading text-[13px]"
-                                  )}
-                                >
-                                  {subLabel}
-                                </span>
-                                {tag && (
-                                  <span
-                                    className={cn(
-                                      "font-sans text-[9px] tracking-[0.18em]",
-                                      accent
-                                        ? "text-brand"
-                                        : "text-foreground/35"
-                                    )}
-                                  >
-                                    {tag}
-                                  </span>
-                                )}
-                              </Link>
-                            </li>
-                          );
-                        }
-                      )}
-                    </ul>
-                  )}
+                    {isActive && (
+                      <span className="size-1 rounded-full bg-brand" />
+                    )}
+                  </Link>
                 </li>
               );
             }
-
-            return (
-              <li
-                key={href}
-                className="border-b border-foreground/8 last:border-0"
-              >
-                <Link
-                  href={href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 transition-colors",
-                    isActive
-                      ? "text-foreground"
-                      : "text-foreground/65 hover:text-foreground"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "font-sans text-[10px] tabular-nums tracking-[0.18em]",
-                      isActive ? "text-brand" : "text-foreground/35"
-                    )}
-                  >
-                    {index}
-                  </span>
-                  <Icon
-                    className={cn(
-                      "size-[15px]",
-                      isActive ? "text-brand" : "text-foreground/55"
-                    )}
-                    strokeWidth={1.6}
-                  />
-                  <span
-                    className={cn(
-                      "text-[14px]",
-                      isActive && "font-heading italic text-foreground"
-                    )}
-                  >
-                    {label}
-                  </span>
-                  {isActive && (
-                    <span className="size-1 rounded-full bg-brand" />
-                  )}
-                </Link>
-              </li>
-            );
-          })}
+          )}
         </ul>
       </nav>
 
-      {/* ── User footer ── */}
+      {/* User footer */}
       <div className="border-t border-sidebar-border">
         {isAdmin && (
           <div className="px-4 pt-3">
@@ -364,10 +466,10 @@ function NavContent({
               href="/admin"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[12px] font-medium transition-colors",
+                "flex w-full items-center gap-2 border px-3 py-2 text-[12px] font-medium transition-colors",
                 pathname.startsWith("/admin")
-                  ? "bg-brand/10 text-brand border border-brand/20"
-                  : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.04] border border-transparent"
+                  ? "border-brand/35 bg-brand/10 text-brand"
+                  : "border-sidebar-border text-foreground/55 hover:bg-sidebar-accent/55 hover:text-foreground"
               )}
             >
               <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
@@ -378,15 +480,15 @@ function NavContent({
         {user ? (
           <>
             <div className="px-4 pt-4 pb-3">
-              <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 px-1 mb-2.5">
+              <p className="mb-2.5 px-1 font-mono text-[10px] uppercase text-foreground/40">
                 Cuenta
               </p>
               <Link
                 href="/profile"
                 onClick={onNavigate}
-                className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.025] px-3 py-3 transition-colors hover:border-brand/25 hover:bg-foreground/[0.04] group"
+                className="group grid grid-cols-[auto_1fr] items-center gap-3 border border-sidebar-border bg-sidebar-accent/35 px-3 py-3 transition-colors hover:border-brand/35 hover:bg-sidebar-accent/65"
               >
-                <div className="size-9 rounded-full border border-foreground/20 bg-foreground/[0.03] overflow-hidden flex items-center justify-center shrink-0 group-hover:border-brand/60 transition-colors">
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden border border-foreground/20 bg-foreground/[0.03] transition-colors group-hover:border-brand/60">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -415,7 +517,7 @@ function NavContent({
               <button
                 type="button"
                 onClick={onSignOut}
-                className="flex items-center gap-2 py-2 text-[12px] text-foreground/55 hover:text-foreground transition-colors group"
+                className="group flex items-center gap-2 py-2 text-[12px] text-foreground/55 transition-colors hover:text-foreground"
               >
                 <LogOut className="size-3.5" strokeWidth={1.6} />
                 Cerrar sesión
@@ -428,7 +530,7 @@ function NavContent({
             <Link
               href="/login"
               onClick={onNavigate}
-              className="flex items-center gap-2 py-2 px-3 rounded-lg text-[12px] font-medium text-foreground bg-foreground/[0.04] border border-foreground/12 hover:bg-brand hover:text-brand-foreground hover:border-brand transition-colors"
+              className="flex items-center gap-2 border border-foreground/12 bg-foreground/[0.04] px-3 py-2 text-[12px] font-medium text-foreground transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground"
             >
               <Lock className="size-3.5" strokeWidth={1.8} />
               Iniciar sesión
@@ -441,7 +543,15 @@ function NavContent({
   );
 }
 
-export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps) {
+export function SidebarNav({
+  user,
+  avatarUrl,
+  isAdmin = false,
+  drPlannerEnabled = true,
+  features,
+  appName,
+  appTagline,
+}: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -453,6 +563,13 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
     navItems.find(
       (item) => pathname === item.href || pathname.startsWith(item.href + "/")
     )?.label ?? "TenPlanner";
+  const resolvedFeatures: FeatureMap = {
+    drPlanner: drPlannerEnabled,
+    sessionTemplates: features?.sessionTemplates ?? true,
+    exerciseCreation: features?.exerciseCreation ?? true,
+    groups: features?.groups ?? true,
+    calendar: features?.calendar ?? true,
+  };
 
   useEffect(() => {
     if (mobileOpen) {
@@ -502,27 +619,45 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex h-dvh w-72 shrink-0 sticky top-0 flex-col border-r border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_94%,var(--background))] backdrop-blur">
+      <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <NavContent
           pathname={pathname}
           user={user}
           avatarUrl={avatarUrl}
           isAdmin={isAdmin}
+          features={resolvedFeatures}
           onSignOut={handleSignOut}
+          appName={appName}
+          appTagline={appTagline}
         />
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_92%,var(--background))]/95 px-5 backdrop-blur">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-5 md:hidden">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/dashboard" className="flex items-baseline gap-1 shrink-0">
-            <span className="font-heading text-base tracking-tight text-foreground">
-              ten
-            </span>
-            <em className="font-heading italic text-base text-brand">planner</em>
+          <Link
+            href="/dashboard"
+            className="flex shrink-0 items-baseline gap-1"
+          >
+            {appName && appName !== "TenPlanner" ? (
+              <span className="font-heading text-base text-brand">
+                {appName}
+              </span>
+            ) : (
+              <>
+                <span className="font-heading text-base text-foreground">
+                  ten
+                </span>
+                <em className="font-heading italic text-base text-brand">
+                  planner
+                </em>
+              </>
+            )}
           </Link>
           <span className="text-foreground/25 text-sm select-none">/</span>
-          <span className="font-heading text-sm text-foreground/70 truncate">{activeLabel}</span>
+          <span className="font-heading text-sm text-foreground/70 truncate">
+            {activeLabel}
+          </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <ThemeToggle compact />
@@ -530,7 +665,7 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
             ref={triggerRef}
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
+            className="flex size-8 items-center justify-center text-foreground/60 transition-colors hover:text-foreground"
             aria-label="Abrir menú"
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav-drawer"
@@ -555,13 +690,13 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <aside className="relative flex h-full w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_94%,var(--background))] backdrop-blur">
+          <aside className="relative flex h-full w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar">
             <div className="absolute top-4 right-4">
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
+                className="flex size-8 items-center justify-center text-foreground/60 transition-colors hover:text-foreground"
                 aria-label="Cerrar menú"
               >
                 <X className="size-4" strokeWidth={1.6} />
@@ -573,7 +708,10 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
               user={user}
               avatarUrl={avatarUrl}
               isAdmin={isAdmin}
+              features={resolvedFeatures}
               onSignOut={handleSignOut}
+              appName={appName}
+              appTagline={appTagline}
             />
           </aside>
         </div>

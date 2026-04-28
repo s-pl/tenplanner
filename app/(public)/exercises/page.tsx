@@ -24,6 +24,8 @@ import { FavoriteToggle } from "@/components/app/favorite-toggle";
 import { ExerciseFilters } from "@/components/app/exercise-filters";
 import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 import {
   Plus,
   ArrowLeft,
@@ -38,7 +40,6 @@ import {
   Lock,
   Heart,
 } from "lucide-react";
-import { MobileFab } from "@/components/app/mobile-fab";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -115,6 +116,21 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+  const [publicExercisesEnabled, exerciseCreationEnabled] = await Promise.all([
+    getBooleanSetting("feature.public_exercises_enabled"),
+    getBooleanSetting("feature.exercise_creation_enabled"),
+  ]);
+
+  if (!publicExercisesEnabled && !user) {
+    return (
+      <FeatureLocked
+        title="Biblioteca global desactivada"
+        description="El administrador ha pausado temporalmente la biblioteca pública de ejercicios."
+        href="/"
+        cta="Volver al inicio"
+      />
+    );
+  }
 
   const params = await searchParams;
 
@@ -137,7 +153,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       requestedTab === "favorites" ||
       requestedTab === "drafts")
       ? "all"
-      : requestedTab;
+      : !publicExercisesEnabled && requestedTab === "global"
+        ? "mine"
+        : requestedTab;
 
   const searchTerm = getString(params.q).trim();
   const parsedPage = Number(getString(params.page) || "1");
@@ -172,15 +190,21 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
-    ? (or(
-        eq(exercisesTable.isGlobal, true),
-        eq(exercisesTable.createdBy, user.id)
-      ) ?? eq(exercisesTable.isGlobal, true))
-    : eq(exercisesTable.isGlobal, true);
+    ? publicExercisesEnabled
+      ? (or(
+          eq(exercisesTable.isGlobal, true),
+          eq(exercisesTable.createdBy, user.id)
+        ) ?? eq(exercisesTable.createdBy, user.id))
+      : eq(exercisesTable.createdBy, user.id)
+    : publicExercisesEnabled
+      ? eq(exercisesTable.isGlobal, true)
+      : sql`1=0`;
 
   const visibilityWhere =
     activeTab === "global"
-      ? eq(exercisesTable.isGlobal, true)
+      ? publicExercisesEnabled
+        ? eq(exercisesTable.isGlobal, true)
+        : sql`1=0`
       : activeTab === "mine" && user
         ? eq(exercisesTable.createdBy, user.id)
         : allVisibleWhere;
@@ -325,10 +349,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         .limit(PAGE_SIZE + 1)
         .offset(offset),
       db.select({ total: count() }).from(exercisesTable).where(allVisibleWhere),
-      db
-        .select({ total: count() })
-        .from(exercisesTable)
-        .where(eq(exercisesTable.isGlobal, true)),
+      publicExercisesEnabled
+        ? db
+            .select({ total: count() })
+            .from(exercisesTable)
+            .where(eq(exercisesTable.isGlobal, true))
+        : Promise.resolve([{ total: 0 }]),
       user
         ? db
             .select({ total: count() })
@@ -467,16 +493,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
       <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
         {/* ─── Masthead ─── */}
         <header className="space-y-6">
@@ -499,7 +515,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {masthead.description}
               </p>
             </div>
-            {user ? (
+            {user && exerciseCreationEnabled ? (
               <div className="flex w-full items-center gap-2 sm:w-auto md:shrink-0">
                 <Link
                   href="/exercises/new"
@@ -508,6 +524,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   <Plus className="size-4" /> Añadir ejercicio
                 </Link>
               </div>
+            ) : user ? (
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-foreground/15 px-4 py-2.5 text-[13px] text-foreground/35 sm:w-auto md:shrink-0">
+                <Lock className="size-3.5" strokeWidth={1.8} /> Creación
+                desactivada
+              </span>
             ) : (
               <Link
                 href="/login"
@@ -524,6 +545,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           {/* ─── Tabs (propiedad) ─── */}
           <nav className="flex items-end gap-6 overflow-x-auto border-b border-foreground/15 pb-px sm:gap-8">
             {TABS.map((t) => {
+              if (t === "global" && !publicExercisesEnabled) return null;
               // Hide drafts tab for unauthenticated users
               if (t === "drafts" && !user) return null;
 
@@ -595,7 +617,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           q: searchTerm || undefined,
                           tab: activeTab,
                         })}
-                        className={`group px-5 py-5 transition-colors ${isActive ? "bg-foreground/[0.03]" : "hover:bg-foreground/[0.02]"}`}
+                        className={`group px-5 py-5 transition-colors ${isActive ? "bg-brand/[0.06]" : "hover:bg-brand/[0.025]"}`}
                       >
                         <div className="flex items-baseline justify-between">
                           <p
@@ -887,7 +909,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="border-t border-foreground/15 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 divide-y divide-foreground/10 md:divide-y-0">
+                <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {filtered.map((exercise, idx) => {
                     const catLabel =
                       CATEGORY_LABEL[exercise.category as Category];
@@ -925,7 +947,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     return (
                       <li
                         key={exercise.id}
-                        className="md:border-b md:border-foreground/10 md:[&:nth-child(3n)]:border-r-0 md:border-r md:border-foreground/10 md:[&:nth-last-child(-n+3)]:border-b-0 flex flex-col"
+                        className="flex flex-col overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
                       >
                         <div className="flex items-center justify-between px-4 pb-0 pt-5 sm:px-6">
                           <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
@@ -959,7 +981,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
                         <Link
                           href={`/exercises/${exercise.id}`}
-                          className="group block flex-1 px-4 pb-6 pt-3 transition-colors hover:bg-foreground/[0.02] sm:px-6"
+                          className="group block flex-1 px-4 pb-6 pt-3 transition-colors hover:bg-brand/[0.025] sm:px-6"
                         >
                           <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-brand mb-1.5">
                             {catCode} · {catLabel}
@@ -979,17 +1001,17 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             exercise.numJugadores) && (
                             <div className="flex flex-wrap gap-1 mb-3">
                               {formatoLabel && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
+                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
                                   {formatoLabel}
                                 </span>
                               )}
                               {exercise.numJugadores && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
+                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
                                   {exercise.numJugadores}P
                                 </span>
                               )}
                               {actividadLabel && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
+                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
                                   {actividadLabel}
                                 </span>
                               )}
@@ -1105,9 +1127,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           )}
         </>
       </div>
-      {user && (
-        <MobileFab href="/exercises/new" icon="plus" label="Nuevo ejercicio" />
-      )}
     </div>
   );
 }

@@ -114,9 +114,12 @@ export function RecommendationCard({
                   key={i}
                   className={cn(
                     "text-[11px] border px-2 py-0.5 inline-flex items-center gap-1.5",
-                    g.severity === "alto" && "border-destructive/40 text-destructive",
-                    g.severity === "medio" && "border-amber-500/40 text-amber-600",
-                    g.severity === "bajo" && "border-foreground/20 text-foreground/60"
+                    g.severity === "alto" &&
+                      "border-destructive/40 text-destructive",
+                    g.severity === "medio" &&
+                      "border-amber-500/40 text-amber-600",
+                    g.severity === "bajo" &&
+                      "border-foreground/20 text-foreground/60"
                   )}
                 >
                   {g.label}
@@ -142,7 +145,9 @@ export function RecommendationCard({
         </button>
         <button
           type="button"
-          onClick={() => onSend(`Afina la propuesta: cambia el foco o la duración.`)}
+          onClick={() =>
+            onSend(`Afina la propuesta: cambia el foco o la duración.`)
+          }
           className="inline-flex items-center gap-2 border border-foreground/20 text-[11px] font-semibold tracking-[0.18em] uppercase px-3 py-2 hover:border-foreground/40 transition-colors"
         >
           Afinar
@@ -164,12 +169,7 @@ function SpecKPI({
   bordered?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "p-4",
-        bordered && "border-l border-r border-brand/20"
-      )}
-    >
+    <div className={cn("p-4", bordered && "border-l border-r border-brand/20")}>
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className="size-3 text-brand" strokeWidth={1.6} />
         <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/55">

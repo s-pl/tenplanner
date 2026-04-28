@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils";
 
 type IconName = "plus" | "bot" | "user-plus" | "dumbbell" | "calendar-plus";
 
-const ICONS: Record<IconName, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+const ICONS: Record<
+  IconName,
+  React.ComponentType<{ className?: string; strokeWidth?: number }>
+> = {
   plus: Plus,
   bot: Bot,
   "user-plus": UserPlus,
@@ -16,7 +19,15 @@ const ICONS: Record<IconName, React.ComponentType<{ className?: string; strokeWi
   "calendar-plus": CalendarPlus,
 };
 
-function IconFor({ name, className, strokeWidth }: { name: IconName; className?: string; strokeWidth?: number }) {
+function IconFor({
+  name,
+  className,
+  strokeWidth,
+}: {
+  name: IconName;
+  className?: string;
+  strokeWidth?: number;
+}) {
   const C = ICONS[name] ?? Plus;
   return <C className={className} strokeWidth={strokeWidth} />;
 }
@@ -81,7 +92,11 @@ export function MobileFabSpeedDial({
                 onClick={() => setOpen(false)}
                 className="inline-flex items-center gap-2 border border-foreground/20 bg-background text-foreground pl-3 pr-4 py-2.5 shadow-lg shadow-foreground/10 hover:border-brand/40 transition-all uppercase text-[11px] font-semibold tracking-[0.18em]"
               >
-                <IconFor name={action.icon} className="size-4 text-brand" strokeWidth={1.8} />
+                <IconFor
+                  name={action.icon}
+                  className="size-4 text-brand"
+                  strokeWidth={1.8}
+                />
                 {action.label}
               </Link>
             </motion.div>
@@ -94,10 +109,17 @@ export function MobileFabSpeedDial({
         aria-label={open ? "Cerrar acciones" : primaryLabel}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.15 }}
+        transition={{
+          type: "spring",
+          stiffness: 260,
+          damping: 20,
+          delay: 0.15,
+        }}
         className={cn(
           "size-14 border border-brand flex items-center justify-center shadow-lg shadow-brand/25 active:scale-95 transition-all",
-          open ? "bg-background text-foreground" : "bg-brand text-brand-foreground"
+          open
+            ? "bg-background text-foreground"
+            : "bg-brand text-brand-foreground"
         )}
       >
         <motion.span

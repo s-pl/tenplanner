@@ -4,6 +4,16 @@ import { z } from "zod";
 import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getBooleanSetting } from "@/lib/app-settings";
+
+async function ensureGroupsEnabled() {
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (groupsEnabled) return null;
+  return NextResponse.json(
+    { error: "Los grupos de alumnos están desactivados." },
+    { status: 403 }
+  );
+}
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -15,17 +25,30 @@ const updateSchema = z.object({
 
 export async function GET(_req: Request, ctx: Ctx) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const locked = await ensureGroupsEnabled();
+  if (locked) return locked;
 
   const { id } = await ctx.params;
 
-  const [group] = await db.select().from(groups)
-    .where(and(eq(groups.id, id), eq(groups.coachId, user.id))).limit(1);
+  const [group] = await db
+    .select()
+    .from(groups)
+    .where(and(eq(groups.id, id), eq(groups.coachId, user.id)))
+    .limit(1);
   if (!group) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const memberRows = await db
-    .select({ id: students.id, name: students.name, imageUrl: students.imageUrl, playerLevel: students.playerLevel })
+    .select({
+      id: students.id,
+      name: students.name,
+      imageUrl: students.imageUrl,
+      playerLevel: students.playerLevel,
+    })
     .from(groupStudents)
     .innerJoin(students, eq(groupStudents.studentId, students.id))
     .where(eq(groupStudents.groupId, id))
@@ -36,38 +59,61 @@ export async function GET(_req: Request, ctx: Ctx) {
 
 export async function PATCH(request: Request, ctx: Ctx) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const locked = await ensureGroupsEnabled();
+  if (locked) return locked;
 
   const { id } = await ctx.params;
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = updateSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 422 }
+    );
 
-  const [existing] = await db.select({ coachId: groups.coachId }).from(groups)
-    .where(eq(groups.id, id)).limit(1);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (existing.coachId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const [existing] = await db
+    .select({ coachId: groups.coachId })
+    .from(groups)
+    .where(eq(groups.id, id))
+    .limit(1);
+  if (!existing)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (existing.coachId !== user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { studentIds, ...fields } = parsed.data;
 
   await db.transaction(async (tx) => {
     if (fields.name !== undefined || fields.description !== undefined) {
-      await tx.update(groups).set({
-        ...(fields.name !== undefined ? { name: fields.name } : {}),
-        ...(fields.description !== undefined ? { description: fields.description } : {}),
-      }).where(eq(groups.id, id));
+      await tx
+        .update(groups)
+        .set({
+          ...(fields.name !== undefined ? { name: fields.name } : {}),
+          ...(fields.description !== undefined
+            ? { description: fields.description }
+            : {}),
+        })
+        .where(eq(groups.id, id));
     }
 
     if (studentIds !== undefined) {
       // Verify all students belong to coach
       if (studentIds.length > 0) {
-        const owned = await tx.select({ id: students.id }).from(students)
+        const owned = await tx
+          .select({ id: students.id })
+          .from(students)
           .where(and(eq(students.coachId, user.id)));
         const ownedIds = new Set(owned.map((s) => s.id));
         if (!studentIds.every((sid) => ownedIds.has(sid))) {
@@ -76,9 +122,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
       }
       await tx.delete(groupStudents).where(eq(groupStudents.groupId, id));
       if (studentIds.length > 0) {
-        await tx.insert(groupStudents).values(
-          studentIds.map((studentId) => ({ groupId: id, studentId }))
-        );
+        await tx
+          .insert(groupStudents)
+          .values(studentIds.map((studentId) => ({ groupId: id, studentId })));
       }
     }
   });
@@ -88,15 +134,25 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
 export async function DELETE(_req: Request, ctx: Ctx) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const locked = await ensureGroupsEnabled();
+  if (locked) return locked;
 
   const { id } = await ctx.params;
 
-  const [existing] = await db.select({ coachId: groups.coachId }).from(groups)
-    .where(eq(groups.id, id)).limit(1);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (existing.coachId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const [existing] = await db
+    .select({ coachId: groups.coachId })
+    .from(groups)
+    .where(eq(groups.id, id))
+    .limit(1);
+  if (!existing)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (existing.coachId !== user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await db.delete(groups).where(eq(groups.id, id));
   return NextResponse.json({ ok: true });

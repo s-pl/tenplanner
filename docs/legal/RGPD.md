@@ -35,15 +35,15 @@ No tocar salvo regresión. Referencia rápida:
 
 Rellenar los marcadores `<!-- TODO -->` en los siguientes archivos. Hasta que tengan valores reales, las páginas legales son inválidas.
 
-| Archivo | Campos |
-| --- | --- |
-| `app/(legal)/privacidad/page.tsx` | Titular, NIF/CIF, domicilio, email de contacto, DPO (si aplica). |
-| `app/(legal)/aviso-legal/page.tsx` | Denominación, NIF, domicilio, email, registro mercantil. |
-| `app/(legal)/terminos/page.tsx` | No hay placeholders, pero revisar referencia al email de supresión. |
-| `docs/legal/RAT.md` | Bloque de identidad del responsable. |
-| `docs/legal/subprocessors.md` | Estado de cada DPA firmado. |
-| `docs/legal/breach-procedure.md` | Nombre del coordinador y DPO. |
-| `README.md` | Sección checklist. |
+| Archivo                            | Campos                                                              |
+| ---------------------------------- | ------------------------------------------------------------------- |
+| `app/(legal)/privacidad/page.tsx`  | Titular, NIF/CIF, domicilio, email de contacto, DPO (si aplica).    |
+| `app/(legal)/aviso-legal/page.tsx` | Denominación, NIF, domicilio, email, registro mercantil.            |
+| `app/(legal)/terminos/page.tsx`    | No hay placeholders, pero revisar referencia al email de supresión. |
+| `docs/legal/RAT.md`                | Bloque de identidad del responsable.                                |
+| `docs/legal/subprocessors.md`      | Estado de cada DPA firmado.                                         |
+| `docs/legal/breach-procedure.md`   | Nombre del coordinador y DPO.                                       |
+| `README.md`                        | Sección checklist.                                                  |
 
 Comando rápido para localizar todo:
 
@@ -56,7 +56,7 @@ grep -rn "TODO" app/(legal)/ docs/legal/ README.md
 Cada proveedor necesita contrato de encargo art. 28 RGPD firmado y conservado.
 
 1. **Supabase** → panel `Organization settings → DPA`. Firmar con datos de la entidad responsable. Link: <https://supabase.com/privacy/dpa>.
-2. **Anthropic** → enviar formulario desde <https://www.anthropic.com/legal/dpa> con NIF + firmante. En el mismo correo, solicitar Zero Data Retention: `privacy@anthropic.com`, asunto *"Request for Zero Data Retention policy"*.
+2. **Anthropic** → enviar formulario desde <https://www.anthropic.com/legal/dpa> con NIF + firmante. En el mismo correo, solicitar Zero Data Retention: `privacy@anthropic.com`, asunto _"Request for Zero Data Retention policy"_.
 3. **Vercel** → `Account → Legal → Data Processing Agreement`. Link: <https://vercel.com/legal/dpa>.
 4. **Pexels** → no procesa datos personales (solo términos de búsqueda). No requiere DPA.
 
@@ -66,11 +66,11 @@ Guardar PDFs firmados fuera del repo (o en repo privado). Actualizar `docs/legal
 
 Añadir en `Project → Settings → Environment Variables` (scope: Production + Preview):
 
-| Variable | Obligatoria en prod |
-| --- | --- |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ — sin ella no funciona `/api/account/delete`. |
-| `CRON_SECRET` | ✅ — sin ella el cron devuelve 500. |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `DATABASE_URL`, `NEXT_ANTHROPIC_API_KEY` | ya existentes. |
+| Variable                                                                                              | Obligatoria en prod                              |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `SUPABASE_SERVICE_ROLE_KEY`                                                                           | ✅ — sin ella no funciona `/api/account/delete`. |
+| `CRON_SECRET`                                                                                         | ✅ — sin ella el cron devuelve 500.              |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `DATABASE_URL`, `NEXT_ANTHROPIC_API_KEY` | ya existentes.                                   |
 
 Rotar `SUPABASE_SERVICE_ROLE_KEY` si alguna vez se expone. Nunca prefijar `NEXT_PUBLIC_`.
 
@@ -98,10 +98,10 @@ Ya está en `vercel.json`. Al deplegar, Vercel lo registra automáticamente. Com
 
 En Supabase dashboard → Storage:
 
-- **avatars**: hoy marcado *Public* → cualquiera con URL ve la imagen. Para fotos de alumnos (pueden ser menores) es riesgo.
+- **avatars**: hoy marcado _Public_ → cualquiera con URL ve la imagen. Para fotos de alumnos (pueden ser menores) es riesgo.
   - Opción A — mínimo esfuerzo: aceptar y documentar en `/privacidad`.
-  - Opción B — recomendada: marcar bucket como *Private* y generar signed URLs en server components para el coach. Requiere tocar `app/(app)/students/...` y `app/(app)/profile/profile-client.tsx`.
-- **exercise-media**: si solo contiene imágenes de ejercicios genéricos (no rostros), *Public* es aceptable.
+  - Opción B — recomendada: marcar bucket como _Private_ y generar signed URLs en server components para el coach. Requiere tocar `app/(app)/students/...` y `app/(app)/profile/profile-client.tsx`.
+- **exercise-media**: si solo contiene imágenes de ejercicios genéricos (no rostros), _Public_ es aceptable.
 
 Decisión documentada en `docs/legal/subprocessors.md` (columna "Garantías extra").
 
@@ -148,15 +148,15 @@ Revisión mínima obligatoria: **anual**.
 
 Plazo máximo: 30 días (prorrogable a 60 con justificación). Canal: email publicado en `/privacidad`.
 
-| Derecho | Acción técnica |
-| --- | --- |
-| Acceso | Generar export JSON vía `/api/export` logueado como el interesado; enviarlo. |
-| Rectificación | El usuario puede hacerlo desde Perfil. Si afecta a alumno, el coach lo edita. |
-| Supresión | El usuario usa Perfil → Datos → Eliminar cuenta. Si es alumno: el coach borra la ficha. Si el alumno pide directamente supresión a TenPlanner: identificar al coach, pedirle borrado, verificar en DB. |
-| Portabilidad | Mismo export JSON. |
-| Oposición | Detener el tratamiento basado en interés legítimo. Documentar la decisión en ticket. |
-| Limitación | Marcar cuenta como "restringida" (no hay flag aún — si surge, añadir columna `users.restricted_at`). |
-| No discriminación por decisiones automatizadas | No hay: Dr. Planner propone, el coach confirma. |
+| Derecho                                        | Acción técnica                                                                                                                                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Acceso                                         | Generar export JSON vía `/api/export` logueado como el interesado; enviarlo.                                                                                                                           |
+| Rectificación                                  | El usuario puede hacerlo desde Perfil. Si afecta a alumno, el coach lo edita.                                                                                                                          |
+| Supresión                                      | El usuario usa Perfil → Datos → Eliminar cuenta. Si es alumno: el coach borra la ficha. Si el alumno pide directamente supresión a TenPlanner: identificar al coach, pedirle borrado, verificar en DB. |
+| Portabilidad                                   | Mismo export JSON.                                                                                                                                                                                     |
+| Oposición                                      | Detener el tratamiento basado en interés legítimo. Documentar la decisión en ticket.                                                                                                                   |
+| Limitación                                     | Marcar cuenta como "restringida" (no hay flag aún — si surge, añadir columna `users.restricted_at`).                                                                                                   |
+| No discriminación por decisiones automatizadas | No hay: Dr. Planner propone, el coach confirma.                                                                                                                                                        |
 
 Cada solicitud se registra en un log interno (`docs/legal/dsar-log.md` — crear al atender la primera) con fecha, identidad, tipo, respuesta.
 
@@ -218,15 +218,15 @@ Detección
 
 Si el roadmap incluye alguno de estos, re-evaluar:
 
-| Cambio | Requisito añadido |
-| --- | --- |
-| Analytics (Vercel Analytics, Plausible, GA4). | Banner granular (opt-in), actualizar `/cookies`, añadir proveedor a RAT. |
-| Pagos (Stripe, etc.). | Datos de facturación = nueva finalidad en RAT. Plazo conservación fiscal 6 años (Cód. Comercio). |
-| Email marketing. | Consentimiento separado, opt-in doble, proveedor en RAT, opción de baja. |
-| Datos de menores <14. | Mecanismo verificable de consentimiento parental (art. 8.2 RGPD). Re-diseñar flow `/s/[token]`. |
-| Datos de salud explícitos (lesiones, patologías). | Base del art. 9 RGPD. Posible EIPD. Consultar DPO / asesor legal. |
-| Operación fuera de UE. | Normativa local (CCPA, LGPD…). Re-evaluar SCC. |
-| Integración con IA de terceros distinta de Anthropic. | DPA nuevo + ZDR + actualizar RAT. |
+| Cambio                                                | Requisito añadido                                                                                |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Analytics (Vercel Analytics, Plausible, GA4).         | Banner granular (opt-in), actualizar `/cookies`, añadir proveedor a RAT.                         |
+| Pagos (Stripe, etc.).                                 | Datos de facturación = nueva finalidad en RAT. Plazo conservación fiscal 6 años (Cód. Comercio). |
+| Email marketing.                                      | Consentimiento separado, opt-in doble, proveedor en RAT, opción de baja.                         |
+| Datos de menores <14.                                 | Mecanismo verificable de consentimiento parental (art. 8.2 RGPD). Re-diseñar flow `/s/[token]`.  |
+| Datos de salud explícitos (lesiones, patologías).     | Base del art. 9 RGPD. Posible EIPD. Consultar DPO / asesor legal.                                |
+| Operación fuera de UE.                                | Normativa local (CCPA, LGPD…). Re-evaluar SCC.                                                   |
+| Integración con IA de terceros distinta de Anthropic. | DPA nuevo + ZDR + actualizar RAT.                                                                |
 
 ---
 

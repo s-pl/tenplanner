@@ -9,7 +9,11 @@ interface ProgressIndicatorProps {
   labels: string[];
 }
 
-export function ProgressIndicator({ step, total, labels }: ProgressIndicatorProps) {
+export function ProgressIndicator({
+  step,
+  total,
+  labels,
+}: ProgressIndicatorProps) {
   return (
     <div className="flex items-start">
       {Array.from({ length: total }).map((_, i) => {
@@ -22,12 +26,12 @@ export function ProgressIndicator({ step, total, labels }: ProgressIndicatorProp
             <div className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  "size-10 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all duration-300",
+                  "flex size-9 items-center justify-center rounded-lg border text-sm font-bold transition-colors",
                   isDone
-                    ? "border-brand bg-brand text-brand-foreground shadow-sm"
+                    ? "border-brand bg-brand text-brand-foreground"
                     : isCurrent
-                    ? "border-brand bg-brand/10 text-brand ring-4 ring-brand/15"
-                    : "border-border bg-background text-muted-foreground"
+                      ? "border-brand bg-brand/10 text-brand"
+                      : "border-border bg-background text-muted-foreground"
                 )}
               >
                 {isDone ? <Check className="size-4" strokeWidth={3} /> : idx}
@@ -38,8 +42,8 @@ export function ProgressIndicator({ step, total, labels }: ProgressIndicatorProp
                   isCurrent
                     ? "text-foreground"
                     : isDone
-                    ? "text-brand"
-                    : "text-muted-foreground"
+                      ? "text-brand"
+                      : "text-muted-foreground"
                 )}
               >
                 {labels[i]}
@@ -48,7 +52,7 @@ export function ProgressIndicator({ step, total, labels }: ProgressIndicatorProp
             {i < total - 1 && (
               <div
                 className={cn(
-                  "h-0.5 w-12 shrink-0 self-start mt-5 mx-2 rounded-full transition-colors duration-500",
+                  "mx-2 mt-4 h-px w-12 shrink-0 self-start transition-colors",
                   isDone ? "bg-brand" : "bg-border"
                 )}
               />

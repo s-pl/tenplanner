@@ -167,7 +167,9 @@ export function computeSessionAnalytics(
   const categoriesCovered = categoryBreakdown.filter(
     (c) => c.minutes > 0
   ).length;
-  const balanceScore = Math.round((categoriesCovered / ALL_CATEGORIES.length) * 100);
+  const balanceScore = Math.round(
+    (categoriesCovered / ALL_CATEGORIES.length) * 100
+  );
 
   // ── Dificultad ──────────────────────────────────────────
   const difficultyMinutes = new Map<ExerciseDifficulty, number>();
@@ -214,9 +216,7 @@ export function computeSessionAnalytics(
   const withIntensity = sorted.filter(
     (e) => typeof e.resolvedIntensity === "number"
   );
-  const intensities = withIntensity.map(
-    (e) => e.resolvedIntensity as number
-  );
+  const intensities = withIntensity.map((e) => e.resolvedIntensity as number);
   const averageIntensity =
     intensities.length > 0
       ? intensities.reduce((s, v) => s + v, 0) / intensities.length

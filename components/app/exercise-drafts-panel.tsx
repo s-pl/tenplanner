@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock3, FilePenLine, Trash2, FileX } from "lucide-react";
-import { listExerciseDrafts, removeExerciseDraft, type ExerciseDraft } from "@/lib/drafts";
+import {
+  listExerciseDrafts,
+  removeExerciseDraft,
+  type ExerciseDraft,
+} from "@/lib/drafts";
 
 function formatUpdatedAt(value: string) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -38,7 +42,10 @@ export function ExerciseDraftsPanel({ showEmptyState = false }: Props) {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       window.removeEventListener("focus", refreshRef.current);
-      window.removeEventListener("tenplanner:drafts-updated", refreshRef.current);
+      window.removeEventListener(
+        "tenplanner:drafts-updated",
+        refreshRef.current
+      );
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
@@ -58,7 +65,9 @@ export function ExerciseDraftsPanel({ showEmptyState = false }: Props) {
           <FileX className="size-6 text-foreground/20" />
         </div>
         <div>
-          <p className="text-base font-semibold text-foreground/40">Sin borradores</p>
+          <p className="text-base font-semibold text-foreground/40">
+            Sin borradores
+          </p>
           <p className="text-sm text-foreground/30 mt-1">
             Los ejercicios que guardes como borrador aparecerán aquí.
           </p>

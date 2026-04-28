@@ -6,11 +6,27 @@ import { groups, groupStudents } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
 import { Users, ChevronRight, Shield } from "lucide-react";
 import { GroupCreateForm } from "./group-create-form";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 export default async function GroupsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (!groupsEnabled) {
+    return (
+      <FeatureLocked
+        title="Grupos desactivados"
+        description="El administrador ha pausado temporalmente la organización por grupos."
+        href="/students"
+        cta="Volver a alumnos"
+      />
+    );
+  }
 
   const rows = await db
     .select({
@@ -25,7 +41,16 @@ export default async function GroupsPage() {
     .where(eq(groups.coachId, user.id))
     .groupBy(groups.id)
     .orderBy(groups.name)
-    .catch(() => [] as { id: string; name: string; description: string | null; createdAt: Date; memberCount: number }[]);
+    .catch(
+      () =>
+        [] as {
+          id: string;
+          name: string;
+          description: string | null;
+          createdAt: Date;
+          memberCount: number;
+        }[]
+    );
 
   return (
     <div className="relative min-h-screen px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14">
@@ -52,13 +77,17 @@ export default async function GroupsPage() {
         {/* Groups grid */}
         <div>
           {rows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center border border-dashed border-foreground/15 rounded-2xl py-20 text-center gap-4">
-              <div className="size-16 rounded-2xl bg-foreground/5 border border-foreground/10 flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center border border-dashed border-foreground/15 rounded-md py-20 text-center gap-4">
+              <div className="size-16 rounded-md bg-muted border border-foreground/10 flex items-center justify-center">
                 <Shield className="size-7 text-foreground/20" />
               </div>
               <div>
-                <p className="text-base font-semibold text-foreground/50">Sin grupos todavía</p>
-                <p className="text-sm text-foreground/35 mt-1">Crea tu primer grupo para empezar.</p>
+                <p className="text-base font-semibold text-foreground/50">
+                  Sin grupos todavía
+                </p>
+                <p className="text-sm text-foreground/35 mt-1">
+                  Crea tu primer grupo para empezar.
+                </p>
               </div>
             </div>
           ) : (
@@ -67,7 +96,7 @@ export default async function GroupsPage() {
                 <Link
                   key={g.id}
                   href={`/groups/${g.id}`}
-                  className="group relative flex flex-col gap-4 bg-card border border-border rounded-2xl p-5 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5 transition-all duration-200"
+                  className="group relative flex flex-col gap-4 bg-card border border-border rounded-md p-5 hover:border-brand/40 hover:bg-brand/[0.025] transition-colors"
                 >
                   {/* Index badge */}
                   <span className="absolute top-4 right-4 font-mono text-[10px] text-foreground/20 tabular-nums">
@@ -76,10 +105,10 @@ export default async function GroupsPage() {
 
                   {/* Icon + count */}
                   <div className="flex items-start justify-between">
-                    <div className="size-11 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center">
+                    <div className="size-11 rounded-md bg-brand/10 border border-brand/15 flex items-center justify-center">
                       <Users className="size-5 text-brand" />
                     </div>
-                    <div className="flex items-center gap-1.5 bg-foreground/5 rounded-full px-2.5 py-1 mt-0.5">
+                    <div className="flex items-center gap-1.5 bg-muted rounded-md px-2.5 py-1 mt-0.5">
                       <span className="text-[11px] font-bold tabular-nums text-foreground/60">
                         {g.memberCount}
                       </span>
@@ -99,7 +128,9 @@ export default async function GroupsPage() {
                         {g.description}
                       </p>
                     ) : (
-                      <p className="text-[12px] text-foreground/25 mt-1.5 italic">Sin descripción</p>
+                      <p className="text-[12px] text-foreground/25 mt-1.5 italic">
+                        Sin descripción
+                      </p>
                     )}
                   </div>
 
@@ -118,9 +149,9 @@ export default async function GroupsPage() {
 
         {/* Create form sidebar */}
         <div className="lg:sticky lg:top-6">
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="bg-card border border-border rounded-md overflow-hidden">
             <div className="px-5 py-4 border-b border-border/50 flex items-center gap-2">
-              <div className="size-7 rounded-lg bg-brand/10 border border-brand/15 flex items-center justify-center">
+              <div className="size-7 rounded-md bg-brand/10 border border-brand/15 flex items-center justify-center">
                 <Shield className="size-3.5 text-brand" />
               </div>
               <h2 className="font-bold text-[13px] text-foreground uppercase tracking-wide">

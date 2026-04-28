@@ -8,24 +8,49 @@ type VTDocument = Document & {
   startViewTransition?: (cb: () => void) => { ready: Promise<void> };
 };
 
+function getTimeBasedDarkMode() {
+  const hour = new Date().getHours();
+  return hour < 7 || hour >= 21;
+}
+
 export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [isDark, setIsDark] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
+    function syncThemeState() {
+      const autoTheme = localStorage.getItem("theme-auto") !== "false";
+      const stored = localStorage.getItem("theme");
+      setIsDark(
+        autoTheme
+          ? getTimeBasedDarkMode()
+          : stored
+            ? stored === "dark"
+            : getTimeBasedDarkMode()
+      );
+    }
+
     /* eslint-disable react-hooks/set-state-in-effect -- hydration-safe read from localStorage */
     setMounted(true);
-    setIsDark(stored ? stored === "dark" : true);
+    syncThemeState();
     /* eslint-enable react-hooks/set-state-in-effect */
+
+    window.addEventListener("storage", syncThemeState);
+    window.addEventListener("theme-auto-change", syncThemeState);
+    return () => {
+      window.removeEventListener("storage", syncThemeState);
+      window.removeEventListener("theme-auto-change", syncThemeState);
+    };
   }, []);
 
   function applyTheme(next: boolean) {
     setIsDark(next);
+    localStorage.setItem("theme-auto", "false");
     localStorage.setItem("theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
     const accent = localStorage.getItem("accent") ?? "blue";
     applyAccentColor(accent);
+    window.dispatchEvent(new Event("theme-auto-change"));
   }
 
   async function toggle(e: React.MouseEvent<HTMLButtonElement>) {

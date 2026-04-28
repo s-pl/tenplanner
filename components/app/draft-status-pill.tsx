@@ -19,7 +19,11 @@ function formatRelative(date: Date): string {
   return `hace ${Math.round(minutes / 60)}h`;
 }
 
-export function DraftStatusPill({ status, savedAt, className }: DraftStatusPillProps) {
+export function DraftStatusPill({
+  status,
+  savedAt,
+  className,
+}: DraftStatusPillProps) {
   const [, tick] = useState(0);
 
   // Re-render every 30s to update the relative timestamp

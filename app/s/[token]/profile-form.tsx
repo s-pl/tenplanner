@@ -103,8 +103,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
   const labelCls =
     "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5";
 
-  const submitDisabled =
-    isPending || !birthDate || ageTooLow || !consent;
+  const submitDisabled = isPending || !birthDate || ageTooLow || !consent;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
@@ -214,9 +213,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
           <div className="px-3.5 pb-3.5 text-[12px] leading-relaxed text-muted-foreground space-y-2 border-t border-border/60">
             <p>
               <strong className="text-foreground">Responsable:</strong>{" "}
-              {coachName
-                ? `${coachName} (tu entrenador/a)`
-                : "Tu entrenador/a"}
+              {coachName ? `${coachName} (tu entrenador/a)` : "Tu entrenador/a"}
               , con TenPlanner como encargado del tratamiento (art. 28 RGPD).
             </p>
             <p>
@@ -245,9 +242,9 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
               lo usa sobre tu ficha).
             </p>
             <p>
-              <strong className="text-foreground">Tus derechos:</strong>{" "}
-              acceso, rectificación, supresión, portabilidad, oposición,
-              limitación y reclamación ante la AEPD (
+              <strong className="text-foreground">Tus derechos:</strong> acceso,
+              rectificación, supresión, portabilidad, oposición, limitación y
+              reclamación ante la AEPD (
               <a
                 href="https://www.aepd.es"
                 target="_blank"

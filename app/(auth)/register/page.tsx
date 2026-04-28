@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
@@ -201,12 +201,12 @@ function RegisterPageContent() {
     handleSubmit,
     formState: { errors },
     getValues,
-    watch,
+    control,
   } = useForm<AccountValues>({
     resolver: zodResolver(accountSchema),
   });
 
-  const passwordValue = watch("password", "");
+  const passwordValue = useWatch({ control, name: "password" }) ?? "";
   const strength = getPasswordStrength(passwordValue);
   const strengthCfg = STRENGTH_CONFIG[strength];
 
@@ -323,8 +323,12 @@ function RegisterPageContent() {
           }),
         });
         if (!res.ok) {
+          const payload = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
           setServerError(
-            "Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo."
+            payload?.error ??
+              "Cuenta creada, pero no se pudo guardar el perfil. Inténtalo de nuevo."
           );
           setLoading(false);
           return;

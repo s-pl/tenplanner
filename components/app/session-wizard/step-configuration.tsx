@@ -59,7 +59,10 @@ function SessionPreview({ state }: { state: WizardState }) {
   const hasTitle = !!state.title.trim();
   const intensityColor =
     state.intensity !== null
-      ? { bar: INTENSITY_BAR[state.intensity - 1], text: INTENSITY_TEXT[state.intensity - 1] }
+      ? {
+          bar: INTENSITY_BAR[state.intensity - 1],
+          text: INTENSITY_TEXT[state.intensity - 1],
+        }
       : null;
 
   return (
@@ -68,10 +71,7 @@ function SessionPreview({ state }: { state: WizardState }) {
         Vista previa
       </p>
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-        {/* Top accent stripe */}
-        <div className="h-1 bg-gradient-to-r from-brand via-brand/50 to-transparent" />
-
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="p-5 space-y-4">
           {/* Title */}
           <p
@@ -93,18 +93,25 @@ function SessionPreview({ state }: { state: WizardState }) {
             </div>
             <div className="flex items-center gap-2">
               <Clock className="size-3.5 shrink-0 text-brand" />
-              <span className="text-xs text-foreground/70">{state.durationMinutes} min</span>
+              <span className="text-xs text-foreground/70">
+                {state.durationMinutes} min
+              </span>
             </div>
             {state.location && (
               <div className="flex items-center gap-2">
                 <MapPin className="size-3.5 shrink-0 text-brand" />
-                <span className="text-xs text-foreground/70">{state.location}</span>
+                <span className="text-xs text-foreground/70">
+                  {state.location}
+                </span>
               </div>
             )}
           </div>
 
           {/* Divider */}
-          {(state.objective || state.intensity !== null || state.tags.length > 0 || state.studentIds.length > 0) && (
+          {(state.objective ||
+            state.intensity !== null ||
+            state.tags.length > 0 ||
+            state.studentIds.length > 0) && (
             <div className="border-t border-border/40" />
           )}
 
@@ -131,7 +138,9 @@ function SessionPreview({ state }: { state: WizardState }) {
                       key={n}
                       className={cn(
                         "h-1.5 flex-1 rounded-full",
-                        n <= (state.intensity ?? 0) ? intensityColor.bar : "bg-border"
+                        n <= (state.intensity ?? 0)
+                          ? intensityColor.bar
+                          : "bg-border"
                       )}
                     />
                   ))}
@@ -178,7 +187,11 @@ function SessionPreview({ state }: { state: WizardState }) {
   );
 }
 
-export function StepConfiguration({ state, update, errors }: StepConfigurationProps) {
+export function StepConfiguration({
+  state,
+  update,
+  errors,
+}: StepConfigurationProps) {
   const [studentsOpen, setStudentsOpen] = useState(false);
 
   return (

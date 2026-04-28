@@ -10,6 +10,8 @@ import {
   boolean,
   date,
   index,
+  numeric,
+  vector,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -60,6 +62,11 @@ export const tipoPelotaEnum = pgEnum("tipo_pelota", [
   "lenta",
   "rapida",
   "sin_pelota",
+]);
+
+export const aiEmbeddingSourceEnum = pgEnum("ai_embedding_source", [
+  "exercise",
+  "session",
 ]);
 
 // Users — id references auth.users(id) managed by Supabase Auth
@@ -182,6 +189,10 @@ export const sessionExercises = pgTable(
     phase: trainingPhaseEnum("phase"),
     intensity: integer("intensity"),
     coachRating: integer("coach_rating"), // 1-5 rating by coach after session
+    actualDurationSeconds: integer("actual_duration_seconds"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    executionNotes: text("execution_notes"),
+    wasSkipped: boolean("was_skipped").default(false).notNull(),
   },
   (t) => [
     index("session_exercises_session_id_idx").on(t.sessionId),
@@ -273,9 +284,7 @@ export const groups = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index("groups_coach_id_idx").on(t.coachId),
-  ]
+  (t) => [index("groups_coach_id_idx").on(t.coachId)]
 );
 
 export const groupStudents = pgTable(
@@ -344,9 +353,7 @@ export const exerciseLists = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [
-    index("exercise_lists_user_id_idx").on(t.userId),
-  ]
+  (t) => [index("exercise_lists_user_id_idx").on(t.userId)]
 );
 
 // Exercise list items (exercises in a list)
@@ -413,9 +420,7 @@ export const sessionDrafts = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [
-    index("session_drafts_user_updated_at_idx").on(t.userId, t.updatedAt),
-  ]
+  (t) => [index("session_drafts_user_updated_at_idx").on(t.userId, t.updatedAt)]
 );
 
 // Session templates (marketplace — no scheduledAt, no students)
@@ -618,13 +623,22 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
 }));
 
 export const groupStudentsRelations = relations(groupStudents, ({ one }) => ({
-  group: one(groups, { fields: [groupStudents.groupId], references: [groups.id] }),
-  student: one(students, { fields: [groupStudents.studentId], references: [students.id] }),
+  group: one(groups, {
+    fields: [groupStudents.groupId],
+    references: [groups.id],
+  }),
+  student: one(students, {
+    fields: [groupStudents.studentId],
+    references: [students.id],
+  }),
 }));
 
-export const drPlannerChatsRelations = relations(drPlannerChats, ({ many }) => ({
-  messages: many(drPlannerMessages),
-}));
+export const drPlannerChatsRelations = relations(
+  drPlannerChats,
+  ({ many }) => ({
+    messages: many(drPlannerMessages),
+  })
+);
 
 export const drPlannerMessagesRelations = relations(
   drPlannerMessages,
@@ -704,5 +718,144 @@ export const landingContent = pgTable("landing_content", {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
-  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedBy: uuid("updated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
 });
+
+// Admin-managed platform settings and feature flags.
+export const appSettings = pgTable(
+  "app_settings",
+  {
+    key: varchar("key", { length: 120 }).primaryKey(),
+    value: json("value").$type<unknown>().notNull(),
+    type: varchar("type", { length: 20 }).notNull().default("boolean"),
+    label: varchar("label", { length: 200 }).notNull(),
+    description: text("description"),
+    category: varchar("category", { length: 80 }).notNull().default("general"),
+    isPublic: boolean("is_public").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    updatedBy: uuid("updated_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    index("app_settings_category_idx").on(t.category),
+    index("app_settings_public_idx").on(t.isPublic),
+  ]
+);
+
+// Semantic search index for AI retrieval over sessions and exercises.
+export const aiDocumentEmbeddings = pgTable(
+  "ai_document_embeddings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerId: uuid("owner_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    source: aiEmbeddingSourceEnum("source").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    content: text("content").notNull(),
+    contentHash: varchar("content_hash", { length: 64 }).notNull(),
+    metadata: json("metadata")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    embeddedAt: timestamp("embedded_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("ai_doc_embeddings_owner_source_idx").on(t.ownerId, t.source),
+    index("ai_doc_embeddings_source_id_idx").on(t.source, t.sourceId),
+    index("ai_doc_embeddings_hash_idx").on(t.contentHash),
+  ]
+);
+
+// AI usage ledger for admin cost and token analytics.
+export const aiUsageEvents = pgTable(
+  "ai_usage_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    chatId: uuid("chat_id").references(() => drPlannerChats.id, {
+      onDelete: "set null",
+    }),
+    provider: varchar("provider", { length: 40 })
+      .notNull()
+      .default("anthropic"),
+    model: varchar("model", { length: 120 }).notNull(),
+    operation: varchar("operation", { length: 80 })
+      .notNull()
+      .default("dr_planner_chat"),
+    inputTokens: integer("input_tokens").default(0).notNull(),
+    outputTokens: integer("output_tokens").default(0).notNull(),
+    totalTokens: integer("total_tokens").default(0).notNull(),
+    cacheReadTokens: integer("cache_read_tokens").default(0).notNull(),
+    cacheWriteTokens: integer("cache_write_tokens").default(0).notNull(),
+    estimatedCostUsd: numeric("estimated_cost_usd", {
+      precision: 12,
+      scale: 6,
+    })
+      .default("0")
+      .notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    finishReason: varchar("finish_reason", { length: 80 }),
+    requestId: varchar("request_id", { length: 160 }),
+    metadata: json("metadata")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("ai_usage_events_user_created_idx").on(t.userId, t.createdAt),
+    index("ai_usage_events_model_created_idx").on(t.model, t.createdAt),
+    index("ai_usage_events_created_at_idx").on(t.createdAt),
+  ]
+);
+
+// Admin controls for limiting individual AI users.
+export const aiUserRestrictions = pgTable(
+  "ai_user_restrictions",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    isRestricted: boolean("is_restricted").default(false).notNull(),
+    customMessage: text("custom_message"),
+    dailyTokenLimit: integer("daily_token_limit"),
+    monthlyTokenLimit: integer("monthly_token_limit"),
+    modelOverride: varchar("model_override", { length: 120 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    updatedBy: uuid("updated_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    index("ai_user_restrictions_restricted_idx").on(t.isRestricted),
+    index("ai_user_restrictions_model_idx").on(t.modelOverride),
+  ]
+);

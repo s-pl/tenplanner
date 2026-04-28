@@ -5,6 +5,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 const bodySchema = z.object({
   id: z.string().uuid(),
@@ -42,6 +43,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const registrationEnabled = await getBooleanSetting(
+    "system.registration_enabled"
+  );
+  if (!registrationEnabled) {
+    return NextResponse.json(
+      { error: "El registro de nuevos usuarios está cerrado." },
+      { status: 403 }
+    );
   }
 
   let body: unknown;

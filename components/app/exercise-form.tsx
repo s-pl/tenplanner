@@ -2,6 +2,7 @@
 
 import {
   type ElementType,
+  type FormEvent,
   type KeyboardEvent,
   type ReactNode,
   useEffect,
@@ -10,7 +11,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { DraftStatusPill } from "@/components/app/draft-status-pill";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -431,7 +432,6 @@ export function ExerciseForm({
   const formModeChangedRef = useRef(false);
   const draftHydratedRef = useRef(false);
   const draftIdRef = useRef<string | null>(null);
-  const saveTimerRef = useRef<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
     "idle"
   );
@@ -464,7 +464,6 @@ export function ExerciseForm({
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -488,7 +487,7 @@ export function ExerciseForm({
       isGlobal: initialData?.isGlobal ?? false,
     },
   });
-  const watchedValues = watch();
+  const watchedValues = useWatch({ control });
   const normalizedImages = imageSlots.filter((value): value is string =>
     Boolean(value)
   );
@@ -501,7 +500,7 @@ export function ExerciseForm({
   }, [formMode, mode]);
 
   // One-time mount hydration — uses window.location.search to avoid re-running
-  // when the URL is updated via history.replaceState in the auto-save effect.
+  // when the URL is updated via history.replaceState after manual draft save.
   useEffect(() => {
     if (!enableDrafts || mode !== "create") {
       draftHydratedRef.current = true;
@@ -663,68 +662,58 @@ export function ExerciseForm({
     formMode,
   };
 
-  useEffect(() => {
+  async function handleSaveDraft() {
     if (!enableDrafts || mode !== "create" || !draftHydratedRef.current) {
       return;
     }
 
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-    }
-
-    saveTimerRef.current = window.setTimeout(() => {
-      saveTimerRef.current = null;
-
-      if (!hasMeaningfulExerciseDraft(draftPayload)) {
-        if (draftIdRef.current) {
-          removeExerciseDraft(draftIdRef.current);
-          draftIdRef.current = null;
-          const params = new URLSearchParams(window.location.search);
-          params.delete(draftQueryParam);
-          const nextQuery = params.toString();
-          window.history.replaceState(
-            null,
-            "",
-            nextQuery
-              ? `${window.location.pathname}?${nextQuery}`
-              : window.location.pathname
-          );
-        }
-        return;
-      }
-
-      let nextDraftId = draftIdRef.current;
-      if (!nextDraftId) {
-        nextDraftId = generateDraftId();
-        draftIdRef.current = nextDraftId;
+    if (!hasMeaningfulExerciseDraft(draftPayload)) {
+      if (draftIdRef.current) {
+        await removeExerciseDraft(draftIdRef.current);
+        draftIdRef.current = null;
         const params = new URLSearchParams(window.location.search);
-        params.set(draftQueryParam, nextDraftId);
+        params.delete(draftQueryParam);
+        const nextQuery = params.toString();
         window.history.replaceState(
           null,
           "",
-          `${window.location.pathname}?${params.toString()}`
+          nextQuery
+            ? `${window.location.pathname}?${nextQuery}`
+            : window.location.pathname
         );
       }
+      setSaveStatus("idle");
+      setSavedAt(null);
+      return;
+    }
 
-      setSaveStatus("saving");
-      void upsertExerciseDraft({
+    let nextDraftId = draftIdRef.current;
+    if (!nextDraftId) {
+      nextDraftId = generateDraftId();
+      draftIdRef.current = nextDraftId;
+      const params = new URLSearchParams(window.location.search);
+      params.set(draftQueryParam, nextDraftId);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}?${params.toString()}`
+      );
+    }
+
+    setSaveStatus("saving");
+    try {
+      await upsertExerciseDraft({
         id: nextDraftId,
         name: draftPayload.name.trim() || "Ejercicio sin título",
         updatedAt: new Date().toISOString(),
         payload: draftPayload,
-      }).then(() => {
-        setSaveStatus("saved");
-        setSavedAt(new Date());
       });
-    }, 800);
-
-    return () => {
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [draftPayload, draftQueryParam, enableDrafts, mode]);
+      setSaveStatus("saved");
+      setSavedAt(new Date());
+    } catch {
+      setSaveStatus("idle");
+    }
+  }
 
   const essentialFilled = countFilled([
     !!watchedValues.name?.trim(),
@@ -842,6 +831,10 @@ export function ExerciseForm({
     } else {
       onSuccess?.(responseData.data);
     }
+  }
+
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    void handleSubmit(onSubmit)(event);
   }
 
   const basicSection = (
@@ -1866,20 +1859,30 @@ export function ExerciseForm({
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
+    <form onSubmit={handleFormSubmit} className="flex flex-col gap-8">
       {/* Mode selector */}
       <div className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
-            Modo de creación
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formMode === "quick"
-              ? "Solo lo esencial: nombre, categoría, dificultad y duración."
-              : "Vista completa con todos los campos avanzados agrupados."}
+            Modo
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          {enableDrafts && mode === "create" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleSaveDraft()}
+              disabled={saveStatus === "saving" || isSubmitting}
+              className="h-8 rounded-lg px-3 text-[11px] font-bold"
+            >
+              {saveStatus === "saving" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              GUARDAR BORRADOR
+            </Button>
+          )}
           {enableDrafts && mode === "create" && (
             <DraftStatusPill status={saveStatus} savedAt={savedAt} />
           )}
@@ -1973,7 +1976,7 @@ export function ExerciseForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-bold px-6 py-2.5 rounded-xl shadow-sm hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-55"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-55"
         >
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
           {mode === "create" ? "Crear ejercicio" : "Guardar cambios"}
