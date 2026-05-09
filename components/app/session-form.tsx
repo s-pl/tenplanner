@@ -56,6 +56,7 @@ const formSchema = z.object({
   title: z.string().trim().min(1, "El título es obligatorio").max(255),
   description: z.string().max(2000).optional().nullable(),
   scheduledAt: z.string().min(1, "La fecha y hora son obligatorias"),
+  placeId: z.string().uuid().optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,6 +67,11 @@ export interface AvailableExercise {
   category: string;
   difficulty: string;
   durationMinutes: number;
+}
+
+export interface SessionFormPlace {
+  id: string;
+  name: string;
 }
 
 interface SelectedExercise {
@@ -81,10 +87,13 @@ interface SessionFormProps {
   mode: "create" | "edit";
   sessionId?: string;
   availableExercises: AvailableExercise[];
+  places?: SessionFormPlace[];
+  monitorName?: string;
   initialData?: {
     title?: string;
     description?: string | null;
     scheduledAt?: string;
+    placeId?: string | null;
     exercises?: {
       exerciseId: string;
       durationMinutes: number;
@@ -113,6 +122,8 @@ export function SessionForm({
   mode,
   sessionId,
   availableExercises,
+  places = [],
+  monitorName,
   initialData,
   onSuccess,
   onCancel,
@@ -325,6 +336,7 @@ export function SessionForm({
       scheduledAt: initialData?.scheduledAt
         ? toDatetimeLocalValue(initialData.scheduledAt)
         : "",
+      placeId: initialData?.placeId ?? "",
     },
   });
 
@@ -341,6 +353,7 @@ export function SessionForm({
         title: values.title,
         description: values.description?.trim() || null,
         scheduledAt: new Date(values.scheduledAt).toISOString(),
+        placeId: values.placeId ? values.placeId : null,
         exercises: selectedExercises.map((e) => ({
           exerciseId: e.exerciseId,
           durationMinutes: e.overrideDuration ?? null,
@@ -416,6 +429,53 @@ export function SessionForm({
           </div>
 
           <div className="space-y-1.5">
+            <label
+              htmlFor="placeId"
+              className="block text-sm font-semibold text-foreground"
+            >
+              Lugar{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional)
+              </span>
+            </label>
+            {places.length === 0 ? (
+              <div className="flex items-center justify-between gap-2 h-11 px-4 text-sm bg-background border border-dashed border-border rounded-xl text-muted-foreground">
+                <span>Aún no tienes lugares.</span>
+                <Link
+                  href="/places"
+                  className="text-xs font-semibold text-brand hover:underline"
+                >
+                  Crear lugar →
+                </Link>
+              </div>
+            ) : (
+              <select
+                id="placeId"
+                {...register("placeId")}
+                className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground"
+              >
+                <option value="">Sin lugar asignado</option>
+                {places.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {monitorName && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-foreground">
+                Monitor
+              </label>
+              <div className="flex items-center h-11 px-4 text-sm bg-muted/40 border border-border rounded-xl text-foreground/80 cursor-not-allowed">
+                {monitorName}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5 sm:col-span-2">
             <label
               htmlFor="description"
               className="block text-sm font-semibold text-foreground"

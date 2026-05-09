@@ -21,6 +21,8 @@ interface StepConfigurationProps {
   state: WizardState;
   update: (patch: Partial<WizardState>) => void;
   errors: Partial<Record<keyof WizardState, string>>;
+  places?: { id: string; name: string }[];
+  monitorName?: string;
 }
 
 const INTENSITY_LABELS = ["Muy suave", "Suave", "Moderada", "Alta", "Máxima"];
@@ -191,6 +193,8 @@ export function StepConfiguration({
   state,
   update,
   errors,
+  places = [],
+  monitorName,
 }: StepConfigurationProps) {
   const [studentsOpen, setStudentsOpen] = useState(false);
 
@@ -199,6 +203,57 @@ export function StepConfiguration({
       {/* Left: form fields */}
       <div className="flex flex-col gap-6 min-w-0">
         <StepBasics state={state} update={update} errors={errors} />
+
+        {/* Lugar (PMV) */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="placeId"
+            className="block text-sm font-semibold text-foreground"
+          >
+            Lugar{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          {places.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              Aún no tienes lugares.{" "}
+              <a
+                href="/places"
+                className="text-brand font-semibold hover:underline"
+              >
+                Crear lugar →
+              </a>
+            </p>
+          ) : (
+            <select
+              id="placeId"
+              value={state.placeId ?? ""}
+              onChange={(e) =>
+                update({ placeId: e.target.value ? e.target.value : null })
+              }
+              className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+            >
+              <option value="">Sin lugar asignado</option>
+              {places.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {monitorName && (
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-foreground">
+              Monitor
+            </label>
+            <div className="flex items-center h-11 px-4 text-sm bg-muted/40 border border-border rounded-xl text-foreground/80 cursor-not-allowed">
+              {monitorName}
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-border/40" />
 

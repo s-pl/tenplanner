@@ -4,11 +4,21 @@ import { z } from "zod";
 export const genderSchema = z.enum(["male", "female", "other"]);
 export const dominantHandSchema = z.enum(["left", "right"]);
 export const playerLevelSchema = z.enum([
+  // Legacy (compat con datos existentes)
   "beginner",
   "amateur",
   "intermediate",
   "advanced",
   "competitive",
+  // PMV 260506 — niveles por edad
+  "descubrimiento",
+  "desarrollo",
+  "consolidacion",
+  "especializacion",
+  "precompeticion",
+  "competicion",
+  "adultos_iniciacion",
+  "adultos_medio_alto",
 ]);
 
 export const studentIdParamsSchema = z.object({
@@ -52,6 +62,26 @@ export const createStudentSchema = z.object({
   dominantHand: dominantHandSchema.optional().nullable(),
   playerLevel: playerLevelSchema.optional().nullable(),
   yearsExperience: z.coerce.number().int().min(0).max(80).optional().nullable(),
+  yearStartedTennis: z.coerce
+    .number()
+    .int()
+    .min(1900, "Año inválido")
+    .max(2100, "Año inválido")
+    .optional()
+    .nullable(),
+  phone: z
+    .string()
+    .trim()
+    .max(32, "Máximo 32 caracteres")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+  preferredSchedule: z
+    .string()
+    .trim()
+    .max(500, "Máximo 500 caracteres")
+    .optional()
+    .nullable(),
   notes: z
     .string()
     .trim()

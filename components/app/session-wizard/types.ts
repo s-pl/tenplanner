@@ -31,11 +31,17 @@ export interface WizardState {
   scheduledAt: string;
   durationMinutes: number;
   location: string;
+  placeId: string | null;
   objective: string;
   intensity: number | null;
   tags: string[];
   studentIds: string[];
   exercises: WizardExercise[];
+}
+
+export interface WizardPlace {
+  id: string;
+  name: string;
 }
 
 export const LOCATION_OPTIONS = [

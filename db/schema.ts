@@ -118,6 +118,12 @@ export const exercises = pgTable(
     efecto: json("efecto").$type<string[]>(),
     variantes: text("variantes"),
     imageUrls: json("image_urls").$type<string[]>(),
+    // New taxonomy (PMV 260506) — additive, replaces difficulty/intensity in UI
+    nivel: varchar("nivel", { length: 32 }), // descubrimiento|desarrollo|consolidacion|especializacion|precompeticion|competicion|adultos_iniciacion|adultos_medio_alto
+    aspectoJuego: varchar("aspecto_juego", { length: 16 }), // tecnica|tactica|mental|fisico
+    parametro: varchar("parametro", { length: 16 }), // altura|profundidad|velocidad|direccion
+    tipologia: varchar("tipologia", { length: 16 }), // juego|reto|otros_deportes
+    duracionRango: varchar("duracion_rango", { length: 16 }), // 1-5|5-10|10-15|15-20|+20
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
@@ -140,6 +146,30 @@ export const exercises = pgTable(
   ]
 );
 
+// Places (coach-managed locations: Pista 1, Pista 2, Gimnasio…)
+export const places = pgTable(
+  "places",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    coachId: uuid("coach_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("places_coach_id_idx").on(t.coachId),
+    uniqueIndex("places_coach_name_uniq").on(t.coachId, t.name),
+  ]
+);
+
 // Sessions
 export const sessions = pgTable(
   "sessions",
@@ -156,7 +186,11 @@ export const sessions = pgTable(
     intensity: integer("intensity"), // 1-5, app-validated
     tags: json("tags").$type<string[]>(),
     location: varchar("location", { length: 50 }),
+    placeId: uuid("place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
     status: sessionStatusEnum("status").notNull().default("scheduled"),
+    statusNote: text("status_note"), // notas de completada / motivo de cancelada
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -169,6 +203,7 @@ export const sessions = pgTable(
     index("sessions_user_id_idx").on(t.userId),
     index("sessions_scheduled_at_idx").on(t.scheduledAt),
     index("sessions_user_scheduled_at_idx").on(t.userId, t.scheduledAt),
+    index("sessions_place_id_idx").on(t.placeId),
   ]
 );
 
@@ -216,8 +251,11 @@ export const students = pgTable(
     heightCm: integer("height_cm"),
     weightKg: integer("weight_kg"),
     dominantHand: varchar("dominant_hand", { length: 10 }), // "left" | "right"
-    playerLevel: varchar("player_level", { length: 30 }),
+    playerLevel: varchar("player_level", { length: 30 }), // ahora admite los 8 niveles PMV
     yearsExperience: integer("years_experience"),
+    yearStartedTennis: integer("year_started_tennis"),
+    phone: varchar("phone", { length: 32 }),
+    preferredSchedule: text("preferred_schedule"),
     notes: text("notes"),
     imageUrl: text("image_url"),
     profileToken: varchar("profile_token", { length: 128 }).unique(),
@@ -509,6 +547,123 @@ export const sessionTemplateAdoptions = pgTable(
   ]
 );
 
+// =====================================================================
+// CLASSES (PMV 260506) — biblioteca de plantillas reutilizables
+// Una "class" es una plantilla con 3 bloques (inicial / principal / final).
+// Cuando se "agenda" a un grupo en una fecha/lugar, se convierte en una
+// session.
+// =====================================================================
+export const classes = pgTable(
+  "classes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: varchar("name", { length: 255 }).notNull(),
+    duracionMinutes: integer("duracion_minutes").notNull(),
+    alumnosTipo: varchar("alumnos_tipo", { length: 16 }), // individual|grupal
+    objetivos: text("objetivos"),
+    material: text("material"),
+    videoUrl: text("video_url"),
+    aspectosImportantes: text("aspectos_importantes"),
+    nivel: varchar("nivel", { length: 32 }),
+    aspectoJuego: varchar("aspecto_juego", { length: 16 }),
+    golpes: json("golpes").$type<string[]>(),
+    isLibrary: boolean("is_library").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("classes_created_by_idx").on(t.createdBy),
+    index("classes_is_library_idx").on(t.isLibrary),
+    index("classes_nivel_idx").on(t.nivel),
+    index("classes_name_idx").on(t.name),
+  ]
+);
+
+export const classBlocks = pgTable(
+  "class_blocks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    classId: uuid("class_id")
+      .references(() => classes.id, { onDelete: "cascade" })
+      .notNull(),
+    orderIndex: integer("order_index").notNull(), // 1=inicial, 2=principal, 3=final
+    title: varchar("title", { length: 120 }),
+    notes: text("notes"),
+  },
+  (t) => [
+    uniqueIndex("class_blocks_class_order_uniq").on(t.classId, t.orderIndex),
+    index("class_blocks_class_id_idx").on(t.classId),
+  ]
+);
+
+export const classBlockExercises = pgTable(
+  "class_block_exercises",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    blockId: uuid("block_id")
+      .references(() => classBlocks.id, { onDelete: "cascade" })
+      .notNull(),
+    exerciseId: uuid("exercise_id").references(() => exercises.id, {
+      onDelete: "set null",
+    }),
+    freeText: text("free_text"), // si exerciseId es null, contenido manual
+    orderIndex: integer("order_index").notNull(),
+    durationMinutes: integer("duration_minutes"),
+  },
+  (t) => [
+    index("class_block_exercises_block_id_idx").on(t.blockId),
+    index("class_block_exercises_block_order_idx").on(t.blockId, t.orderIndex),
+    index("class_block_exercises_exercise_id_idx").on(t.exerciseId),
+  ]
+);
+
+export const classFavorites = pgTable(
+  "class_favorites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    classId: uuid("class_id")
+      .references(() => classes.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("class_favorites_user_class_uniq").on(t.userId, t.classId),
+    index("class_favorites_user_id_idx").on(t.userId),
+  ]
+);
+
+export const classDrafts = pgTable(
+  "class_drafts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    payload: json("payload").$type<Record<string, unknown>>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("class_drafts_user_updated_at_idx").on(t.userId, t.updatedAt)]
+);
+
 // Dr. Planner chat history
 export const drPlannerChats = pgTable(
   "dr_planner_chats",
@@ -706,6 +861,57 @@ export const sessionDraftsRelations = relations(sessionDrafts, ({ one }) => ({
     fields: [sessionDrafts.userId],
     references: [users.id],
   }),
+}));
+
+export const placesRelations = relations(places, ({ one, many }) => ({
+  coach: one(users, { fields: [places.coachId], references: [users.id] }),
+  sessions: many(sessions),
+}));
+
+export const classesRelations = relations(classes, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [classes.createdBy],
+    references: [users.id],
+  }),
+  blocks: many(classBlocks),
+  favorites: many(classFavorites),
+}));
+
+export const classBlocksRelations = relations(classBlocks, ({ one, many }) => ({
+  class: one(classes, {
+    fields: [classBlocks.classId],
+    references: [classes.id],
+  }),
+  blockExercises: many(classBlockExercises),
+}));
+
+export const classBlockExercisesRelations = relations(
+  classBlockExercises,
+  ({ one }) => ({
+    block: one(classBlocks, {
+      fields: [classBlockExercises.blockId],
+      references: [classBlocks.id],
+    }),
+    exercise: one(exercises, {
+      fields: [classBlockExercises.exerciseId],
+      references: [exercises.id],
+    }),
+  })
+);
+
+export const classFavoritesRelations = relations(classFavorites, ({ one }) => ({
+  user: one(users, {
+    fields: [classFavorites.userId],
+    references: [users.id],
+  }),
+  class: one(classes, {
+    fields: [classFavorites.classId],
+    references: [classes.id],
+  }),
+}));
+
+export const classDraftsRelations = relations(classDrafts, ({ one }) => ({
+  user: one(users, { fields: [classDrafts.userId], references: [users.id] }),
 }));
 
 // Landing page editable content (admin-managed copy)

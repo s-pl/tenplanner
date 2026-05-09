@@ -176,6 +176,13 @@
       "when": 1778200000000,
       "tag": "0024_session_execution_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1778600000000,
+      "tag": "0025_aromatic_saracen",
+      "breakpoints": true
     }
   ]
 }

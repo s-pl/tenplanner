@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
@@ -16,21 +15,21 @@ export default async function PublicLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  const avatarUrl = user?.user_metadata?.avatar_url ?? null;
 
-  const avatarUrl = user.user_metadata?.avatar_url ?? null;
-
-  const [[row], maintenanceBanner, drPlannerEnabled] = await Promise.all([
-    db
-      .select({ isAdmin: users.isAdmin })
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1),
+  const [adminRows, maintenanceBanner, drPlannerEnabled] = await Promise.all([
+    user
+      ? db
+          .select({ isAdmin: users.isAdmin })
+          .from(users)
+          .where(eq(users.id, user.id))
+          .limit(1)
+      : Promise.resolve([] as { isAdmin: boolean | null }[]),
     getStringSetting("system.maintenance_banner", ""),
     isDrPlannerEnabled(),
   ]);
 
-  const isAdmin = row?.isAdmin ?? false;
+  const isAdmin = adminRows[0]?.isAdmin ?? false;
 
   return (
     <AppShell

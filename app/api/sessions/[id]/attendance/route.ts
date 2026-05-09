@@ -5,10 +5,20 @@ import { db } from "@/db";
 import { sessions, sessionStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 
-const patchSchema = z.object({
-  studentId: z.string().uuid(),
-  attended: z.boolean(),
-});
+const patchSchema = z
+  .object({
+    studentId: z.string().uuid(),
+    attended: z.boolean().optional(),
+    rating: z.number().int().min(1).max(5).nullable().optional(),
+    feedback: z.string().trim().max(2000).nullable().optional(),
+  })
+  .refine(
+    (d) =>
+      d.attended !== undefined ||
+      d.rating !== undefined ||
+      d.feedback !== undefined,
+    { message: "Debes enviar al menos un campo a actualizar" }
+  );
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -61,18 +71,30 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!student)
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
 
-  // Upsert attendance
+  const updateSet: Record<string, unknown> = {};
+  if (parsed.data.attended !== undefined)
+    updateSet.attended = parsed.data.attended;
+  if (parsed.data.rating !== undefined) updateSet.rating = parsed.data.rating;
+  if (parsed.data.feedback !== undefined) {
+    updateSet.feedback = parsed.data.feedback;
+    updateSet.feedbackAt = new Date();
+  }
+
+  // Upsert attendance / rating / feedback
   await db
     .insert(sessionStudents)
     .values({
       sessionId,
       studentId: parsed.data.studentId,
-      attended: parsed.data.attended,
+      attended: parsed.data.attended ?? null,
+      rating: parsed.data.rating ?? null,
+      feedback: parsed.data.feedback ?? null,
+      feedbackAt: parsed.data.feedback !== undefined ? new Date() : null,
     })
     .onConflictDoUpdate({
       target: [sessionStudents.sessionId, sessionStudents.studentId],
-      set: { attended: parsed.data.attended },
+      set: updateSet,
     });
 
-  return NextResponse.json({ ok: true, attended: parsed.data.attended });
+  return NextResponse.json({ ok: true });
 }

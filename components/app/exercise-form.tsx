@@ -1105,51 +1105,7 @@ export function ExerciseForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Zap className="size-3.5" /> Intensidad
-                </span>
-                <span className="ml-1 font-normal text-muted-foreground">
-                  (1-5, opcional)
-                </span>
-              </label>
-              <Controller
-                name="intensity"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((n) => {
-                      const isSelected = field.value === n;
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => field.onChange(isSelected ? null : n)}
-                          className={cn(
-                            "size-10 rounded-xl border text-sm font-semibold transition-all duration-150",
-                            isSelected
-                              ? "bg-brand text-brand-foreground border-brand"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {n}
-                        </button>
-                      );
-                    })}
-                    {field.value != null ? (
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(null)}
-                        className="ml-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                      >
-                        Limpiar
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-              />
-            </div>
+            {/* Intensidad eliminada del UI según PMV 260506 — se mantiene en BD */}
 
             {isAdmin ? (
               <div className="space-y-2 border-t border-border/60 pt-2">
@@ -1166,10 +1122,10 @@ export function ExerciseForm({
                       />
                       <div className="flex-1">
                         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                          <Globe className="size-3.5" /> Ejercicio global
+                          <Globe className="size-3.5" /> Ejercicio biblioteca
                         </span>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Disponible para todos los usuarios de TenPlanner.
+                          Pasa a la biblioteca pública de Ten Planner.
                         </p>
                       </div>
                     </label>
@@ -1910,7 +1866,122 @@ export function ExerciseForm({
       </div>
 
       {formMode === "quick" ? (
-        basicSection
+        <section className="space-y-6">
+          <SectionHeader
+            icon={Dumbbell}
+            title="Información básica"
+            subtitle="Solo lo imprescindible: nombre, categoría y nivel"
+          />
+          {/* Nombre */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="quick-name"
+              className="block text-sm font-semibold text-foreground"
+            >
+              Nombre del ejercicio
+            </label>
+            <input
+              id="quick-name"
+              type="text"
+              placeholder="Ej: Bandeja cruzada de revés"
+              autoComplete="off"
+              aria-invalid={!!errors.name}
+              {...register("name")}
+              className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground font-medium"
+            />
+            {errors.name ? (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            ) : null}
+          </div>
+
+          {/* Categoría */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Categoría
+            </label>
+            <Controller
+              name="category"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {CATEGORIES.map(({ id, label }) => {
+                    const active = field.value === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => field.onChange(id)}
+                        className={cn(
+                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                          active
+                            ? "bg-brand/10 border-brand text-brand"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {errors.category ? (
+              <p className="text-xs text-destructive">
+                {errors.category.message as string}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Dificultad */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Dificultad
+            </label>
+            <Controller
+              name="difficulty"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {DIFFICULTIES.map(({ id, label }) => {
+                    const active = field.value === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => field.onChange(id)}
+                        className={cn(
+                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                          active
+                            ? "bg-brand/10 border-brand text-brand"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {errors.difficulty ? (
+              <p className="text-xs text-destructive">
+                {errors.difficulty.message as string}
+              </p>
+            ) : null}
+          </div>
+
+          <p className="text-xs text-muted-foreground italic">
+            ¿Necesitas más detalle? Cambia a{" "}
+            <button
+              type="button"
+              onClick={() => updateFormMode("full")}
+              className="font-semibold text-brand hover:underline"
+            >
+              modo Completo
+            </button>{" "}
+            cuando quieras.
+          </p>
+        </section>
       ) : (
         <div className="flex flex-col gap-5">
           <AccordionSection
@@ -1925,18 +1996,14 @@ export function ExerciseForm({
           </AccordionSection>
 
           <AccordionSection
-            title="Contenido pedagógico"
-            subtitle="Objetivos, descripción, pasos, variantes y recursos."
+            title="Descripción y objetivos"
+            subtitle="Qué se trabaja en este ejercicio y qué se busca."
             filled={pedagogicalFilled}
             total={6}
             open={expandedSections.pedagogical}
             onToggle={(next) => toggleAccordion("pedagogical", next)}
           >
-            <div className="flex flex-col gap-8">
-              {workSection}
-              {stepsSection}
-              {resourcesSection}
-            </div>
+            <div className="flex flex-col gap-8">{workSection}</div>
           </AccordionSection>
 
           <AccordionSection

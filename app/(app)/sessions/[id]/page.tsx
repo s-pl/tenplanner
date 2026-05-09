@@ -79,6 +79,8 @@ export default async function SessionPage({ params }: PageProps) {
           name: students.name,
           imageUrl: students.imageUrl,
           attended: sessionStudents.attended,
+          rating: sessionStudents.rating,
+          feedback: sessionStudents.feedback,
         })
         .from(sessionStudents)
         .innerJoin(students, eq(sessionStudents.studentId, students.id))

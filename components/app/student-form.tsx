@@ -14,6 +14,8 @@ import {
   Trophy,
   FileText,
   ImageIcon,
+  Phone,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +26,15 @@ type PlayerLevel =
   | "amateur"
   | "intermediate"
   | "advanced"
-  | "competitive";
+  | "competitive"
+  | "descubrimiento"
+  | "desarrollo"
+  | "consolidacion"
+  | "especializacion"
+  | "precompeticion"
+  | "competicion"
+  | "adultos_iniciacion"
+  | "adultos_medio_alto";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio").max(255),
@@ -51,13 +61,33 @@ const formSchema = z.object({
     .nullable(),
   dominantHand: z.enum(["left", "right"]).optional().nullable(),
   playerLevel: z
-    .enum(["beginner", "amateur", "intermediate", "advanced", "competitive"])
+    .enum([
+      "beginner",
+      "amateur",
+      "intermediate",
+      "advanced",
+      "competitive",
+      "descubrimiento",
+      "desarrollo",
+      "consolidacion",
+      "especializacion",
+      "precompeticion",
+      "competicion",
+      "adultos_iniciacion",
+      "adultos_medio_alto",
+    ])
     .optional()
     .nullable(),
   yearsExperience: z
     .union([z.coerce.number().int().min(0).max(80), z.literal("")])
     .optional()
     .nullable(),
+  yearStartedTennis: z
+    .union([z.coerce.number().int().min(1900).max(2100), z.literal("")])
+    .optional()
+    .nullable(),
+  phone: z.string().trim().max(32).optional().or(z.literal("")),
+  preferredSchedule: z.string().trim().max(500).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
   imageUrl: z.string().trim().max(1000).optional().or(z.literal("")),
 });
@@ -76,12 +106,29 @@ const HANDS: { id: DominantHand; label: string }[] = [
 ];
 
 const LEVELS: { id: PlayerLevel; label: string; desc: string }[] = [
-  { id: "beginner", label: "Principiante", desc: "Está aprendiendo" },
-  { id: "amateur", label: "Amateur", desc: "Juega casualmente" },
-  { id: "intermediate", label: "Intermedio", desc: "Tiene base técnica" },
-  { id: "advanced", label: "Avanzado", desc: "Juega con regularidad" },
-  { id: "competitive", label: "Competitivo", desc: "Compite en torneos" },
+  { id: "descubrimiento", label: "Descubrimiento", desc: "4-6 años" },
+  { id: "desarrollo", label: "Desarrollo", desc: "6-8 años" },
+  { id: "consolidacion", label: "Consolidación", desc: "8-10 años" },
+  { id: "especializacion", label: "Especialización", desc: "10-12 años" },
+  { id: "precompeticion", label: "Precompetición", desc: "12-14 años" },
+  { id: "competicion", label: "Competición", desc: "14-18 años" },
+  { id: "adultos_iniciacion", label: "Adultos iniciación", desc: "Empiezan" },
+  {
+    id: "adultos_medio_alto",
+    label: "Adultos medio-alto",
+    desc: "Con base técnica",
+  },
 ];
+
+// Niveles legacy que pueden venir en datos antiguos. Se muestran si están
+// activos pero no se ofrecen como nueva selección.
+const LEGACY_LEVEL_LABELS: Record<string, string> = {
+  beginner: "Principiante (legacy)",
+  amateur: "Amateur (legacy)",
+  intermediate: "Intermedio (legacy)",
+  advanced: "Avanzado (legacy)",
+  competitive: "Competitivo (legacy)",
+};
 
 export interface StudentFormProps {
   mode: "create" | "edit";
@@ -96,6 +143,9 @@ export interface StudentFormProps {
     dominantHand?: DominantHand | null;
     playerLevel?: PlayerLevel | null;
     yearsExperience?: number | null;
+    yearStartedTennis?: number | null;
+    phone?: string | null;
+    preferredSchedule?: string | null;
     notes?: string | null;
     imageUrl?: string | null;
   };
@@ -150,6 +200,9 @@ export function StudentForm({
       dominantHand: initialData?.dominantHand ?? null,
       playerLevel: initialData?.playerLevel ?? null,
       yearsExperience: initialData?.yearsExperience ?? "",
+      yearStartedTennis: initialData?.yearStartedTennis ?? "",
+      phone: initialData?.phone ?? "",
+      preferredSchedule: initialData?.preferredSchedule ?? "",
       notes: initialData?.notes ?? "",
       imageUrl: initialData?.imageUrl ?? "",
     },
@@ -180,6 +233,12 @@ export function StudentForm({
         values.yearsExperience === "" || values.yearsExperience == null
           ? null
           : Number(values.yearsExperience),
+      yearStartedTennis:
+        values.yearStartedTennis === "" || values.yearStartedTennis == null
+          ? null
+          : Number(values.yearStartedTennis),
+      phone: values.phone?.trim() || null,
+      preferredSchedule: values.preferredSchedule?.trim() || null,
       notes: values.notes?.trim() || null,
       imageUrl: values.imageUrl?.trim() || null,
     };
@@ -263,6 +322,32 @@ export function StudentForm({
               {errors.email && (
                 <p className="text-xs text-destructive">
                   {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="phone"
+                className="block text-sm font-semibold text-foreground"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="size-3.5" /> Teléfono
+                </span>
+                <span className="font-normal text-muted-foreground ml-1">
+                  (opcional)
+                </span>
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="+34 600 00 00 00"
+                {...register("phone")}
+                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              />
+              {errors.phone && (
+                <p className="text-xs text-destructive">
+                  {errors.phone.message as string}
                 </p>
               )}
             </div>
@@ -438,63 +523,135 @@ export function StudentForm({
             <Controller
               name="playerLevel"
               control={control}
-              render={({ field }) => (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                  {LEVELS.map(({ id, label, desc }) => {
-                    const isSelected = field.value === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => field.onChange(isSelected ? null : id)}
-                        className={cn(
-                          "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all duration-150",
-                          isSelected
-                            ? "bg-brand/10 border-brand"
-                            : "border-border hover:bg-muted"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-sm font-semibold",
-                            isSelected ? "text-brand" : "text-foreground"
-                          )}
-                        >
-                          {label}
+              render={({ field }) => {
+                const isLegacy =
+                  field.value && field.value in LEGACY_LEVEL_LABELS;
+                return (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                      {LEVELS.map(({ id, label, desc }) => {
+                        const isSelected = field.value === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() =>
+                              field.onChange(isSelected ? null : id)
+                            }
+                            className={cn(
+                              "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all duration-150",
+                              isSelected
+                                ? "bg-brand/10 border-brand"
+                                : "border-border hover:bg-muted"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "text-sm font-semibold",
+                                isSelected ? "text-brand" : "text-foreground"
+                              )}
+                            >
+                              {label}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {desc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {isLegacy && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Nivel actual:{" "}
+                        <span className="font-medium">
+                          {LEGACY_LEVEL_LABELS[field.value as string]}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                        . Selecciona uno nuevo para sustituirlo.
+                      </p>
+                    )}
+                  </div>
+                );
+              }}
             />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="yearsExperience"
+                className="block text-sm font-semibold text-foreground"
+              >
+                Años de experiencia{" "}
+                <span className="font-normal text-muted-foreground">
+                  (opcional)
+                </span>
+              </label>
+              <input
+                id="yearsExperience"
+                type="number"
+                min={0}
+                max={80}
+                placeholder="3"
+                {...register("yearsExperience")}
+                className="w-28 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              />
+              {errors.yearsExperience && (
+                <p className="text-xs text-destructive">
+                  {errors.yearsExperience.message as string}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="yearStartedTennis"
+                className="block text-sm font-semibold text-foreground"
+              >
+                Año en que empezó a jugar{" "}
+                <span className="font-normal text-muted-foreground">
+                  (opcional)
+                </span>
+              </label>
+              <input
+                id="yearStartedTennis"
+                type="number"
+                min={1900}
+                max={2100}
+                placeholder="2018"
+                {...register("yearStartedTennis")}
+                className="w-32 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              />
+              {errors.yearStartedTennis && (
+                <p className="text-xs text-destructive">
+                  {errors.yearStartedTennis.message as string}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">
             <label
-              htmlFor="yearsExperience"
+              htmlFor="preferredSchedule"
               className="block text-sm font-semibold text-foreground"
             >
-              Años de experiencia{" "}
-              <span className="font-normal text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-3.5" /> Horario preferente
+              </span>
+              <span className="font-normal text-muted-foreground ml-1">
                 (opcional)
               </span>
             </label>
             <input
-              id="yearsExperience"
-              type="number"
-              min={0}
-              max={80}
-              placeholder="3"
-              {...register("yearsExperience")}
-              className="w-28 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              id="preferredSchedule"
+              type="text"
+              maxLength={500}
+              placeholder="Ej: Martes y jueves por la tarde"
+              {...register("preferredSchedule")}
+              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
             />
-            {errors.yearsExperience && (
+            {errors.preferredSchedule && (
               <p className="text-xs text-destructive">
-                {errors.yearsExperience.message as string}
+                {errors.preferredSchedule.message as string}
               </p>
             )}
           </div>

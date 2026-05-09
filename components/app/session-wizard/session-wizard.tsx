@@ -30,6 +30,9 @@ interface SessionWizardProps {
   initialTitle?: string;
   initialObjective?: string;
   initialLocation?: string;
+  initialPlaceId?: string | null;
+  places?: { id: string; name: string }[];
+  monitorName?: string;
   allowDraftRestore?: boolean;
 }
 
@@ -104,15 +107,21 @@ function createInitialState({
   initialTitle,
   initialObjective,
   initialLocation,
+  initialPlaceId,
 }: Pick<
   SessionWizardProps,
-  "initialExercises" | "initialTitle" | "initialObjective" | "initialLocation"
+  | "initialExercises"
+  | "initialTitle"
+  | "initialObjective"
+  | "initialLocation"
+  | "initialPlaceId"
 >): WizardState {
   return {
     title: initialTitle ?? "",
     scheduledAt: defaultScheduledAt(),
     durationMinutes: 60,
     location: initialLocation ?? "",
+    placeId: initialPlaceId ?? null,
     objective: initialObjective ?? "",
     intensity: null,
     tags: [],
@@ -127,6 +136,7 @@ function toDraftPayload(state: WizardState): SessionDraftPayload {
     scheduledAt: state.scheduledAt,
     durationMinutes: state.durationMinutes,
     location: state.location,
+    placeId: state.placeId,
     objective: state.objective,
     intensity: state.intensity,
     tags: state.tags,
@@ -157,6 +167,10 @@ function sanitizeDraftPayload(
       typeof payload.location === "string"
         ? payload.location
         : fallback.location,
+    placeId:
+      typeof payload.placeId === "string" || payload.placeId === null
+        ? payload.placeId
+        : fallback.placeId,
     objective:
       typeof payload.objective === "string"
         ? payload.objective
@@ -185,6 +199,9 @@ export function SessionWizard({
   initialTitle,
   initialObjective,
   initialLocation,
+  initialPlaceId,
+  places = [],
+  monitorName,
   allowDraftRestore = true,
 }: SessionWizardProps) {
   const pathname = usePathname();
@@ -202,6 +219,7 @@ export function SessionWizard({
       initialTitle,
       initialObjective,
       initialLocation,
+      initialPlaceId,
     });
   }
   const baselineState = initialStateRef.current;
@@ -388,6 +406,7 @@ export function SessionWizard({
           intensity: state.intensity,
           tags: state.tags.length > 0 ? state.tags : null,
           location: state.location.trim() || null,
+          placeId: state.placeId,
           studentIds: state.studentIds,
           exercises: state.exercises.map((exercise) => ({
             exerciseId: exercise.exerciseId,
@@ -491,6 +510,8 @@ export function SessionWizard({
             state={state}
             update={update}
             errors={visibleErrors}
+            places={places}
+            monitorName={monitorName}
           />
         ) : (
           <StepExercises

@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import {
   sessions as sessionsTable,
+  sessionExercises,
   exercises as exercisesTable,
+  students as studentsTable,
 } from "@/db/schema";
 import { and, asc, count, desc, eq, gte, lt, sql } from "drizzle-orm";
 import {
@@ -13,7 +15,6 @@ import {
   ArrowUpRight,
   Plus,
   Clock,
-  Bot,
   Lock,
   CalendarClock,
   BookOpen,
@@ -21,16 +22,16 @@ import {
   MapPin,
   Radio,
   Target,
+  Heart,
+  GraduationCap,
+  Dumbbell,
+  Users,
+  Sparkles,
 } from "lucide-react";
-import { AiInsightsWidget } from "@/components/app/dashboard/ai-insights-widget";
 import { TimeGreeting } from "@/components/app/dashboard/time-greeting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { greetingForHour } from "@/lib/time-greeting";
-import {
-  areAiInsightsEnabled,
-  getBooleanSetting,
-  isDrPlannerEnabled,
-} from "@/lib/app-settings";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 function formatDayMonth(date: Date) {
   return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" })
@@ -140,41 +141,27 @@ function DashboardBodySkeleton() {
   );
 }
 
-function AiInsightsSkeleton() {
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between gap-4 border-b border-foreground/10 pb-2">
-        <Skeleton className="h-3 w-32 rounded-none" />
-        <Skeleton className="h-3 w-28 rounded-none" />
-      </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="border border-foreground/12 p-4">
-            <Skeleton className="h-3 w-16 rounded-none" />
-            <Skeleton className="mt-3 h-6 w-28 rounded-none" />
-            <Skeleton className="mt-3 h-3 w-40 rounded-none" />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 async function DashboardBody({
   userId,
-  drPlannerEnabled,
   sessionCreationEnabled,
 }: {
   userId: string;
-  drPlannerEnabled: boolean;
   sessionCreationEnabled: boolean;
 }) {
   const now = new Date();
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
+  const lastWeekStart = new Date(now);
+  lastWeekStart.setDate(now.getDate() - 7);
 
-  const [upcomingSessions, recentSessions, sessionStats, exerciseCount] =
-    await Promise.all([
+  const [
+    upcomingSessions,
+    sessionStats,
+    exerciseCount,
+    studentCount,
+    lastWeekMinutes,
+    mostUsedExercise,
+  ] = await Promise.all([
       db
         .select({
           id: sessionsTable.id,
@@ -194,23 +181,6 @@ async function DashboardBody({
         .limit(4),
       db
         .select({
-          id: sessionsTable.id,
-          title: sessionsTable.title,
-          scheduledAt: sessionsTable.scheduledAt,
-          durationMinutes: sessionsTable.durationMinutes,
-          location: sessionsTable.location,
-        })
-        .from(sessionsTable)
-        .where(
-          and(
-            eq(sessionsTable.userId, userId),
-            lt(sessionsTable.scheduledAt, now)
-          )
-        )
-        .orderBy(desc(sessionsTable.scheduledAt))
-        .limit(4),
-      db
-        .select({
           total: sql<number>`count(*)`,
           totalMinutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
           thisWeekCount: sql<number>`count(*) filter (where ${sessionsTable.scheduledAt} >= ${weekStart.toISOString()})`,
@@ -218,13 +188,76 @@ async function DashboardBody({
         .from(sessionsTable)
         .where(eq(sessionsTable.userId, userId)),
       db.select({ count: count() }).from(exercisesTable),
+      db
+        .select({ count: count() })
+        .from(studentsTable)
+        .where(eq(studentsTable.coachId, userId)),
+      db
+        .select({
+          minutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
+        })
+        .from(sessionsTable)
+        .where(
+          and(
+            eq(sessionsTable.userId, userId),
+            gte(sessionsTable.scheduledAt, lastWeekStart),
+            lt(sessionsTable.scheduledAt, now)
+          )
+        ),
+      db
+        .select({
+          name: exercisesTable.name,
+          uses: sql<number>`count(${sessionExercises.id})`,
+        })
+        .from(sessionExercises)
+        .innerJoin(
+          sessionsTable,
+          eq(sessionsTable.id, sessionExercises.sessionId)
+        )
+        .innerJoin(
+          exercisesTable,
+          eq(exercisesTable.id, sessionExercises.exerciseId)
+        )
+        .where(eq(sessionsTable.userId, userId))
+        .groupBy(exercisesTable.id, exercisesTable.name)
+        .orderBy(desc(sql`count(${sessionExercises.id})`))
+        .limit(1),
     ]);
 
   const totalSessions = Number(sessionStats[0]?.total ?? 0);
   const totalMinutes = Number(sessionStats[0]?.totalMinutes ?? 0);
   const thisWeekCount = Number(sessionStats[0]?.thisWeekCount ?? 0);
   const totalHours = Math.round(totalMinutes / 60);
+  const studentTotal = Number(studentCount[0]?.count ?? 0);
+  const lastWeekMin = Number(lastWeekMinutes[0]?.minutes ?? 0);
+  const topExercise = mostUsedExercise[0];
 
+  // Insight: 3 KPIs personalizados (PMV)
+  const insightStats = [
+    {
+      label: "Ejercicio más usado",
+      value: topExercise?.name ?? "—",
+      unit: topExercise ? `${topExercise.uses}×` : "sin datos",
+      icon: Sparkles,
+      isText: true,
+    },
+    {
+      label: "Tiempo en pista",
+      value: lastWeekMin,
+      unit: "min · semana pasada",
+      icon: Clock,
+      isText: false,
+    },
+    {
+      label: "Mis alumnos",
+      value: studentTotal,
+      unit: studentTotal === 1 ? "alumno" : "alumnos",
+      icon: Users,
+      isText: false,
+    },
+  ];
+
+  // Panorámica: 4 stats globales
   const stats = [
     {
       label: "Semana en curso",
@@ -241,7 +274,7 @@ async function DashboardBody({
       cue: "arsenal",
     },
     {
-      label: "Tiempo pista",
+      label: "Tiempo en pista",
       value: totalHours,
       unit: "horas",
       icon: Clock,
@@ -256,19 +289,8 @@ async function DashboardBody({
     },
   ];
 
+  // Herramientas: 5 accesos rápidos
   const actions = [
-    ...(drPlannerEnabled
-      ? [
-          {
-            href: "/sessions/dr-planner",
-            label: "Dr. Planner",
-            desc: "Diseña una sesión con contexto real",
-            tag: "IA",
-            icon: Bot,
-            accent: true,
-          },
-        ]
-      : []),
     ...(sessionCreationEnabled
       ? [
           {
@@ -277,15 +299,30 @@ async function DashboardBody({
             desc: "Construcción manual por bloques",
             tag: "PLAN",
             icon: Plus,
+            accent: true,
           },
         ]
       : []),
     {
-      href: "/exercises",
-      label: "Biblioteca",
-      desc: "Selecciona, filtra y reutiliza ejercicios",
-      tag: "LIB",
-      icon: Target,
+      href: "/exercises/new",
+      label: "Nuevo ejercicio",
+      desc: "Crea un ejercicio para tu biblioteca",
+      tag: "EJE",
+      icon: Dumbbell,
+    },
+    {
+      href: "/exercises?tab=favorites",
+      label: "Ejercicios favoritos",
+      desc: "Tus ejercicios marcados",
+      tag: "FAV",
+      icon: Heart,
+    },
+    {
+      href: "/classes?tab=favorites",
+      label: "Clases favoritas",
+      desc: "Plantillas listas para impartir",
+      tag: "CLA",
+      icon: GraduationCap,
     },
     {
       href: "/calendar",
@@ -298,11 +335,58 @@ async function DashboardBody({
 
   return (
     <div className="flex flex-col gap-10 md:gap-12">
-      <section aria-labelledby="stats-heading" className="flex flex-col gap-4">
+      {/* Insight: 3 KPIs */}
+      <section
+        aria-labelledby="insight-heading"
+        className="flex flex-col gap-4"
+      >
         <SectionTitle
-          id="stats-heading"
+          id="insight-heading"
           number="01"
-          title="Marcador operativo"
+          title="Insight"
+          meta="hoy mismo"
+        />
+        <div className="ink-panel grid grid-cols-1 border border-foreground/12 bg-card/90 sm:grid-cols-3">
+          {insightStats.map(({ label, value, unit, icon: Icon, isText }) => (
+            <div
+              key={label}
+              className="relative min-h-32 border-b border-r border-foreground/10 p-5 last:border-r-0 sm:[&:nth-child(3n)]:border-r-0 sm:border-b-0"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-[12px] text-foreground/72">{label}</p>
+                <Icon className="size-4 text-brand" strokeWidth={1.7} />
+              </div>
+              <div className="mt-5 flex items-end justify-between gap-3">
+                {isText ? (
+                  <span
+                    className="font-heading text-2xl leading-tight italic text-foreground line-clamp-2"
+                    title={String(value)}
+                  >
+                    {value}
+                  </span>
+                ) : (
+                  <span className="font-heading text-5xl leading-none text-foreground tabular-nums">
+                    {value}
+                  </span>
+                )}
+                <span className="pb-1 font-mono text-[10px] uppercase text-foreground/45 text-right">
+                  {unit}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Panorámica */}
+      <section
+        aria-labelledby="panoramica-heading"
+        className="flex flex-col gap-4"
+      >
+        <SectionTitle
+          id="panoramica-heading"
+          number="02"
+          title="Panorámica"
           meta="resumen vivo"
         />
 
@@ -337,7 +421,7 @@ async function DashboardBody({
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="flex flex-col gap-4">
           <div className="flex items-end justify-between gap-4">
-            <SectionTitle number="02" title="Horizonte de pista" />
+            <SectionTitle number="03" title="Horizonte" />
             <Link
               href="/sessions?filter=upcoming"
               className="group inline-flex items-center gap-1.5 font-mono text-[10px] uppercase text-foreground/55 transition-colors hover:text-brand"
@@ -414,7 +498,7 @@ async function DashboardBody({
 
         <aside className="flex flex-col gap-6">
           <div className="flex flex-col gap-4">
-            <SectionTitle number="03" title="Carril de decisiones" />
+            <SectionTitle number="04" title="Herramientas" />
             <div className="ink-panel border border-foreground/12 bg-card/90">
               {actions.map(({ href, label, desc, tag, icon: Icon, accent }) => (
                 <Link
@@ -455,33 +539,6 @@ async function DashboardBody({
             </div>
           </div>
 
-          {recentSessions.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <SectionTitle number="04" title="Archivo fresco" />
-              <ul className="border border-foreground/12 bg-card/70">
-                {recentSessions.map((session) => {
-                  const date = new Date(session.scheduledAt);
-                  return (
-                    <li
-                      key={session.id}
-                      className="grid grid-cols-[74px_1fr_auto] items-center gap-3 border-b border-foreground/10 px-4 py-3 last:border-b-0"
-                    >
-                      <span className="font-mono text-[10px] uppercase text-foreground/45 tabular-nums">
-                        {formatDayMonth(date)}
-                      </span>
-                      <p className="truncate text-[13px] italic text-foreground/82">
-                        {session.title}
-                      </p>
-                      <span className="font-mono text-[10px] tabular-nums text-foreground/35">
-                        {session.durationMinutes}&prime;
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
           <div className="ledger-surface border border-foreground/12 p-5">
             <p className="font-heading text-[15px] italic leading-relaxed text-foreground/58">
               &ldquo;La repetición no es memoria: es escultura. Cada sesión
@@ -510,12 +567,9 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ||
     "Coach";
   const now = new Date();
-  const [drPlannerEnabled, aiInsightsEnabled, sessionCreationEnabled] =
-    await Promise.all([
-      isDrPlannerEnabled(),
-      areAiInsightsEnabled(),
-      getBooleanSetting("feature.session_creation_enabled"),
-    ]);
+  const sessionCreationEnabled = await getBooleanSetting(
+    "feature.session_creation_enabled"
+  );
 
   return (
     <div className="relative min-h-full">
@@ -543,21 +597,7 @@ export default async function DashboardPage() {
                 </p>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[360px]">
-                {drPlannerEnabled ? (
-                  <Link
-                    href="/sessions/dr-planner"
-                    className="group inline-flex h-11 items-center justify-center gap-2 border border-brand/45 bg-brand/10 px-4 text-[13px] font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-foreground"
-                  >
-                    <Bot className="size-4" />
-                    Dr. Planner
-                  </Link>
-                ) : (
-                  <span className="inline-flex h-11 items-center justify-center gap-2 border border-foreground/12 bg-foreground/[0.03] px-4 text-[13px] font-semibold text-foreground/38">
-                    <Lock className="size-4" />
-                    IA próximamente
-                  </span>
-                )}
+              <div className="grid gap-2 lg:min-w-[220px]">
                 {sessionCreationEnabled ? (
                   <Link
                     href="/sessions/new"
@@ -579,16 +619,9 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        {drPlannerEnabled && aiInsightsEnabled && (
-          <Suspense fallback={<AiInsightsSkeleton />}>
-            <AiInsightsWidget coachId={user.id} />
-          </Suspense>
-        )}
-
         <Suspense fallback={<DashboardBodySkeleton />}>
           <DashboardBody
             userId={user.id}
-            drPlannerEnabled={drPlannerEnabled}
             sessionCreationEnabled={sessionCreationEnabled}
           />
         </Suspense>

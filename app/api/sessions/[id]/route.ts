@@ -224,6 +224,8 @@ export async function PUT(request: Request, context: RouteContext) {
       updateValues.intensity = sessionFields.intensity;
     if (sessionFields.location !== undefined)
       updateValues.location = sessionFields.location;
+    if (sessionFields.placeId !== undefined)
+      updateValues.placeId = sessionFields.placeId;
     if (tags !== undefined) {
       updateValues.tags =
         tags && tags.length > 0

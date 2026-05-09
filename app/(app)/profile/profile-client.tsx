@@ -355,10 +355,6 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 {user.email}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-brand/10 text-brand border border-brand/25 font-medium">
-                  <span className="size-1.5 rounded-full bg-brand" />
-                  {ROLES.find((r) => r.id === role)?.label ?? "—"}
-                </span>
                 <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-foreground/5 text-foreground/75 border border-foreground/15">
                   {LEVELS.find((l) => l.id === level)?.label ?? "—"}
                 </span>
@@ -479,29 +475,6 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 disabled
                 className="w-full h-10 bg-transparent border-0 border-b border-foreground/15 text-[15px] text-foreground/50 cursor-not-allowed tabular-nums"
               />
-            </div>
-          </div>
-
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
-              Rol
-            </p>
-            <div className="flex gap-0 border border-foreground/15 w-fit">
-              {ROLES.map((r, i) => (
-                <button
-                  key={r.id}
-                  onClick={() => setRole(r.id)}
-                  className={cn(
-                    "px-4 py-2.5 text-[13px] transition-colors",
-                    i > 0 && "border-l border-foreground/15",
-                    role === r.id
-                      ? "bg-brand text-brand-foreground font-semibold"
-                      : "text-foreground/65 hover:text-foreground hover:bg-foreground/[0.03]"
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
             </div>
           </div>
 

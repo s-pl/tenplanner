@@ -53,7 +53,7 @@ export function DraftStatusPill({
       ) : (
         <>
           <Check className="size-3" strokeWidth={2.5} />
-          Guardado · {savedAt ? formatRelative(savedAt) : ""}
+          Guardado automático {savedAt ? `· ${formatRelative(savedAt)}` : ""}
         </>
       )}
     </span>

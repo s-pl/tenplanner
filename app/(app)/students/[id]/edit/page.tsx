@@ -14,7 +14,15 @@ type PlayerLevel =
   | "amateur"
   | "intermediate"
   | "advanced"
-  | "competitive";
+  | "competitive"
+  | "descubrimiento"
+  | "desarrollo"
+  | "consolidacion"
+  | "especializacion"
+  | "precompeticion"
+  | "competicion"
+  | "adultos_iniciacion"
+  | "adultos_medio_alto";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -69,6 +77,9 @@ export default async function EditStudentPage({ params }: PageProps) {
             dominantHand: student.dominantHand as DominantHand | null,
             playerLevel: student.playerLevel as PlayerLevel | null,
             yearsExperience: student.yearsExperience,
+            yearStartedTennis: student.yearStartedTennis,
+            phone: student.phone,
+            preferredSchedule: student.preferredSchedule,
             notes: student.notes,
             imageUrl: student.imageUrl,
           }}

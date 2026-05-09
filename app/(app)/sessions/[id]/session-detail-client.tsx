@@ -20,6 +20,7 @@ import {
   Star,
   Play,
   Upload,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -72,6 +73,8 @@ export interface SessionStudentData {
   name: string;
   imageUrl: string | null;
   attended: boolean | null;
+  rating: number | null;
+  feedback: string | null;
 }
 
 export interface SessionExerciseData {
@@ -212,6 +215,13 @@ function StudentsSection({
   const [attendance, setAttendance] = useState<Record<string, boolean | null>>(
     () => Object.fromEntries(students.map((s) => [s.id, s.attended]))
   );
+  const [ratings, setRatings] = useState<Record<string, number | null>>(() =>
+    Object.fromEntries(students.map((s) => [s.id, s.rating]))
+  );
+  const [feedbacks, setFeedbacks] = useState<Record<string, string>>(() =>
+    Object.fromEntries(students.map((s) => [s.id, s.feedback ?? ""]))
+  );
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   async function toggleAttendance(studentId: string) {
@@ -225,6 +235,25 @@ function StudentsSection({
     });
     if (res.ok) setAttendance((prev) => ({ ...prev, [studentId]: next }));
     setSaving(null);
+  }
+
+  async function setRating(studentId: string, rating: number) {
+    const next = ratings[studentId] === rating ? null : rating;
+    setRatings((prev) => ({ ...prev, [studentId]: next }));
+    await fetch(`/api/sessions/${sessionId}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, rating: next }),
+    });
+  }
+
+  async function commitFeedback(studentId: string) {
+    const value = feedbacks[studentId] ?? "";
+    await fetch(`/api/sessions/${sessionId}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, feedback: value || null }),
+    });
   }
 
   const presentCount = Object.values(attendance).filter(Boolean).length;
@@ -247,54 +276,115 @@ function StudentsSection({
         ) : (
           students.map((s) => {
             const attended = attendance[s.id];
+            const rating = ratings[s.id];
+            const feedback = feedbacks[s.id] ?? "";
             const isSaving = saving === s.id;
+            const isOpen = expanded[s.id];
+            const hasNotes = (rating ?? 0) > 0 || feedback.trim().length > 0;
             return (
-              <div key={s.id} className="flex items-center gap-3 px-6 py-3">
-                {s.imageUrl ? (
-                  <Image
-                    src={s.imageUrl}
-                    alt={s.name}
-                    width={32}
-                    height={32}
-                    className="size-8 rounded-full object-cover shrink-0"
-                  />
-                ) : (
-                  <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
-                    {getInitials(s.name)}
-                  </span>
-                )}
-                <span className="flex-1 text-sm font-medium text-foreground truncate">
-                  {s.name}
-                </span>
-                <button
-                  onClick={() => toggleAttendance(s.id)}
-                  disabled={isSaving}
-                  aria-label={attended ? "Marcar ausente" : "Marcar presente"}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
-                    attended === true
-                      ? "bg-brand/10 border-brand/30 text-brand"
-                      : attended === false
-                        ? "bg-destructive/10 border-destructive/30 text-destructive"
-                        : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {isSaving ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : attended === true ? (
-                    <>
-                      <CheckCircle2 className="size-3" /> Presente
-                    </>
-                  ) : attended === false ? (
-                    <>
-                      <XCircle className="size-3" /> Ausente
-                    </>
+              <div key={s.id}>
+                <div className="flex items-center gap-3 px-6 py-3">
+                  {s.imageUrl ? (
+                    <Image
+                      src={s.imageUrl}
+                      alt={s.name}
+                      width={32}
+                      height={32}
+                      className="size-8 rounded-full object-cover shrink-0"
+                    />
                   ) : (
-                    <>
-                      <Circle className="size-3" /> Sin marcar
-                    </>
+                    <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
+                      {getInitials(s.name)}
+                    </span>
                   )}
-                </button>
+                  <span className="flex-1 text-sm font-medium text-foreground truncate">
+                    {s.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpanded((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
+                    }
+                    className={cn(
+                      "text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors",
+                      hasNotes
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {hasNotes ? "★ Notas" : "Notas"}
+                  </button>
+                  <button
+                    onClick={() => toggleAttendance(s.id)}
+                    disabled={isSaving}
+                    aria-label={attended ? "Marcar ausente" : "Marcar presente"}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
+                      attended === true
+                        ? "bg-brand/10 border-brand/30 text-brand"
+                        : attended === false
+                          ? "bg-destructive/10 border-destructive/30 text-destructive"
+                          : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : attended === true ? (
+                      <>
+                        <CheckCircle2 className="size-3" /> Presente
+                      </>
+                    ) : attended === false ? (
+                      <>
+                        <XCircle className="size-3" /> Ausente
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="size-3" /> Sin marcar
+                      </>
+                    )}
+                  </button>
+                </div>
+                {isOpen && (
+                  <div className="px-6 pb-4 pl-[60px] space-y-2 bg-muted/20">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setRating(s.id, n)}
+                          className={cn(
+                            "size-7 flex items-center justify-center transition-colors",
+                            (rating ?? 0) >= n
+                              ? "text-amber-500"
+                              : "text-muted-foreground/40 hover:text-amber-500/60"
+                          )}
+                          aria-label={`Valorar ${n} estrellas`}
+                        >
+                          <span className="text-base">★</span>
+                        </button>
+                      ))}
+                      {rating != null && (
+                        <span className="ml-2 text-[11px] text-muted-foreground">
+                          {rating}/5
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      rows={2}
+                      maxLength={2000}
+                      value={feedback}
+                      onChange={(e) =>
+                        setFeedbacks((prev) => ({
+                          ...prev,
+                          [s.id]: e.target.value,
+                        }))
+                      }
+                      onBlur={() => commitFeedback(s.id)}
+                      placeholder="Observaciones del alumno…"
+                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground placeholder:text-muted-foreground resize-none"
+                    />
+                  </div>
+                )}
               </div>
             );
           })
@@ -456,6 +546,13 @@ export function SessionDetailClient({
   const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusDialog, setStatusDialog] = useState<
+    | { kind: "complete" | "cancel"; note: string }
+    | null
+  >(null);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatDates, setRepeatDates] = useState<string[]>([""]);
+  const [repeating, setRepeating] = useState(false);
   const [exerciseRatings, setExerciseRatings] = useState<
     Record<string, number>
   >(() =>
@@ -489,13 +586,16 @@ export function SessionDetailClient({
   }
 
   async function handleStatusChange(
-    newStatus: "completed" | "cancelled" | "scheduled"
+    newStatus: "completed" | "cancelled" | "scheduled",
+    note?: string | null
   ) {
     setUpdatingStatus(true);
+    const body: Record<string, unknown> = { status: newStatus };
+    if (note !== undefined) body.statusNote = note;
     const res = await fetch(`/api/sessions/${session.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       setStatus(newStatus);
@@ -717,7 +817,7 @@ export function SessionDetailClient({
         {status !== "completed" && status !== "cancelled" && (
           <div className="flex flex-wrap items-center gap-2 border-b border-border/50 px-4 py-3 sm:px-6">
             <button
-              onClick={() => handleStatusChange("completed")}
+              onClick={() => setStatusDialog({ kind: "complete", note: "" })}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors disabled:opacity-50"
             >
@@ -729,12 +829,20 @@ export function SessionDetailClient({
               Marcar completada
             </button>
             <button
-              onClick={() => handleStatusChange("cancelled")}
+              onClick={() => setStatusDialog({ kind: "cancel", note: "" })}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive border border-destructive/30 bg-destructive/5 px-3 py-1.5 rounded-full hover:bg-destructive/15 transition-colors disabled:opacity-50"
             >
               <XCircle className="size-3" />
               Cancelar sesión
+            </button>
+            <button
+              onClick={() => setRepeatOpen(true)}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground border border-border bg-background px-3 py-1.5 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <CalendarClock className="size-3" />
+              Repetir en otras fechas
             </button>
           </div>
         )}
@@ -1163,6 +1271,173 @@ export function SessionDetailClient({
                   <Upload className="size-4" />
                 )}
                 Publicar plantilla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status note dialog */}
+      {statusDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          onClick={() => setStatusDialog(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-heading text-xl text-foreground">
+              {statusDialog.kind === "complete"
+                ? "Marcar como completada"
+                : "Cancelar sesión"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {statusDialog.kind === "complete"
+                ? "Anota cómo fue la sesión (opcional)."
+                : "Indica el motivo de la cancelación."}
+            </p>
+            <textarea
+              autoFocus
+              rows={4}
+              maxLength={2000}
+              value={statusDialog.note}
+              onChange={(e) =>
+                setStatusDialog({ ...statusDialog, note: e.target.value })
+              }
+              placeholder={
+                statusDialog.kind === "complete"
+                  ? "Buen ritmo, los alumnos respondieron bien…"
+                  : "Lluvia, lesión, ausencia del grupo…"
+              }
+              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground resize-none"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setStatusDialog(null)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={async () => {
+                  const targetStatus =
+                    statusDialog.kind === "complete" ? "completed" : "cancelled";
+                  await handleStatusChange(
+                    targetStatus,
+                    statusDialog.note.trim() || null
+                  );
+                  setStatusDialog(null);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl text-brand-foreground transition-colors disabled:opacity-60",
+                  statusDialog.kind === "complete"
+                    ? "bg-brand hover:bg-brand/90"
+                    : "bg-destructive hover:bg-destructive/90 text-white"
+                )}
+              >
+                {updatingStatus && <Loader2 className="size-4 animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Repeat dialog */}
+      {repeatOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          onClick={() => setRepeatOpen(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-heading text-xl text-foreground">
+              Repetir sesión
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Clona esta sesión (con sus ejercicios) en una o varias fechas.
+              Los alumnos asignados <em>no</em> se copian.
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {repeatDates.map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={d}
+                    onChange={(e) =>
+                      setRepeatDates((prev) =>
+                        prev.map((v, j) => (j === i ? e.target.value : v))
+                      )
+                    }
+                    className="flex-1 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 text-foreground"
+                  />
+                  {repeatDates.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRepeatDates((prev) =>
+                          prev.filter((_, j) => j !== i)
+                        )
+                      }
+                      className="size-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Quitar fecha"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRepeatDates((prev) => [...prev, ""])}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                + Añadir fecha
+              </button>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRepeatOpen(false)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={repeating}
+                onClick={async () => {
+                  const validDates = repeatDates
+                    .filter((d) => d.trim())
+                    .map((d) => new Date(d).toISOString());
+                  if (validDates.length === 0) return;
+                  setRepeating(true);
+                  const res = await fetch(
+                    `/api/sessions/${session.id}/repeat`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ dates: validDates }),
+                    }
+                  );
+                  setRepeating(false);
+                  if (res.ok) {
+                    setRepeatOpen(false);
+                    setRepeatDates([""]);
+                    router.push("/sessions");
+                    router.refresh();
+                  }
+                }}
+                className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-60"
+              >
+                {repeating && <Loader2 className="size-4 animate-spin" />}
+                Crear sesiones
               </button>
             </div>
           </div>

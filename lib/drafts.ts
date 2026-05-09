@@ -41,6 +41,7 @@ export interface SessionDraftPayload {
   scheduledAt: string;
   durationMinutes: number;
   location: string;
+  placeId: string | null;
   objective: string;
   intensity: number | null;
   tags: string[];

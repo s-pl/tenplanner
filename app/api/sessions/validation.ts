@@ -97,6 +97,7 @@ export const createSessionSchema = z.object({
   intensity: intensitySchema,
   tags: tagsSchema,
   location: locationSchema,
+  placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
   studentIds: studentIdsSchema,
   exercises: z.array(exerciseItemSchema).default([]),
 });
@@ -134,6 +135,7 @@ export const updateSessionSchema = z
     intensity: intensitySchema,
     tags: tagsSchema,
     location: locationSchema,
+    placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
     studentIds: z.array(z.string().uuid("ID de alumno inválido")).optional(),
     exercises: z.array(exerciseItemSchema).optional(),
   })

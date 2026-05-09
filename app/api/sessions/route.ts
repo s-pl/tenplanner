@@ -229,6 +229,7 @@ export async function POST(request: Request) {
     intensity,
     tags,
     location,
+    placeId,
     studentIds,
     exercises: exerciseItems,
   } = parsedBody.data;
@@ -303,6 +304,7 @@ export async function POST(request: Request) {
           intensity: intensity ?? null,
           tags: normalizedTags,
           location: location ?? null,
+          placeId: placeId ?? null,
         })
         .returning();
 

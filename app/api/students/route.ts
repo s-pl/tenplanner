@@ -87,6 +87,9 @@ export async function POST(request: Request) {
         dominantHand: d.dominantHand ?? null,
         playerLevel: d.playerLevel ?? null,
         yearsExperience: d.yearsExperience ?? null,
+        yearStartedTennis: d.yearStartedTennis ?? null,
+        phone: d.phone ? d.phone : null,
+        preferredSchedule: d.preferredSchedule ?? null,
         notes: d.notes ?? null,
         imageUrl: d.imageUrl ?? null,
       })

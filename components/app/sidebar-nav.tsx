@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   LayoutDashboard,
-  Bot,
   Plus,
   Lock,
   Heart,
@@ -23,6 +22,8 @@ import {
   Store,
   ShieldCheck,
   ChevronRight,
+  GraduationCap,
+  MapPin,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,8 @@ interface NavItem {
   publicAccess?: boolean;
   feature?: FeatureKey;
   submenu?: SubItem[];
+  /** Etiqueta usada para el primer ítem auto-generado del submenú (default "Ver todas") */
+  allLabel?: string;
 }
 
 const navItems: NavItem[] = [
@@ -63,6 +66,7 @@ const navItems: NavItem[] = [
     icon: Dumbbell,
     index: "02",
     publicAccess: true,
+    allLabel: "Ver todos",
     submenu: [
       { href: "/exercises", label: "Biblioteca", icon: BookOpen },
       { href: "/exercises?tab=mine", label: "Mis ejercicios", icon: Dumbbell },
@@ -76,10 +80,25 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    href: "/classes",
+    label: "Clases",
+    icon: GraduationCap,
+    index: "03",
+    publicAccess: true,
+    allLabel: "Ver todas",
+    submenu: [
+      { href: "/classes", label: "Biblioteca", icon: BookOpen },
+      { href: "/classes?tab=mine", label: "Mis clases", icon: GraduationCap },
+      { href: "/classes?tab=favorites", label: "Favoritos", icon: Heart },
+      { href: "/classes/new", label: "Nueva clase", icon: Plus },
+    ],
+  },
+  {
     href: "/sessions",
     label: "Sesiones",
     icon: ClipboardList,
-    index: "03",
+    index: "04",
+    allLabel: "Ver todas",
     submenu: [
       { href: "/sessions", label: "Mis sesiones", icon: ClipboardList },
       {
@@ -89,23 +108,6 @@ const navItems: NavItem[] = [
         feature: "sessionTemplates",
       },
       { href: "/sessions/new", label: "Nueva sesión", icon: Plus },
-      {
-        href: "/sessions/dr-planner",
-        label: "Dr. Planner",
-        icon: Bot,
-        accent: true,
-        feature: "drPlanner",
-      },
-    ],
-  },
-  {
-    href: "/students",
-    label: "Alumnos",
-    icon: Users,
-    index: "04",
-    submenu: [
-      { href: "/students", label: "Lista de alumnos", icon: Users },
-      { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
     ],
   },
   {
@@ -115,7 +117,19 @@ const navItems: NavItem[] = [
     index: "05",
     feature: "calendar",
   },
-  { href: "/profile", label: "Perfil", icon: UserCircle, index: "06" },
+  {
+    href: "/students",
+    label: "Alumnos",
+    icon: Users,
+    index: "06",
+    allLabel: "Ver todos",
+    submenu: [
+      { href: "/students", label: "Lista de alumnos", icon: Users },
+      { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
+    ],
+  },
+  { href: "/places", label: "Lugares", icon: MapPin, index: "07" },
+  { href: "/profile", label: "Perfil", icon: UserCircle, index: "08" },
 ];
 
 interface SidebarNavProps {
@@ -219,6 +233,7 @@ function NavContent({
               index,
               publicAccess,
               feature,
+              allLabel,
             }) => {
               const isActive =
                 pathname === href || pathname.startsWith(href + "/");
@@ -342,7 +357,7 @@ function NavContent({
                                 : "text-foreground/55 hover:text-foreground"
                             )}
                           >
-                            <span>Ver todas</span>
+                            <span>{allLabel ?? "Ver todas"}</span>
                           </Link>
                         </li>
                         {submenu.map(

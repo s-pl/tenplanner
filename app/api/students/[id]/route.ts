@@ -91,6 +91,8 @@ export async function PUT(request: Request, context: StudentRouteContext) {
       "dominantHand",
       "playerLevel",
       "yearsExperience",
+      "yearStartedTennis",
+      "preferredSchedule",
       "notes",
       "imageUrl",
     ] as const;
@@ -103,6 +105,9 @@ export async function PUT(request: Request, context: StudentRouteContext) {
 
     if (d.email !== undefined) {
       updateValues.email = d.email === "" ? null : d.email;
+    }
+    if (d.phone !== undefined) {
+      updateValues.phone = d.phone === "" ? null : d.phone;
     }
 
     const [updated] = await db

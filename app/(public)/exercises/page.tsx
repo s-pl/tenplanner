@@ -82,9 +82,9 @@ const TABS = ["all", "global", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
-  all: "Todos",
-  global: "Globales",
-  mine: "Propios",
+  all: "Ver todos",
+  global: "Biblioteca",
+  mine: "Mis ejercicios",
   favorites: "Favoritos",
   drafts: "Borradores",
 };
