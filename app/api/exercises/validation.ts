@@ -41,17 +41,74 @@ export const tipoPelotaSchema = z.enum([
 export const GOLPES_VALUES = [
   "derecha",
   "reves",
+  "saque",
+  "volea",
+  "remate",
+  "dejada",
   "globo",
+  // Legacy values still accepted for backwards compatibility:
   "smash",
   "bandeja",
   "volea_dcha",
   "volea_rev",
   "bajada_pared",
   "vibora",
-  "saque",
   "chiquita",
-  "dejada",
 ] as const;
+
+export const NIVEL_PMV_VALUES = [
+  "descubrimiento",
+  "desarrollo",
+  "consolidacion",
+  "especializacion",
+  "precompeticion",
+  "competicion",
+  "adultos_iniciacion",
+  "adultos_medio_alto",
+] as const;
+
+export const ASPECTO_JUEGO_VALUES = [
+  "tecnica",
+  "tactica",
+  "mental",
+  "fisico",
+] as const;
+
+export const PARAMETRO_VALUES = [
+  "altura",
+  "profundidad",
+  "velocidad",
+  "direccion",
+] as const;
+
+export const TIPOLOGIA_VALUES = ["juego", "reto", "otros_deportes"] as const;
+
+export const DURACION_RANGO_VALUES = [
+  "1-5",
+  "5-10",
+  "10-15",
+  "15-20",
+  "+20",
+] as const;
+
+export const nivelPmvSchema = z.enum(NIVEL_PMV_VALUES);
+export const aspectoJuegoSchema = z.enum(ASPECTO_JUEGO_VALUES);
+export const parametroSchema = z.enum(PARAMETRO_VALUES);
+export const tipologiaSchema = z.enum(TIPOLOGIA_VALUES);
+export const duracionRangoSchema = z.enum(DURACION_RANGO_VALUES);
+
+export const LOCATION_VALUES = [
+  "pista",
+  "pared",
+  "playa",
+  "casa",
+  // Legacy:
+  "indoor",
+  "outdoor",
+  "any",
+] as const;
+
+export const locationSchema = z.enum(LOCATION_VALUES);
 
 export const EFECTO_VALUES = [
   "liftado",
@@ -107,9 +164,14 @@ export const exercisesListQuerySchema = z.object({
     .optional(),
   minDuracion: z.coerce.number().int().min(1).optional(),
   maxDuracion: z.coerce.number().int().min(1).optional(),
-  location: z.enum(["indoor", "outdoor", "any"]).optional(),
+  location: locationSchema.optional(),
   phase: trainingPhaseSchema.optional(),
   intensity: z.coerce.number().int().min(1).max(5).optional(),
+  nivel: nivelPmvSchema.optional(),
+  aspectoJuego: aspectoJuegoSchema.optional(),
+  parametro: parametroSchema.optional(),
+  tipologia: tipologiaSchema.optional(),
+  duracionRango: duracionRangoSchema.optional(),
 });
 
 export const createExerciseSchema = z.object({
@@ -125,7 +187,7 @@ export const createExerciseSchema = z.object({
   objectives: descriptionSchema.optional().nullable(),
   tips: descriptionSchema.optional().nullable(),
   imageUrl: z.string().max(1000).optional().nullable(),
-  location: z.enum(["indoor", "outdoor", "any"]).optional().nullable(),
+  location: locationSchema.optional().nullable(),
   videoUrl: z.string().max(500).optional().nullable(),
   phase: trainingPhaseSchema.optional().nullable(),
   intensity: z
@@ -136,7 +198,7 @@ export const createExerciseSchema = z.object({
     .optional()
     .nullable(),
   formato: ejercicioFormatoSchema.optional().nullable(),
-  numJugadores: z.number().int().min(1).max(20).optional().nullable(),
+  numJugadores: z.number().int().min(1).max(6).optional().nullable(),
   tipoPelota: tipoPelotaSchema.optional().nullable(),
   tipoActividad: tipoActividadSchema.optional().nullable(),
   golpes: z.array(golpeSchema).max(15).optional().nullable(),
@@ -144,6 +206,11 @@ export const createExerciseSchema = z.object({
   variantes: z.string().trim().max(2000).optional().nullable(),
   imageUrls: z.array(z.string().url().max(1000)).max(4).optional().nullable(),
   isGlobal: z.boolean().optional(),
+  nivel: nivelPmvSchema.optional().nullable(),
+  aspectoJuego: aspectoJuegoSchema.optional().nullable(),
+  parametro: parametroSchema.optional().nullable(),
+  tipologia: tipologiaSchema.optional().nullable(),
+  duracionRango: duracionRangoSchema.optional().nullable(),
   steps: z
     .array(
       z.object({

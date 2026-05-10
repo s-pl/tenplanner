@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Clock,
   MapPin,
+  Repeat,
   Tag,
   Users,
   Zap,
@@ -297,12 +298,170 @@ export function StepConfiguration({
             </div>
           )}
         </div>
+
+        {/* Recurrencia (PMV: "todos los lunes…") */}
+        <RecurrenceBlock state={state} update={update} />
       </div>
 
       {/* Right: live preview (desktop only) */}
       <div className="hidden lg:block">
         <SessionPreview state={state} />
       </div>
+    </div>
+  );
+}
+
+const WEEKDAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
+// Map from display index (Monday-first) to JS Date getDay value (Sunday=0).
+const WEEKDAY_TO_JSDAY = [1, 2, 3, 4, 5, 6, 0];
+
+function RecurrenceBlock({
+  state,
+  update,
+}: {
+  state: WizardState;
+  update: (patch: Partial<WizardState>) => void;
+}) {
+  const r = state.recurrence;
+  const scheduled = new Date(state.scheduledAt);
+  const baseWeekday = isNaN(scheduled.getTime())
+    ? null
+    : scheduled.getDay();
+
+  function toggleEnabled(next: boolean) {
+    update({
+      recurrence: {
+        ...r,
+        enabled: next,
+        weekdays:
+          r.weekdays.length === 0 && baseWeekday !== null
+            ? [baseWeekday]
+            : r.weekdays,
+      },
+    });
+  }
+
+  function toggleWeekday(jsDay: number) {
+    const has = r.weekdays.includes(jsDay);
+    update({
+      recurrence: {
+        ...r,
+        weekdays: has
+          ? r.weekdays.filter((d) => d !== jsDay)
+          : [...r.weekdays, jsDay],
+      },
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => toggleEnabled(!r.enabled)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+      >
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <Repeat className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">
+            Repetir sesión
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {r.enabled
+              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " · varios días" : ""}`
+              : "Crea esta misma sesión los próximos días que indiques"}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "inline-flex h-6 w-11 items-center rounded-full border transition-colors",
+            r.enabled
+              ? "bg-brand border-brand"
+              : "bg-muted border-border"
+          )}
+        >
+          <span
+            className={cn(
+              "size-5 rounded-full bg-background transition-transform",
+              r.enabled ? "translate-x-5" : "translate-x-0.5"
+            )}
+          />
+        </span>
+      </button>
+
+      {r.enabled && (
+        <div className="border-t border-border px-4 py-4 space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Días de la semana
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAY_LABELS.map((label, i) => {
+                const jsDay = WEEKDAY_TO_JSDAY[i];
+                const active = r.weekdays.includes(jsDay);
+                return (
+                  <button
+                    key={jsDay}
+                    type="button"
+                    onClick={() => toggleWeekday(jsDay)}
+                    className={cn(
+                      "size-9 rounded-lg border text-sm font-semibold transition-colors",
+                      active
+                        ? "bg-brand text-brand-foreground border-brand"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {r.weekdays.length === 0 && baseWeekday !== null && (
+              <p className="text-[11px] text-muted-foreground mt-2 italic">
+                Si no eliges días, se usará el mismo día que la primera sesión.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="recurrence-weeks"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+            >
+              Durante cuántas semanas
+            </label>
+            <input
+              id="recurrence-weeks"
+              type="number"
+              min={2}
+              max={52}
+              value={r.weeks}
+              onChange={(e) =>
+                update({
+                  recurrence: {
+                    ...r,
+                    weeks: Math.min(
+                      52,
+                      Math.max(2, parseInt(e.target.value, 10) || 2)
+                    ),
+                  },
+                })
+              }
+              className="w-24 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+            />
+            <span className="ml-2 text-xs text-muted-foreground">
+              semanas (incluida la primera)
+            </span>
+          </div>
+
+          <p className="text-[12px] text-muted-foreground italic">
+            Se crearán automáticamente todas las sesiones para los días
+            seleccionados. Después podrás editarlas o cancelarlas
+            individualmente.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -412,14 +412,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     favorites: favIdArray.length,
     drafts: draftCount,
   };
-  const masthead = {
-    eyebrow: "Método · Catálogo",
-    accent: "Biblioteca",
-    suffix: "de ejercicios",
-    description:
-      "Una colección viva: ejercicios globales, propios y generados con criterio. Aquí se edita el lenguaje del método.",
-    statusLabel: `${tabCounts.all.toString().padStart(3, "0")} ejercicios visibles`,
-  };
 
   const advancedParams: Record<string, string | string[] | undefined> = {
     formato: activeFormato,
@@ -493,60 +485,46 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
-        {/* ─── Masthead ─── */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              {masthead.eyebrow}
-            </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {masthead.statusLabel}
+      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-5 border-b border-border">
+          <div>
+            <h1 className="font-heading text-3xl font-semibold text-foreground">
+              Ejercicios
+            </h1>
+            <p className="mt-1.5 text-[14px] text-foreground/60 max-w-prose">
+              Biblioteca de ejercicios sueltos, etiquetados por nivel,
+              categoría y duración.
             </p>
           </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
-            <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">{masthead.accent}</em>{" "}
-                {masthead.suffix}
-              </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                {masthead.description}
-              </p>
-            </div>
-            {user && exerciseCreationEnabled ? (
-              <div className="flex w-full items-center gap-2 sm:w-auto md:shrink-0">
-                <Link
-                  href="/exercises/new"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors sm:w-auto"
-                >
-                  <Plus className="size-4" /> Añadir ejercicio
-                </Link>
-              </div>
-            ) : user ? (
-              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-foreground/15 px-4 py-2.5 text-[13px] text-foreground/35 sm:w-auto md:shrink-0">
-                <Lock className="size-3.5" strokeWidth={1.8} /> Creación
-                desactivada
-              </span>
-            ) : (
-              <Link
-                href="/login"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-foreground/20 text-foreground/50 px-4 py-2.5 text-[13px] hover:border-foreground/40 hover:text-foreground/70 transition-colors sm:w-auto md:shrink-0"
-              >
-                <Lock className="size-3.5" strokeWidth={1.8} /> Inicia sesión
-                para añadir
-              </Link>
-            )}
-          </div>
+          {user && exerciseCreationEnabled ? (
+            <Link
+              href="/exercises/new"
+              className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+            >
+              <Plus className="size-4" />
+              Nuevo ejercicio
+            </Link>
+          ) : user ? (
+            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/30 px-4 h-10 text-[13px] text-foreground/40">
+              <Lock className="size-4" />
+              Bloqueado
+            </span>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-4 h-10 text-[13px] text-foreground/65 hover:border-brand/40 hover:text-brand transition-colors"
+            >
+              <Lock className="size-3.5" />
+              Inicia sesión para añadir
+            </Link>
+          )}
         </header>
 
         <>
-          {/* ─── Tabs (propiedad) ─── */}
-          <nav className="flex items-end gap-6 overflow-x-auto border-b border-foreground/15 pb-px sm:gap-8">
+          {/* Tabs */}
+          <nav className="flex flex-wrap gap-1 border-b border-border">
             {TABS.map((t) => {
               if (t === "global" && !publicExercisesEnabled) return null;
-              // Hide drafts tab for unauthenticated users
               if (t === "drafts" && !user) return null;
 
               const isActive = activeTab === t;
@@ -557,12 +535,10 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   <Link
                     key={t}
                     href="/login"
-                    className="group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 border-transparent pb-3 text-foreground/35 hover:text-foreground/50 transition-colors"
+                    className="px-4 py-2.5 text-sm font-medium text-foreground/35 -mb-px border-b-2 border-transparent hover:text-foreground/55 transition-colors inline-flex items-center gap-1.5"
                   >
-                    <span className="text-[15px] flex items-center gap-1">
-                      <Lock className="size-3 inline" strokeWidth={1.8} />
-                      {TAB_LABELS[t]}
-                    </span>
+                    <Lock className="size-3" strokeWidth={1.8} />
+                    {TAB_LABELS[t]}
                   </Link>
                 );
               }
@@ -576,22 +552,18 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     q: searchTerm || undefined,
                     tab: t,
                   })}
-                  className={`group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 pb-3 transition-colors ${
+                  className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
                     isActive
-                      ? "border-brand"
-                      : "border-transparent hover:border-foreground/25"
+                      ? "border-brand text-brand"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <span
-                    className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
-                  >
-                    {TAB_LABELS[t]}
-                  </span>
-                  <span
-                    className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
-                  >
-                    ({tabCounts[t].toString().padStart(2, "0")})
-                  </span>
+                  {TAB_LABELS[t]}
+                  {tabCounts[t] > 0 && (
+                    <span className="ml-1.5 text-[11px] tabular-nums text-foreground/45">
+                      {tabCounts[t]}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -890,38 +862,34 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 )}
               </div>
 
-              {/* ─── Grid ─── */}
               {filtered.length === 0 ? (
-                <div className="border-t border-b border-foreground/15 py-20 text-center">
-                  <p className="font-heading italic text-2xl text-foreground/80 mb-2">
-                    Sin coincidencias.
+                <div className="border border-dashed border-border rounded-lg py-16 text-center">
+                  <p className="text-[15px] font-medium text-foreground mb-2">
+                    Sin coincidencias
                   </p>
-                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
+                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-4">
                     {searchTerm
-                      ? `Nada para «${searchTerm}» con los filtros actuales.`
+                      ? `No hay ejercicios para "${searchTerm}".`
                       : "Prueba con otra combinación."}
                   </p>
                   <Link
                     href={buildHref({ tab: activeTab })}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors pb-0.5"
+                    className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline"
                   >
                     Limpiar filtros
                   </Link>
                 </div>
               ) : (
                 <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {filtered.map((exercise, idx) => {
+                  {filtered.map((exercise) => {
                     const catLabel =
                       CATEGORY_LABEL[exercise.category as Category];
-                    const catCode =
-                      CATEGORY_CODE[exercise.category as Category];
                     const diffLabel =
                       DIFFICULTY_LABEL[exercise.difficulty as Difficulty];
                     const diffBars =
                       DIFFICULTY_BARS[exercise.difficulty as Difficulty];
                     const steps = Number(exercise.stepsCount ?? 0);
                     const materials = Number(exercise.materialsCount ?? 0);
-                    const globalIdx = offset + idx + 1;
 
                     let owner: {
                       label: string;
@@ -949,9 +917,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         key={exercise.id}
                         className="flex flex-col overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
                       >
-                        <div className="flex items-center justify-between px-4 pb-0 pt-5 sm:px-6">
-                          <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
-                            № {String(globalIdx).padStart(3, "0")}
+                        <div className="flex items-center justify-between px-4 pb-0 pt-4 sm:px-5">
+                          <span className="text-[11px] font-medium text-foreground/55 tabular-nums">
+                            {exercise.durationMinutes} min
                           </span>
                           <div className="flex items-center gap-2.5">
                             {owner && (
@@ -983,15 +951,15 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           href={`/exercises/${exercise.id}`}
                           className="group block flex-1 px-4 pb-6 pt-3 transition-colors hover:bg-brand/[0.025] sm:px-6"
                         >
-                          <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-brand mb-1.5">
-                            {catCode} · {catLabel}
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-brand mb-2">
+                            {catLabel}
                           </p>
-                          <h3 className="font-heading text-[20px] leading-[1.2] text-foreground mb-2">
+                          <h3 className="font-heading text-[18px] font-semibold leading-snug text-foreground mb-2">
                             {exercise.name}
                           </h3>
 
                           {exercise.description && (
-                            <p className="text-[12.5px] text-foreground/60 italic leading-relaxed line-clamp-2 mb-5">
+                            <p className="text-[12.5px] text-foreground/60 leading-relaxed line-clamp-2 mb-5">
                               {exercise.description}
                             </p>
                           )}

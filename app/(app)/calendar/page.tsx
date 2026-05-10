@@ -69,25 +69,14 @@ export default async function CalendarPage() {
 
   return (
     <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-8">
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
-              Agenda · Calendario
-            </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
-              № {String(total).padStart(3, "0")}
-            </p>
-          </div>
-          <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-            Tu <em className="italic text-brand">calendario</em>,
-            <br />
-            de un vistazo.
+      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
+        <header className="pb-5 border-b border-border">
+          <h1 className="font-heading text-3xl font-semibold text-foreground">
+            Calendario
           </h1>
-          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
+          <p className="text-[14px] text-foreground/60 mt-1.5">
             {total} sesión{total !== 1 ? "es" : ""} planificada
-            {total !== 1 ? "s" : ""} · navega por semana o mes y revisa qué
-            viene.
+            {total !== 1 ? "s" : ""}.
           </p>
         </header>
         {total === 0 ? (

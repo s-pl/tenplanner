@@ -227,6 +227,11 @@ export async function POST(request: Request) {
         imageUrls: rest.imageUrls ?? null,
         steps: rest.steps ?? null,
         materials: rest.materials ?? null,
+        nivel: rest.nivel ?? null,
+        aspectoJuego: rest.aspectoJuego ?? null,
+        parametro: rest.parametro ?? null,
+        tipologia: rest.tipologia ?? null,
+        duracionRango: rest.duracionRango ?? null,
         isGlobal: isAdmin && requestedIsGlobal === true,
         createdBy: user.id,
       })

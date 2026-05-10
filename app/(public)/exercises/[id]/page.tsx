@@ -101,7 +101,12 @@ export default async function ExercisePage({ params }: PageProps) {
           }> | null) ?? null,
         materials: (exercise.materials as string[] | null) ?? null,
         location:
-          (exercise.location as "indoor" | "outdoor" | "any" | null) ?? null,
+          (exercise.location as
+            | "pista"
+            | "pared"
+            | "playa"
+            | "casa"
+            | null) ?? null,
         videoUrl: exercise.videoUrl ?? null,
         tips: exercise.tips ?? null,
         imageUrl: exercise.imageUrl ?? null,

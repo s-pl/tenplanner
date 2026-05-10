@@ -127,6 +127,12 @@ function createInitialState({
     tags: [],
     studentIds: [],
     exercises: initialExercises ?? [],
+    recurrence: {
+      enabled: false,
+      frequency: "weekly",
+      weeks: 4,
+      weekdays: [],
+    },
   };
 }
 
@@ -190,6 +196,7 @@ function sanitizeDraftPayload(
     exercises: Array.isArray(payload.exercises)
       ? payload.exercises.filter(isWizardExercise)
       : fallback.exercises,
+    recurrence: fallback.recurrence,
   };
 }
 
@@ -393,30 +400,70 @@ export function SessionWizard({
     setServerError(null);
 
     try {
-      const scheduledIso = new Date(state.scheduledAt).toISOString();
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: state.title.trim(),
-          description: null,
-          scheduledAt: scheduledIso,
-          durationMinutes: state.durationMinutes,
-          objective: state.objective.trim() || null,
-          intensity: state.intensity,
-          tags: state.tags.length > 0 ? state.tags : null,
-          location: state.location.trim() || null,
-          placeId: state.placeId,
-          studentIds: state.studentIds,
-          exercises: state.exercises.map((exercise) => ({
-            exerciseId: exercise.exerciseId,
-            durationMinutes: exercise.overrideDuration ?? null,
-            notes: exercise.notes.trim() || null,
-            phase: exercise.phase,
-            intensity: exercise.intensity,
-          })),
-        }),
-      });
+      const scheduledDate = new Date(state.scheduledAt);
+      const scheduledIso = scheduledDate.toISOString();
+
+      // Compute the list of dates: original + recurring ones if enabled.
+      const dates: string[] = [scheduledIso];
+      if (state.recurrence.enabled && state.recurrence.weeks > 1) {
+        const weekdays =
+          state.recurrence.weekdays.length > 0
+            ? state.recurrence.weekdays
+            : [scheduledDate.getDay()];
+
+        // Generate every weekday occurrence within the configured number of
+        // weeks, starting from the same hour on the original day.
+        for (let w = 0; w < state.recurrence.weeks; w++) {
+          for (const wd of weekdays) {
+            const d = new Date(scheduledDate);
+            // Move to the start of week of scheduledDate
+            const diff = wd - scheduledDate.getDay() + w * 7;
+            d.setDate(scheduledDate.getDate() + diff);
+            const iso = d.toISOString();
+            // Skip past dates (before the original) and the original itself.
+            if (d.getTime() <= scheduledDate.getTime()) continue;
+            if (!dates.includes(iso)) dates.push(iso);
+          }
+        }
+        dates.sort();
+      }
+
+      const exercisesPayload = state.exercises.map((exercise) => ({
+        exerciseId: exercise.exerciseId,
+        durationMinutes: exercise.overrideDuration ?? null,
+        notes: exercise.notes.trim() || null,
+        phase: exercise.phase,
+        intensity: exercise.intensity,
+      }));
+
+      // Submit all sessions sequentially. If any fails we stop and report.
+      let res: Response | null = null;
+      for (const iso of dates) {
+        res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: state.title.trim(),
+            description: null,
+            scheduledAt: iso,
+            durationMinutes: state.durationMinutes,
+            objective: state.objective.trim() || null,
+            intensity: state.intensity,
+            tags: state.tags.length > 0 ? state.tags : null,
+            location: state.location.trim() || null,
+            placeId: state.placeId,
+            studentIds: state.studentIds,
+            exercises: exercisesPayload,
+          }),
+        });
+        if (!res.ok) break;
+      }
+
+      // Use the last response for downstream handling so failures bubble up.
+      if (!res) {
+        setServerError("No se pudo crear la sesión.");
+        return;
+      }
 
       const data = (await res.json().catch(() => ({}))) as {
         details?: Array<{ message: string }>;

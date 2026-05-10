@@ -94,17 +94,14 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4 border-b border-border pb-4">
+      <div className="flex items-end justify-between gap-4 border-b border-border pb-5 flex-wrap">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-1">
-            № 07
-          </p>
-          <h1 className="font-heading text-3xl sm:text-4xl italic text-foreground leading-tight">
+          <h1 className="font-heading text-3xl font-semibold text-foreground">
             Lugares
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 max-w-prose">
-            Pistas, salas, gimnasios… Lo que uses al impartir. Aparecerán como
-            opción al crear una sesión.
+          <p className="text-[14px] text-foreground/60 mt-1.5 max-w-prose">
+            Pistas, salas, gimnasios. Aparecerán como opción al crear una
+            sesión.
           </p>
         </div>
         {edit.mode === "idle" && (
@@ -114,9 +111,10 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
               setError(null);
               setEdit({ mode: "create" });
             }}
-            className="inline-flex shrink-0 items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all duration-150"
+            className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
           >
-            <Plus className="size-4" /> Nuevo lugar
+            <Plus className="size-4" />
+            Nuevo lugar
           </button>
         )}
       </div>
@@ -213,45 +211,34 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
       )}
 
       {places.length === 0 && edit.mode === "idle" ? (
-        <div className="border border-dashed border-border bg-card/40 px-6 py-16 text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-muted-foreground/60 mb-3">
-            Inventario · vacío
+        <div className="border border-dashed border-border rounded-lg bg-card/40 px-6 py-16 text-center">
+          <p className="text-[15px] font-medium text-foreground mb-2">
+            Aún no has creado ningún lugar
           </p>
-          <p className="font-heading italic text-2xl text-foreground/70 max-w-md mx-auto">
-            Aún no has creado ningún lugar.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            Crea “Pista 1”, “Pista 2” o lo que uses para tus sesiones.
+          <p className="text-[13px] text-foreground/55 max-w-md mx-auto">
+            Crea &quot;Pista 1&quot;, &quot;Pista 2&quot; o lo que uses para tus
+            sesiones.
           </p>
         </div>
       ) : (
         <ul
           className={cn(
-            "grid gap-px bg-border border border-border",
+            "grid gap-3",
             "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
           )}
         >
-          {places.map((place, idx) => (
+          {places.map((place) => (
             <li
               key={place.id}
-              className="group relative bg-card p-5 hover:bg-foreground/[0.025] transition-colors min-h-[140px]"
+              className="group rounded-lg border border-border bg-card p-5 hover:border-brand/30 transition-colors"
             >
-              <span
-                aria-hidden
-                className="absolute top-3 right-4 font-heading italic text-foreground/[0.05] text-[5rem] leading-none select-none tabular-nums group-hover:text-brand/[0.1] transition-colors"
-              >
-                {String(idx + 1).padStart(2, "0")}
-              </span>
-              <div className="relative flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-brand mb-2">
-                    Lugar
-                  </p>
-                  <p className="font-heading italic text-xl text-foreground truncate leading-tight">
+                  <p className="font-heading text-lg font-semibold text-foreground truncate">
                     {place.name}
                   </p>
                   {place.description && (
-                    <p className="text-[12.5px] text-muted-foreground line-clamp-2 mt-2 leading-relaxed">
+                    <p className="text-[13px] text-foreground/60 line-clamp-2 mt-1.5 leading-relaxed">
                       {place.description}
                     </p>
                   )}

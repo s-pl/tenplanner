@@ -106,38 +106,26 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 py-10">
-        {/* Masthead */}
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
-              Roster · Alumnos
-            </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
-              № {String(totalStudents).padStart(3, "0")}
-            </p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-end md:gap-6">
-            <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-              Tus <em className="italic text-brand">alumnos</em>,
-              <br />
-              uno a uno.
+      <div className="px-4 sm:px-6 md:px-10 py-8">
+        <header className="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-border">
+          <div>
+            <h1 className="font-heading text-3xl font-semibold text-foreground">
+              Alumnos
             </h1>
-            {totalStudents > 0 && (
-              <Link
-                href="/students/new"
-                className="inline-flex w-full items-center justify-center gap-2 border border-brand bg-brand px-4 py-2.5 text-[12px] font-semibold tracking-wide text-brand-foreground uppercase transition-colors hover:bg-brand/90 md:w-auto md:shrink-0"
-              >
-                <Plus className="size-3.5" strokeWidth={2} />
-                Nuevo alumno
-              </Link>
-            )}
+            <p className="text-[14px] text-foreground/60 mt-1.5">
+              {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
+              {totalStudents !== 1 ? "s" : ""}.
+            </p>
           </div>
-          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
-            {totalStudents !== 1 ? "s" : ""} · fichas individuales con histórico
-            y nivel.
-          </p>
+          {totalStudents > 0 && (
+            <Link
+              href="/students/new"
+              className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+            >
+              <Plus className="size-4" />
+              Nuevo alumno
+            </Link>
+          )}
         </header>
 
         {/* Level strip */}
@@ -259,7 +247,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-heading text-[17px] italic text-foreground truncate group-hover:text-brand transition-colors">
+                        <p className="text-[15px] font-medium text-foreground truncate group-hover:text-brand transition-colors">
                           {student.name}
                         </p>
                         {student.email && (
@@ -337,16 +325,6 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </nav>
         )}
 
-        {/* Footnote */}
-        <footer className="grid gap-3 pt-8 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
-          <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
-            &ldquo;Un buen entrenador conoce a sus alumnos antes de diseñar su
-            primera sesión.&rdquo;
-          </p>
-          <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
-            /tenplanner · 04
-          </p>
-        </footer>
       </div>
     </div>
   );

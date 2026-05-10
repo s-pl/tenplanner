@@ -1,24 +1,5 @@
 import Link from "next/link";
-import { QuotesRotator } from "@/components/app/quotes-rotator";
 import { ThemeToggle } from "@/components/app/theme-toggle";
-
-function PadelCourt() {
-  return (
-    <div className="auth-court-wrap flex items-center justify-center">
-      <div className="relative">
-        <div className="auth-court-glow" />
-        <div className="auth-court">
-          <div className="auth-court__service-left" />
-          <div className="auth-court__service-right" />
-          <div className="auth-court__center-line" />
-          <div className="auth-ball auth-ball--a" />
-          <div className="auth-ball auth-ball--b" />
-          <div className="auth-ball auth-ball--c" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AuthLayout({
   children,
@@ -27,55 +8,24 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left panel */}
-      <div className="relative hidden overflow-hidden md:flex md:w-[46%] lg:w-[42%] xl:w-[38%] flex-col bg-sidebar border-r border-sidebar-border">
-        {/* Top gradient accent */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-brand"
-        />
-        {/* Subtle radial glow center */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_55%,color-mix(in_oklab,var(--brand)_8%,transparent)_0%,transparent_70%)]"
-        />
-
+      {/* Left panel — clean, no animation */}
+      <div className="relative hidden overflow-hidden md:flex md:w-[44%] lg:w-[40%] flex-col bg-sidebar border-r border-sidebar-border">
         <div className="relative z-10 flex h-full flex-col p-10">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 w-fit">
-            <div className="flex size-8 items-center justify-center rounded-sm bg-brand">
-              <svg
-                className="size-4 text-brand-foreground"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-            <span className="font-heading text-lg font-semibold text-foreground">
-              ten<em className="italic text-brand not-italic">planner</em>
-            </span>
+          <Link
+            href="/"
+            className="font-heading text-2xl font-semibold text-foreground"
+          >
+            ten<em className="italic text-brand not-italic">planner</em>
           </Link>
 
-          {/* Court */}
-          <div className="flex flex-1 items-center justify-center py-10">
-            <div className="w-full max-w-xs">
-              <PadelCourt />
-            </div>
-          </div>
-
-          {/* Quote */}
-          <div className="space-y-4">
-            <div className="h-px bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
-            <div className="space-y-1">
-              <div className="select-none font-heading text-4xl font-bold leading-none text-brand/20">
-                &ldquo;
-              </div>
-              <QuotesRotator />
+          <div className="flex flex-1 items-end">
+            <div className="space-y-3">
+              <h2 className="font-heading text-3xl leading-tight text-foreground">
+                Planifica tus clases de tenis sin perder tiempo.
+              </h2>
+              <p className="text-sm text-foreground/65 max-w-sm leading-relaxed">
+                Ejercicios, clases y sesiones organizados en un solo sitio.
+              </p>
             </div>
           </div>
         </div>
@@ -85,23 +35,11 @@ export default function AuthLayout({
       <div className="flex flex-1 flex-col bg-background">
         {/* Mobile top bar */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4 md:hidden">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-sm bg-brand">
-              <svg
-                className="size-3.5 text-brand-foreground"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-            <span className="font-heading text-lg font-semibold">
-              ten<em className="italic text-brand not-italic">planner</em>
-            </span>
+          <Link
+            href="/"
+            className="font-heading text-lg font-semibold"
+          >
+            ten<em className="italic text-brand not-italic">planner</em>
           </Link>
           <ThemeToggle compact />
         </div>

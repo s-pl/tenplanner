@@ -89,7 +89,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
   const blockTitles = ["Bloque inicial", "Bloque principal", "Bloque final"];
 
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
+    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-10">
       <Link
         href="/classes"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

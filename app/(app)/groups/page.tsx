@@ -53,23 +53,14 @@ export default async function GroupsPage() {
     );
 
   return (
-    <div className="relative min-h-screen px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14">
-      {/* Page header */}
-      <header className="mb-10">
-        <div className="flex items-center gap-2 mb-4">
-          <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
-            Alumnos · Grupos
-          </p>
-          <span className="text-foreground/20">·</span>
-          <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-            {rows.length} {rows.length === 1 ? "grupo" : "grupos"}
-          </p>
-        </div>
-        <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight">
-          <em className="italic text-brand">Grupos</em> de alumnos
+    <div className="relative min-h-screen px-4 sm:px-6 md:px-10 py-8">
+      <header className="pb-5 mb-6 border-b border-border">
+        <h1 className="font-heading text-3xl font-semibold text-foreground">
+          Grupos
         </h1>
-        <p className="mt-3 text-[15px] text-foreground/55 leading-relaxed max-w-xl">
-          Organiza a tus alumnos en grupos para planificar sesiones colectivas.
+        <p className="mt-1.5 text-[14px] text-foreground/60">
+          {rows.length} {rows.length === 1 ? "grupo" : "grupos"} · organiza a
+          tus alumnos para planificar sesiones colectivas.
         </p>
       </header>
 

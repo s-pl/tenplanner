@@ -54,9 +54,6 @@ function formatWeekday(date: Date) {
     .replace(".", "")
     .toUpperCase();
 }
-function formatYear(date: Date) {
-  return new Intl.DateTimeFormat("es-ES", { year: "numeric" }).format(date);
-}
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("es-ES", {
     hour: "2-digit",
@@ -213,93 +210,66 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     { key: "past", label: "Pasadas", n: pastCount },
     { key: "drafts", label: "Borradores", n: draftCount },
   ];
-  const masthead = {
-    eyebrow: "Planificación · Agenda",
-    accent: "Sesiones",
-    suffix: "de entrenamiento",
-    description:
-      "Cada sesión es una hipótesis: un plan que la pista valida o desmiente. Aquí mantienes ritmo, archivo y continuidad.",
-    statusLabel: `${totalSessions.toString().padStart(3, "0")} registros`,
-  };
-
   return (
     <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
-        {/* ─── Masthead ─── */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              {masthead.eyebrow}
-            </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {masthead.statusLabel}
+      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-5 border-b border-border">
+          <div>
+            <h1 className="font-heading text-3xl font-semibold text-foreground">
+              Sesiones
+            </h1>
+            <p className="mt-1.5 text-[14px] text-foreground/60">
+              Entrenamientos agendados con fecha, hora, lugar y alumnos.
             </p>
           </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
-            <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">{masthead.accent}</em>{" "}
-                {masthead.suffix}
-              </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                {masthead.description}
-              </p>
-            </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 md:flex md:shrink-0">
-              {drPlannerEnabled ? (
-                <Link
-                  href="/sessions/dr-planner"
-                  className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 transition-colors hover:border-brand/40 hover:text-brand"
-                >
-                  <Bot className="size-4 text-brand" /> Dr. Planner
-                </Link>
-              ) : (
-                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2.5 text-[13px] font-medium text-foreground/38">
-                  <Lock className="size-4" /> IA próximamente
-                </span>
-              )}
-              {sessionCreationEnabled ? (
-                <Link
-                  href="/sessions/new"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold transition-colors hover:bg-brand/90"
-                >
-                  <Plus className="size-4" /> Nueva sesión
-                </Link>
-              ) : (
-                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2.5 text-[13px] font-medium text-foreground/38">
-                  <Lock className="size-4" /> Crear sesiones bloqueado
-                </span>
-              )}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {drPlannerEnabled && (
+              <Link
+                href="/sessions/dr-planner"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3.5 h-10 text-[13px] font-medium text-foreground/80 transition-colors hover:border-brand/40 hover:text-brand"
+              >
+                <Bot className="size-4 text-brand" />
+                Dr. Planner
+              </Link>
+            )}
+            {sessionCreationEnabled ? (
+              <Link
+                href="/sessions/new"
+                className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+              >
+                <Plus className="size-4" />
+                Nueva sesión
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/30 px-4 h-10 text-[13px] text-foreground/40">
+                <Lock className="size-4" />
+                Bloqueado
+              </span>
+            )}
           </div>
         </header>
 
         <>
-          {/* ─── Filter rail ─── */}
-          <nav className="flex items-end gap-6 overflow-x-auto border-b border-foreground/15 pb-px sm:gap-8">
+          {/* Tabs */}
+          <nav className="flex flex-wrap gap-1 border-b border-border">
             {FILTERS.map(({ key, label, n }) => {
               const isActive = activeFilter === key;
               return (
                 <Link
                   key={key}
                   href={sessionsHref({ filter: key, page: 1 })}
-                  className={`group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 pb-3 transition-colors ${
+                  className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
                     isActive
-                      ? "border-brand"
-                      : "border-transparent hover:border-foreground/25"
+                      ? "border-brand text-brand"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <span
-                    className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
-                  >
-                    {label}
-                  </span>
-                  <span
-                    className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
-                  >
-                    ({n.toString().padStart(2, "0")})
-                  </span>
+                  {label}
+                  {n > 0 && (
+                    <span className="ml-1.5 text-[11px] tabular-nums text-foreground/45">
+                      {n}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -309,63 +279,6 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             <SessionDraftsPanel showEmptyState />
           ) : (
             <>
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Agenda total
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {totalSessions.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Todas las sesiones registradas en tu archivo.
-                  </p>
-                </div>
-                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Proximas
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {upcomingCount.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Trabajo futuro ya colocado en la agenda.
-                  </p>
-                </div>
-                <div className="rounded-md border border-foreground/15 bg-card px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Pasadas
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {pastCount.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Archivo util para revisar carga y continuidad.
-                  </p>
-                </div>
-                <div className="rounded-md border border-brand/25 bg-brand/[0.07] px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-brand/80">
-                    Foco actual
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {(searchTerm
-                      ? totalFiltered
-                      : (FILTERS.find((item) => item.key === activeFilter)?.n ??
-                        totalSessions)
-                    )
-                      .toString()
-                      .padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/60">
-                    {searchTerm
-                      ? `Coincidencias para «${searchTerm}».`
-                      : activeFilter === "all"
-                        ? "Vista completa del archivo."
-                        : `Sesiones visibles en «${activeFilter === "upcoming" ? "Próximas" : "Pasadas"}».`}
-                  </p>
-                </div>
-              </div>
-
               <div className="space-y-3">
                 <Suspense
                   fallback={
@@ -376,9 +289,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 </Suspense>
 
                 {searchTerm ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand/8 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-brand">
-                      Búsqueda: {searchTerm}
+                  <div className="flex flex-wrap items-center gap-2 text-[12px] text-foreground/55">
+                    <span>
+                      Resultados para{" "}
+                      <span className="font-medium text-foreground">
+                        &quot;{searchTerm}&quot;
+                      </span>
                     </span>
                     <Link
                       href={sessionsHref({
@@ -386,7 +302,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                         q: undefined,
                         page: 1,
                       })}
-                      className="inline-flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 transition-colors hover:text-foreground"
+                      className="text-brand hover:underline"
                     >
                       Limpiar
                     </Link>
@@ -394,22 +310,21 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 ) : null}
               </div>
 
-              {/* ─── List ─── */}
               {sessionRows.length === 0 ? (
-                <div className="border-t border-b border-foreground/15 py-20 text-center">
-                  <p className="font-heading italic text-2xl text-foreground/80 mb-2">
-                    {activeFilter === "upcoming"
-                      ? "La agenda está despejada."
-                      : activeFilter === "past"
-                        ? "Aún no hay archivo que mirar."
-                        : "Ninguna sesión registrada."}
-                  </p>
-                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-6">
+                <div className="border border-dashed border-border rounded-lg py-16 text-center">
+                  <p className="text-[15px] font-medium text-foreground mb-2">
                     {searchTerm
-                      ? `No hay sesiones para «${searchTerm}» con el filtro actual.`
-                      : activeFilter === "all"
-                        ? "Diseña tu primera sesión para empezar a dar forma al método."
-                        : "Prueba con otro filtro o crea una sesión nueva."}
+                      ? "Sin coincidencias"
+                      : activeFilter === "upcoming"
+                        ? "No tienes sesiones próximas"
+                        : activeFilter === "past"
+                          ? "No tienes sesiones pasadas"
+                          : "Sin sesiones todavía"}
+                  </p>
+                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
+                    {searchTerm
+                      ? `No hay sesiones para "${searchTerm}".`
+                      : "Crea una nueva sesión para empezar."}
                   </p>
                   <Link
                     href={
@@ -421,7 +336,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                           })
                         : "/sessions/new"
                     }
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors pb-0.5"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-brand text-brand-foreground px-4 py-2 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
                   >
                     {searchTerm ? (
                       <>
@@ -435,85 +350,70 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="flex flex-col gap-3">
-                  {sessionRows.map((session, idx) => {
+                <ul className="flex flex-col gap-2">
+                  {sessionRows.map((session) => {
                     const date = new Date(session.scheduledAt);
                     const isPast = date < now;
                     const count = exerciseCountMap.get(session.id) ?? 0;
                     const relative = humanDate(date);
-                    const globalIdx = offset + idx + 1;
+                    const statusLabel =
+                      session.status === "completed"
+                        ? "Completada"
+                        : session.status === "cancelled"
+                          ? "Cancelada"
+                          : isPast
+                            ? "Sin completar"
+                            : "Programada";
+                    const statusColor =
+                      session.status === "completed"
+                        ? "bg-brand/10 text-brand border-brand/20"
+                        : session.status === "cancelled"
+                          ? "bg-destructive/10 text-destructive/80 border-destructive/20"
+                          : isPast
+                            ? "bg-foreground/5 text-foreground/55 border-border"
+                            : "bg-blue-500/10 text-blue-500 border-blue-500/20";
 
                     return (
                       <li
                         key={session.id}
-                        className="overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
+                        className="rounded-lg border border-border bg-card transition-colors hover:border-brand/30"
                       >
                         <Link
                           href={`/sessions/${session.id}`}
-                          className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-5 transition-colors hover:bg-brand/[0.025] sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5 md:gap-8"
+                          className="group flex items-center gap-4 px-4 py-3.5"
                         >
-                          <span className="hidden w-6 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
-                            {String(globalIdx).padStart(2, "0")}
-                          </span>
-
-                          <div className="min-w-[78px] border-l border-foreground/15 pl-3 sm:min-w-[104px] sm:pl-5">
-                            <p className="font-heading text-[20px] leading-none tabular-nums text-foreground sm:text-[24px]">
+                          <div className="w-20 shrink-0 border-r border-border pr-3">
+                            <p className="font-heading text-xl leading-none tabular-nums text-foreground">
                               {formatDayMonth(date)}
                             </p>
-                            <p className="mt-1.5 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
+                            <p className="mt-1 text-[11px] uppercase text-foreground/50 tabular-nums">
                               {formatWeekday(date)} · {formatTime(date)}
                             </p>
                           </div>
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`font-sans text-[9px] uppercase tracking-[0.2em] ${
-                                  session.status === "completed"
-                                    ? "text-brand"
-                                    : session.status === "cancelled"
-                                      ? "text-destructive/70"
-                                      : isPast
-                                        ? "text-foreground/55"
-                                        : "text-foreground/65"
-                                }`}
+                                className={`inline-flex items-center text-[10.5px] font-medium px-1.5 py-0.5 rounded border ${statusColor}`}
                               >
-                                {session.status === "completed"
-                                  ? "Completada"
-                                  : session.status === "cancelled"
-                                    ? "Cancelada"
-                                    : isPast
-                                      ? "Sin completar"
-                                      : "En agenda"}
+                                {statusLabel}
                               </span>
                               {relative && (
-                                <span className="font-sans text-[10px] italic text-foreground/45">
-                                  · {relative}
+                                <span className="text-[12px] text-foreground/50">
+                                  {relative}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[16px] text-foreground leading-snug truncate">
+                            <p className="text-[15px] text-foreground truncate">
                               {session.title}
                             </p>
-                            {session.description && (
-                              <p className="mt-1 text-[12px] text-foreground/55 truncate italic">
-                                {session.description}
-                              </p>
-                            )}
-                            <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.16em] text-foreground/40 tabular-nums">
-                              {session.durationMinutes} min{" "}
-                              <span className="text-foreground/20 mx-1.5">
-                                ·
-                              </span>{" "}
-                              {count} {count === 1 ? "ejercicio" : "ejercicios"}{" "}
-                              <span className="text-foreground/20 mx-1.5">
-                                ·
-                              </span>{" "}
-                              {formatYear(date)}
+                            <p className="mt-1 text-[12px] text-foreground/55 tabular-nums">
+                              {session.durationMinutes} min ·{" "}
+                              {count} {count === 1 ? "ejercicio" : "ejercicios"}
                             </p>
                           </div>
 
-                          <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+                          <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand transition-colors" />
                         </Link>
                       </li>
                     );
@@ -521,45 +421,40 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 </ul>
               )}
 
-              {/* ─── Pagination ─── */}
-              {totalFiltered > 0 && (
-                <footer className="flex items-center justify-between pt-2 border-t border-foreground/15">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
-                    {offset + 1}–{offset + sessionRows.length} / {totalFiltered}
+              {totalFiltered > 0 && totalPages > 1 && (
+                <footer className="flex items-center justify-between pt-3 border-t border-border">
+                  <p className="text-[12px] text-foreground/50 tabular-nums">
+                    {offset + 1}–{offset + sessionRows.length} de {totalFiltered}
                   </p>
-
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-5">
-                      {safePage > 1 ? (
-                        <Link
-                          href={sessionsHref({ page: safePage - 1 })}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                        >
-                          <ArrowLeft className="size-3" /> Anterior
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          <ArrowLeft className="size-3" /> Anterior
-                        </span>
-                      )}
-                      <span className="font-sans text-[10px] tracking-[0.18em] text-foreground/50 tabular-nums">
-                        {safePage.toString().padStart(2, "0")} /{" "}
-                        {totalPages.toString().padStart(2, "0")}
+                  <div className="flex items-center gap-3">
+                    {safePage > 1 ? (
+                      <Link
+                        href={sessionsHref({ page: safePage - 1 })}
+                        className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70 hover:text-brand transition-colors"
+                      >
+                        <ArrowLeft className="size-3.5" /> Anterior
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/25">
+                        <ArrowLeft className="size-3.5" /> Anterior
                       </span>
-                      {safePage < totalPages ? (
-                        <Link
-                          href={sessionsHref({ page: safePage + 1 })}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                        >
-                          Siguiente <ArrowUpRight className="size-3" />
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          Siguiente <ArrowUpRight className="size-3" />
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    <span className="text-[12px] text-foreground/50 tabular-nums">
+                      {safePage} / {totalPages}
+                    </span>
+                    {safePage < totalPages ? (
+                      <Link
+                        href={sessionsHref({ page: safePage + 1 })}
+                        className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70 hover:text-brand transition-colors"
+                      >
+                        Siguiente <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/25">
+                        Siguiente <ArrowUpRight className="size-3.5" />
+                      </span>
+                    )}
+                  </div>
                 </footer>
               )}
             </>

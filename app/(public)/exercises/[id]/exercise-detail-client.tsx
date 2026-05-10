@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
-type Location = "indoor" | "outdoor" | "any";
+type Location = "pista" | "pared" | "playa" | "casa";
 type Phase = "activation" | "main" | "cooldown";
 type Formato = "individual" | "parejas" | "grupal" | "multigrupo";
 type TipoActividad =
@@ -118,7 +118,12 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; color: string }> = {
   advanced: { label: "Avanzado", color: "text-red-400" },
 };
 
-const LOCATION_LABELS: Record<Location, string> = {
+const LOCATION_LABELS: Record<string, string> = {
+  pista: "🎾 Pista de tenis",
+  pared: "🧱 Pared",
+  playa: "🏖️ Playa",
+  casa: "🏠 Casa",
+  // Legacy values (still in DB):
   indoor: "🏟️ Pista cubierta",
   outdoor: "☀️ Pista exterior",
   any: "📍 Cualquier lugar",

@@ -207,6 +207,11 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "efecto",
       "variantes",
       "imageUrls",
+      "nivel",
+      "aspectoJuego",
+      "parametro",
+      "tipologia",
+      "duracionRango",
     ] as const;
 
     for (const field of fields) {

@@ -32,7 +32,7 @@ export default async function NewClassPage() {
     .limit(500);
 
   return (
-    <div className="max-w-4xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
+    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-10">
       <Link
         href="/classes"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

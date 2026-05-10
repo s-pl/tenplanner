@@ -50,7 +50,6 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  index: string;
   publicAccess?: boolean;
   feature?: FeatureKey;
   submenu?: SubItem[];
@@ -59,12 +58,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, index: "01" },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   {
     href: "/exercises",
     label: "Ejercicios",
     icon: Dumbbell,
-    index: "02",
     publicAccess: true,
     allLabel: "Ver todos",
     submenu: [
@@ -83,7 +81,6 @@ const navItems: NavItem[] = [
     href: "/classes",
     label: "Clases",
     icon: GraduationCap,
-    index: "03",
     publicAccess: true,
     allLabel: "Ver todas",
     submenu: [
@@ -97,7 +94,6 @@ const navItems: NavItem[] = [
     href: "/sessions",
     label: "Sesiones",
     icon: ClipboardList,
-    index: "04",
     allLabel: "Ver todas",
     submenu: [
       { href: "/sessions", label: "Mis sesiones", icon: ClipboardList },
@@ -114,22 +110,20 @@ const navItems: NavItem[] = [
     href: "/calendar",
     label: "Calendario",
     icon: CalendarDays,
-    index: "05",
     feature: "calendar",
   },
   {
     href: "/students",
     label: "Alumnos",
     icon: Users,
-    index: "06",
     allLabel: "Ver todos",
     submenu: [
       { href: "/students", label: "Lista de alumnos", icon: Users },
       { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
     ],
   },
-  { href: "/places", label: "Lugares", icon: MapPin, index: "07" },
-  { href: "/profile", label: "Perfil", icon: UserCircle, index: "08" },
+  { href: "/places", label: "Lugares", icon: MapPin },
+  { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
 interface SidebarNavProps {
@@ -195,13 +189,9 @@ function NavContent({
   return (
     <div className="flex flex-col h-full">
       {/* Wordmark */}
-      <div className="relative border-b border-sidebar-border px-5 pb-5 pt-6">
-        <div
-          aria-hidden
-          className="absolute left-0 top-0 h-full w-1 bg-brand"
-        />
-        <Link href="/dashboard" className="block group" onClick={onNavigate}>
-          <p className="font-heading text-3xl leading-none text-foreground">
+      <div className="border-b border-sidebar-border px-5 py-5">
+        <Link href="/dashboard" className="block" onClick={onNavigate}>
+          <p className="font-heading text-2xl leading-none text-foreground">
             {appName && appName !== "TenPlanner" ? (
               <span className="text-brand">{appName}</span>
             ) : (
@@ -220,17 +210,13 @@ function NavContent({
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="mb-3 px-2 font-mono text-[10px] uppercase text-foreground/45">
-          Navegacion
-        </p>
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-0.5">
           {navItems.map(
             ({
               href,
               label,
               icon: Icon,
               submenu,
-              index,
               publicAccess,
               feature,
               allLabel,
@@ -243,27 +229,15 @@ function NavContent({
 
               if (isLocked) {
                 return (
-                  <li
-                    key={href}
-                    className="border border-transparent border-b-sidebar-border/70"
-                  >
+                  <li key={href}>
                     <Link
                       href="/login"
                       onClick={onNavigate}
-                      className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-foreground/35 transition-colors hover:border-sidebar-border hover:bg-sidebar-accent/55 hover:text-foreground/55"
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/40 transition-colors hover:bg-sidebar-accent/55 hover:text-foreground/65"
                     >
-                      <span className="font-mono text-[10px] tabular-nums text-foreground/20">
-                        {index}
-                      </span>
-                      <Icon
-                        className="size-[15px] text-foreground/25"
-                        strokeWidth={1.6}
-                      />
-                      <span className="text-[14px]">{label}</span>
-                      <Lock
-                        className="size-[11px] text-foreground/30"
-                        strokeWidth={1.8}
-                      />
+                      <Icon className="size-4" strokeWidth={1.6} />
+                      <span className="flex-1 text-[14px]">{label}</span>
+                      <Lock className="size-3 text-foreground/30" strokeWidth={1.8} />
                     </Link>
                   </li>
                 );
@@ -271,23 +245,11 @@ function NavContent({
 
               if (featureLocked) {
                 return (
-                  <li
-                    key={href}
-                    className="border border-transparent border-b-sidebar-border/70"
-                  >
-                    <span className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-foreground/35">
-                      <span className="font-mono text-[10px] tabular-nums text-foreground/20">
-                        {index}
-                      </span>
-                      <Icon
-                        className="size-[15px] text-foreground/25"
-                        strokeWidth={1.6}
-                      />
-                      <span className="text-[14px]">{label}</span>
-                      <Lock
-                        className="size-[11px] text-foreground/30"
-                        strokeWidth={1.8}
-                      />
+                  <li key={href}>
+                    <span className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/40">
+                      <Icon className="size-4" strokeWidth={1.6} />
+                      <span className="flex-1 text-[14px]">{label}</span>
+                      <Lock className="size-3 text-foreground/30" strokeWidth={1.8} />
                     </span>
                   </li>
                 );
@@ -295,42 +257,28 @@ function NavContent({
 
               if (submenu) {
                 return (
-                  <li
-                    key={href}
-                    className={cn(
-                      "border border-transparent border-b-sidebar-border/70",
-                      isActive && "border-sidebar-border bg-sidebar-accent/60"
-                    )}
-                  >
+                  <li key={href}>
                     <button
                       type="button"
                       onClick={() => toggleSubmenu(href)}
                       className={cn(
-                        "grid w-full grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 text-left transition-colors",
+                        "flex w-full items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
                         isActive
-                          ? "text-foreground"
-                          : "text-foreground/65 hover:bg-sidebar-accent/45 hover:text-foreground"
+                          ? "bg-sidebar-accent/60 text-foreground"
+                          : "text-foreground/70 hover:bg-sidebar-accent/45 hover:text-foreground"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "font-mono text-[10px] tabular-nums",
-                          isActive ? "text-brand" : "text-foreground/35"
-                        )}
-                      >
-                        {index}
-                      </span>
                       <Icon
                         className={cn(
-                          "size-[15px]",
-                          isActive ? "text-brand" : "text-foreground/55"
+                          "size-4",
+                          isActive ? "text-brand" : "text-foreground/60"
                         )}
                         strokeWidth={1.6}
                       />
                       <span
                         className={cn(
-                          "text-[14px]",
-                          isActive && "font-heading italic text-foreground"
+                          "flex-1 text-[14px]",
+                          isActive && "font-medium text-foreground"
                         )}
                       >
                         {label}
@@ -345,19 +293,19 @@ function NavContent({
                     </button>
 
                     {isOpen && (
-                      <ul className="flex flex-col gap-0.5 pb-3 pl-12 pr-2">
+                      <ul className="flex flex-col gap-0.5 pb-2 pl-9 pr-2">
                         <li>
                           <Link
                             href={href}
                             onClick={onNavigate}
                             className={cn(
-                              "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
+                              "block py-1.5 px-2 rounded-md text-[12.5px] transition-colors",
                               pathname === href
                                 ? "text-brand"
                                 : "text-foreground/55 hover:text-foreground"
                             )}
                           >
-                            <span>{allLabel ?? "Ver todas"}</span>
+                            {allLabel ?? "Ver todas"}
                           </Link>
                         </li>
                         {submenu.map(
@@ -377,12 +325,9 @@ function NavContent({
                             if (featureLocked) {
                               return (
                                 <li key={subHref}>
-                                  <span className="grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] text-foreground/35">
+                                  <span className="flex items-center justify-between py-1.5 px-2 text-[12.5px] text-foreground/35">
                                     <span>{subLabel}</span>
-                                    <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase text-foreground/30">
-                                      <Lock className="size-3" />
-                                      Desactivado
-                                    </span>
+                                    <Lock className="size-3 text-foreground/30" />
                                   </span>
                                 </li>
                               );
@@ -394,22 +339,15 @@ function NavContent({
                                   href={subHref}
                                   onClick={onNavigate}
                                   className={cn(
-                                    "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
+                                    "block py-1.5 px-2 rounded-md text-[12.5px] transition-colors",
                                     isSubActive
-                                      ? "text-brand"
+                                      ? "text-brand font-medium"
                                       : accent
                                         ? "text-brand/75 hover:text-brand"
                                         : "text-foreground/55 hover:text-foreground"
                                   )}
                                 >
-                                  <span
-                                    className={cn(
-                                      isSubActive &&
-                                        "italic font-heading text-[13px]"
-                                    )}
-                                  >
-                                    {subLabel}
-                                  </span>
+                                  {subLabel}
                                 </Link>
                               </li>
                             );
@@ -422,49 +360,32 @@ function NavContent({
               }
 
               return (
-                <li
-                  key={href}
-                  className={cn(
-                    "border border-transparent border-b-sidebar-border/70",
-                    isActive && "border-sidebar-border bg-sidebar-accent/60"
-                  )}
-                >
+                <li key={href}>
                   <Link
                     href={href}
                     onClick={onNavigate}
                     className={cn(
-                      "grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-3 py-3 transition-colors",
+                      "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
                       isActive
-                        ? "text-foreground"
-                        : "text-foreground/65 hover:bg-sidebar-accent/45 hover:text-foreground"
+                        ? "bg-sidebar-accent/60 text-foreground"
+                        : "text-foreground/70 hover:bg-sidebar-accent/45 hover:text-foreground"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "font-mono text-[10px] tabular-nums",
-                        isActive ? "text-brand" : "text-foreground/35"
-                      )}
-                    >
-                      {index}
-                    </span>
                     <Icon
                       className={cn(
-                        "size-[15px]",
-                        isActive ? "text-brand" : "text-foreground/55"
+                        "size-4",
+                        isActive ? "text-brand" : "text-foreground/60"
                       )}
                       strokeWidth={1.6}
                     />
                     <span
                       className={cn(
-                        "text-[14px]",
-                        isActive && "font-heading italic text-foreground"
+                        "flex-1 text-[14px]",
+                        isActive && "font-medium text-foreground"
                       )}
                     >
                       {label}
                     </span>
-                    {isActive && (
-                      <span className="size-1 rounded-full bg-brand" />
-                    )}
                   </Link>
                 </li>
               );

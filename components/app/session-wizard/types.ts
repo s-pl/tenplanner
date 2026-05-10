@@ -26,6 +26,15 @@ export interface WizardExercise {
   intensity: number | null;
 }
 
+export type WizardRecurrenceFrequency = "weekly";
+
+export interface WizardRecurrence {
+  enabled: boolean;
+  frequency: WizardRecurrenceFrequency;
+  weeks: number; // total weeks including the original
+  weekdays: number[]; // 0=Sun..6=Sat (multi-select)
+}
+
 export interface WizardState {
   title: string;
   scheduledAt: string;
@@ -37,6 +46,7 @@ export interface WizardState {
   tags: string[];
   studentIds: string[];
   exercises: WizardExercise[];
+  recurrence: WizardRecurrence;
 }
 
 export interface WizardPlace {
