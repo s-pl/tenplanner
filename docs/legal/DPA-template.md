@@ -7,16 +7,16 @@ El texto público está embebido en `/terminos` (apartado 3 «Encargo del tratam
 
 ## Mapping RGPD art. 28.3
 
-| Letra | Exigencia | Dónde se cumple |
-| --- | --- | --- |
-| a | Tratar solo bajo instrucciones documentadas. | `/terminos` §3.3 primer punto. |
-| b | Confidencialidad del personal. | `/terminos` §3.3 segundo punto + políticas internas. |
-| c | Seguridad art. 32. | `/privacidad` §9 (medidas técnicas). |
-| d | Subencargados con autorización previa. | `docs/legal/subprocessors.md` + aviso en `/privacidad` §5. |
-| e | Asistencia para derechos del interesado. | `/terminos` §3.3 + `/api/export` + borrado. |
-| f | Asistencia para los arts. 32-36. | `breach-procedure.md`. |
-| g | Devolver o suprimir al finalizar. | `/terminos` §3.3 último punto. |
-| h | Poner a disposición información para demostrar cumplimiento. | `docs/legal/*` a solicitud del responsable. |
+| Letra | Exigencia                                                    | Dónde se cumple                                            |
+| ----- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| a     | Tratar solo bajo instrucciones documentadas.                 | `/terminos` §3.3 primer punto.                             |
+| b     | Confidencialidad del personal.                               | `/terminos` §3.3 segundo punto + políticas internas.       |
+| c     | Seguridad art. 32.                                           | `/privacidad` §9 (medidas técnicas).                       |
+| d     | Subencargados con autorización previa.                       | `docs/legal/subprocessors.md` + aviso en `/privacidad` §5. |
+| e     | Asistencia para derechos del interesado.                     | `/terminos` §3.3 + `/api/export` + borrado.                |
+| f     | Asistencia para los arts. 32-36.                             | `breach-procedure.md`.                                     |
+| g     | Devolver o suprimir al finalizar.                            | `/terminos` §3.3 último punto.                             |
+| h     | Poner a disposición información para demostrar cumplimiento. | `docs/legal/*` a solicitud del responsable.                |
 
 ## Subencargados
 

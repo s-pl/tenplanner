@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
@@ -59,20 +59,20 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [sessionReady, setSessionReady] = useState<"checking" | "ok" | "missing">(
-    "checking"
-  );
+  const [sessionReady, setSessionReady] = useState<
+    "checking" | "ok" | "missing"
+  >("checking");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<Values>({ resolver: zodResolver(schema) });
 
-  const passwordValue = watch("password", "");
+  const passwordValue = useWatch({ control, name: "password" }) ?? "";
   const strength = getPasswordStrength(passwordValue);
   const strengthCfg = STRENGTH_CONFIG[strength];
 
@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
 
   if (sessionReady === "checking") {
     return (
-      <div className="flex items-center justify-center py-10">
+      <div className="rounded-[32px] border border-[#050505]/10 bg-white p-8 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e]">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />
       </div>
     );
@@ -112,44 +112,49 @@ export default function ResetPasswordPage() {
 
   if (sessionReady === "missing") {
     return (
-      <div className="space-y-5 text-center">
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+      <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 text-center shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+        <div className="space-y-5">
+        <h1 className="text-3xl font-black leading-tight text-foreground">
           Enlace no válido
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm leading-6 text-foreground/62">
           Este enlace de recuperación ha caducado o ya se ha utilizado. Solicita
           uno nuevo y vuelve a intentarlo.
         </p>
         <Link
           href="/forgot-password"
-          className="inline-flex items-center justify-center h-10 px-5 rounded-md bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 transition-colors"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-brand px-5 text-sm font-black text-brand-foreground transition-colors hover:bg-brand/90"
         >
           Pedir enlace nuevo
         </Link>
+        </div>
       </div>
     );
   }
 
   if (done) {
     return (
-      <div className="space-y-4 text-center">
+      <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 text-center shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+        <div className="space-y-4">
         <div className="flex flex-col items-center gap-4">
-          <div className="size-16 rounded-2xl bg-brand/15 flex items-center justify-center">
-            <CheckCircle2 className="size-8 text-brand" />
+          <div className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground">
+            <CheckCircle2 className="size-8" />
           </div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl font-black leading-tight text-foreground">
             Contraseña actualizada
           </h1>
           <p className="text-sm text-muted-foreground">
             Redirigiendo a tu dashboard…
           </p>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+      <div className="space-y-6">
       <div className="flex flex-col gap-3">
         <Link
           href="/login"
@@ -158,10 +163,11 @@ export default function ResetPasswordPage() {
           <ArrowLeft className="size-3.5" /> Cancelar
         </Link>
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+          <p className="tp-kicker">Seguridad</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
             Nueva contraseña
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-2 text-sm leading-6 text-foreground/62">
             Elige una nueva contraseña para tu cuenta.
           </p>
         </div>
@@ -183,7 +189,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               tabIndex={-1}
               aria-label={
                 showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
@@ -247,7 +253,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => setShowConfirm((v) => !v)}
-              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               tabIndex={-1}
               aria-label={
                 showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
@@ -266,14 +272,14 @@ export default function ResetPasswordPage() {
         </div>
 
         {serverError && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+          <div className="rounded-[22px] border border-destructive/20 bg-destructive/10 px-4 py-3">
             <p className="text-sm text-destructive">{serverError}</p>
           </div>
         )}
 
         <Button
           type="submit"
-          className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+          className="h-11 w-full rounded-full bg-brand font-black text-brand-foreground hover:bg-brand/90"
           disabled={loading}
         >
           {loading ? (
@@ -286,6 +292,7 @@ export default function ResetPasswordPage() {
           )}
         </Button>
       </form>
+      </div>
     </div>
   );
 }

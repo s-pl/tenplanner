@@ -8,10 +8,10 @@ import {
   useEffect,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Send,
   Loader2,
   Bot,
@@ -180,12 +180,6 @@ async function fetchWithChatTimeout(
 }
 
 // ─── Mention chip (inline in user messages) ──────────────────────────────────
-
-const MENTION_ICONS: Record<string, React.ReactNode> = {
-  ejercicio: <Dumbbell className="size-2.5" />,
-  sesion: <Calendar className="size-2.5" />,
-  alumno: <GraduationCap className="size-2.5" />,
-};
 
 // Matches both @[nombre] (new) and @[tipo:nombre] (legacy stored messages)
 const MENTION_RE = /(@\[(?:(?:ejercicio|sesion|alumno):)?[^\]]+\])/g;
@@ -493,10 +487,10 @@ function MarkdownBubble({ role, content }: { role: string; content: string }) {
       )}
       <div
         className={cn(
-          "max-w-[85%] px-4 py-3",
+          "max-w-[85%] rounded-lg px-4 py-3 shadow-sm",
           isAssistant
-            ? "border-l-2 border-brand/50 bg-foreground/[0.02] text-foreground"
-            : "bg-brand text-brand-foreground text-[14px] leading-relaxed"
+            ? "border border-l-2 border-foreground/12 border-l-brand/50 bg-card text-foreground"
+            : "border border-brand bg-brand text-[14px] leading-relaxed text-brand-foreground"
         )}
       >
         {isAssistant ? (
@@ -531,7 +525,7 @@ function ExerciseCard({
     <div
       onClick={onToggle}
       className={cn(
-        "relative flex flex-col gap-2 p-3.5 border cursor-pointer transition-all group pl-4",
+        "relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3.5 pl-4 shadow-sm transition-all group",
         selected
           ? "bg-brand/[0.06] border-brand"
           : "bg-card border-foreground/15 hover:border-foreground/35"
@@ -868,7 +862,8 @@ function StudentPickerCard({
   function toggle(id: string) {
     setSelected((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }
@@ -1616,6 +1611,22 @@ function MentionPopover({
 
 // ─── Main chat component ───────────────────────────────────────────────────────
 
+type ModelMode = "auto" | "reasoning" | "rapido";
+
+const MODEL_MODES: { id: ModelMode; label: string; desc: string }[] = [
+  {
+    id: "auto",
+    label: "Automático",
+    desc: "El sistema elige el modelo según la complejidad",
+  },
+  {
+    id: "reasoning",
+    label: "Razonamiento",
+    desc: "Sonnet — respuestas más profundas",
+  },
+  { id: "rapido", label: "Rapidez", desc: "Haiku — respuestas más rápidas" },
+];
+
 export function DrPlannerChat({
   chatId,
   initialTitle,
@@ -1626,17 +1637,40 @@ export function DrPlannerChat({
   initialMessages: Record<string, unknown>[];
 }) {
   const router = useRouter();
-  const { messages, sendMessage, status, setMessages, stop, error, clearError } =
-    useChat({
-      transport: new DefaultChatTransport({
+  const [modelMode, setModelMode] = useState<ModelMode>("auto");
+
+  function updateModelMode(mode: ModelMode) {
+    setModelMode(mode);
+  }
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
         api: "/api/dr-planner",
+        body: { chatId, modelMode },
         fetch: fetchWithChatTimeout,
+        prepareSendMessagesRequest: ({ body, messages }) => ({
+          body: { ...body, messages },
+        }),
       }),
-      messages: initialMessages as unknown as UIMessage[],
-      onError: (chatError) => {
-        console.error("[Dr. Planner] chat error:", chatError);
-      },
-    });
+    [chatId, modelMode]
+  );
+
+  const {
+    messages,
+    sendMessage,
+    status,
+    setMessages,
+    stop,
+    error,
+    clearError,
+  } = useChat({
+    transport,
+    messages: initialMessages as unknown as UIMessage[],
+    onError: (chatError) => {
+      console.error("[Dr. Planner] chat error:", chatError);
+    },
+  });
 
   const [input, setInput] = useState("");
   const [title, setTitle] = useState(initialTitle);
@@ -1692,7 +1726,7 @@ export function DrPlannerChat({
         .catch(() => {});
     }
     prevStatus.current = status;
-  }, [status]);
+  }, [chatId, messages, status, title]);
 
   // Auto-save every 10s while streaming so work isn't lost mid-generation
   useEffect(() => {
@@ -1834,7 +1868,8 @@ export function DrPlannerChat({
   const toggleExercise = useCallback((id: string) => {
     setSelectedExercises((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }, []);
@@ -1924,21 +1959,21 @@ export function DrPlannerChat({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-dvh">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white md:h-dvh">
       {/* Header */}
-      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-4 sm:px-6 md:px-10 py-3 sm:py-4 border-b border-foreground/15 bg-background/80 backdrop-blur shrink-0">
+      <header className="grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86 sm:gap-4 sm:px-6 sm:py-4 md:px-10">
         <Link
           href="/sessions/dr-planner"
-          className="font-sans text-[10px] uppercase tracking-[0.18em] sm:tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors whitespace-nowrap"
+          className="whitespace-nowrap rounded-full border border-[#050505]/10 px-3 py-1.5 text-[10px] font-black uppercase text-foreground/55 transition-colors hover:text-brand dark:border-white/10"
         >
           <span className="sm:hidden">←</span>
           <span className="hidden sm:inline">← Dr. Planner</span>
         </Link>
         <div className="min-w-0 text-center">
-          <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-foreground/45 hidden sm:block">
+          <p className="hidden text-[9px] font-black uppercase text-foreground/45 sm:block">
             Conversación · IA
           </p>
-          <p className="font-heading italic text-[14px] sm:text-[15px] text-foreground truncate sm:mt-0.5">
+          <p className="truncate text-[14px] font-black text-foreground sm:mt-0.5 sm:text-[15px]">
             {title}
           </p>
         </div>
@@ -1947,7 +1982,7 @@ export function DrPlannerChat({
             <button
               onClick={() => setMessages([])}
               title="Limpiar conversación"
-              className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-black uppercase text-foreground/55 transition-colors hover:bg-muted hover:text-foreground"
             >
               <RotateCcw className="size-3" strokeWidth={1.6} />
               <span className="hidden sm:inline">Limpiar</span>
@@ -1955,7 +1990,7 @@ export function DrPlannerChat({
           )}
           <button
             onClick={handleDelete}
-            className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-destructive transition-colors"
+            className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-black uppercase text-foreground/55 transition-colors hover:bg-destructive/10 hover:text-destructive"
             title="Eliminar"
           >
             <Trash2 className="size-3" strokeWidth={1.6} />
@@ -1968,13 +2003,13 @@ export function DrPlannerChat({
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10">
         {chatErrorText && (
           <div className="max-w-5xl mx-auto pt-4">
-            <div className="flex items-start gap-3 border-l-2 border-destructive bg-foreground/[0.02] px-4 py-3">
+            <div className="flex items-start gap-3 rounded-[22px] border border-destructive/25 bg-destructive/10 px-4 py-3">
               <XCircle
                 className="size-3.5 text-destructive shrink-0 mt-0.5"
                 strokeWidth={1.6}
               />
               <div className="flex-1 min-w-0">
-                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive">
+                <p className="text-[10px] font-black uppercase text-destructive">
                   Error de conexión IA
                 </p>
                 <p className="text-[12px] text-destructive/90 mt-1">
@@ -1983,7 +2018,7 @@ export function DrPlannerChat({
               </div>
               <button
                 onClick={clearError}
-                className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive/80 hover:text-destructive transition-colors"
+                className="rounded-full px-2 py-1 text-[10px] font-black uppercase text-destructive/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
                 Cerrar
               </button>
@@ -1992,17 +2027,17 @@ export function DrPlannerChat({
         )}
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-8 max-w-xl mx-auto text-center pb-4">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+            <p className="tp-kicker">
               Consulta · Dr. Planner
             </p>
-            <h2 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-              ¿Qué <em className="italic text-brand">sesión</em> necesitas hoy?
+            <h2 className="text-4xl font-black leading-tight text-foreground md:text-5xl">
+              ¿Qué sesión necesitas hoy?
             </h2>
             <p className="text-[13px] text-foreground/60 leading-relaxed max-w-md">
               Describe nivel del grupo, duración disponible y objetivos.
               Diseñaré el plan usando tu biblioteca de ejercicios.
             </p>
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-0 border border-foreground/15">
+            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
               {[
                 "Sesión de 60 min para nivel intermedio",
                 "Técnica de volea para principiantes",
@@ -2016,9 +2051,7 @@ export function DrPlannerChat({
                     textareaRef.current?.focus();
                   }}
                   className={cn(
-                    "text-left text-[12px] text-foreground/70 hover:text-foreground hover:bg-foreground/[0.03] px-4 py-3.5 transition-all border-foreground/10",
-                    i % 2 === 1 && "sm:border-l",
-                    i >= 2 && "border-t"
+                    "rounded-[22px] border border-[#050505]/10 bg-white px-4 py-3.5 text-left text-[12px] font-semibold text-foreground/70 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:text-foreground dark:border-white/10 dark:bg-[#10100e]"
                   )}
                 >
                   <span className="font-sans text-[9px] tabular-nums tracking-[0.22em] text-foreground/35 mr-2">
@@ -2030,7 +2063,7 @@ export function DrPlannerChat({
             </div>
           </div>
         ) : (
-          <div className="py-5 space-y-4 max-w-5xl mx-auto">
+          <div className="mx-auto max-w-5xl space-y-4 py-5">
             {messages.map((m) => {
               const text = getMessageText(m);
               const parts = m.parts as Array<{
@@ -2208,15 +2241,15 @@ export function DrPlannerChat({
                       (hasVisibleText ? "Redactando respuesta…" : "Pensando…"));
                 return (
                   <div className="flex gap-3 justify-start">
-                    <div className="size-7 border border-foreground/20 bg-transparent flex items-center justify-center shrink-0 mt-1">
+                    <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#050505]/10 bg-white dark:border-white/10 dark:bg-[#10100e]">
                       <Bot className="size-3.5 text-brand" strokeWidth={1.6} />
                     </div>
-                    <div className="border-l-2 border-brand/50 bg-foreground/[0.02] px-4 py-2.5 flex items-center gap-3">
+                    <div className="flex items-center gap-3 rounded-full border border-brand/25 bg-brand/10 px-4 py-2.5">
                       <span className="relative flex size-1.5">
                         <span className="absolute inline-flex size-full bg-brand/60 opacity-75 animate-ping" />
                         <span className="relative inline-flex size-1.5 bg-brand" />
                       </span>
-                      <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">
+                      <span className="text-[10px] font-black uppercase text-foreground/65">
                         {label}
                       </span>
                       <span className="flex gap-[3px]">
@@ -2244,13 +2277,13 @@ export function DrPlannerChat({
 
       {/* Floating bar — exercises selected */}
       {selectedExercises.size > 0 && (
-        <div className="shrink-0 px-4 sm:px-6 md:px-10 py-3 border-t border-brand bg-brand/[0.04]">
+        <div className="shrink-0 border-t border-brand/30 bg-brand/10 px-4 py-3 sm:px-6 md:px-10">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-baseline gap-3">
-              <span className="font-heading text-2xl tabular-nums text-brand leading-none">
+              <span className="text-2xl font-black tabular-nums leading-none text-brand">
                 {String(selectedExercises.size).padStart(2, "0")}
               </span>
-              <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/65">
+              <span className="text-[10px] font-black uppercase text-foreground/65">
                 ejercicio{selectedExercises.size !== 1 ? "s" : ""} seleccionado
                 {selectedExercises.size !== 1 ? "s" : ""}
               </span>
@@ -2258,7 +2291,7 @@ export function DrPlannerChat({
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSelectedExercises(new Set())}
-                className="flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-black uppercase text-foreground/55 transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-3" strokeWidth={1.6} /> Limpiar
               </button>
@@ -2268,7 +2301,7 @@ export function DrPlannerChat({
                     `/sessions/new?exercises=${Array.from(selectedExercises).join(",")}`
                   )
                 }
-                className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[11px] font-semibold tracking-[0.18em] uppercase px-4 py-2 hover:bg-brand/90 transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-[11px] font-black uppercase text-brand-foreground transition-colors hover:bg-brand/90"
               >
                 <Plus className="size-3" strokeWidth={2} /> Crear sesión
               </button>
@@ -2278,7 +2311,7 @@ export function DrPlannerChat({
       )}
 
       {/* Input — fixed bottom with safe area padding on mobile */}
-      <div className="shrink-0 px-4 sm:px-6 md:px-10 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-foreground/15 bg-background/80 backdrop-blur">
+      <div className="shrink-0 border-t border-[#050505]/10 bg-white/86 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86 sm:px-6 md:px-10">
         <div ref={inputWrapperRef} className="relative">
           {mentionQuery !== null && (
             <MentionPopover
@@ -2288,7 +2321,7 @@ export function DrPlannerChat({
               onSelect={handleMentionSelect}
             />
           )}
-          <div className="flex gap-3 items-end border border-foreground/20 px-4 py-3 focus-within:border-brand transition-all bg-background">
+          <div className="flex items-end gap-3 rounded-[26px] border border-[#050505]/10 bg-[#F4F4F1] px-4 py-3 transition-all focus-within:border-brand dark:border-white/10 dark:bg-white/[0.04]">
             <textarea
               ref={textareaRef}
               value={input}
@@ -2309,7 +2342,7 @@ export function DrPlannerChat({
                     body: JSON.stringify({ messages }),
                   }).catch(() => {});
                 }}
-                className="size-8 border border-destructive/40 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-colors shrink-0"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-destructive/40 text-destructive transition-colors hover:bg-destructive/10"
                 title="Detener generación"
               >
                 <X className="size-3.5" strokeWidth={1.6} />
@@ -2319,15 +2352,35 @@ export function DrPlannerChat({
                 type="button"
                 onClick={submit}
                 disabled={!input.trim()}
-                className="size-8 bg-brand text-brand-foreground flex items-center justify-center hover:bg-brand/90 transition-colors disabled:opacity-30 disabled:bg-foreground/10 disabled:text-foreground/40 shrink-0"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground transition-colors hover:bg-brand/90 disabled:bg-foreground/10 disabled:text-foreground/40 disabled:opacity-30"
               >
                 <Send className="size-3.5" strokeWidth={2} />
               </button>
             )}
           </div>
-          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 text-center mt-2">
-            Intro enviar · Shift+Intro nueva línea · @ mencionar
-          </p>
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
+              Intro enviar · Shift+Intro nueva línea · @ mencionar
+            </p>
+            <div className="flex items-center gap-1">
+              {MODEL_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  title={m.desc}
+                  onClick={() => updateModelMode(m.id)}
+                  className={cn(
+                    "font-sans text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 border transition-colors",
+                    modelMode === m.id
+                      ? "border-brand text-brand bg-brand/10"
+                      : "border-foreground/15 text-foreground/40 hover:text-foreground/70 hover:border-foreground/30"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

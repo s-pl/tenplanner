@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -12,8 +13,19 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (!groupsEnabled) {
+    return NextResponse.json(
+      { error: "Los grupos de alumnos están desactivados." },
+      { status: 403 }
+    );
+  }
 
   const { searchParams } = new URL(request.url);
   const withStudents = searchParams.get("withStudents") === "true";
@@ -32,12 +44,35 @@ export async function GET(request: Request) {
       .leftJoin(students, eq(groupStudents.studentId, students.id))
       .where(eq(groups.coachId, user.id))
       .orderBy(groups.name)
-      .catch(() => [] as { groupId: string; groupName: string; description: string | null; studentId: string | null }[]);
+      .catch(
+        () =>
+          [] as {
+            groupId: string;
+            groupName: string;
+            description: string | null;
+            studentId: string | null;
+          }[]
+      );
 
-    const map = new Map<string, { id: string; name: string; description: string | null; memberCount: number; studentIds: string[] }>();
+    const map = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        description: string | null;
+        memberCount: number;
+        studentIds: string[];
+      }
+    >();
     for (const row of rows) {
       if (!map.has(row.groupId)) {
-        map.set(row.groupId, { id: row.groupId, name: row.groupName, description: row.description ?? null, memberCount: 0, studentIds: [] });
+        map.set(row.groupId, {
+          id: row.groupId,
+          name: row.groupName,
+          description: row.description ?? null,
+          memberCount: 0,
+          studentIds: [],
+        });
       }
       if (row.studentId) {
         const g = map.get(row.groupId)!;
@@ -61,29 +96,58 @@ export async function GET(request: Request) {
     .where(eq(groups.coachId, user.id))
     .groupBy(groups.id)
     .orderBy(groups.name)
-    .catch(() => [] as { id: string; name: string; description: string | null; createdAt: Date; memberCount: number }[]);
+    .catch(
+      () =>
+        [] as {
+          id: string;
+          name: string;
+          description: string | null;
+          createdAt: Date;
+          memberCount: number;
+        }[]
+    );
 
   return NextResponse.json({ data: rows });
 }
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (!groupsEnabled) {
+    return NextResponse.json(
+      { error: "Los grupos de alumnos están desactivados." },
+      { status: 403 }
+    );
+  }
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 422 }
+    );
   }
 
   const [group] = await db
     .insert(groups)
-    .values({ coachId: user.id, name: parsed.data.name, description: parsed.data.description ?? null })
+    .values({
+      coachId: user.id,
+      name: parsed.data.name,
+      description: parsed.data.description ?? null,
+    })
     .returning();
 
   return NextResponse.json({ data: group }, { status: 201 });

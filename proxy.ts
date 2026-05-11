@@ -7,11 +7,15 @@ const PUBLIC_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/auth/callback",
+  "/classes",
+  "/exercises",
   "/s/",
+  "/privacy",
   "/privacidad",
   "/aviso-legal",
   "/cookies",
   "/terminos",
+  "/landing/",
   "/api/cron/",
 ];
 const PUBLIC_EXACT = new Set(["/"]);
@@ -28,7 +32,7 @@ function buildCsp(nonce: string): string {
     "base-uri 'self'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "img-src 'self' data: blob: https://*.supabase.co https://images.pexels.com",
+    "img-src 'self' data: blob: https://*.supabase.co https://images.pexels.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? "" : " 'unsafe-eval'"}`,
@@ -40,7 +44,10 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function withSecurityHeaders(response: NextResponse, csp: string): NextResponse {
+function withSecurityHeaders(
+  response: NextResponse,
+  csp: string
+): NextResponse {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -175,15 +182,19 @@ export async function proxy(request: NextRequest) {
     typeof authHeader === "string" && authHeader.startsWith("Bearer ");
   const isExercisesReadApi =
     request.method === "GET" && pathname.startsWith("/api/exercises");
+  const isClassesReadApi =
+    request.method === "GET" && pathname.startsWith("/api/classes");
   const isProfileBootstrapApi =
     pathname === "/api/users" && request.method === "POST" && hasBearerToken;
   const isPublic =
     PUBLIC_EXACT.has(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p)) ||
     isExercisesReadApi ||
+    isClassesReadApi ||
     isProfileBootstrapApi;
   const isApiRoute = pathname.startsWith("/api/");
-  const shouldCheckUser = !isPublic || pathname === "/login" || pathname === "/register";
+  const shouldCheckUser =
+    !isPublic || pathname === "/login" || pathname === "/register";
 
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] =
     null;

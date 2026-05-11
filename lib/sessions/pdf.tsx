@@ -1,10 +1,4 @@
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 export type PdfExercise = {
   name: string;
@@ -110,7 +104,12 @@ const styles = StyleSheet.create({
   },
 
   // Objective / description text
-  bodyText: { fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 10 },
+  bodyText: {
+    fontSize: 10,
+    color: "#374151",
+    lineHeight: 1.5,
+    marginBottom: 10,
+  },
 
   // Students
   studentsRow: { fontSize: 9.5, color: "#374151", marginBottom: 12 },
@@ -203,7 +202,12 @@ const styles = StyleSheet.create({
     borderTopColor: BORDER,
     lineHeight: 1.4,
   },
-  exerciseMaterials: { flexDirection: "row", flexWrap: "wrap", gap: 3, marginTop: 5 },
+  exerciseMaterials: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 3,
+    marginTop: 5,
+  },
   exerciseMaterialChip: {
     fontSize: 8,
     color: "#4B5563",
@@ -228,12 +232,13 @@ const styles = StyleSheet.create({
   },
 });
 
-const PHASE_LABEL: Record<NonNullable<PdfExercise["phase"]> | "none", string> = {
-  activation: "Activación",
-  main: "Principal",
-  cooldown: "Vuelta a la calma",
-  none: "Sin fase asignada",
-};
+const PHASE_LABEL: Record<NonNullable<PdfExercise["phase"]> | "none", string> =
+  {
+    activation: "Activación",
+    main: "Principal",
+    cooldown: "Vuelta a la calma",
+    none: "Sin fase asignada",
+  };
 
 const CATEGORY_LABEL: Record<PdfExercise["category"], string> = {
   technique: "Técnica",
@@ -248,7 +253,14 @@ const DIFFICULTY_LABEL: Record<PdfExercise["difficulty"], string> = {
   advanced: "Avanzado",
 };
 
-const INTENSITY_LABEL = ["", "Muy suave", "Suave", "Moderada", "Alta", "Máxima"];
+const INTENSITY_LABEL = [
+  "",
+  "Muy suave",
+  "Suave",
+  "Moderada",
+  "Alta",
+  "Máxima",
+];
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -273,7 +285,11 @@ function groupByPhase(exercises: PdfExercise[]) {
     PdfExercise[]
   >();
   for (const ex of [...exercises].sort((a, b) => a.orderIndex - b.orderIndex)) {
-    const key = (ex.phase ?? "none") as "activation" | "main" | "cooldown" | "none";
+    const key = (ex.phase ?? "none") as
+      | "activation"
+      | "main"
+      | "cooldown"
+      | "none";
     const list = groups.get(key) ?? [];
     list.push(ex);
     groups.set(key, list);
@@ -307,7 +323,9 @@ export function SessionPdf({ session }: { session: PdfSession }) {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brandLabel}>TenPlanner · Sesión de entrenamiento</Text>
+          <Text style={styles.brandLabel}>
+            TenPlanner · Sesión de entrenamiento
+          </Text>
           <Text style={styles.title}>{session.title}</Text>
           <Text style={styles.subtitle}>{formatDate(session.scheduledAt)}</Text>
           <Text style={styles.coachLine}>Entrenador: {session.coachName}</Text>
@@ -383,7 +401,8 @@ export function SessionPdf({ session }: { session: PdfSession }) {
             <Text style={styles.sectionTitle}>Material necesario</Text>
             <View style={styles.materialsContainer}>
               <Text style={styles.materialsTitle}>
-                Prepara antes de comenzar — {allMaterials.length} elemento{allMaterials.length !== 1 ? "s" : ""}
+                Prepara antes de comenzar — {allMaterials.length} elemento
+                {allMaterials.length !== 1 ? "s" : ""}
               </Text>
               <View style={styles.materialsList}>
                 {allMaterials.map((m) => (
@@ -408,8 +427,16 @@ export function SessionPdf({ session }: { session: PdfSession }) {
                 style={styles.exercise}
               >
                 <View style={styles.exerciseHeader}>
-                  <View style={{ flexDirection: "row", flex: 1, alignItems: "flex-start" }}>
-                    <Text style={styles.exerciseNumber}>{ex.orderIndex + 1}.</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flex: 1,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Text style={styles.exerciseNumber}>
+                      {ex.orderIndex + 1}.
+                    </Text>
                     <Text style={styles.exerciseName}>{ex.name}</Text>
                   </View>
                   {ex.durationMinutes ? (
@@ -420,7 +447,8 @@ export function SessionPdf({ session }: { session: PdfSession }) {
                 </View>
 
                 <Text style={styles.exerciseMeta}>
-                  {CATEGORY_LABEL[ex.category]} · {DIFFICULTY_LABEL[ex.difficulty]}
+                  {CATEGORY_LABEL[ex.category]} ·{" "}
+                  {DIFFICULTY_LABEL[ex.difficulty]}
                   {ex.intensity != null
                     ? ` · Intensidad ${ex.intensity}/5 (${INTENSITY_LABEL[ex.intensity]})`
                     : ""}
@@ -446,7 +474,8 @@ export function SessionPdf({ session }: { session: PdfSession }) {
 
         {/* Footer */}
         <Text style={styles.footer} fixed>
-          Generado con TenPlanner · {formatDate(new Date())} · Entrenador: {session.coachName}
+          Generado con TenPlanner · {formatDate(new Date())} · Entrenador:{" "}
+          {session.coachName}
         </Text>
       </Page>
     </Document>

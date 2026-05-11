@@ -91,6 +91,9 @@ export async function PUT(request: Request, context: StudentRouteContext) {
       "dominantHand",
       "playerLevel",
       "yearsExperience",
+      "yearStartedTennis",
+      "yearStartedRacketSports",
+      "preferredSchedule",
       "notes",
       "imageUrl",
     ] as const;
@@ -103,6 +106,21 @@ export async function PUT(request: Request, context: StudentRouteContext) {
 
     if (d.email !== undefined) {
       updateValues.email = d.email === "" ? null : d.email;
+    }
+    if (d.phone !== undefined) {
+      updateValues.phone = d.phone === "" ? null : d.phone;
+    }
+    if (
+      d.yearStartedRacketSports !== undefined &&
+      d.yearStartedTennis === undefined
+    ) {
+      updateValues.yearStartedTennis = d.yearStartedRacketSports;
+    }
+    if (
+      d.yearStartedTennis !== undefined &&
+      d.yearStartedRacketSports === undefined
+    ) {
+      updateValues.yearStartedRacketSports = d.yearStartedTennis;
     }
 
     const [updated] = await db

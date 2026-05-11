@@ -24,6 +24,8 @@ import { FavoriteToggle } from "@/components/app/favorite-toggle";
 import { ExerciseFilters } from "@/components/app/exercise-filters";
 import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 import {
   Plus,
   ArrowLeft,
@@ -38,7 +40,6 @@ import {
   Lock,
   Heart,
 } from "lucide-react";
-import { MobileFab } from "@/components/app/mobile-fab";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -81,9 +82,9 @@ const TABS = ["all", "global", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
-  all: "Todos",
-  global: "Globales",
-  mine: "Propios",
+  all: "Ver todos",
+  global: "Biblioteca",
+  mine: "Mis ejercicios",
   favorites: "Favoritos",
   drafts: "Borradores",
 };
@@ -115,6 +116,21 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+  const [publicExercisesEnabled, exerciseCreationEnabled] = await Promise.all([
+    getBooleanSetting("feature.public_exercises_enabled"),
+    getBooleanSetting("feature.exercise_creation_enabled"),
+  ]);
+
+  if (!publicExercisesEnabled && !user) {
+    return (
+      <FeatureLocked
+        title="Biblioteca global desactivada"
+        description="El administrador ha pausado temporalmente la biblioteca pública de ejercicios."
+        href="/"
+        cta="Volver al inicio"
+      />
+    );
+  }
 
   const params = await searchParams;
 
@@ -137,7 +153,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       requestedTab === "favorites" ||
       requestedTab === "drafts")
       ? "all"
-      : requestedTab;
+      : !publicExercisesEnabled && requestedTab === "global"
+        ? "mine"
+        : requestedTab;
 
   const searchTerm = getString(params.q).trim();
   const parsedPage = Number(getString(params.page) || "1");
@@ -146,6 +164,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   // Advanced filters
   const activeFormato = getString(params.formato) || undefined;
+  const activeNivel = getString(params.nivel) || undefined;
+  const activeAspectoJuego = getString(params.aspectoJuego) || undefined;
+  const activeParametro = getString(params.parametro) || undefined;
+  const activeTipologia = getString(params.tipologia) || undefined;
+  const activeDuracionRango = getString(params.duracionRango) || undefined;
   const activeNumJugadores = getNumber(params.numJugadores);
   const activeTipoPelota = getString(params.tipoPelota) || undefined;
   const activeTipoActividad = getString(params.tipoActividad) || undefined;
@@ -154,11 +177,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const activeMinDuracion = getNumber(params.minDuracion);
   const activeMaxDuracion = getNumber(params.maxDuracion);
   const activeLocation = getString(params.location) || undefined;
-  const activePhase = getString(params.phase) || undefined;
-  const activeIntensity = getNumber(params.intensity);
 
   const advancedActive =
     activeFormato ||
+    activeNivel ||
+    activeAspectoJuego ||
+    activeParametro ||
+    activeTipologia ||
+    activeDuracionRango ||
     activeNumJugadores != null ||
     activeTipoPelota ||
     activeTipoActividad ||
@@ -166,21 +192,25 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     activeEfecto.length > 0 ||
     activeMinDuracion != null ||
     activeMaxDuracion != null ||
-    activeLocation ||
-    activePhase ||
-    activeIntensity != null;
+    activeLocation;
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
-    ? (or(
-        eq(exercisesTable.isGlobal, true),
-        eq(exercisesTable.createdBy, user.id)
-      ) ?? eq(exercisesTable.isGlobal, true))
-    : eq(exercisesTable.isGlobal, true);
+    ? publicExercisesEnabled
+      ? (or(
+          eq(exercisesTable.isGlobal, true),
+          eq(exercisesTable.createdBy, user.id)
+        ) ?? eq(exercisesTable.createdBy, user.id))
+      : eq(exercisesTable.createdBy, user.id)
+    : publicExercisesEnabled
+      ? eq(exercisesTable.isGlobal, true)
+      : sql`1=0`;
 
   const visibilityWhere =
     activeTab === "global"
-      ? eq(exercisesTable.isGlobal, true)
+      ? publicExercisesEnabled
+        ? eq(exercisesTable.isGlobal, true)
+        : sql`1=0`
       : activeTab === "mine" && user
         ? eq(exercisesTable.createdBy, user.id)
         : allVisibleWhere;
@@ -230,6 +260,17 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           activeFormato as "individual" | "parejas" | "grupal" | "multigrupo"
         )
       );
+    if (activeNivel) listConditions.push(eq(exercisesTable.nivel, activeNivel));
+    if (activeAspectoJuego)
+      listConditions.push(eq(exercisesTable.aspectoJuego, activeAspectoJuego));
+    if (activeParametro)
+      listConditions.push(eq(exercisesTable.parametro, activeParametro));
+    if (activeTipologia)
+      listConditions.push(eq(exercisesTable.tipologia, activeTipologia));
+    if (activeDuracionRango)
+      listConditions.push(
+        eq(exercisesTable.duracionRango, activeDuracionRango)
+      );
     if (activeNumJugadores != null)
       listConditions.push(eq(exercisesTable.numJugadores, activeNumJugadores));
     if (activeTipoPelota)
@@ -277,15 +318,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       );
     if (activeLocation)
       listConditions.push(eq(exercisesTable.location, activeLocation));
-    if (activePhase)
-      listConditions.push(
-        eq(
-          exercisesTable.phase,
-          activePhase as "activation" | "main" | "cooldown"
-        )
-      );
-    if (activeIntensity != null)
-      listConditions.push(eq(exercisesTable.intensity, activeIntensity));
   }
 
   const listWhere = and(...listConditions);
@@ -325,10 +357,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         .limit(PAGE_SIZE + 1)
         .offset(offset),
       db.select({ total: count() }).from(exercisesTable).where(allVisibleWhere),
-      db
-        .select({ total: count() })
-        .from(exercisesTable)
-        .where(eq(exercisesTable.isGlobal, true)),
+      publicExercisesEnabled
+        ? db
+            .select({ total: count() })
+            .from(exercisesTable)
+            .where(eq(exercisesTable.isGlobal, true))
+        : Promise.resolve([{ total: 0 }]),
       user
         ? db
             .select({ total: count() })
@@ -386,17 +420,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     favorites: favIdArray.length,
     drafts: draftCount,
   };
-  const masthead = {
-    eyebrow: "Método · Catálogo",
-    accent: "Biblioteca",
-    suffix: "de ejercicios",
-    description:
-      "Una colección viva: ejercicios globales, propios y generados con criterio. Aquí se edita el lenguaje del método.",
-    statusLabel: `${tabCounts.all.toString().padStart(3, "0")} ejercicios visibles`,
-  };
 
   const advancedParams: Record<string, string | string[] | undefined> = {
     formato: activeFormato,
+    nivel: activeNivel,
+    aspectoJuego: activeAspectoJuego,
+    parametro: activeParametro,
+    tipologia: activeTipologia,
+    duracionRango: activeDuracionRango,
     numJugadores:
       activeNumJugadores != null ? String(activeNumJugadores) : undefined,
     tipoPelota: activeTipoPelota,
@@ -408,8 +439,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     maxDuracion:
       activeMaxDuracion != null ? String(activeMaxDuracion) : undefined,
     location: activeLocation,
-    phase: activePhase,
-    intensity: activeIntensity != null ? String(activeIntensity) : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -424,6 +453,13 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     if (merged.page && merged.page !== "1")
       p.set("page", merged.page as string);
     if (merged.formato) p.set("formato", merged.formato as string);
+    if (merged.nivel) p.set("nivel", merged.nivel as string);
+    if (merged.aspectoJuego)
+      p.set("aspectoJuego", merged.aspectoJuego as string);
+    if (merged.parametro) p.set("parametro", merged.parametro as string);
+    if (merged.tipologia) p.set("tipologia", merged.tipologia as string);
+    if (merged.duracionRango)
+      p.set("duracionRango", merged.duracionRango as string);
     if (merged.numJugadores)
       p.set("numJugadores", merged.numJugadores as string);
     if (merged.tipoPelota) p.set("tipoPelota", merged.tipoPelota as string);
@@ -444,8 +480,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     if (merged.minDuracion) p.set("minDuracion", merged.minDuracion as string);
     if (merged.maxDuracion) p.set("maxDuracion", merged.maxDuracion as string);
     if (merged.location) p.set("location", merged.location as string);
-    if (merged.phase) p.set("phase", merged.phase as string);
-    if (merged.intensity) p.set("intensity", merged.intensity as string);
     const s = p.toString();
     return `/exercises${s ? `?${s}` : ""}`;
   }
@@ -466,648 +500,706 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   };
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
-        {/* ─── Masthead ─── */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              {masthead.eyebrow}
-            </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {masthead.statusLabel}
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
-            <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">{masthead.accent}</em>{" "}
-                {masthead.suffix}
+    <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_82%_20%,rgba(214,255,56,0.22),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_82%_20%,rgba(214,255,56,0.18),transparent_34%)]" />
+      <div className="relative px-4 py-6 sm:px-6 md:px-10 lg:px-12">
+        <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
+          <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
+            <div>
+              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                Biblioteca publica
+              </p>
+              <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
+                Ejercicios
               </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                {masthead.description}
+              <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
+                Biblioteca de ejercicios sueltos, etiquetados por nivel,
+                categoria y duracion para entrenadores de deportes de raqueta.
               </p>
             </div>
-            {user ? (
-              <div className="flex w-full items-center gap-2 sm:w-auto md:shrink-0">
-                <Link
-                  href="/exercises/new"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors sm:w-auto"
-                >
-                  <Plus className="size-4" /> Añadir ejercicio
-                </Link>
+            <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-[#D6FF38]">
+                    {tabCounts.all}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    Total
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-white">
+                    {tabCounts.global}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    Global
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-white">
+                    {tabCounts.favorites}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    Listas
+                  </p>
+                </div>
               </div>
-            ) : (
-              <Link
-                href="/login"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-foreground/20 text-foreground/50 px-4 py-2.5 text-[13px] hover:border-foreground/40 hover:text-foreground/70 transition-colors sm:w-auto md:shrink-0"
-              >
-                <Lock className="size-3.5" strokeWidth={1.8} /> Inicia sesión
-                para añadir
-              </Link>
-            )}
+              <div>
+                {user && exerciseCreationEnabled ? (
+                  <Link
+                    href="/exercises/new"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
+                  >
+                    <Plus className="size-4" />
+                    Nuevo ejercicio
+                  </Link>
+                ) : user ? (
+                  <span className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 bg-white/[0.04] px-5 text-[13px] font-semibold text-white/45">
+                    <Lock className="size-4" />
+                    Bloqueado
+                  </span>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/18 px-5 text-[13px] font-semibold text-white/72 transition hover:border-[#D6FF38] hover:text-[#D6FF38]"
+                  >
+                    <Lock className="size-3.5" />
+                    Inicia sesion para anadir
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
+          <div className="h-2 bg-[#D6FF38]" />
         </header>
 
-        <>
-          {/* ─── Tabs (propiedad) ─── */}
-          <nav className="flex items-end gap-6 overflow-x-auto border-b border-foreground/15 pb-px sm:gap-8">
-            {TABS.map((t) => {
-              // Hide drafts tab for unauthenticated users
-              if (t === "drafts" && !user) return null;
+        <div className="mt-6 space-y-6">
+          <>
+            {/* Tabs */}
+            <nav className="flex gap-2 overflow-x-auto rounded-lg border border-[#050505]/10 bg-white/70 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04]">
+              {TABS.map((t) => {
+                if (t === "global" && !publicExercisesEnabled) return null;
+                if (t === "drafts" && !user) return null;
 
-              const isActive = activeTab === t;
-              const requiresAuth = !user && (t === "mine" || t === "favorites");
+                const isActive = activeTab === t;
+                const requiresAuth =
+                  !user && (t === "mine" || t === "favorites");
 
-              if (requiresAuth) {
+                if (requiresAuth) {
+                  return (
+                    <Link
+                      key={t}
+                      href="/login"
+                      className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-foreground/35 transition-colors hover:bg-[#050505]/5 hover:text-foreground/55 dark:hover:bg-white/8"
+                    >
+                      <Lock className="size-3" strokeWidth={1.8} />
+                      {TAB_LABELS[t]}
+                    </Link>
+                  );
+                }
+
                 return (
                   <Link
                     key={t}
-                    href="/login"
-                    className="group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 border-transparent pb-3 text-foreground/35 hover:text-foreground/50 transition-colors"
-                  >
-                    <span className="text-[15px] flex items-center gap-1">
-                      <Lock className="size-3 inline" strokeWidth={1.8} />
-                      {TAB_LABELS[t]}
-                    </span>
-                  </Link>
-                );
-              }
-
-              return (
-                <Link
-                  key={t}
-                  href={buildHref({
-                    category: activeCategory,
-                    difficulty: activeDifficulty,
-                    q: searchTerm || undefined,
-                    tab: t,
-                  })}
-                  className={`group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 pb-3 transition-colors ${
-                    isActive
-                      ? "border-brand"
-                      : "border-transparent hover:border-foreground/25"
-                  }`}
-                >
-                  <span
-                    className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
+                    href={buildHref({
+                      category: activeCategory,
+                      difficulty: activeDifficulty,
+                      q: searchTerm || undefined,
+                      tab: t,
+                    })}
+                    className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? "bg-[#D6FF38] text-[#050505]"
+                        : "text-muted-foreground hover:bg-[#050505]/5 hover:text-foreground dark:hover:bg-white/8"
+                    }`}
                   >
                     {TAB_LABELS[t]}
-                  </span>
-                  <span
-                    className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
-                  >
-                    ({tabCounts[t].toString().padStart(2, "0")})
-                  </span>
-                </Link>
-              );
-            })}
-          </nav>
+                    {tabCounts[t] > 0 && (
+                      <span className="ml-1.5 text-[11px] tabular-nums opacity-60">
+                        {tabCounts[t]}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {activeTab === "drafts" && user ? (
-            <ExerciseDraftsPanel showEmptyState />
-          ) : activeTab === "favorites" && user ? (
-            <ExerciseListsSection />
-          ) : (
-            <>
-              {/* ─── Category strip ─── */}
-              {tabCounts[activeTab] > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 border-t border-b border-foreground/15 divide-foreground/10 md:divide-x divide-y md:divide-y-0">
-                  {byCategory.map(({ cat, count }) => {
-                    const isActive = activeCategory === cat;
-                    return (
-                      <Link
-                        key={cat}
-                        href={buildHref({
-                          category: isActive ? "all" : cat,
-                          difficulty: activeDifficulty,
-                          q: searchTerm || undefined,
-                          tab: activeTab,
-                        })}
-                        className={`group px-5 py-5 transition-colors ${isActive ? "bg-foreground/[0.03]" : "hover:bg-foreground/[0.02]"}`}
-                      >
-                        <div className="flex items-baseline justify-between">
-                          <p
-                            className={`font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? "text-brand" : "text-foreground/45"}`}
-                          >
-                            {CATEGORY_CODE[cat as Category]} ·{" "}
-                            {CATEGORY_LABEL[cat as Category]}
-                          </p>
-                          {isActive && (
-                            <span className="size-1.5 rounded-full bg-brand" />
-                          )}
-                        </div>
-                        <p className="mt-2 font-heading text-3xl tabular-nums leading-none text-foreground">
-                          {count}
-                        </p>
-                        <p className="mt-1.5 font-sans text-[10px] italic text-foreground/45">
-                          ejercicios
-                        </p>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* ─── Search + difficulty + filtros avanzados ─── */}
-              <div className="space-y-3">
-                <div className="flex flex-col md:flex-row gap-3">
-                  <form
-                    className="flex-1 relative"
-                    action="/exercises"
-                    method="get"
-                  >
-                    <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/40 pointer-events-none"
-                      strokeWidth={1.6}
-                    />
-                    <input
-                      type="search"
-                      name="q"
-                      placeholder="Buscar por nombre o descripción…"
-                      defaultValue={searchTerm}
-                      className="w-full h-10 pl-9 pr-4 text-[13px] bg-transparent border border-foreground/20 rounded-md focus:outline-none focus:border-brand/60 text-foreground placeholder:text-foreground/40 transition-colors"
-                    />
-                    {activeCategory !== "all" && (
-                      <input
-                        type="hidden"
-                        name="category"
-                        value={activeCategory}
-                      />
-                    )}
-                    {activeDifficulty !== "all" && (
-                      <input
-                        type="hidden"
-                        name="difficulty"
-                        value={activeDifficulty}
-                      />
-                    )}
-                    {activeTab !== "all" && (
-                      <input type="hidden" name="tab" value={activeTab} />
-                    )}
-                    {activeFormato && (
-                      <input
-                        type="hidden"
-                        name="formato"
-                        value={activeFormato}
-                      />
-                    )}
-                    {activeNumJugadores != null && (
-                      <input
-                        type="hidden"
-                        name="numJugadores"
-                        value={activeNumJugadores}
-                      />
-                    )}
-                    {activeTipoPelota && (
-                      <input
-                        type="hidden"
-                        name="tipoPelota"
-                        value={activeTipoPelota}
-                      />
-                    )}
-                    {activeTipoActividad && (
-                      <input
-                        type="hidden"
-                        name="tipoActividad"
-                        value={activeTipoActividad}
-                      />
-                    )}
-                    {activeGolpes.map((g) => (
-                      <input key={g} type="hidden" name="golpe" value={g} />
-                    ))}
-                    {activeEfecto.map((e) => (
-                      <input key={e} type="hidden" name="efecto" value={e} />
-                    ))}
-                    {activeMinDuracion != null && (
-                      <input
-                        type="hidden"
-                        name="minDuracion"
-                        value={activeMinDuracion}
-                      />
-                    )}
-                    {activeMaxDuracion != null && (
-                      <input
-                        type="hidden"
-                        name="maxDuracion"
-                        value={activeMaxDuracion}
-                      />
-                    )}
-                    {activeLocation && (
-                      <input
-                        type="hidden"
-                        name="location"
-                        value={activeLocation}
-                      />
-                    )}
-                    {activePhase && (
-                      <input type="hidden" name="phase" value={activePhase} />
-                    )}
-                    {activeIntensity != null && (
-                      <input
-                        type="hidden"
-                        name="intensity"
-                        value={activeIntensity}
-                      />
-                    )}
-                  </form>
-
-                  <div className="flex items-center gap-1.5 overflow-x-auto">
-                    <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40 px-1 shrink-0">
-                      Nivel:
-                    </span>
-                    {DIFFICULTIES.map((diff) => {
-                      const isActive = activeDifficulty === diff;
-                      const label =
-                        diff === "all"
-                          ? "Todos"
-                          : DIFFICULTY_LABEL[diff as Difficulty];
+            {activeTab === "drafts" && user ? (
+              <ExerciseDraftsPanel showEmptyState />
+            ) : activeTab === "favorites" && user ? (
+              <ExerciseListsSection />
+            ) : (
+              <>
+                {/* ─── Category strip ─── */}
+                {tabCounts[activeTab] > 0 && (
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {byCategory.map(({ cat, count }) => {
+                      const isActive = activeCategory === cat;
                       return (
                         <Link
-                          key={diff}
+                          key={cat}
                           href={buildHref({
-                            category: activeCategory,
-                            difficulty: diff,
+                            category: isActive ? "all" : cat,
+                            difficulty: activeDifficulty,
                             q: searchTerm || undefined,
                             tab: activeTab,
                           })}
-                          className={`px-2.5 py-1.5 text-[11px] font-sans tracking-[0.08em] whitespace-nowrap transition-colors border rounded ${
+                          className={`group rounded-lg border px-5 py-5 transition-all ${
                             isActive
-                              ? "border-brand text-brand bg-brand/5"
-                              : "border-foreground/15 text-foreground/55 hover:text-foreground hover:border-foreground/30"
+                              ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505] shadow-[0_18px_40px_rgba(214,255,56,0.24)]"
+                              : "border-[#050505]/10 bg-white/70 hover:border-[#050505]/20 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-[#D6FF38]/40"
                           }`}
                         >
-                          {label}
+                          <div className="flex items-baseline justify-between">
+                            <p
+                              className={`font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? "text-[#050505]/70" : "text-foreground/45"}`}
+                            >
+                              {CATEGORY_CODE[cat as Category]} ·{" "}
+                              {CATEGORY_LABEL[cat as Category]}
+                            </p>
+                            {isActive && (
+                              <span className="size-1.5 rounded-full bg-[#050505]" />
+                            )}
+                          </div>
+                          <p className="mt-2 font-heading text-3xl tabular-nums leading-none">
+                            {count}
+                          </p>
+                          <p className="mt-1.5 font-sans text-[10px] italic opacity-60">
+                            ejercicios
+                          </p>
                         </Link>
                       );
                     })}
                   </div>
+                )}
+
+                {/* ─── Search + difficulty + filtros avanzados ─── */}
+                <div className="space-y-3 rounded-lg border border-[#050505]/10 bg-white/70 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="flex flex-col gap-3 md:flex-row">
+                    <form
+                      className="flex-1 relative"
+                      action="/exercises"
+                      method="get"
+                    >
+                      <Search
+                        className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/40"
+                        strokeWidth={1.6}
+                      />
+                      <input
+                        type="search"
+                        name="q"
+                        placeholder="Buscar por nombre o descripción…"
+                        defaultValue={searchTerm}
+                        className="h-11 w-full rounded-full border border-[#050505]/12 bg-[#F4F4F1] pl-9 pr-4 text-[13px] text-foreground transition-colors placeholder:text-foreground/40 focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                      />
+                      {activeCategory !== "all" && (
+                        <input
+                          type="hidden"
+                          name="category"
+                          value={activeCategory}
+                        />
+                      )}
+                      {activeDifficulty !== "all" && (
+                        <input
+                          type="hidden"
+                          name="difficulty"
+                          value={activeDifficulty}
+                        />
+                      )}
+                      {activeTab !== "all" && (
+                        <input type="hidden" name="tab" value={activeTab} />
+                      )}
+                      {activeFormato && (
+                        <input
+                          type="hidden"
+                          name="formato"
+                          value={activeFormato}
+                        />
+                      )}
+                      {activeNivel && (
+                        <input type="hidden" name="nivel" value={activeNivel} />
+                      )}
+                      {activeAspectoJuego && (
+                        <input
+                          type="hidden"
+                          name="aspectoJuego"
+                          value={activeAspectoJuego}
+                        />
+                      )}
+                      {activeParametro && (
+                        <input
+                          type="hidden"
+                          name="parametro"
+                          value={activeParametro}
+                        />
+                      )}
+                      {activeTipologia && (
+                        <input
+                          type="hidden"
+                          name="tipologia"
+                          value={activeTipologia}
+                        />
+                      )}
+                      {activeDuracionRango && (
+                        <input
+                          type="hidden"
+                          name="duracionRango"
+                          value={activeDuracionRango}
+                        />
+                      )}
+                      {activeNumJugadores != null && (
+                        <input
+                          type="hidden"
+                          name="numJugadores"
+                          value={activeNumJugadores}
+                        />
+                      )}
+                      {activeTipoPelota && (
+                        <input
+                          type="hidden"
+                          name="tipoPelota"
+                          value={activeTipoPelota}
+                        />
+                      )}
+                      {activeTipoActividad && (
+                        <input
+                          type="hidden"
+                          name="tipoActividad"
+                          value={activeTipoActividad}
+                        />
+                      )}
+                      {activeGolpes.map((g) => (
+                        <input key={g} type="hidden" name="golpe" value={g} />
+                      ))}
+                      {activeEfecto.map((e) => (
+                        <input key={e} type="hidden" name="efecto" value={e} />
+                      ))}
+                      {activeMinDuracion != null && (
+                        <input
+                          type="hidden"
+                          name="minDuracion"
+                          value={activeMinDuracion}
+                        />
+                      )}
+                      {activeMaxDuracion != null && (
+                        <input
+                          type="hidden"
+                          name="maxDuracion"
+                          value={activeMaxDuracion}
+                        />
+                      )}
+                      {activeLocation && (
+                        <input
+                          type="hidden"
+                          name="location"
+                          value={activeLocation}
+                        />
+                      )}
+                    </form>
+
+                    <div className="flex items-center gap-1.5 overflow-x-auto">
+                      <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+                        Nivel:
+                      </span>
+                      {DIFFICULTIES.map((diff) => {
+                        const isActive = activeDifficulty === diff;
+                        const label =
+                          diff === "all"
+                            ? "Todos"
+                            : DIFFICULTY_LABEL[diff as Difficulty];
+                        return (
+                          <Link
+                            key={diff}
+                            href={buildHref({
+                              category: activeCategory,
+                              difficulty: diff,
+                              q: searchTerm || undefined,
+                              tab: activeTab,
+                            })}
+                            className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-sans font-semibold tracking-[0.08em] transition-colors ${
+                              isActive
+                                ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                                : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
+                            }`}
+                          >
+                            {label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ─── Filtros avanzados ─── */}
+                  <ExerciseFilters
+                    currentFilters={{
+                      formato: activeFormato,
+                      nivel: activeNivel,
+                      aspectoJuego: activeAspectoJuego,
+                      parametro: activeParametro,
+                      tipologia: activeTipologia,
+                      duracionRango: activeDuracionRango,
+                      numJugadores: activeNumJugadores,
+                      tipoPelota: activeTipoPelota,
+                      tipoActividad: activeTipoActividad,
+                      golpes: activeGolpes,
+                      efecto: activeEfecto,
+                      minDuracion: activeMinDuracion,
+                      maxDuracion: activeMaxDuracion,
+                      location: activeLocation,
+                    }}
+                    preserved={{
+                      q: searchTerm || undefined,
+                      tab: activeTab !== "all" ? activeTab : undefined,
+                      category:
+                        activeCategory !== "all" ? activeCategory : undefined,
+                      difficulty:
+                        activeDifficulty !== "all"
+                          ? activeDifficulty
+                          : undefined,
+                    }}
+                  />
+
+                  {/* Active filter summary */}
+                  {advancedActive && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {activeFormato && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Formato: {FORMATO_LABEL[activeFormato]}
+                        </span>
+                      )}
+                      {activeNivel && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Nivel: {activeNivel.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {activeAspectoJuego && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Aspecto: {activeAspectoJuego}
+                        </span>
+                      )}
+                      {activeParametro && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Parametro: {activeParametro}
+                        </span>
+                      )}
+                      {activeTipologia && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Tipologia: {activeTipologia.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {activeDuracionRango && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Rango: {activeDuracionRango}
+                        </span>
+                      )}
+                      {activeNumJugadores != null && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          {activeNumJugadores} jugador
+                          {activeNumJugadores !== 1 ? "es" : ""}
+                        </span>
+                      )}
+                      {activeTipoPelota && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          Pelota: {activeTipoPelota.replace("_", " ")}
+                        </span>
+                      )}
+                      {activeTipoActividad && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          {TIPO_ACTIVIDAD_LABEL[activeTipoActividad] ??
+                            activeTipoActividad}
+                        </span>
+                      )}
+                      {activeGolpes.map((g) => (
+                        <span
+                          key={g}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          {g.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                      {activeEfecto.map((e) => (
+                        <span
+                          key={e}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Efecto: {e.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                      {(activeMinDuracion != null ||
+                        activeMaxDuracion != null) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          {activeMinDuracion ?? ""}–{activeMaxDuracion ?? "∞"}{" "}
+                          min
+                        </span>
+                      )}
+                      {activeLocation && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
+                          {activeLocation}
+                        </span>
+                      )}
+                      <Link
+                        href={buildHref({
+                          category: activeCategory,
+                          difficulty: activeDifficulty,
+                          q: searchTerm || undefined,
+                          tab: activeTab,
+                          formato: undefined,
+                          nivel: undefined,
+                          aspectoJuego: undefined,
+                          parametro: undefined,
+                          tipologia: undefined,
+                          duracionRango: undefined,
+                          numJugadores: undefined,
+                          tipoPelota: undefined,
+                          tipoActividad: undefined,
+                          golpe: undefined,
+                          efecto: undefined,
+                          minDuracion: undefined,
+                          maxDuracion: undefined,
+                          location: undefined,
+                        })}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 hover:text-foreground border border-foreground/15 rounded transition-colors"
+                      >
+                        Limpiar filtros
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
-                {/* ─── Filtros avanzados ─── */}
-                <ExerciseFilters
-                  currentFilters={{
-                    formato: activeFormato,
-                    numJugadores: activeNumJugadores,
-                    tipoPelota: activeTipoPelota,
-                    tipoActividad: activeTipoActividad,
-                    golpes: activeGolpes,
-                    efecto: activeEfecto,
-                    minDuracion: activeMinDuracion,
-                    maxDuracion: activeMaxDuracion,
-                    location: activeLocation,
-                    phase: activePhase,
-                    intensity: activeIntensity,
-                  }}
-                  preserved={{
-                    q: searchTerm || undefined,
-                    tab: activeTab !== "all" ? activeTab : undefined,
-                    category:
-                      activeCategory !== "all" ? activeCategory : undefined,
-                    difficulty:
-                      activeDifficulty !== "all" ? activeDifficulty : undefined,
-                  }}
-                />
-
-                {/* Active filter summary */}
-                {advancedActive && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {activeFormato && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        Formato: {FORMATO_LABEL[activeFormato]}
-                      </span>
-                    )}
-                    {activeNumJugadores != null && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        {activeNumJugadores} jugador
-                        {activeNumJugadores !== 1 ? "es" : ""}
-                      </span>
-                    )}
-                    {activeTipoPelota && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        Pelota: {activeTipoPelota.replace("_", " ")}
-                      </span>
-                    )}
-                    {activeTipoActividad && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        {TIPO_ACTIVIDAD_LABEL[activeTipoActividad] ??
-                          activeTipoActividad}
-                      </span>
-                    )}
-                    {activeGolpes.map((g) => (
-                      <span
-                        key={g}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
-                      >
-                        {g.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                    {activeEfecto.map((e) => (
-                      <span
-                        key={e}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
-                      >
-                        Efecto: {e.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                    {(activeMinDuracion != null ||
-                      activeMaxDuracion != null) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        {activeMinDuracion ?? ""}–{activeMaxDuracion ?? "∞"} min
-                      </span>
-                    )}
-                    {activeIntensity != null && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        Intensidad {activeIntensity}
-                      </span>
-                    )}
-                    {activePhase && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        Fase: {activePhase}
-                      </span>
-                    )}
-                    {activeLocation && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                        {activeLocation}
-                      </span>
-                    )}
+                {filtered.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
+                    <p className="text-[15px] font-medium text-foreground mb-2">
+                      Sin coincidencias
+                    </p>
+                    <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-4">
+                      {searchTerm
+                        ? `No hay ejercicios para "${searchTerm}".`
+                        : "Prueba con otra combinación."}
+                    </p>
                     <Link
-                      href={buildHref({
-                        category: activeCategory,
-                        difficulty: activeDifficulty,
-                        q: searchTerm || undefined,
-                        tab: activeTab,
-                        formato: undefined,
-                        numJugadores: undefined,
-                        tipoPelota: undefined,
-                        tipoActividad: undefined,
-                        golpe: undefined,
-                        efecto: undefined,
-                        minDuracion: undefined,
-                        maxDuracion: undefined,
-                        location: undefined,
-                        phase: undefined,
-                        intensity: undefined,
-                      })}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 hover:text-foreground border border-foreground/15 rounded transition-colors"
+                      href={buildHref({ tab: activeTab })}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
                     >
                       Limpiar filtros
                     </Link>
                   </div>
-                )}
-              </div>
+                ) : (
+                  <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {filtered.map((exercise) => {
+                      const catLabel =
+                        CATEGORY_LABEL[exercise.category as Category];
+                      const diffLabel =
+                        DIFFICULTY_LABEL[exercise.difficulty as Difficulty];
+                      const diffBars =
+                        DIFFICULTY_BARS[exercise.difficulty as Difficulty];
+                      const steps = Number(exercise.stepsCount ?? 0);
+                      const materials = Number(exercise.materialsCount ?? 0);
 
-              {/* ─── Grid ─── */}
-              {filtered.length === 0 ? (
-                <div className="border-t border-b border-foreground/15 py-20 text-center">
-                  <p className="font-heading italic text-2xl text-foreground/80 mb-2">
-                    Sin coincidencias.
-                  </p>
-                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
-                    {searchTerm
-                      ? `Nada para «${searchTerm}» con los filtros actuales.`
-                      : "Prueba con otra combinación."}
-                  </p>
-                  <Link
-                    href={buildHref({ tab: activeTab })}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors pb-0.5"
-                  >
-                    Limpiar filtros
-                  </Link>
-                </div>
-              ) : (
-                <ul className="border-t border-foreground/15 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 divide-y divide-foreground/10 md:divide-y-0">
-                  {filtered.map((exercise, idx) => {
-                    const catLabel =
-                      CATEGORY_LABEL[exercise.category as Category];
-                    const catCode =
-                      CATEGORY_CODE[exercise.category as Category];
-                    const diffLabel =
-                      DIFFICULTY_LABEL[exercise.difficulty as Difficulty];
-                    const diffBars =
-                      DIFFICULTY_BARS[exercise.difficulty as Difficulty];
-                    const steps = Number(exercise.stepsCount ?? 0);
-                    const materials = Number(exercise.materialsCount ?? 0);
-                    const globalIdx = offset + idx + 1;
+                      let owner: {
+                        label: string;
+                        icon: React.ElementType;
+                      } | null = null;
+                      if (exercise.isAiGenerated)
+                        owner = { label: "IA", icon: Sparkles };
+                      else if (exercise.isGlobal)
+                        owner = { label: "GLB", icon: Globe };
+                      else if (user && exercise.createdBy === user.id)
+                        owner = { label: "PRP", icon: User };
 
-                    let owner: {
-                      label: string;
-                      icon: React.ElementType;
-                    } | null = null;
-                    if (exercise.isAiGenerated)
-                      owner = { label: "IA", icon: Sparkles };
-                    else if (exercise.isGlobal)
-                      owner = { label: "GLB", icon: Globe };
-                    else if (user && exercise.createdBy === user.id)
-                      owner = { label: "PRP", icon: User };
+                      const isFavorited = favoritedIds.has(exercise.id);
+                      const formatoLabel = exercise.formato
+                        ? FORMATO_LABEL[exercise.formato]
+                        : null;
+                      const actividadLabel = exercise.tipoActividad
+                        ? TIPO_ACTIVIDAD_LABEL[exercise.tipoActividad]
+                        : null;
+                      const savedInLists =
+                        exerciseListCountMap.get(exercise.id) ?? 0;
 
-                    const isFavorited = favoritedIds.has(exercise.id);
-                    const formatoLabel = exercise.formato
-                      ? FORMATO_LABEL[exercise.formato]
-                      : null;
-                    const actividadLabel = exercise.tipoActividad
-                      ? TIPO_ACTIVIDAD_LABEL[exercise.tipoActividad]
-                      : null;
-                    const savedInLists =
-                      exerciseListCountMap.get(exercise.id) ?? 0;
-
-                    return (
-                      <li
-                        key={exercise.id}
-                        className="md:border-b md:border-foreground/10 md:[&:nth-child(3n)]:border-r-0 md:border-r md:border-foreground/10 md:[&:nth-last-child(-n+3)]:border-b-0 flex flex-col"
-                      >
-                        <div className="flex items-center justify-between px-4 pb-0 pt-5 sm:px-6">
-                          <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35">
-                            № {String(globalIdx).padStart(3, "0")}
-                          </span>
-                          <div className="flex items-center gap-2.5">
-                            {owner && (
-                              <span
-                                className={`inline-flex items-center gap-1 font-sans text-[9px] uppercase tracking-[0.2em] ${
-                                  owner.label === "IA"
-                                    ? "text-brand"
-                                    : "text-foreground/50"
-                                }`}
-                              >
-                                <owner.icon
-                                  className="size-2.5"
-                                  strokeWidth={1.8}
-                                />
-                                {owner.label}
-                              </span>
-                            )}
-                            <FavoriteToggle
-                              exerciseId={exercise.id}
-                              initialFavorited={isFavorited}
-                              exerciseName={exercise.name}
-                              size="sm"
-                              locked={!user}
-                            />
-                          </div>
-                        </div>
-
-                        <Link
-                          href={`/exercises/${exercise.id}`}
-                          className="group block flex-1 px-4 pb-6 pt-3 transition-colors hover:bg-foreground/[0.02] sm:px-6"
+                      return (
+                        <li
+                          key={exercise.id}
+                          className="flex flex-col overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#D6FF38] hover:shadow-[0_24px_50px_rgba(5,5,5,0.12)] dark:border-white/10 dark:bg-white/[0.04]"
                         >
-                          <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-brand mb-1.5">
-                            {catCode} · {catLabel}
-                          </p>
-                          <h3 className="font-heading text-[20px] leading-[1.2] text-foreground mb-2">
-                            {exercise.name}
-                          </h3>
-
-                          {exercise.description && (
-                            <p className="text-[12.5px] text-foreground/60 italic leading-relaxed line-clamp-2 mb-5">
-                              {exercise.description}
-                            </p>
-                          )}
-
-                          {(formatoLabel ||
-                            actividadLabel ||
-                            exercise.numJugadores) && (
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {formatoLabel && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
-                                  {formatoLabel}
-                                </span>
-                              )}
-                              {exercise.numJugadores && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
-                                  {exercise.numJugadores}P
-                                </span>
-                              )}
-                              {actividadLabel && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-foreground/5 text-foreground/50 rounded">
-                                  {actividadLabel}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {user && savedInLists > 0 ? (
-                            <div className="mb-3 flex flex-wrap gap-1">
-                              <span className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/8 px-2 py-1 text-[10px] font-medium text-brand">
-                                <Heart className="size-3" strokeWidth={1.7} />
-                                En {savedInLists} lista
-                                {savedInLists !== 1 ? "s" : ""}
-                              </span>
-                            </div>
-                          ) : null}
-
-                          <div className="grid gap-4 border-t border-foreground/10 pt-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                            <div className="space-y-1.5">
-                              <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/40">
-                                {diffLabel}
-                              </p>
-                              <div className="flex gap-0.5">
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <span
-                                    key={n}
-                                    className={`h-[3px] w-5 rounded-full ${n <= diffBars ? "bg-brand" : "bg-foreground/15"}`}
+                          <div className="flex items-center justify-between bg-[#050505] px-4 py-3 text-white sm:px-5">
+                            <span className="rounded-full bg-[#D6FF38] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[#050505]">
+                              {exercise.durationMinutes} min
+                            </span>
+                            <div className="flex items-center gap-2.5">
+                              {owner && (
+                                <span
+                                  className={`inline-flex items-center gap-1 font-sans text-[9px] uppercase tracking-[0.2em] ${
+                                    owner.label === "IA"
+                                      ? "text-[#D6FF38]"
+                                      : "text-white/55"
+                                  }`}
+                                >
+                                  <owner.icon
+                                    className="size-2.5"
+                                    strokeWidth={1.8}
                                   />
-                                ))}
+                                  {owner.label}
+                                </span>
+                              )}
+                              <FavoriteToggle
+                                exerciseId={exercise.id}
+                                initialFavorited={isFavorited}
+                                exerciseName={exercise.name}
+                                size="sm"
+                                locked={!user}
+                              />
+                            </div>
+                          </div>
+
+                          <Link
+                            href={`/exercises/${exercise.id}`}
+                            className="group block flex-1 px-4 pb-6 pt-5 transition-colors hover:bg-[#D6FF38]/[0.05] sm:px-6"
+                          >
+                            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6D7F00] dark:text-[#D6FF38]">
+                              {catLabel}
+                            </p>
+                            <h3 className="mb-2 font-heading text-[19px] font-semibold leading-snug text-foreground transition-colors group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
+                              {exercise.name}
+                            </h3>
+
+                            {exercise.description && (
+                              <p className="text-[12.5px] text-foreground/60 leading-relaxed line-clamp-2 mb-5">
+                                {exercise.description}
+                              </p>
+                            )}
+
+                            {(formatoLabel ||
+                              actividadLabel ||
+                              exercise.numJugadores) && (
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {formatoLabel && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
+                                    {formatoLabel}
+                                  </span>
+                                )}
+                                {exercise.numJugadores && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
+                                    {exercise.numJugadores}P
+                                  </span>
+                                )}
+                                {actividadLabel && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
+                                    {actividadLabel}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {user && savedInLists > 0 ? (
+                              <div className="mb-3 flex flex-wrap gap-1">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10px] font-semibold text-[#5E6F00] dark:text-[#D6FF38]">
+                                  <Heart className="size-3" strokeWidth={1.7} />
+                                  En {savedInLists} lista
+                                  {savedInLists !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            ) : null}
+
+                            <div className="grid gap-4 border-t border-foreground/10 pt-4 sm:grid-cols-[1fr_auto] sm:items-end">
+                              <div className="space-y-1.5">
+                                <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/40">
+                                  {diffLabel}
+                                </p>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <span
+                                      key={n}
+                                      className={`h-[3px] w-5 rounded-full ${n <= diffBars ? "bg-[#D6FF38]" : "bg-foreground/15"}`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 font-sans text-[10px] tabular-nums text-foreground/50">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="size-3" strokeWidth={1.6} />{" "}
+                                  {exercise.durationMinutes}&prime;
+                                </span>
+                                {steps > 0 && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <ListOrdered
+                                      className="size-3"
+                                      strokeWidth={1.6}
+                                    />{" "}
+                                    {steps}
+                                  </span>
+                                )}
+                                {materials > 0 && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Package
+                                      className="size-3"
+                                      strokeWidth={1.6}
+                                    />{" "}
+                                    {materials}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 font-sans text-[10px] tabular-nums text-foreground/50">
-                              <span className="inline-flex items-center gap-1">
-                                <Clock className="size-3" strokeWidth={1.6} />{" "}
-                                {exercise.durationMinutes}&prime;
-                              </span>
-                              {steps > 0 && (
-                                <span className="inline-flex items-center gap-1">
-                                  <ListOrdered
-                                    className="size-3"
-                                    strokeWidth={1.6}
-                                  />{" "}
-                                  {steps}
-                                </span>
-                              )}
-                              {materials > 0 && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Package
-                                    className="size-3"
-                                    strokeWidth={1.6}
-                                  />{" "}
-                                  {materials}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
 
-              {/* ─── Pagination ─── */}
-              {(currentPage > 1 || hasNextPage) && (
-                <footer className="flex flex-col gap-3 border-t border-foreground/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
-                    {filtered.length > 0
-                      ? `${offset + 1}–${offset + filtered.length}`
-                      : "0"}{" "}
-                    · Página {currentPage.toString().padStart(2, "0")}
-                  </p>
-                  <div className="flex items-center gap-5">
-                    {currentPage > 1 ? (
-                      <Link
-                        href={buildHref({
-                          category: activeCategory,
-                          difficulty: activeDifficulty,
-                          q: searchTerm || undefined,
-                          tab: activeTab,
-                          page: String(currentPage - 1),
-                        })}
-                        className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                      >
-                        <ArrowLeft className="size-3" /> Anterior
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                        <ArrowLeft className="size-3" /> Anterior
-                      </span>
-                    )}
-                    {hasNextPage ? (
-                      <Link
-                        href={buildHref({
-                          category: activeCategory,
-                          difficulty: activeDifficulty,
-                          q: searchTerm || undefined,
-                          tab: activeTab,
-                          page: String(currentPage + 1),
-                        })}
-                        className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                      >
-                        Siguiente <ArrowUpRight className="size-3" />
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                        Siguiente <ArrowUpRight className="size-3" />
-                      </span>
-                    )}
-                  </div>
-                </footer>
-              )}
-            </>
-          )}
-        </>
+                {/* ─── Pagination ─── */}
+                {(currentPage > 1 || hasNextPage) && (
+                  <footer className="flex flex-col gap-3 rounded-lg border border-[#050505]/10 bg-white/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/[0.04]">
+                    <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
+                      {filtered.length > 0
+                        ? `${offset + 1}–${offset + filtered.length}`
+                        : "0"}{" "}
+                      · Página {currentPage.toString().padStart(2, "0")}
+                    </p>
+                    <div className="flex items-center gap-5">
+                      {currentPage > 1 ? (
+                        <Link
+                          href={buildHref({
+                            category: activeCategory,
+                            difficulty: activeDifficulty,
+                            q: searchTerm || undefined,
+                            tab: activeTab,
+                            page: String(currentPage - 1),
+                          })}
+                          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-[#6D7F00] dark:hover:text-[#D6FF38]"
+                        >
+                          <ArrowLeft className="size-3" /> Anterior
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                          <ArrowLeft className="size-3" /> Anterior
+                        </span>
+                      )}
+                      {hasNextPage ? (
+                        <Link
+                          href={buildHref({
+                            category: activeCategory,
+                            difficulty: activeDifficulty,
+                            q: searchTerm || undefined,
+                            tab: activeTab,
+                            page: String(currentPage + 1),
+                          })}
+                          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-[#6D7F00] dark:hover:text-[#D6FF38]"
+                        >
+                          Siguiente <ArrowUpRight className="size-3" />
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+                          Siguiente <ArrowUpRight className="size-3" />
+                        </span>
+                      )}
+                    </div>
+                  </footer>
+                )}
+              </>
+            )}
+          </>
+        </div>
       </div>
-      {user && (
-        <MobileFab href="/exercises/new" icon="plus" label="Nuevo ejercicio" />
-      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
 import { CookieBanner } from "@/components/app/cookie-banner";
@@ -31,13 +31,13 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "TenPlanner — Planificador de Entrenamiento de Pádel",
-    template: "%s · TenPlanner",
+    default: "TenPlanner - Planificador para Deportes de Raqueta",
+    template: "%s - TenPlanner",
   },
   description:
-    "El planificador inteligente de entrenamiento para entrenadores y jugadores de pádel. Diseña sesiones, gestiona alumnos y mide progreso.",
+    "Planifica sesiones, gestiona alumnos y organiza biblioteca para deportes de raqueta.",
   keywords: [
-    "pádel",
+    "deportes de raqueta",
     "entrenamiento",
     "planificador",
     "entrenador",
@@ -49,17 +49,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "TenPlanner",
-    title: "TenPlanner — Planificador de Entrenamiento de Pádel",
+    title: "TenPlanner - Planificador para Deportes de Raqueta",
     description:
-      "Diseña sesiones, gestiona alumnos y mide el progreso de tu pádel.",
+      "Disena sesiones, gestiona alumnos y mide progreso en pista o cancha.",
     url: "/",
     locale: "es_ES",
   },
   twitter: {
     card: "summary_large_image",
     title: "TenPlanner",
-    description:
-      "Planificador inteligente de entrenamiento de pádel para entrenadores.",
+    description: "Planificador de entrenamiento para deportes de raqueta.",
   },
   robots: {
     index: true,
@@ -85,7 +84,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-xl focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-brand focus:outline-none"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-brand focus:outline-none"
         >
           Ir al contenido principal
         </a>
@@ -96,15 +95,20 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
           try {
+            var autoTheme = localStorage.getItem('theme-auto') !== 'false';
+            var h = new Date().getHours();
+            var timeDark = h < 7 || h >= 21;
             var t = localStorage.getItem('theme');
-            var isDark = t ? t === 'dark' : true;
+            var isDark = autoTheme ? timeDark : (t ? t === 'dark' : timeDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
             document.documentElement.classList.toggle('dark', isDark);
-            var A = { blue: ['oklch(0.70 0.18 255)','oklch(0.50 0.20 255)'], green: ['oklch(0.73 0.19 148)','oklch(0.48 0.18 148)'], violet: ['oklch(0.68 0.18 290)','oklch(0.50 0.18 290)'], amber: ['oklch(0.78 0.18 70)','oklch(0.58 0.18 70)'], rose: ['oklch(0.70 0.20 15)','oklch(0.52 0.20 15)'] };
+            var A = { blue: { dark: '#d6ff38', light: '#d6ff38', mutedDark: '#2b3613', mutedLight: '#efffba' }, green: { dark: '#5cff8d', light: '#5cff8d', mutedDark: '#14361f', mutedLight: '#dcffe5' }, violet: { dark: '#6ee7ff', light: '#6ee7ff', mutedDark: '#10313a', mutedLight: '#dff8ff' }, amber: { dark: '#ffd166', light: '#ffd166', mutedDark: '#3d2d12', mutedLight: '#fff2c7' }, rose: { dark: '#ff7a66', light: '#ff7a66', mutedDark: '#3d1f1a', mutedLight: '#ffe2dc' } };
             var ac = localStorage.getItem('accent') || 'blue';
             var c = A[ac] || A.blue;
-            var v = isDark ? c[0] : c[1];
+            var v = isDark ? c.dark : c.light;
+            var muted = isDark ? c.mutedDark : c.mutedLight;
             var el = document.documentElement;
-            el.style.setProperty('--brand', v); el.style.setProperty('--primary', v); el.style.setProperty('--ring', v); el.style.setProperty('--sidebar-primary', v); el.style.setProperty('--sidebar-ring', v);
+            el.style.setProperty('--brand', v); el.style.setProperty('--brand-muted', muted || v); el.style.setProperty('--brand-foreground', '#050505'); el.style.setProperty('--primary', v); el.style.setProperty('--primary-foreground', '#050505'); el.style.setProperty('--ring', v); el.style.setProperty('--sidebar-primary', v); el.style.setProperty('--sidebar-primary-foreground', '#050505'); el.style.setProperty('--sidebar-ring', v);
             var fs = localStorage.getItem('font-size') || 'md';
             var fm = { sm: '13px', md: '15px', lg: '17px' };
             el.style.fontSize = fm[fs] || '15px';

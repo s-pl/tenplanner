@@ -24,12 +24,16 @@ import {
   ArrowRight,
   ArrowLeft,
   ArrowUpRight,
-  Bot,
+  Lock,
   Search,
+  CalendarClock,
+  Clock,
+  Dumbbell,
 } from "lucide-react";
-import { MobileFabSpeedDial } from "@/components/app/mobile-fab";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
+import { getAppSettings } from "@/lib/app-settings";
+import { cn } from "@/lib/utils";
 type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
@@ -52,9 +56,6 @@ function formatWeekday(date: Date) {
     .format(date)
     .replace(".", "")
     .toUpperCase();
-}
-function formatYear(date: Date) {
-  return new Intl.DateTimeFormat("es-ES", { year: "numeric" }).format(date);
 }
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -81,6 +82,11 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
+  const settings = await getAppSettings([
+    "feature.session_creation_enabled",
+  ]);
+  const sessionCreationEnabled =
+    settings.get("feature.session_creation_enabled") !== false;
 
   const { filter, page, q } = await searchParams;
   const activeFilter: Filter =
@@ -205,170 +211,100 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     { key: "past", label: "Pasadas", n: pastCount },
     { key: "drafts", label: "Borradores", n: draftCount },
   ];
-  const masthead = {
-    eyebrow: "Planificación · Agenda",
-    accent: "Sesiones",
-    suffix: "de entrenamiento",
-    description:
-      "Cada sesión es una hipótesis: un plan que la pista valida o desmiente. Aquí mantienes ritmo, archivo y continuidad.",
-    statusLabel: `${totalSessions.toString().padStart(3, "0")} registros`,
-  };
-
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
-        {/* ─── Masthead ─── */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              {masthead.eyebrow}
+    <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
+      <div className="w-full space-y-6 px-4 py-8 sm:px-6 md:px-10">
+        <header className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:p-6">
+          <div
+            aria-hidden
+            className="court-grid pointer-events-none absolute inset-0 opacity-40 dark:opacity-25"
+          />
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
+              <CalendarClock className="size-3.5 text-brand" />
+              Plan operativo
             </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {masthead.statusLabel}
+            <h1 className="font-heading text-3xl font-semibold text-foreground md:text-4xl">
+              Sesiones
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-[14px] text-foreground/60">
+              Entrenamientos agendados con fecha, hora, lugar y alumnos.
             </p>
           </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
-            <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">{masthead.accent}</em>{" "}
-                {masthead.suffix}
-              </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                {masthead.description}
-              </p>
-            </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 md:flex md:shrink-0">
-              <Link
-                href="/sessions/dr-planner"
-                className="group inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/20 bg-background px-4 py-2.5 text-[13px] font-medium text-foreground/80 hover:border-brand/40 hover:text-brand transition-colors"
-              >
-                <Bot className="size-4 text-brand" /> Dr. Planner
-              </Link>
+          <div className="flex flex-wrap gap-2">
+            {sessionCreationEnabled ? (
               <Link
                 href="/sessions/new"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
               >
-                <Plus className="size-4" /> Nueva sesión
+                <Plus className="size-4" />
+                Nueva sesión
               </Link>
-            </div>
+            ) : (
+              <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
+                <Lock className="size-4" />
+                Bloqueado
+              </span>
+            )}
+          </div>
           </div>
         </header>
 
         <>
-          {/* ─── Filter rail ─── */}
-          <nav className="flex items-end gap-6 overflow-x-auto border-b border-foreground/15 pb-px sm:gap-8">
+          {/* Tabs */}
+          <nav className="flex flex-wrap gap-2 rounded-lg border border-[#050505]/10 bg-white p-1.5 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
             {FILTERS.map(({ key, label, n }) => {
               const isActive = activeFilter === key;
               return (
                 <Link
                   key={key}
                   href={sessionsHref({ filter: key, page: 1 })}
-                  className={`group -mb-px flex shrink-0 items-baseline gap-2 border-b-2 pb-3 transition-colors ${
+                  className={cn(
+                    "inline-flex min-h-9 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors",
                     isActive
-                      ? "border-brand"
-                      : "border-transparent hover:border-foreground/25"
-                  }`}
+                      ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                      : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                  )}
                 >
-                  <span
-                    className={`text-[15px] ${isActive ? "font-heading italic text-foreground" : "text-foreground/60 group-hover:text-foreground"}`}
-                  >
-                    {label}
-                  </span>
-                  <span
-                    className={`font-sans text-[10px] tabular-nums tracking-[0.14em] ${isActive ? "text-brand" : "text-foreground/40"}`}
-                  >
-                    ({n.toString().padStart(2, "0")})
-                  </span>
+                  {label}
+                  {n > 0 && (
+                    <span
+                      className={cn(
+                        "text-[11px] tabular-nums",
+                        isActive ? "opacity-70" : "text-foreground/45"
+                      )}
+                    >
+                      {n}
+                    </span>
+                  )}
                 </Link>
               );
             })}
           </nav>
 
           {activeFilter === "drafts" ? (
-            <SessionDraftsPanel showEmptyState />
+            <div className="rounded-lg border border-[#050505]/10 bg-white p-3 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+              <SessionDraftsPanel showEmptyState />
+            </div>
           ) : (
             <>
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Agenda total
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {totalSessions.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Todas las sesiones registradas en tu archivo.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Proximas
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {upcomingCount.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Trabajo futuro ya colocado en la agenda.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-foreground/15 bg-foreground/[0.02] px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                    Pasadas
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {pastCount.toString().padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/55">
-                    Archivo util para revisar carga y continuidad.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-brand/20 bg-brand/[0.06] px-4 py-4">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-brand/80">
-                    Foco actual
-                  </p>
-                  <p className="mt-2 font-heading text-3xl leading-none text-foreground">
-                    {(searchTerm
-                      ? totalFiltered
-                      : (FILTERS.find((item) => item.key === activeFilter)?.n ??
-                        totalSessions)
-                    )
-                      .toString()
-                      .padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-[12px] text-foreground/60">
-                    {searchTerm
-                      ? `Coincidencias para «${searchTerm}».`
-                      : activeFilter === "all"
-                        ? "Vista completa del archivo."
-                        : `Sesiones visibles en «${activeFilter === "upcoming" ? "Próximas" : "Pasadas"}».`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-lg border border-[#050505]/10 bg-white p-3 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
                 <Suspense
                   fallback={
-                    <div className="h-10 w-full rounded-md border border-foreground/20 bg-transparent animate-pulse" />
+                    <div className="h-11 w-full animate-pulse rounded-full border border-foreground/15 bg-muted/30" />
                   }
                 >
                   <SessionsSearchInput defaultValue={searchTerm} />
                 </Suspense>
 
                 {searchTerm ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand/8 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-brand">
-                      Búsqueda: {searchTerm}
+                  <div className="flex flex-wrap items-center gap-2 text-[12px] text-foreground/55">
+                    <span>
+                      Resultados para{" "}
+                      <span className="font-medium text-foreground">
+                        &quot;{searchTerm}&quot;
+                      </span>
                     </span>
                     <Link
                       href={sessionsHref({
@@ -376,7 +312,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                         q: undefined,
                         page: 1,
                       })}
-                      className="inline-flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 transition-colors hover:text-foreground"
+                      className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2.5 py-1 font-semibold text-foreground transition-colors hover:bg-[#D6FF38]/25"
                     >
                       Limpiar
                     </Link>
@@ -384,22 +320,28 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 ) : null}
               </div>
 
-              {/* ─── List ─── */}
               {sessionRows.length === 0 ? (
-                <div className="border-t border-b border-foreground/15 py-20 text-center">
-                  <p className="font-heading italic text-2xl text-foreground/80 mb-2">
-                    {activeFilter === "upcoming"
-                      ? "La agenda está despejada."
-                      : activeFilter === "past"
-                        ? "Aún no hay archivo que mirar."
-                        : "Ninguna sesión registrada."}
-                  </p>
-                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-6">
+                <div className="rounded-lg border border-dashed border-[#050505]/15 bg-white px-6 py-16 text-center shadow-[0_18px_50px_rgba(5,5,5,0.04)] dark:border-white/15 dark:bg-white/[0.035]">
+                  <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border border-[#D6FF38]/35 bg-[#D6FF38]/10">
+                    {searchTerm ? (
+                      <Search className="size-6 text-foreground/70" />
+                    ) : (
+                      <CalendarClock className="size-6 text-foreground/70" />
+                    )}
+                  </span>
+                  <p className="text-[15px] font-medium text-foreground mb-2">
                     {searchTerm
-                      ? `No hay sesiones para «${searchTerm}» con el filtro actual.`
-                      : activeFilter === "all"
-                        ? "Diseña tu primera sesión para empezar a dar forma al método."
-                        : "Prueba con otro filtro o crea una sesión nueva."}
+                      ? "Sin coincidencias"
+                      : activeFilter === "upcoming"
+                        ? "No tienes sesiones próximas"
+                        : activeFilter === "past"
+                          ? "No tienes sesiones pasadas"
+                          : "Sin sesiones todavía"}
+                  </p>
+                  <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-5">
+                    {searchTerm
+                      ? `No hay sesiones para "${searchTerm}".`
+                      : "Crea una nueva sesión para empezar."}
                   </p>
                   <Link
                     href={
@@ -411,7 +353,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                           })
                         : "/sessions/new"
                     }
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand border-b border-brand/40 hover:border-brand transition-colors pb-0.5"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
                   >
                     {searchTerm ? (
                       <>
@@ -425,82 +367,80 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="border-t border-foreground/15 divide-y divide-foreground/10">
-                  {sessionRows.map((session, idx) => {
+                <ul className="grid gap-2">
+                  {sessionRows.map((session) => {
                     const date = new Date(session.scheduledAt);
                     const isPast = date < now;
                     const count = exerciseCountMap.get(session.id) ?? 0;
                     const relative = humanDate(date);
-                    const globalIdx = offset + idx + 1;
+                    const statusLabel =
+                      session.status === "completed"
+                        ? "Completada"
+                        : session.status === "cancelled"
+                          ? "Cancelada"
+                          : isPast
+                            ? "Sin completar"
+                            : "Programada";
+                    const statusColor =
+                      session.status === "completed"
+                        ? "bg-brand/10 text-brand border-brand/20"
+                        : session.status === "cancelled"
+                          ? "bg-destructive/10 text-destructive/80 border-destructive/20"
+                          : isPast
+                            ? "bg-foreground/5 text-foreground/55 border-border"
+                            : "bg-blue-500/10 text-blue-500 border-blue-500/20";
 
                     return (
-                      <li key={session.id}>
+                      <li
+                        key={session.id}
+                        className="rounded-lg border border-[#050505]/10 bg-white shadow-[0_12px_36px_rgba(5,5,5,0.035)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
+                      >
                         <Link
                           href={`/sessions/${session.id}`}
-                          className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 py-6 -mx-3 px-3 hover:bg-foreground/[0.02] transition-colors sm:grid-cols-[auto_auto_1fr_auto] sm:gap-5 md:gap-8"
+                          className="group flex items-center gap-4 px-4 py-3.5"
                         >
-                          <span className="hidden w-6 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
-                            {String(globalIdx).padStart(2, "0")}
-                          </span>
-
-                          <div className="min-w-[78px] border-l border-foreground/15 pl-3 sm:min-w-[104px] sm:pl-5">
-                            <p className="font-heading text-[20px] leading-none tabular-nums text-foreground sm:text-[24px]">
+                          <div className="flex w-20 shrink-0 flex-col items-start border-r border-border pr-3">
+                            <p className="font-heading text-xl leading-none tabular-nums text-foreground">
                               {formatDayMonth(date)}
                             </p>
-                            <p className="mt-1.5 font-sans text-[10px] tracking-[0.15em] uppercase text-foreground/45 tabular-nums">
+                            <p className="mt-1 text-[11px] uppercase text-foreground/50 tabular-nums">
                               {formatWeekday(date)} · {formatTime(date)}
                             </p>
                           </div>
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`font-sans text-[9px] uppercase tracking-[0.2em] ${
-                                  session.status === "completed"
-                                    ? "text-brand"
-                                    : session.status === "cancelled"
-                                      ? "text-destructive/70"
-                                      : isPast
-                                        ? "text-foreground/55"
-                                        : "text-foreground/65"
-                                }`}
+                                className={`inline-flex items-center text-[10.5px] font-medium px-1.5 py-0.5 rounded border ${statusColor}`}
                               >
-                                {session.status === "completed"
-                                  ? "Completada"
-                                  : session.status === "cancelled"
-                                    ? "Cancelada"
-                                    : isPast
-                                      ? "Sin completar"
-                                      : "En agenda"}
+                                {statusLabel}
                               </span>
                               {relative && (
-                                <span className="font-sans text-[10px] italic text-foreground/45">
-                                  · {relative}
+                                <span className="text-[12px] text-foreground/50">
+                                  {relative}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[16px] text-foreground leading-snug truncate">
+                            <p className="text-[15px] text-foreground truncate">
                               {session.title}
                             </p>
-                            {session.description && (
-                              <p className="mt-1 text-[12px] text-foreground/55 truncate italic">
-                                {session.description}
-                              </p>
-                            )}
-                            <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.16em] text-foreground/40 tabular-nums">
-                              {session.durationMinutes} min{" "}
-                              <span className="text-foreground/20 mx-1.5">
-                                ·
+                            <p className="mt-1 text-[12px] text-foreground/55 tabular-nums">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                {session.durationMinutes} min
                               </span>{" "}
-                              {count} {count === 1 ? "ejercicio" : "ejercicios"}{" "}
-                              <span className="text-foreground/20 mx-1.5">
-                                ·
-                              </span>{" "}
-                              {formatYear(date)}
+                              <span className="mx-1 text-foreground/25">/</span>
+                              <span className="inline-flex items-center gap-1">
+                                <Dumbbell className="size-3" />
+                                {count}{" "}
+                                {count === 1 ? "ejercicio" : "ejercicios"}
+                              </span>
                             </p>
                           </div>
 
-                          <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-foreground/30 transition-colors group-hover:border-[#D6FF38]/70 group-hover:bg-[#D6FF38]/15 group-hover:text-foreground">
+                            <ArrowRight className="size-4" />
+                          </span>
                         </Link>
                       </li>
                     );
@@ -508,58 +448,46 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 </ul>
               )}
 
-              {/* ─── Pagination ─── */}
-              {totalFiltered > 0 && (
-                <footer className="flex items-center justify-between pt-2 border-t border-foreground/15">
-                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
-                    {offset + 1}–{offset + sessionRows.length} / {totalFiltered}
+              {totalFiltered > 0 && totalPages > 1 && (
+                <footer className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#050505]/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.045]">
+                  <p className="text-[12px] text-foreground/50 tabular-nums">
+                    {offset + 1}–{offset + sessionRows.length} de {totalFiltered}
                   </p>
-
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-5">
-                      {safePage > 1 ? (
-                        <Link
-                          href={sessionsHref({ page: safePage - 1 })}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                        >
-                          <ArrowLeft className="size-3" /> Anterior
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          <ArrowLeft className="size-3" /> Anterior
-                        </span>
-                      )}
-                      <span className="font-sans text-[10px] tracking-[0.18em] text-foreground/50 tabular-nums">
-                        {safePage.toString().padStart(2, "0")} /{" "}
-                        {totalPages.toString().padStart(2, "0")}
+                  <div className="flex items-center gap-3">
+                    {safePage > 1 ? (
+                      <Link
+                        href={sessionsHref({ page: safePage - 1 })}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground"
+                      >
+                        <ArrowLeft className="size-3.5" /> Anterior
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[13px] text-foreground/25">
+                        <ArrowLeft className="size-3.5" /> Anterior
                       </span>
-                      {safePage < totalPages ? (
-                        <Link
-                          href={sessionsHref({ page: safePage + 1 })}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
-                        >
-                          Siguiente <ArrowUpRight className="size-3" />
-                        </Link>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          Siguiente <ArrowUpRight className="size-3" />
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    <span className="text-[12px] text-foreground/50 tabular-nums">
+                      {safePage} / {totalPages}
+                    </span>
+                    {safePage < totalPages ? (
+                      <Link
+                        href={sessionsHref({ page: safePage + 1 })}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground"
+                      >
+                        Siguiente <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[13px] text-foreground/25">
+                        Siguiente <ArrowUpRight className="size-3.5" />
+                      </span>
+                    )}
+                  </div>
                 </footer>
               )}
             </>
           )}
         </>
       </div>
-      <MobileFabSpeedDial
-        primaryLabel="Nueva sesión"
-        actions={[
-          { href: "/sessions/dr-planner", label: "Dr. Planner", icon: "bot" },
-          { href: "/sessions/new", label: "Nueva sesión", icon: "plus" },
-        ]}
-      />
     </div>
   );
 }

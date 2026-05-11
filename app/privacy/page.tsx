@@ -12,23 +12,31 @@ export default function PrivacyPolicyPage() {
   const lastUpdated = "23 de abril de 2026";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-6 py-16">
+    <div className="min-h-screen bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1]">
+      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6 sm:py-14">
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex rounded-full border border-[#050505]/12 bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
         >
           ← Volver al inicio
         </Link>
 
-        <h1 className="font-heading text-4xl font-bold mt-8 mb-2">
-          Política de Privacidad
-        </h1>
-        <p className="text-sm text-muted-foreground mb-10">
-          Última actualización: {lastUpdated}
-        </p>
+        <header className="mt-8 overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
+          <div className="p-6 sm:p-8">
+            <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+              TenPlanner legal
+            </p>
+            <h1 className="mt-3 font-heading text-4xl font-semibold leading-none sm:text-5xl">
+              Política de Privacidad
+            </h1>
+            <p className="mt-4 text-sm text-white/62">
+              Última actualización: {lastUpdated}
+            </p>
+          </div>
+          <div className="h-2 bg-[#D6FF38]" />
+        </header>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-[15px] leading-relaxed">
+        <div className="mt-8 rounded-lg border border-[#050505]/10 bg-white/70 p-5 text-[15px] leading-relaxed shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-8">
           <section>
             <h2 className="font-heading text-xl font-semibold">
               1. Responsable del tratamiento
@@ -72,8 +80,8 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Chat Dr. Planner:</strong> mensajes enviados al
                 asistente de IA. Se procesan por Anthropic PBC para responder.
-                Base legal: ejecución del contrato + interés legítimo en
-                mejorar el servicio.
+                Base legal: ejecución del contrato + interés legítimo en mejorar
+                el servicio.
               </li>
               <li>
                 <strong>Datos técnicos:</strong> IP y cookies técnicas de
@@ -112,9 +120,9 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p>
               Conservamos los datos mientras tu cuenta esté activa. Puedes
-              solicitar el borrado en cualquier momento desde tu perfil. Tras
-              la eliminación, los datos quedan suprimidos en un plazo máximo de
-              30 días, salvo obligación legal de conservación.
+              solicitar el borrado en cualquier momento desde tu perfil. Tras la
+              eliminación, los datos quedan suprimidos en un plazo máximo de 30
+              días, salvo obligación legal de conservación.
             </p>
           </section>
 
@@ -159,8 +167,8 @@ export default function PrivacyPolicyPage() {
               7. Cambios en esta política
             </h2>
             <p>
-              Publicaremos cualquier cambio material en esta página. La fecha
-              de última actualización se muestra al inicio.
+              Publicaremos cualquier cambio material en esta página. La fecha de
+              última actualización se muestra al inicio.
             </p>
           </section>
         </div>

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { drPlannerChats, drPlannerMessages } from "@/db/schema";
 import { and, asc, eq } from "drizzle-orm";
+import { isDrPlannerEnabled } from "@/lib/app-settings";
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -25,6 +26,12 @@ export async function GET(_req: Request, { params }: Ctx) {
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isDrPlannerEnabled())) {
+    return NextResponse.json(
+      { error: "Dr. Planner está desactivado." },
+      { status: 403 }
+    );
+  }
 
   const chat = await getAuthedChat(id, user.id);
   if (!chat) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -55,6 +62,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isDrPlannerEnabled())) {
+    return NextResponse.json(
+      { error: "Dr. Planner está desactivado." },
+      { status: 403 }
+    );
+  }
 
   const chat = await getAuthedChat(id, user.id);
   if (!chat) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -83,7 +96,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   await db.transaction(async (tx) => {
     if (body.messages !== undefined) {
-      await tx.delete(drPlannerMessages).where(eq(drPlannerMessages.chatId, id));
+      await tx
+        .delete(drPlannerMessages)
+        .where(eq(drPlannerMessages.chatId, id));
       if (body.messages.length > 0) {
         await tx.insert(drPlannerMessages).values(
           body.messages.map((m, i) => ({
@@ -126,6 +141,12 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isDrPlannerEnabled())) {
+    return NextResponse.json(
+      { error: "Dr. Planner está desactivado." },
+      { status: 403 }
+    );
+  }
 
   const chat = await getAuthedChat(id, user.id);
   if (!chat) return NextResponse.json({ error: "Not found" }, { status: 404 });

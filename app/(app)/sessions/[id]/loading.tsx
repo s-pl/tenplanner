@@ -1,6 +1,6 @@
 export default function SessionDetailLoading() {
   return (
-    <div className="px-4 md:px-8 py-8 space-y-6 max-w-5xl animate-pulse">
+    <div className="w-full px-4 py-8 md:px-10 space-y-6 animate-pulse">
       {/* Back + title row */}
       <div className="flex items-center gap-3">
         <div className="size-9 rounded-xl bg-muted/30 shrink-0" />

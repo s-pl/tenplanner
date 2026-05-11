@@ -1,9 +1,12 @@
 import { and, count, desc, eq, ilike, type SQL } from "drizzle-orm";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
+import { embedExercise } from "@/lib/ai/semantic-search";
+import { getBooleanSetting } from "@/lib/app-settings";
 import {
   createExerciseSchema,
   exercisesListQuerySchema,
@@ -33,7 +36,23 @@ export async function GET(request: NextRequest) {
 
   const { category, search, page, limit } = parsedQuery.data;
   const offset = (page - 1) * limit;
-  const whereConditions: SQL[] = [exerciseVisibleToUserCondition(user?.id)];
+  const publicExercisesEnabled = await getBooleanSetting(
+    "feature.public_exercises_enabled"
+  );
+  const visibilityCondition = publicExercisesEnabled
+    ? exerciseVisibleToUserCondition(user?.id)
+    : user
+      ? eq(exercises.createdBy, user.id)
+      : undefined;
+
+  if (!visibilityCondition) {
+    return NextResponse.json({
+      data: [],
+      pagination: { page, limit, total: 0, totalPages: 0 },
+    });
+  }
+
+  const whereConditions: SQL[] = [visibilityCondition];
 
   if (category) {
     whereConditions.push(eq(exercises.category, category));
@@ -115,6 +134,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const exerciseCreationEnabled = await getBooleanSetting(
+    "feature.exercise_creation_enabled"
+  );
+  if (!exerciseCreationEnabled) {
+    return NextResponse.json(
+      { error: "La creación de ejercicios está desactivada." },
+      { status: 403 }
+    );
+  }
+
   let body: unknown;
 
   try {
@@ -137,7 +166,8 @@ export async function POST(request: Request) {
   }
 
   const totalImages =
-    (parsedBody.data.imageUrl ? 1 : 0) + (parsedBody.data.imageUrls?.length ?? 0);
+    (parsedBody.data.imageUrl ? 1 : 0) +
+    (parsedBody.data.imageUrls?.length ?? 0);
   if (totalImages > 4) {
     return NextResponse.json(
       { error: "Solo se permiten 4 imágenes por ejercicio" },
@@ -197,10 +227,31 @@ export async function POST(request: Request) {
         imageUrls: rest.imageUrls ?? null,
         steps: rest.steps ?? null,
         materials: rest.materials ?? null,
+        nivel: rest.nivel ?? null,
+        aspectoJuego: rest.aspectoJuego ?? null,
+        parametro: rest.parametro ?? null,
+        tipologia: rest.tipologia ?? null,
+        duracionRango: rest.duracionRango ?? null,
         isGlobal: isAdmin && requestedIsGlobal === true,
         createdBy: user.id,
       })
       .returning();
+
+    after(() =>
+      embedExercise({
+        id: createdExercise.id,
+        ownerId: createdExercise.isGlobal ? null : user.id,
+        name: createdExercise.name,
+        category: createdExercise.category,
+        difficulty: createdExercise.difficulty,
+        durationMinutes: createdExercise.durationMinutes,
+        description: createdExercise.description,
+        objectives: createdExercise.objectives,
+        tips: createdExercise.tips,
+        materials: createdExercise.materials as string[] | null,
+        location: createdExercise.location,
+      }).catch(console.error)
+    );
 
     return NextResponse.json({ data: createdExercise }, { status: 201 });
   } catch {

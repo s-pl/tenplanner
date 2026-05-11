@@ -1,0 +1,518 @@
+import Link from "next/link";
+import { eq, or, desc, and, ilike, sql } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
+import { db } from "@/db";
+import { classes, classFavorites, classDrafts } from "@/db/schema";
+import { Plus, Search, FileText, Heart } from "lucide-react";
+
+const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
+type Tab = (typeof TABS)[number];
+
+const TAB_LABELS: Record<Tab, string> = {
+  all: "Ver todas",
+  library: "Biblioteca",
+  mine: "Mis clases",
+  favorites: "Favoritos",
+  drafts: "Borradores",
+};
+
+const NIVEL_FILTERS = [
+  { id: "", label: "Todos" },
+  { id: "descubrimiento", label: "Descubrimiento (4-6)" },
+  { id: "desarrollo", label: "Desarrollo (6-8)" },
+  { id: "consolidacion", label: "Consolidación (8-10)" },
+  { id: "especializacion", label: "Especialización (10-12)" },
+  { id: "precompeticion", label: "Precompetición (12-14)" },
+  { id: "competicion", label: "Competición (14-18)" },
+  { id: "adultos_iniciacion", label: "Adultos iniciación" },
+  { id: "adultos_medio_alto", label: "Adultos medio-alto" },
+];
+
+const DURACION_FILTERS = [
+  { id: "", label: "Cualquiera" },
+  { id: "30", label: "30 min" },
+  { id: "45", label: "45 min" },
+  { id: "60", label: "60 min" },
+  { id: "75", label: "75 min" },
+  { id: "90", label: "90 min" },
+  { id: "120", label: "+90 min" },
+];
+
+const ASPECTO_FILTERS = [
+  { id: "", label: "Cualquiera" },
+  { id: "tecnica", label: "Técnica" },
+  { id: "tactica", label: "Táctica" },
+  { id: "mental", label: "Trabajo mental" },
+  { id: "fisico", label: "Físico" },
+];
+
+const GOLPES_FILTERS = [
+  { id: "derecha", label: "Derecha" },
+  { id: "reves", label: "Revés" },
+  { id: "saque", label: "Saque" },
+  { id: "volea", label: "Volea" },
+  { id: "remate", label: "Remate" },
+  { id: "dejada", label: "Dejada" },
+  { id: "globo", label: "Globo" },
+];
+
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ClassesPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
+
+  const requestedTab = (params.tab as string) ?? "all";
+  const tab: Tab = TABS.includes(requestedTab as Tab)
+    ? (requestedTab as Tab)
+    : "all";
+  const activeTab: Tab =
+    !user && (tab === "mine" || tab === "favorites") ? "all" : tab;
+
+  const q = typeof params.q === "string" ? params.q.trim() : "";
+  const nivel = typeof params.nivel === "string" ? params.nivel : "";
+  const duracion = typeof params.duracion === "string" ? params.duracion : "";
+  const aspecto = typeof params.aspecto === "string" ? params.aspecto : "";
+  const golpe = typeof params.golpe === "string" ? params.golpe : "";
+
+  // For drafts tab we don't query classes
+  let rows: Array<{
+    id: string;
+    name: string;
+    duracionMinutes: number;
+    alumnosTipo: string | null;
+    numAlumnos: number | null;
+    objetivos: string | null;
+    nivel: string | null;
+    isLibrary: boolean;
+    createdAt: Date;
+  }> = [];
+  let draftCount = 0;
+  let draftRows: Array<{
+    id: string;
+    payload: Record<string, unknown>;
+    updatedAt: Date;
+  }> = [];
+
+  if (user) {
+    draftRows = await db
+      .select({
+        id: classDrafts.id,
+        payload: classDrafts.payload,
+        updatedAt: classDrafts.updatedAt,
+      })
+      .from(classDrafts)
+      .where(eq(classDrafts.userId, user.id))
+      .orderBy(desc(classDrafts.updatedAt))
+      .limit(50);
+    draftCount = draftRows.length;
+  }
+
+  if (activeTab !== "drafts") {
+    const conds = [];
+    if (activeTab === "mine" && user) {
+      conds.push(eq(classes.createdBy, user.id));
+    } else if (activeTab === "library") {
+      conds.push(eq(classes.isLibrary, true));
+    } else if (activeTab === "favorites" && user) {
+      conds.push(
+        sql`${classes.id} IN (SELECT class_id FROM class_favorites WHERE user_id = ${user.id})`
+      );
+    } else {
+      conds.push(
+        user
+          ? or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))!
+          : eq(classes.isLibrary, true)
+      );
+    }
+    if (q) conds.push(ilike(classes.name, `%${q}%`));
+    if (nivel) conds.push(eq(classes.nivel, nivel));
+    if (aspecto) conds.push(eq(classes.aspectoJuego, aspecto));
+    if (duracion === "120") {
+      conds.push(sql`${classes.duracionMinutes} > 90`);
+    } else if (duracion) {
+      const d = Number(duracion);
+      if (Number.isFinite(d)) conds.push(eq(classes.duracionMinutes, d));
+    }
+    if (golpe) {
+      conds.push(sql`${classes.golpes}::jsonb @> ${`["${golpe}"]`}::jsonb`);
+    }
+
+    rows = await db
+      .select({
+        id: classes.id,
+        name: classes.name,
+        duracionMinutes: classes.duracionMinutes,
+        alumnosTipo: classes.alumnosTipo,
+        numAlumnos: classes.numAlumnos,
+        objetivos: classes.objetivos,
+        nivel: classes.nivel,
+        isLibrary: classes.isLibrary,
+        createdAt: classes.createdAt,
+      })
+      .from(classes)
+      .where(and(...conds))
+      .orderBy(desc(classes.createdAt))
+      .limit(60);
+  }
+
+  // Favorites set para pintar el corazón si aplica
+  const favRows = user
+    ? await db
+        .select({ classId: classFavorites.classId })
+        .from(classFavorites)
+        .where(eq(classFavorites.userId, user.id))
+    : [];
+  const favorites = new Set(favRows.map((f) => f.classId));
+
+  return (
+    <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.24),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.18),transparent_34%)]" />
+      <div className="relative space-y-6">
+        <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
+          <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
+            <div>
+              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                Biblioteca de clases
+              </p>
+              <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
+                Clases
+              </h1>
+              <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
+                Plantillas reutilizables con bloques y ejercicios para preparar
+                sesiones completas sin perder criterio en pista o cancha.
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-[#D6FF38]">
+                    {rows.length}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    visibles
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-white">
+                    {draftCount}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    borradores
+                  </p>
+                </div>
+              </div>
+              {user && (
+                <Link
+                  href="/classes/new"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
+                >
+                  <Plus className="size-4" />
+                  Nueva clase
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="h-2 bg-[#D6FF38]" />
+        </header>
+
+        {/* Tabs */}
+        <nav className="flex gap-2 overflow-x-auto rounded-lg border border-[#050505]/10 bg-white/70 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04]">
+          {TABS.map((t) => {
+            if (!user && (t === "mine" || t === "favorites" || t === "drafts"))
+              return null;
+            const active = activeTab === t;
+            const sp = new URLSearchParams();
+            if (t !== "all") sp.set("tab", t);
+            if (q) sp.set("q", q);
+            if (nivel) sp.set("nivel", nivel);
+            if (duracion) sp.set("duracion", duracion);
+            if (aspecto) sp.set("aspecto", aspecto);
+            if (golpe) sp.set("golpe", golpe);
+            return (
+              <Link
+                key={t}
+                href={sp.toString() ? `/classes?${sp.toString()}` : "/classes"}
+                className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-[#D6FF38] text-[#050505]"
+                    : "text-muted-foreground hover:bg-[#050505]/5 hover:text-foreground dark:hover:bg-white/8"
+                }`}
+              >
+                {TAB_LABELS[t]}
+                {t === "drafts" && draftCount > 0 && (
+                  <span className="ml-1.5 text-[10px] tabular-nums opacity-60">
+                    ({draftCount})
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {activeTab === "drafts" && user ? (
+          draftRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-20 text-center dark:border-white/15 dark:bg-white/[0.04]">
+              <div className="flex size-14 items-center justify-center rounded-lg border border-[#D6FF38]/40 bg-[#D6FF38]/20">
+                <FileText className="size-6 text-[#6D7F00] dark:text-[#D6FF38]" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-foreground/40">
+                  Sin borradores
+                </p>
+                <p className="text-sm text-foreground/30 mt-1">
+                  Las clases que guardes como borrador aparecerán aquí.
+                </p>
+              </div>
+              <Link
+                href="/classes/new"
+                className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
+              >
+                Crear clase
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {draftRows.map((draft, i) => {
+                const name =
+                  (typeof draft.payload?.name === "string" &&
+                    (draft.payload.name as string).trim()) ||
+                  "Clase sin título";
+                return (
+                  <li
+                    key={draft.id}
+                    className="flex items-center gap-3 rounded-lg border border-[#050505]/10 bg-white/70 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
+                  >
+                    <span className="font-sans text-[9px] tabular-nums text-foreground/30 shrink-0">
+                      {(i + 1).toString().padStart(2, "0")}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-heading text-foreground truncate">
+                        {name}
+                      </p>
+                      <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums">
+                        {new Intl.DateTimeFormat("es-ES", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(draft.updatedAt))}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/classes/new?draft=${draft.id}`}
+                      className="inline-flex items-center gap-1 rounded-full bg-[#D6FF38] px-3 py-1.5 text-[12px] font-semibold text-[#050505] transition hover:bg-[#050505] hover:text-white dark:hover:bg-white"
+                    >
+                      Continuar
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : (
+          <>
+            {/* Filtros: search + nivel + duración + aspecto + golpe */}
+            <form
+              className="grid gap-3 rounded-lg border border-[#050505]/10 bg-white/70 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04] md:grid-cols-[minmax(220px,1fr)_repeat(4,auto)_auto] md:items-end"
+              action="/classes"
+            >
+              {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
+              <div className="flex-1 min-w-[200px]">
+                <label
+                  htmlFor="q"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Buscar
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+                  <input
+                    id="q"
+                    name="q"
+                    defaultValue={q}
+                    placeholder="Nombre, contenido, objetivos…"
+                    className="h-11 w-full rounded-full border border-[#050505]/12 bg-[#F4F4F1] pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="nivel"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Nivel
+                </label>
+                <select
+                  id="nivel"
+                  name="nivel"
+                  defaultValue={nivel}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {NIVEL_FILTERS.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="duracion"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Duración
+                </label>
+                <select
+                  id="duracion"
+                  name="duracion"
+                  defaultValue={duracion}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {DURACION_FILTERS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="aspecto"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Aspecto
+                </label>
+                <select
+                  id="aspecto"
+                  name="aspecto"
+                  defaultValue={aspecto}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {ASPECTO_FILTERS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="golpe"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Golpe
+                </label>
+                <select
+                  id="golpe"
+                  name="golpe"
+                  defaultValue={golpe}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  <option value="">Cualquiera</option>
+                  {GOLPES_FILTERS.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="h-11 rounded-full bg-[#050505] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
+              >
+                Filtrar
+              </button>
+            </form>
+
+            {/* Listado */}
+            {rows.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
+                <p className="text-[15px] font-medium text-foreground mb-2">
+                  No hay clases que coincidan
+                </p>
+                <p className="text-[13px] text-foreground/55 max-w-md mx-auto">
+                  Prueba a quitar algún filtro o crea una clase nueva.
+                </p>
+                {user && (
+                  <Link
+                    href="/classes/new"
+                    className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
+                  >
+                    <Plus className="size-3.5" />
+                    Crear la primera
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {rows.map((cls) => (
+                  <li key={cls.id}>
+                    <Link
+                      href={`/classes/${cls.id}`}
+                      className="group flex h-full flex-col justify-between overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#D6FF38] hover:shadow-[0_24px_50px_rgba(5,5,5,0.12)] dark:border-white/10 dark:bg-white/[0.04]"
+                    >
+                      <div>
+                        <div className="mb-4 flex items-start justify-between gap-3 bg-[#050505] px-5 py-3 text-white">
+                          <span className="rounded-full bg-[#D6FF38] px-2.5 py-1 text-[11.5px] font-bold tabular-nums text-[#050505]">
+                            {cls.duracionMinutes} min
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {cls.isLibrary && (
+                              <span className="rounded-full border border-[#D6FF38]/50 bg-[#D6FF38]/15 px-2 py-0.5 text-[10px] font-semibold text-[#D6FF38]">
+                                Biblioteca
+                              </span>
+                            )}
+                            {favorites.has(cls.id) && (
+                              <Heart
+                                className="size-3.5 fill-pink-500 text-pink-500"
+                                aria-label="Favorito"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="px-5">
+                          <h3 className="line-clamp-3 font-heading text-[19px] font-semibold leading-snug text-foreground transition-colors group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
+                            {cls.name}
+                          </h3>
+                          {cls.objetivos && (
+                            <p className="mt-3 line-clamp-3 text-[13px] leading-5 text-muted-foreground">
+                              {cls.objetivos}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mx-5 mb-5 mt-5 flex flex-wrap gap-1.5 border-t border-border pt-4">
+                        <span className="rounded-full border border-border px-2 py-1 text-[10.5px] text-foreground/60">
+                          {cls.numAlumnos
+                            ? `${cls.numAlumnos} alumnos`
+                            : cls.alumnosTipo === "individual"
+                              ? "1 alumno"
+                              : "Grupo"}
+                        </span>
+                        {cls.alumnosTipo && (
+                          <span className="rounded-full border border-border px-2 py-1 text-[10.5px] capitalize text-foreground/60">
+                            {cls.alumnosTipo}
+                          </span>
+                        )}
+                        {cls.nivel && (
+                          <span className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]">
+                            {cls.nivel.replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

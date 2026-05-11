@@ -9,8 +9,11 @@ type Context = { params: Promise<{ listId: string }> };
 
 export async function PATCH(request: Request, context: Context) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { listId } = await context.params;
 
@@ -23,16 +26,21 @@ export async function PATCH(request: Request, context: Context) {
   if (!list) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = z.object({
-    name: z.string().trim().min(1).max(100).optional(),
-    emoji: z.string().max(10).optional(),
-  }).safeParse(body);
+  const parsed = z
+    .object({
+      name: z.string().trim().min(1).max(100).optional(),
+      emoji: z.string().max(10).optional(),
+    })
+    .safeParse(body);
 
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   const [updated] = await db
     .update(exerciseLists)
@@ -45,8 +53,11 @@ export async function PATCH(request: Request, context: Context) {
 
 export async function DELETE(_request: Request, context: Context) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { listId } = await context.params;
 
@@ -65,15 +76,20 @@ export async function DELETE(_request: Request, context: Context) {
       .where(eq(exerciseListItems.listId, listId));
     if (Number(total) > 0) {
       return NextResponse.json(
-        { error: "No puedes eliminar la lista de favoritos principal mientras tenga ejercicios." },
+        {
+          error:
+            "No puedes eliminar la lista de favoritos principal mientras tenga ejercicios.",
+        },
         { status: 409 }
       );
     }
   }
 
-  await db.delete(exerciseLists).where(
-    and(eq(exerciseLists.id, listId), eq(exerciseLists.userId, user.id))
-  );
+  await db
+    .delete(exerciseLists)
+    .where(
+      and(eq(exerciseLists.id, listId), eq(exerciseLists.userId, user.id))
+    );
 
   return NextResponse.json({ ok: true });
 }

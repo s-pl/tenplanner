@@ -1,8 +1,12 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
+  classes,
   exercises,
+  sessionBlockItems,
+  sessionBlocks,
   sessionExercises,
   sessionStudents,
   sessions,
@@ -16,26 +20,212 @@ import {
 } from "../validation";
 import {
   calculateExercisePlanDuration,
-  getAccessibleExerciseDurationMap,
+  exerciseVisibleToUserCondition,
 } from "@/lib/exercise-access";
+import { embedSession } from "@/lib/ai/semantic-search";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
-async function calculateDuration(
+type SessionBlockInput = {
+  orderIndex: number;
+  title?: string | null;
+  notes?: string | null;
+  items: Array<{
+    exerciseId?: string | null;
+    freeText?: string | null;
+    durationMinutes?: number | null;
+    notes?: string | null;
+  }>;
+};
+
+type TrainingPhase = "activation" | "main" | "cooldown";
+
+type ExerciseSnapshot = {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+};
+
+const BLOCK_TITLE_BY_PHASE: Record<number, string> = {
+  1: "Bloque inicial",
+  2: "Bloque principal",
+  3: "Bloque final",
+};
+
+function phaseToBlockOrder(phase?: string | null) {
+  if (phase === "activation") return 1;
+  if (phase === "cooldown") return 3;
+  return 2;
+}
+
+function blockOrderToPhase(orderIndex: number): TrainingPhase {
+  if (orderIndex === 1) return "activation";
+  if (orderIndex === 3) return "cooldown";
+  return "main";
+}
+
+function normalizePhase(phase?: string | null): TrainingPhase | null {
+  if (phase === "activation" || phase === "main" || phase === "cooldown") {
+    return phase;
+  }
+  return null;
+}
+
+function buildBlocksFromExercises(
+  exerciseItems: {
+    exerciseId: string;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    phase?: string | null;
+  }[]
+): SessionBlockInput[] {
+  const grouped = new Map<number, SessionBlockInput>();
+  for (const item of exerciseItems) {
+    const orderIndex = phaseToBlockOrder(item.phase);
+    const block =
+      grouped.get(orderIndex) ??
+      ({
+        orderIndex,
+        title: BLOCK_TITLE_BY_PHASE[orderIndex],
+        notes: null,
+        items: [],
+      } satisfies SessionBlockInput);
+    block.items.push({
+      exerciseId: item.exerciseId,
+      freeText: null,
+      durationMinutes: item.durationMinutes ?? null,
+      notes: item.notes ?? null,
+    });
+    grouped.set(orderIndex, block);
+  }
+  return [1, 2, 3].map(
+    (orderIndex) =>
+      grouped.get(orderIndex) ?? {
+        orderIndex,
+        title: BLOCK_TITLE_BY_PHASE[orderIndex],
+        notes: null,
+        items: [],
+      }
+  );
+}
+
+function normalizeBlocks(
+  blocks: SessionBlockInput[] | null | undefined,
+  exerciseItems: {
+    exerciseId: string;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    phase?: string | null;
+  }[]
+) {
+  const source =
+    blocks && blocks.length > 0 ? blocks : buildBlocksFromExercises(exerciseItems);
+  const byOrder = new Map<number, SessionBlockInput>();
+
+  for (const block of source) {
+    const orderIndex = block.orderIndex;
+    const existing =
+      byOrder.get(orderIndex) ??
+      ({
+        orderIndex,
+        title: block.title ?? BLOCK_TITLE_BY_PHASE[orderIndex],
+        notes: block.notes ?? null,
+        items: [],
+      } satisfies SessionBlockInput);
+
+    existing.title =
+      block.title ?? existing.title ?? BLOCK_TITLE_BY_PHASE[orderIndex];
+    existing.notes = block.notes ?? existing.notes ?? null;
+    existing.items.push(...block.items);
+    byOrder.set(orderIndex, existing);
+  }
+
+  return [1, 2, 3].map(
+    (orderIndex) =>
+      byOrder.get(orderIndex) ?? {
+        orderIndex,
+        title: BLOCK_TITLE_BY_PHASE[orderIndex],
+        notes: null,
+        items: [],
+      }
+  );
+}
+
+function exerciseIdsFromBlocks(blocks: SessionBlockInput[]) {
+  return blocks.flatMap((block) =>
+    block.items.flatMap((item) => (item.exerciseId ? [item.exerciseId] : []))
+  );
+}
+
+function buildCompatibilityExercises(
+  blocks: SessionBlockInput[],
+  exerciseItems: {
+    exerciseId: string;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    phase?: string | null;
+    intensity?: number | null;
+  }[]
+) {
+  if (exerciseItems.length > 0) return exerciseItems;
+
+  return blocks.flatMap((block) =>
+    block.items.flatMap((item) =>
+      item.exerciseId
+        ? [
+            {
+              exerciseId: item.exerciseId,
+              durationMinutes: item.durationMinutes ?? null,
+              notes: item.notes ?? null,
+              phase: blockOrderToPhase(block.orderIndex),
+              intensity: null,
+            },
+          ]
+        : []
+    )
+  );
+}
+
+function sumBlockDuration(blocks: SessionBlockInput[]) {
+  return blocks.reduce(
+    (sum, block) =>
+      sum +
+      block.items.reduce(
+        (blockSum, item) => blockSum + (item.durationMinutes ?? 0),
+        0
+      ),
+    0
+  );
+}
+
+async function getAccessibleExerciseSnapshots(
   userId: string,
-  exerciseItems: { exerciseId: string; durationMinutes?: number | null }[]
-): Promise<{ duration: number; inaccessibleIds: string[] }> {
-  const { durationById, inaccessibleIds } =
-    await getAccessibleExerciseDurationMap(
-      userId,
-      exerciseItems.map((item) => item.exerciseId)
+  exerciseIds: string[]
+) {
+  const uniqueIds = Array.from(new Set(exerciseIds));
+  if (uniqueIds.length === 0) {
+    return { snapshots: new Map<string, ExerciseSnapshot>(), inaccessibleIds: [] };
+  }
+
+  const rows = await db
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      description: exercises.description,
+      durationMinutes: exercises.durationMinutes,
+    })
+    .from(exercises)
+    .where(
+      and(inArray(exercises.id, uniqueIds), exerciseVisibleToUserCondition(userId))
     );
-  return {
-    duration: calculateExercisePlanDuration(exerciseItems, durationById),
-    inaccessibleIds,
-  };
+
+  const snapshots = new Map(rows.map((row) => [row.id, row]));
+  const inaccessibleIds = uniqueIds.filter((id) => !snapshots.has(id));
+
+  return { snapshots, inaccessibleIds };
 }
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -75,6 +265,11 @@ export async function GET(_request: Request, context: RouteContext) {
         notes: sessionExercises.notes,
         phase: sessionExercises.phase,
         intensity: sessionExercises.intensity,
+        coachRating: sessionExercises.coachRating,
+        actualDurationSeconds: sessionExercises.actualDurationSeconds,
+        completedAt: sessionExercises.completedAt,
+        executionNotes: sessionExercises.executionNotes,
+        wasSkipped: sessionExercises.wasSkipped,
         exerciseId: exercises.id,
         exerciseName: exercises.name,
         exerciseCategory: exercises.category,
@@ -96,6 +291,86 @@ export async function GET(_request: Request, context: RouteContext) {
       .innerJoin(students, eq(sessionStudents.studentId, students.id))
       .where(eq(sessionStudents.sessionId, id));
 
+    const blockRows = await db
+      .select({
+        blockId: sessionBlocks.id,
+        blockOrderIndex: sessionBlocks.orderIndex,
+        blockTitle: sessionBlocks.title,
+        blockNotes: sessionBlocks.notes,
+        itemId: sessionBlockItems.id,
+        itemOrderIndex: sessionBlockItems.orderIndex,
+        itemExerciseId: sessionBlockItems.exerciseId,
+        itemExerciseName: sessionBlockItems.exerciseName,
+        itemExerciseDescription: sessionBlockItems.exerciseDescription,
+        itemFreeText: sessionBlockItems.freeText,
+        itemDurationMinutes: sessionBlockItems.durationMinutes,
+        itemNotes: sessionBlockItems.notes,
+      })
+      .from(sessionBlocks)
+      .leftJoin(sessionBlockItems, eq(sessionBlockItems.blockId, sessionBlocks.id))
+      .where(eq(sessionBlocks.sessionId, id))
+      .orderBy(asc(sessionBlocks.orderIndex), asc(sessionBlockItems.orderIndex));
+
+    const blockMap = new Map<
+      string,
+      {
+        id: string;
+        orderIndex: number;
+        title: string | null;
+        notes: string | null;
+        items: Array<{
+          id: string;
+          orderIndex: number;
+          exerciseId: string | null;
+          exerciseName: string | null;
+          exerciseDescription: string | null;
+          freeText: string | null;
+          durationMinutes: number | null;
+          notes: string | null;
+        }>;
+      }
+    >();
+
+    for (const row of blockRows) {
+      const block =
+        blockMap.get(row.blockId) ??
+        ({
+          id: row.blockId,
+          orderIndex: row.blockOrderIndex,
+          title: row.blockTitle,
+          notes: row.blockNotes,
+          items: [],
+        } satisfies {
+          id: string;
+          orderIndex: number;
+          title: string | null;
+          notes: string | null;
+          items: Array<{
+            id: string;
+            orderIndex: number;
+            exerciseId: string | null;
+            exerciseName: string | null;
+            exerciseDescription: string | null;
+            freeText: string | null;
+            durationMinutes: number | null;
+            notes: string | null;
+          }>;
+        });
+      if (row.itemId) {
+        block.items.push({
+          id: row.itemId,
+          orderIndex: row.itemOrderIndex ?? 0,
+          exerciseId: row.itemExerciseId,
+          exerciseName: row.itemExerciseName,
+          exerciseDescription: row.itemExerciseDescription,
+          freeText: row.itemFreeText,
+          durationMinutes: row.itemDurationMinutes,
+          notes: row.itemNotes,
+        });
+      }
+      blockMap.set(row.blockId, block);
+    }
+
     return NextResponse.json({
       data: {
         id: session.id,
@@ -105,6 +380,9 @@ export async function GET(_request: Request, context: RouteContext) {
         durationMinutes: session.durationMinutes,
         userId: session.userId,
         objective: session.objective,
+        material: session.material,
+        observations: session.observations,
+        sourceClassId: session.sourceClassId,
         intensity: session.intensity,
         tags: session.tags,
         location: session.location,
@@ -120,7 +398,15 @@ export async function GET(_request: Request, context: RouteContext) {
           notes: e.notes,
           phase: e.phase,
           intensity: e.intensity,
+          coachRating: e.coachRating,
+          actualDurationSeconds: e.actualDurationSeconds,
+          completedAt: e.completedAt,
+          executionNotes: e.executionNotes,
+          wasSkipped: e.wasSkipped,
         })),
+        blocks: Array.from(blockMap.values()).sort(
+          (a, b) => a.orderIndex - b.orderIndex
+        ),
         students: studentRows,
       },
     });
@@ -176,6 +462,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const {
       exercises: exerciseItems,
+      blocks,
       studentIds,
       tags,
       ...sessionFields
@@ -199,6 +486,51 @@ export async function PUT(request: Request, context: RouteContext) {
       }
     }
 
+    if (sessionFields.sourceClassId) {
+      const [sourceClass] = await db
+        .select({ id: classes.id })
+        .from(classes)
+        .where(
+          and(
+            eq(classes.id, sessionFields.sourceClassId),
+            or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))
+          )
+        )
+        .limit(1);
+
+      if (!sourceClass) {
+        return NextResponse.json(
+          { error: "La clase de origen no existe o no es accesible" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const replacesPlan = exerciseItems !== undefined || blocks !== undefined;
+    const normalizedBlocks = replacesPlan
+      ? normalizeBlocks(blocks, exerciseItems ?? [])
+      : [];
+    const compatibilityExercises = replacesPlan
+      ? buildCompatibilityExercises(normalizedBlocks, exerciseItems ?? [])
+      : [];
+    const exerciseIds = replacesPlan
+      ? [
+          ...compatibilityExercises.map((item) => item.exerciseId),
+          ...exerciseIdsFromBlocks(normalizedBlocks),
+        ]
+      : [];
+    const { snapshots, inaccessibleIds } = await getAccessibleExerciseSnapshots(
+      user.id,
+      exerciseIds
+    );
+
+    if (inaccessibleIds.length > 0) {
+      return NextResponse.json(
+        { error: "Algunos ejercicios no existen o no son accesibles" },
+        { status: 400 }
+      );
+    }
+
     const updateValues: Record<string, unknown> = {};
     if (sessionFields.title !== undefined)
       updateValues.title = sessionFields.title;
@@ -208,10 +540,18 @@ export async function PUT(request: Request, context: RouteContext) {
       updateValues.scheduledAt = new Date(sessionFields.scheduledAt);
     if (sessionFields.objective !== undefined)
       updateValues.objective = sessionFields.objective;
+    if (sessionFields.material !== undefined)
+      updateValues.material = sessionFields.material;
+    if (sessionFields.observations !== undefined)
+      updateValues.observations = sessionFields.observations;
+    if (sessionFields.sourceClassId !== undefined)
+      updateValues.sourceClassId = sessionFields.sourceClassId;
     if (sessionFields.intensity !== undefined)
       updateValues.intensity = sessionFields.intensity;
     if (sessionFields.location !== undefined)
       updateValues.location = sessionFields.location;
+    if (sessionFields.placeId !== undefined)
+      updateValues.placeId = sessionFields.placeId;
     if (tags !== undefined) {
       updateValues.tags =
         tags && tags.length > 0
@@ -219,23 +559,19 @@ export async function PUT(request: Request, context: RouteContext) {
           : null;
     }
 
-    let exerciseAccess:
-      | { duration: number; inaccessibleIds: string[] }
-      | undefined;
-    if (exerciseItems !== undefined) {
-      exerciseAccess = await calculateDuration(user.id, exerciseItems);
-      if (exerciseAccess.inaccessibleIds.length > 0) {
-        return NextResponse.json(
-          { error: "Algunos ejercicios no existen o no son accesibles" },
-          { status: 400 }
-        );
-      }
-    }
-
     if (sessionFields.durationMinutes !== undefined) {
       updateValues.durationMinutes = sessionFields.durationMinutes;
-    } else if (exerciseItems !== undefined) {
-      updateValues.durationMinutes = exerciseAccess?.duration ?? 0;
+    } else if (replacesPlan) {
+      updateValues.durationMinutes =
+        calculateExercisePlanDuration(
+          compatibilityExercises,
+          new Map(
+            Array.from(snapshots.values()).map((row) => [
+              row.id,
+              row.durationMinutes,
+            ])
+          )
+        ) || sumBlockDuration(normalizedBlocks);
     }
 
     const updatedSession = await db.transaction(async (tx) => {
@@ -245,23 +581,58 @@ export async function PUT(request: Request, context: RouteContext) {
         .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
         .returning();
 
-      if (exerciseItems !== undefined) {
+      if (replacesPlan) {
         await tx
           .delete(sessionExercises)
           .where(eq(sessionExercises.sessionId, id));
 
-        if (exerciseItems.length > 0) {
+        if (compatibilityExercises.length > 0) {
           await tx.insert(sessionExercises).values(
-            exerciseItems.map((item, idx) => ({
+            compatibilityExercises.map((item, idx) => ({
               sessionId: id,
               exerciseId: item.exerciseId,
               orderIndex: idx,
               durationMinutes: item.durationMinutes ?? null,
               notes: item.notes ?? null,
-              phase: item.phase ?? null,
+              phase: normalizePhase(item.phase),
               intensity: item.intensity ?? null,
             }))
           );
+        }
+
+        await tx.delete(sessionBlocks).where(eq(sessionBlocks.sessionId, id));
+
+        for (const block of normalizedBlocks) {
+          const [sessionBlock] = await tx
+            .insert(sessionBlocks)
+            .values({
+              sessionId: id,
+              orderIndex: block.orderIndex,
+              title: block.title ?? BLOCK_TITLE_BY_PHASE[block.orderIndex],
+              notes: block.notes ?? null,
+            })
+            .returning({ id: sessionBlocks.id });
+
+          if (block.items.length > 0) {
+            await tx.insert(sessionBlockItems).values(
+              block.items.map((item, idx) => {
+                const snapshot = item.exerciseId
+                  ? snapshots.get(item.exerciseId)
+                  : undefined;
+                return {
+                  blockId: sessionBlock.id,
+                  exerciseId: item.exerciseId ?? null,
+                  exerciseName: snapshot?.name ?? null,
+                  exerciseDescription: snapshot?.description ?? null,
+                  freeText: item.freeText?.trim() || null,
+                  orderIndex: idx,
+                  durationMinutes:
+                    item.durationMinutes ?? snapshot?.durationMinutes ?? null,
+                  notes: item.notes ?? null,
+                };
+              })
+            );
+          }
         }
       }
 
@@ -279,6 +650,12 @@ export async function PUT(request: Request, context: RouteContext) {
 
       return session;
     });
+
+    if (updatedSession) {
+      after(() =>
+        embedSession(updatedSession.id, user.id).catch(console.error)
+      );
+    }
 
     return NextResponse.json({ data: updatedSession });
   } catch {

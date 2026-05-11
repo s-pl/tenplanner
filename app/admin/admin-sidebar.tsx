@@ -8,17 +8,39 @@ import {
   Users,
   FileText,
   Sparkles,
+  SlidersHorizontal,
+  Bot,
   ChevronLeft,
   Menu,
   X,
+  Layers,
+  MessageSquare,
+  Palette,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNav = [
-  { href: "/admin", label: "Métricas", icon: LayoutDashboard, exact: true },
+  { href: "/admin", label: "Metricas", icon: LayoutDashboard, exact: true },
+  { href: "/admin/ai", label: "IA", icon: Bot, exact: false },
+  { href: "/admin/chats", label: "Chats", icon: MessageSquare, exact: false },
   { href: "/admin/users", label: "Usuarios", icon: Users, exact: false },
   { href: "/admin/content", label: "Contenido", icon: FileText, exact: false },
+  {
+    href: "/admin/embeddings",
+    label: "Embeddings",
+    icon: Layers,
+    exact: false,
+  },
   { href: "/admin/landing", label: "Landing", icon: Sparkles, exact: false },
+  { href: "/admin/branding", label: "Marca", icon: Palette, exact: false },
+  { href: "/admin/tools", label: "Herramientas", icon: Wrench, exact: false },
+  {
+    href: "/admin/settings",
+    label: "Ajustes",
+    icon: SlidersHorizontal,
+    exact: false,
+  },
 ];
 
 function AdminNavLinks({
@@ -41,10 +63,10 @@ function AdminNavLinks({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-brand/10 text-brand font-medium"
-                  : "text-foreground/60 hover:text-foreground hover:bg-foreground/5"
+                  ? "bg-brand text-brand-foreground font-black shadow-[0_12px_30px_color-mix(in_oklab,var(--brand)_25%,transparent)]"
+                  : "text-sidebar-foreground/64 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )}
             >
               <item.icon className="size-4 shrink-0" />
@@ -85,12 +107,12 @@ export function AdminSidebar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-foreground/10 bg-background/95 px-4 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar/96 px-4 text-sidebar-foreground backdrop-blur md:hidden">
         <div className="min-w-0">
-          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
-            Admin Panel
+          <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-sidebar-foreground/44">
+            TenPlanner Admin
           </p>
-          <p className="truncate font-heading text-sm font-semibold text-foreground">
+          <p className="truncate font-heading text-sm font-semibold text-sidebar-foreground">
             {activeItem.label}
           </p>
         </div>
@@ -98,8 +120,8 @@ export function AdminSidebar() {
           ref={triggerRef}
           type="button"
           onClick={() => setOpen(true)}
-          className="flex size-9 items-center justify-center rounded-lg text-foreground/60 transition-colors hover:bg-foreground/5 hover:text-foreground"
-          aria-label="Abrir menú de administración"
+          className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          aria-label="Abrir menu de administracion"
           aria-expanded={open}
           aria-controls="admin-mobile-nav"
         >
@@ -107,22 +129,22 @@ export function AdminSidebar() {
         </button>
       </header>
 
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-foreground/10 md:flex">
-        <div className="border-b border-foreground/10 px-4 py-5">
-          <p className="mb-1 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+        <div className="border-b border-sidebar-border px-4 py-5">
+          <p className="mb-1 font-sans text-[9px] uppercase tracking-[0.22em] text-sidebar-foreground/44">
             TenPlanner
           </p>
-          <p className="font-heading text-base font-semibold text-foreground">
-            Admin Panel
+          <p className="font-heading text-base font-semibold text-sidebar-foreground">
+            Admin
           </p>
         </div>
 
         <AdminNavLinks pathname={pathname} />
 
-        <div className="border-t border-foreground/10 p-3">
+        <div className="border-t border-sidebar-border p-3">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <ChevronLeft className="size-4" />
             Volver al app
@@ -135,22 +157,22 @@ export function AdminSidebar() {
           id="admin-mobile-nav"
           role="dialog"
           aria-modal="true"
-          aria-label="Menú de administración"
+          aria-label="Menu de administracion"
           className="fixed inset-0 z-50 flex md:hidden"
         >
           <div
-            className="absolute inset-0 bg-foreground/35 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#050505]/55 backdrop-blur-sm"
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
-          <aside className="relative flex h-full w-[min(18rem,86vw)] flex-col border-r border-foreground/10 bg-background shadow-2xl">
-            <div className="flex items-start justify-between border-b border-foreground/10 px-4 py-5">
+          <aside className="relative flex h-full w-[min(18rem,86vw)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl">
+            <div className="flex items-start justify-between border-b border-sidebar-border px-4 py-5">
               <div>
-                <p className="mb-1 font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
+                <p className="mb-1 font-sans text-[9px] uppercase tracking-[0.22em] text-sidebar-foreground/44">
                   TenPlanner
                 </p>
-                <p className="font-heading text-base font-semibold text-foreground">
-                  Admin Panel
+                <p className="font-heading text-base font-semibold text-sidebar-foreground">
+                  Admin
                 </p>
               </div>
               <button
@@ -160,8 +182,8 @@ export function AdminSidebar() {
                   setOpen(false);
                   triggerRef.current?.focus();
                 }}
-                className="flex size-8 items-center justify-center rounded-lg text-foreground/60 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                aria-label="Cerrar menú de administración"
+                className="flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/64 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                aria-label="Cerrar menu de administracion"
               >
                 <X className="size-4" />
               </button>
@@ -170,11 +192,11 @@ export function AdminSidebar() {
               pathname={pathname}
               onNavigate={() => setOpen(false)}
             />
-            <div className="border-t border-foreground/10 p-3">
+            <div className="border-t border-sidebar-border p-3">
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
               >
                 <ChevronLeft className="size-4" />
                 Volver al app

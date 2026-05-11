@@ -50,10 +50,10 @@ export default function TerminosPage() {
 
       <H2 id="objeto">1. Objeto</H2>
       <P>
-        TenPlanner es una plataforma SaaS para entrenadores de pádel que
-        permite planificar sesiones, gestionar una biblioteca de ejercicios,
-        registrar alumnos y usar un asistente de IA (Dr. Planner). Al crear
-        una cuenta aceptas estos términos.
+        TenPlanner es una plataforma SaaS para entrenadores de deportes de raqueta que permite
+        planificar sesiones, gestionar una biblioteca de ejercicios, registrar
+        alumnos y usar un asistente de IA (Dr. Planner). Al crear una cuenta
+        aceptas estos términos.
       </P>
 
       <H2 id="cuenta">2. Cuenta y uso</H2>
@@ -65,8 +65,7 @@ export default function TerminosPage() {
       <P>
         Queda prohibido: usar la plataforma para fines ilícitos, intentar
         acceder a datos de otros usuarios, realizar ingeniería inversa del
-        software, o introducir datos de terceros sin base legítima para
-        hacerlo.
+        software, o introducir datos de terceros sin base legítima para hacerlo.
       </P>
 
       <H2 id="encargo">3. Encargo del tratamiento (art. 28 RGPD)</H2>
@@ -79,9 +78,9 @@ export default function TerminosPage() {
 
       <H3>3.1. Objeto del encargo</H3>
       <P>
-        Alojar y procesar los datos de los alumnos que el entrenador introduce
-        o recoge vía enlace público /s/[token], con la finalidad de gestionar
-        las sesiones de entrenamiento.
+        Alojar y procesar los datos de los alumnos que el entrenador introduce o
+        recoge vía enlace público /s/[token], con la finalidad de gestionar las
+        sesiones de entrenamiento.
       </P>
 
       <H3>3.2. Duración</H3>
@@ -142,14 +141,14 @@ export default function TerminosPage() {
           (consentimiento, contrato u otro supuesto del art. 6 RGPD).
         </li>
         <li>
-          Informar al alumno conforme a los arts. 13-14 RGPD — el enlace
-          público /s/[token] ya incluye la información requerida por parte de
+          Informar al alumno conforme a los arts. 13-14 RGPD — el enlace público
+          /s/[token] ya incluye la información requerida por parte de
           TenPlanner, pero el entrenador debe entregar la suya propia si trata
           los datos también en sistemas externos.
         </li>
         <li>
-          No introducir categorías especiales de datos (salud, ideología,
-          etc.) sin consentimiento explícito ni otra base del art. 9 RGPD.
+          No introducir categorías especiales de datos (salud, ideología, etc.)
+          sin consentimiento explícito ni otra base del art. 9 RGPD.
         </li>
         <li>Mantener actualizados los datos que registre.</li>
       </ul>
@@ -171,17 +170,17 @@ export default function TerminosPage() {
       <H2 id="disponibilidad">5. Disponibilidad y cambios</H2>
       <P>
         Ofrecemos el servicio en modo &ldquo;tal cual&rdquo;, sin garantía de
-        disponibilidad 24/7. Podemos actualizar funcionalidades, precios o
-        estos términos; los cambios sustanciales se notificarán con al menos
-        15 días de antelación.
+        disponibilidad 24/7. Podemos actualizar funcionalidades, precios o estos
+        términos; los cambios sustanciales se notificarán con al menos 15 días
+        de antelación.
       </P>
 
       <H2 id="baja">6. Baja y supresión</H2>
       <P>
         Puedes eliminar tu cuenta en cualquier momento desde Perfil → Datos →
         Eliminar cuenta. El borrado es irreversible y elimina sesiones,
-        ejercicios propios, alumnos, conversaciones con Dr. Planner y tu
-        cuenta de autenticación.
+        ejercicios propios, alumnos, conversaciones con Dr. Planner y tu cuenta
+        de autenticación.
       </P>
 
       <H2 id="ley">7. Legislación y jurisdicción</H2>

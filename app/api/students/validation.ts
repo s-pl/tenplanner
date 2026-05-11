@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isAllowedImageUrl } from "@/lib/url-safety";
 
 export const genderSchema = z.enum(["male", "female", "other"]);
 export const dominantHandSchema = z.enum(["left", "right"]);
 export const playerLevelSchema = z.enum([
+  // Legacy (compat con datos existentes)
   "beginner",
   "amateur",
   "intermediate",
   "advanced",
   "competitive",
+  // PMV 260506 — niveles por edad
+  "descubrimiento",
+  "desarrollo",
+  "consolidacion",
+  "especializacion",
+  "precompeticion",
+  "competicion",
+  "adultos_iniciacion",
+  "adultos_medio_alto",
 ]);
 
 export const studentIdParamsSchema = z.object({
@@ -18,6 +29,15 @@ export const studentIdParamsSchema = z.object({
 const dateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)");
+
+const optionalImageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((value) => value === "" || isAllowedImageUrl(value), {
+    message:
+      "La URL de foto debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
+  });
 
 export const createStudentSchema = z.object({
   name: z
@@ -52,13 +72,40 @@ export const createStudentSchema = z.object({
   dominantHand: dominantHandSchema.optional().nullable(),
   playerLevel: playerLevelSchema.optional().nullable(),
   yearsExperience: z.coerce.number().int().min(0).max(80).optional().nullable(),
+  yearStartedTennis: z.coerce
+    .number()
+    .int()
+    .min(1900, "Año inválido")
+    .max(2100, "Año inválido")
+    .optional()
+    .nullable(),
+  yearStartedRacketSports: z.coerce
+    .number()
+    .int()
+    .min(1900, "Año inválido")
+    .max(2100, "Año inválido")
+    .optional()
+    .nullable(),
+  phone: z
+    .string()
+    .trim()
+    .max(32, "Máximo 32 caracteres")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+  preferredSchedule: z
+    .string()
+    .trim()
+    .max(500, "Máximo 500 caracteres")
+    .optional()
+    .nullable(),
   notes: z
     .string()
     .trim()
     .max(2000, "Máximo 2000 caracteres")
     .optional()
     .nullable(),
-  imageUrl: z.string().trim().max(1000).optional().nullable(),
+  imageUrl: optionalImageUrlSchema.optional().nullable(),
 });
 
 export const updateStudentSchema = createStudentSchema

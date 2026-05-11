@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, Loader2, Search, UserPlus, Users, Users2 } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Loader2,
+  Search,
+  UserPlus,
+  Users,
+  Users2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StudentOption, WizardState } from "./types";
 
@@ -40,10 +48,16 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           if (!cancelled) setStatus("unavailable");
           return;
         }
-        const studentsPayload = (await studentsRes.json()) as { data?: StudentOption[] };
-        const groupsPayload = groupsRes.ok ? (await groupsRes.json()) as { data?: GroupOption[] } : { data: [] };
+        const studentsPayload = (await studentsRes.json()) as {
+          data?: StudentOption[];
+        };
+        const groupsPayload = groupsRes.ok
+          ? ((await groupsRes.json()) as { data?: GroupOption[] })
+          : { data: [] };
         if (cancelled) return;
-        setStudents(Array.isArray(studentsPayload?.data) ? studentsPayload.data : []);
+        setStudents(
+          Array.isArray(studentsPayload?.data) ? studentsPayload.data : []
+        );
         setGroups(Array.isArray(groupsPayload?.data) ? groupsPayload.data : []);
         setStatus("ready");
       } catch {
@@ -51,7 +65,9 @@ export function StepStudents({ state, update }: StepStudentsProps) {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function toggleStudent(id: string) {
@@ -113,7 +129,8 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           Selecciona los alumnos para esta sesión.
         </p>
         <span className="text-xs font-semibold text-foreground tabular-nums">
-          {state.studentIds.length} seleccionado{state.studentIds.length !== 1 ? "s" : ""}
+          {state.studentIds.length} seleccionado
+          {state.studentIds.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -125,7 +142,7 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           className={cn(
             "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-medium transition-colors",
             tab === "individual"
-              ? "bg-background text-foreground shadow-sm border border-border"
+              ? "bg-background text-foreground border border-border"
               : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -138,7 +155,7 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           className={cn(
             "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-medium transition-colors",
             tab === "groups"
-              ? "bg-background text-foreground shadow-sm border border-border"
+              ? "bg-background text-foreground border border-border"
               : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -157,15 +174,24 @@ export function StepStudents({ state, update }: StepStudentsProps) {
           {groups.length === 0 ? (
             <div className="text-center py-8 border border-dashed border-border rounded-xl">
               <Users2 className="size-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No tienes grupos creados.</p>
-              <Link href="/groups" className="mt-2 inline-block text-xs text-brand hover:underline">
+              <p className="text-sm text-muted-foreground">
+                No tienes grupos creados.
+              </p>
+              <Link
+                href="/groups"
+                className="mt-2 inline-block text-xs text-brand hover:underline"
+              >
                 Crear un grupo
               </Link>
             </div>
           ) : (
             groups.map((g) => {
-              const allSelected = g.studentIds.length > 0 && g.studentIds.every((id) => state.studentIds.includes(id));
-              const someSelected = g.studentIds.some((id) => state.studentIds.includes(id));
+              const allSelected =
+                g.studentIds.length > 0 &&
+                g.studentIds.every((id) => state.studentIds.includes(id));
+              const someSelected = g.studentIds.some((id) =>
+                state.studentIds.includes(id)
+              );
               return (
                 <button
                   key={g.id}
@@ -180,32 +206,53 @@ export function StepStudents({ state, update }: StepStudentsProps) {
                         : "border-border bg-background hover:border-brand/40"
                   )}
                 >
-                  <div className={cn(
-                    "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
-                    allSelected ? "bg-brand border-brand" : someSelected ? "bg-brand/20 border-brand/40" : "border-border"
-                  )}>
-                    {allSelected && <Check className="size-3.5 text-background" />}
-                    {someSelected && !allSelected && <span className="size-2 rounded-sm bg-brand" />}
+                  <div
+                    className={cn(
+                      "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                      allSelected
+                        ? "bg-brand border-brand"
+                        : someSelected
+                          ? "bg-brand/20 border-brand/40"
+                          : "border-border"
+                    )}
+                  >
+                    {allSelected && (
+                      <Check className="size-3.5 text-background" />
+                    )}
+                    {someSelected && !allSelected && (
+                      <span className="size-2 rounded-sm bg-brand" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">{g.name}</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {g.name}
+                      </p>
                       <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {g.memberCount} {g.memberCount === 1 ? "alumno" : "alumnos"}
+                        {g.memberCount}{" "}
+                        {g.memberCount === 1 ? "alumno" : "alumnos"}
                       </span>
                     </div>
                     {g.description && (
-                      <p className="text-xs text-muted-foreground truncate">{g.description}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {g.description}
+                      </p>
                     )}
                   </div>
-                  <ChevronDown className={cn("size-4 text-muted-foreground/40 shrink-0 -rotate-90")} />
+                  <ChevronDown
+                    className={cn(
+                      "size-4 text-muted-foreground/40 shrink-0 -rotate-90"
+                    )}
+                  />
                 </button>
               );
             })
           )}
           {state.studentIds.length > 0 && (
             <p className="text-xs text-muted-foreground pt-1">
-              {state.studentIds.length} alumno{state.studentIds.length !== 1 ? "s" : ""} seleccionado{state.studentIds.length !== 1 ? "s" : ""} en total
+              {state.studentIds.length} alumno
+              {state.studentIds.length !== 1 ? "s" : ""} seleccionado
+              {state.studentIds.length !== 1 ? "s" : ""} en total
             </p>
           )}
         </div>
@@ -237,16 +284,22 @@ export function StepStudents({ state, update }: StepStudentsProps) {
                       : "border-border bg-background hover:border-brand/40"
                   )}
                 >
-                  <div className={cn(
-                    "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
-                    selected ? "bg-brand border-brand" : "border-border"
-                  )}>
+                  <div
+                    className={cn(
+                      "size-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                      selected ? "bg-brand border-brand" : "border-border"
+                    )}
+                  >
                     {selected && <Check className="size-3.5 text-background" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {s.name}
+                    </p>
                     {s.playerLevel && (
-                      <p className="text-xs text-muted-foreground truncate">{s.playerLevel}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {s.playerLevel}
+                      </p>
                     )}
                   </div>
                 </button>

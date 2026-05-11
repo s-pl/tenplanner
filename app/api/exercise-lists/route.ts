@@ -7,8 +7,11 @@ import { z } from "zod";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const exerciseId = request.nextUrl.searchParams.get("exerciseId");
   const includeExercises =
@@ -40,7 +43,10 @@ export async function GET(request: NextRequest) {
             listId: exerciseListItems.listId,
           })
           .from(exerciseListItems)
-          .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+          .innerJoin(
+            exerciseLists,
+            eq(exerciseLists.id, exerciseListItems.listId)
+          )
           .where(
             and(
               eq(exerciseLists.userId, user.id),
@@ -60,7 +66,10 @@ export async function GET(request: NextRequest) {
             imageUrl: exercises.imageUrl,
           })
           .from(exerciseListItems)
-          .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+          .innerJoin(
+            exerciseLists,
+            eq(exerciseLists.id, exerciseListItems.listId)
+          )
           .innerJoin(exercises, eq(exercises.id, exerciseListItems.exerciseId))
           .where(eq(exerciseLists.userId, user.id))
       : Promise.resolve(
@@ -76,7 +85,9 @@ export async function GET(request: NextRequest) {
         ),
   ]);
 
-  const countMap = new Map(counts.map((row) => [row.listId, Number(row.total)]));
+  const countMap = new Map(
+    counts.map((row) => [row.listId, Number(row.total)])
+  );
   const membershipSet = new Set(memberships.map((row) => row.listId));
   const itemsMap = new Map<
     string,
@@ -108,27 +119,35 @@ export async function GET(request: NextRequest) {
       ...list,
       itemsCount: countMap.get(list.id) ?? 0,
       containsExercise: membershipSet.has(list.id),
-      items: includeExercises ? itemsMap.get(list.id) ?? [] : undefined,
+      items: includeExercises ? (itemsMap.get(list.id) ?? []) : undefined,
     })),
   });
 }
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = z.object({
-    name: z.string().trim().min(1).max(100),
-    emoji: z.string().max(10).optional(),
-  }).safeParse(body);
+  const parsed = z
+    .object({
+      name: z.string().trim().min(1).max(100),
+      emoji: z.string().max(10).optional(),
+    })
+    .safeParse(body);
 
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   // Check if this is the user's first list — if so, mark it as default
   const [{ total }] = await db
@@ -138,12 +157,15 @@ export async function POST(request: Request) {
 
   const isFirstList = Number(total) === 0;
 
-  const [list] = await db.insert(exerciseLists).values({
-    userId: user.id,
-    name: parsed.data.name,
-    emoji: parsed.data.emoji ?? "📋",
-    isDefault: isFirstList,
-  }).returning();
+  const [list] = await db
+    .insert(exerciseLists)
+    .values({
+      userId: user.id,
+      name: parsed.data.name,
+      emoji: parsed.data.emoji ?? "📋",
+      isDefault: isFirstList,
+    })
+    .returning();
 
   return NextResponse.json({ data: list }, { status: 201 });
 }

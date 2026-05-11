@@ -6,6 +6,8 @@ import { groups, groupStudents, students } from "@/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
 import { ArrowLeft, Users } from "lucide-react";
 import { GroupDetailClient } from "./group-detail-client";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,18 @@ export default async function GroupDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
+  if (!groupsEnabled) {
+    return (
+      <FeatureLocked
+        title="Grupos desactivados"
+        description="El administrador ha pausado temporalmente la organización por grupos."
+        href="/students"
+        cta="Volver a alumnos"
+      />
+    );
+  }
 
   const { id } = await params;
 
@@ -58,36 +72,37 @@ export default async function GroupDetailPage({ params }: PageProps) {
     .orderBy(students.name);
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
       {/* Header */}
-      <header className="mb-10">
-        <div className="flex items-center gap-3 mb-6">
+      <header className="tp-hero-panel p-6 text-white sm:p-8">
+        <div className="mb-6 flex items-center gap-3">
           <Link
             href="/groups"
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted hover:border-foreground/20 transition-colors text-muted-foreground"
+            className="flex size-10 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/70 transition-colors hover:bg-white/12 hover:text-white"
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <p className="text-xs text-muted-foreground">Grupos</p>
+          <p className="text-xs font-black uppercase text-white/45">Grupos</p>
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="size-10 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center shrink-0">
-                <Users className="size-5 text-brand" />
+            <div className="mb-2 flex items-center gap-3">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505]">
+                <Users className="size-5" />
               </div>
-              <h1 className="min-w-0 break-words font-heading text-3xl tracking-tight text-foreground md:text-4xl">
+              <h1 className="min-w-0 break-words text-4xl font-black leading-tight text-white md:text-5xl">
                 {group.name}
               </h1>
             </div>
             {group.description && (
-              <p className="mt-2 text-sm text-muted-foreground ml-[52px]">
+              <p className="ml-[60px] mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/62">
                 {group.description}
               </p>
             )}
-            <p className="mt-1 text-xs text-muted-foreground ml-[52px] tabular-nums">
-              <span className="font-bold text-foreground">
+            <p className="ml-[60px] mt-2 text-xs font-semibold tabular-nums text-white/50">
+              <span className="font-black text-[#D6FF38]">
                 {memberRows.length}
               </span>{" "}
               {memberRows.length === 1 ? "alumno" : "alumnos"}
@@ -102,6 +117,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
         members={memberRows}
         availableStudents={availableStudents}
       />
+      </div>
     </div>
   );
 }

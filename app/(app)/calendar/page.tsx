@@ -5,6 +5,9 @@ import { db } from "@/db";
 import { sessions as sessionsTable } from "@/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
+import { CalendarDays, Download, Plus } from "lucide-react";
 
 // Sessions loaded into the calendar are limited to this window to keep
 // initial payload bounded. User can navigate the UI within this range.
@@ -19,6 +22,18 @@ export default async function CalendarPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const calendarEnabled = await getBooleanSetting("feature.calendar_enabled");
+  if (!calendarEnabled) {
+    return (
+      <FeatureLocked
+        title="Calendario desactivado"
+        description="El administrador ha pausado temporalmente la vista de calendario."
+        href="/sessions"
+        cta="Volver a sesiones"
+      />
+    );
+  }
 
   const now = new Date();
   const windowStart = new Date(now);
@@ -53,46 +68,50 @@ export default async function CalendarPage() {
   const total = serialized.length;
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
-        }}
-      />
-      <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-8">
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
-              Agenda · Calendario
-            </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
-              № {String(total).padStart(3, "0")}
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
+        <header className="tp-hero-panel flex flex-col gap-6 p-6 text-white sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+              <CalendarDays className="size-3.5" />
+              Agenda operativa
+            </div>
+            <h1 className="text-4xl font-black leading-tight sm:text-5xl">
+              Calendario
+            </h1>
+            <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
+              {total} sesión{total !== 1 ? "es" : ""} planificada
+              {total !== 1 ? "s" : ""} dentro de la ventana activa.
             </p>
           </div>
-          <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-            Tu <em className="italic text-brand">calendario</em>,
-            <br />
-            de un vistazo.
-          </h1>
-          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            {total} sesión{total !== 1 ? "es" : ""} planificada
-            {total !== 1 ? "s" : ""} · navega por semana o mes y revisa qué
-            viene.
-          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/api/calendar/ical"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/14 px-4 text-sm font-black text-white transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
+            >
+              <Download className="size-4" />
+              Exportar iCal
+            </Link>
+            <Link
+              href="/sessions/new"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-sm font-black text-[#050505] transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Nueva sesión
+            </Link>
+          </div>
         </header>
         {total === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-            <p className="text-foreground/50 text-sm max-w-xs">
+          <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
+            <p className="max-w-xs text-sm leading-6 text-foreground/55">
               Aún no tienes sesiones planificadas. Crea tu primera sesión para
               verla aquí.
             </p>
             <Link
               href="/sessions/new"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-4 text-sm font-black text-brand-foreground transition-opacity hover:opacity-90"
             >
+              <Plus className="size-4" />
               Crear primera sesión
             </Link>
           </div>

@@ -2,6 +2,7 @@
 
 import {
   type ElementType,
+  type FormEvent,
   type KeyboardEvent,
   type ReactNode,
   useEffect,
@@ -10,7 +11,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { DraftStatusPill } from "@/components/app/draft-status-pill";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -18,7 +19,6 @@ import {
   Target,
   Brain,
   Dumbbell,
-  Flame,
   Plus,
   X,
   Video,
@@ -28,7 +28,6 @@ import {
   ChevronUp,
   ChevronDown,
   ImageIcon,
-  Zap,
   Globe,
   SlidersHorizontal,
   Users,
@@ -48,7 +47,7 @@ import { MediaUploader } from "@/components/app/media-uploader";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
-type Location = "indoor" | "outdoor" | "any";
+type Location = "pista" | "pared" | "playa" | "casa";
 type Phase = "activation" | "main" | "cooldown";
 type ExerciseFormMode = "quick" | "full";
 type AccordionSectionId = "essential" | "pedagogical" | "params" | "media";
@@ -65,17 +64,61 @@ const FORM_MODE_STORAGE_KEY = "exercise-form-mode";
 const GOLPES_PRESET = [
   { id: "derecha", label: "Derecha" },
   { id: "reves", label: "Revés" },
-  { id: "globo", label: "Globo" },
-  { id: "smash", label: "Smash" },
-  { id: "bandeja", label: "Bandeja" },
-  { id: "volea_dcha", label: "Volea dcha." },
-  { id: "volea_rev", label: "Volea rev." },
-  { id: "bajada_pared", label: "Bajada pared" },
-  { id: "vibora", label: "Víbora" },
   { id: "saque", label: "Saque" },
-  { id: "chiquita", label: "Chiquita" },
+  { id: "volea", label: "Volea" },
+  { id: "remate", label: "Remate" },
   { id: "dejada", label: "Dejada" },
+  { id: "globo", label: "Globo" },
 ] as const;
+
+const NIVELES_PMV = [
+  { id: "descubrimiento", label: "Descubrimiento", desc: "4-6 años" },
+  { id: "desarrollo", label: "Desarrollo", desc: "6-8 años" },
+  { id: "consolidacion", label: "Consolidación", desc: "8-10 años" },
+  { id: "especializacion", label: "Especialización", desc: "10-12 años" },
+  { id: "precompeticion", label: "Precompetición", desc: "12-14 años" },
+  { id: "competicion", label: "Competición", desc: "14-18 años" },
+  { id: "adultos_iniciacion", label: "Adultos iniciación", desc: "Empiezan" },
+  {
+    id: "adultos_medio_alto",
+    label: "Adultos medio-alto",
+    desc: "Con base técnica",
+  },
+] as const;
+
+const ASPECTOS_JUEGO = [
+  { id: "tecnica", label: "Técnica" },
+  { id: "tactica", label: "Táctica" },
+  { id: "mental", label: "Trabajo mental" },
+  { id: "fisico", label: "Físico" },
+] as const;
+
+const PARAMETROS = [
+  { id: "altura", label: "Altura" },
+  { id: "profundidad", label: "Profundidad" },
+  { id: "velocidad", label: "Velocidad" },
+  { id: "direccion", label: "Dirección" },
+] as const;
+
+const TIPOLOGIAS = [
+  { id: "juego", label: "Juego" },
+  { id: "reto", label: "Reto" },
+  { id: "otros_deportes", label: "Otros deportes" },
+] as const;
+
+const DURACION_RANGOS = [
+  { id: "1-5", label: "1-5 min" },
+  { id: "5-10", label: "5-10 min" },
+  { id: "10-15", label: "10-15 min" },
+  { id: "15-20", label: "15-20 min" },
+  { id: "+20", label: "+20 min" },
+] as const;
+
+type NivelPmv = (typeof NIVELES_PMV)[number]["id"];
+type AspectoJuego = (typeof ASPECTOS_JUEGO)[number]["id"];
+type Parametro = (typeof PARAMETROS)[number]["id"];
+type Tipologia = (typeof TIPOLOGIAS)[number]["id"];
+type DuracionRango = (typeof DURACION_RANGOS)[number]["id"];
 
 const EFECTO_PRESET = [
   { id: "liftado", label: "Liftado" },
@@ -107,7 +150,33 @@ const formSchema = z.object({
     .int()
     .min(1, "Mínimo 1 minuto")
     .max(300, "Máximo 300 minutos"),
-  location: z.enum(["indoor", "outdoor", "any"]).optional().nullable(),
+  location: z.enum(["pista", "pared", "playa", "casa"]).optional().nullable(),
+  nivel: z
+    .enum([
+      "descubrimiento",
+      "desarrollo",
+      "consolidacion",
+      "especializacion",
+      "precompeticion",
+      "competicion",
+      "adultos_iniciacion",
+      "adultos_medio_alto",
+    ])
+    .optional()
+    .nullable(),
+  aspectoJuegoPmv: z
+    .enum(["tecnica", "tactica", "mental", "fisico"])
+    .optional()
+    .nullable(),
+  parametro: z
+    .enum(["altura", "profundidad", "velocidad", "direccion"])
+    .optional()
+    .nullable(),
+  tipologia: z.enum(["juego", "reto", "otros_deportes"]).optional().nullable(),
+  duracionRango: z
+    .enum(["1-5", "5-10", "10-15", "15-20", "+20"])
+    .optional()
+    .nullable(),
   videoUrl: z.string().max(500).optional().nullable(),
   phase: z.enum(["activation", "main", "cooldown"]).optional().nullable(),
   intensity: z.coerce.number().int().min(1).max(5).optional().nullable(),
@@ -115,7 +184,7 @@ const formSchema = z.object({
     .enum(["individual", "parejas", "grupal", "multigrupo"])
     .optional()
     .nullable(),
-  numJugadores: z.coerce.number().int().min(1).max(20).optional().nullable(),
+  numJugadores: z.coerce.number().int().min(1).max(6).optional().nullable(),
   tipoPelota: z
     .enum(["normal", "lenta", "rapida", "sin_pelota"])
     .optional()
@@ -160,8 +229,18 @@ const CATEGORIES: {
     border: "border-purple-400/20",
   },
   {
+    id: "warm-up",
+    label: "Trabajo mental",
+    icon: Brain,
+    color: "text-brand",
+    activeBg: "bg-brand/15",
+    activeBorder: "border-brand",
+    bg: "bg-brand/5",
+    border: "border-brand/20",
+  },
+  {
     id: "fitness",
-    label: "Fitness",
+    label: "Físico",
     icon: Dumbbell,
     color: "text-amber-400",
     activeBg: "bg-amber-400/15",
@@ -169,67 +248,38 @@ const CATEGORIES: {
     bg: "bg-amber-400/5",
     border: "border-amber-400/20",
   },
-  {
-    id: "warm-up",
-    label: "Calentamiento",
-    icon: Flame,
-    color: "text-brand",
-    activeBg: "bg-brand/15",
-    activeBorder: "border-brand",
-    bg: "bg-brand/5",
-    border: "border-brand/20",
-  },
 ];
 
-const DIFFICULTIES: {
-  id: Difficulty;
-  label: string;
-  desc: string;
-  activeColor: string;
-  activeBg: string;
-  activeBorder: string;
-}[] = [
-  {
-    id: "beginner",
-    label: "Principiante",
-    desc: "Apto para todos",
-    activeColor: "text-brand",
-    activeBg: "bg-brand/10",
-    activeBorder: "border-brand",
-  },
-  {
-    id: "intermediate",
-    label: "Intermedio",
-    desc: "Requiere base técnica",
-    activeColor: "text-amber-400",
-    activeBg: "bg-amber-400/10",
-    activeBorder: "border-amber-400",
-  },
-  {
-    id: "advanced",
-    label: "Avanzado",
-    desc: "Alta exigencia",
-    activeColor: "text-red-400",
-    activeBg: "bg-red-400/10",
-    activeBorder: "border-red-400",
-  },
-];
+// Mapping nivel PMV -> difficulty (compatibility with existing DB column)
+const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
+  descubrimiento: "beginner",
+  desarrollo: "beginner",
+  consolidacion: "intermediate",
+  especializacion: "intermediate",
+  precompeticion: "advanced",
+  competicion: "advanced",
+  adultos_iniciacion: "beginner",
+  adultos_medio_alto: "advanced",
+};
 
 const LOCATIONS: { id: Location; label: string; icon: string }[] = [
-  { id: "indoor", label: "Pista cubierta", icon: "🏟️" },
-  { id: "outdoor", label: "Pista exterior", icon: "☀️" },
-  { id: "any", label: "Cualquier lugar", icon: "📍" },
+  { id: "pista", label: "Pista/cancha", icon: "🎾" },
+  { id: "pared", label: "Pared", icon: "🧱" },
+  { id: "playa", label: "Playa", icon: "🏖️" },
+  { id: "casa", label: "Casa", icon: "🏠" },
 ];
 
 const PRESET_MATERIALS = [
-  "Pelota de pádel",
-  "Raqueta",
+  "Pelota de gomaespuma",
+  "Pelota roja",
+  "Pelota naranja",
+  "Pelota verde",
+  "Pelota amarilla",
   "Conos",
-  "Escalera de agilidad",
-  "Pared de fondo",
-  "Canasta de pelotas",
-  "Elástico",
-  "Disco de equilibrio",
+  "Chinos",
+  "Comba",
+  "Líneas de goma",
+  "Escalera",
 ];
 
 export interface ExerciseFormProps {
@@ -263,6 +313,11 @@ export interface ExerciseFormProps {
     variantes?: string | null;
     imageUrls?: string[] | null;
     isGlobal?: boolean;
+    nivel?: NivelPmv | null;
+    aspectoJuego?: AspectoJuego | null;
+    parametro?: Parametro | null;
+    tipologia?: Tipologia | null;
+    duracionRango?: DuracionRango | null;
   };
   onSuccess?: (result?: ExerciseFormResult) => void;
   onCancel?: () => void;
@@ -286,16 +341,16 @@ function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 pb-4 border-b border-border/50 mb-6">
-      <div className="size-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-        <Icon className="size-4 text-brand" />
+    <div className="mb-5 flex items-start gap-3 border-b border-foreground/10 pb-4">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/12 text-[#D6FF38]">
+        <Icon className="size-4" />
       </div>
       <div>
-        <p className="text-sm font-bold text-foreground uppercase tracking-wide">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
           {title}
         </p>
         {subtitle && (
-          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
         )}
       </div>
     </div>
@@ -361,8 +416,8 @@ function AccordionSection({
       open={open}
       onToggle={(event) => onToggle(event.currentTarget.open)}
       className={cn(
-        "rounded-2xl border bg-card overflow-hidden transition-colors",
-        open ? "border-brand/30" : "border-border"
+        "overflow-hidden rounded-lg border bg-card shadow-sm shadow-black/5 transition-colors",
+        open ? "border-[#D6FF38]/40" : "border-foreground/10"
       )}
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:content-none">
@@ -370,7 +425,7 @@ function AccordionSection({
           <div className="flex items-center gap-2 mb-1">
             <p className="text-sm font-bold text-foreground">{title}</p>
             {isComplete ? (
-              <span className="rounded-full bg-brand/10 border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand uppercase tracking-wide">
+              <span className="rounded-full border border-[#D6FF38]/30 bg-[#D6FF38]/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">
                 Completo
               </span>
             ) : (
@@ -380,11 +435,11 @@ function AccordionSection({
             )}
           </div>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
-          <div className="mt-2 h-0.5 rounded-full bg-border overflow-hidden">
+          <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-foreground/10">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500",
-                isComplete ? "bg-brand" : "bg-brand/50"
+                isComplete ? "bg-[#D6FF38]" : "bg-[#D6FF38]/50"
               )}
               style={{ width: `${fillPct}%` }}
             />
@@ -393,13 +448,13 @@ function AccordionSection({
         <div
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all",
-            open && "rotate-180 bg-muted text-foreground"
+            open && "rotate-180 bg-[#D6FF38] text-[#050505]"
           )}
         >
           <ChevronDown className="size-4" />
         </div>
       </summary>
-      <div className="border-t border-border/50 px-4 py-5">{children}</div>
+      <div className="border-t border-foreground/10 px-4 py-5">{children}</div>
     </details>
   );
 }
@@ -431,7 +486,6 @@ export function ExerciseForm({
   const formModeChangedRef = useRef(false);
   const draftHydratedRef = useRef(false);
   const draftIdRef = useRef<string | null>(null);
-  const saveTimerRef = useRef<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
     "idle"
   );
@@ -464,7 +518,6 @@ export function ExerciseForm({
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -486,9 +539,14 @@ export function ExerciseForm({
       tipoPelota: initialData?.tipoPelota ?? null,
       tipoActividad: initialData?.tipoActividad ?? null,
       isGlobal: initialData?.isGlobal ?? false,
+      nivel: initialData?.nivel ?? null,
+      aspectoJuegoPmv: initialData?.aspectoJuego ?? null,
+      parametro: initialData?.parametro ?? null,
+      tipologia: initialData?.tipologia ?? null,
+      duracionRango: initialData?.duracionRango ?? null,
     },
   });
-  const watchedValues = watch();
+  const watchedValues = useWatch({ control });
   const normalizedImages = imageSlots.filter((value): value is string =>
     Boolean(value)
   );
@@ -501,7 +559,7 @@ export function ExerciseForm({
   }, [formMode, mode]);
 
   // One-time mount hydration — uses window.location.search to avoid re-running
-  // when the URL is updated via history.replaceState in the auto-save effect.
+  // when the URL is updated via history.replaceState after manual draft save.
   useEffect(() => {
     if (!enableDrafts || mode !== "create") {
       draftHydratedRef.current = true;
@@ -663,68 +721,58 @@ export function ExerciseForm({
     formMode,
   };
 
-  useEffect(() => {
+  async function handleSaveDraft() {
     if (!enableDrafts || mode !== "create" || !draftHydratedRef.current) {
       return;
     }
 
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-    }
-
-    saveTimerRef.current = window.setTimeout(() => {
-      saveTimerRef.current = null;
-
-      if (!hasMeaningfulExerciseDraft(draftPayload)) {
-        if (draftIdRef.current) {
-          removeExerciseDraft(draftIdRef.current);
-          draftIdRef.current = null;
-          const params = new URLSearchParams(window.location.search);
-          params.delete(draftQueryParam);
-          const nextQuery = params.toString();
-          window.history.replaceState(
-            null,
-            "",
-            nextQuery
-              ? `${window.location.pathname}?${nextQuery}`
-              : window.location.pathname
-          );
-        }
-        return;
-      }
-
-      let nextDraftId = draftIdRef.current;
-      if (!nextDraftId) {
-        nextDraftId = generateDraftId();
-        draftIdRef.current = nextDraftId;
+    if (!hasMeaningfulExerciseDraft(draftPayload)) {
+      if (draftIdRef.current) {
+        await removeExerciseDraft(draftIdRef.current);
+        draftIdRef.current = null;
         const params = new URLSearchParams(window.location.search);
-        params.set(draftQueryParam, nextDraftId);
+        params.delete(draftQueryParam);
+        const nextQuery = params.toString();
         window.history.replaceState(
           null,
           "",
-          `${window.location.pathname}?${params.toString()}`
+          nextQuery
+            ? `${window.location.pathname}?${nextQuery}`
+            : window.location.pathname
         );
       }
+      setSaveStatus("idle");
+      setSavedAt(null);
+      return;
+    }
 
-      setSaveStatus("saving");
-      void upsertExerciseDraft({
+    let nextDraftId = draftIdRef.current;
+    if (!nextDraftId) {
+      nextDraftId = generateDraftId();
+      draftIdRef.current = nextDraftId;
+      const params = new URLSearchParams(window.location.search);
+      params.set(draftQueryParam, nextDraftId);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}?${params.toString()}`
+      );
+    }
+
+    setSaveStatus("saving");
+    try {
+      await upsertExerciseDraft({
         id: nextDraftId,
         name: draftPayload.name.trim() || "Ejercicio sin título",
         updatedAt: new Date().toISOString(),
         payload: draftPayload,
-      }).then(() => {
-        setSaveStatus("saved");
-        setSavedAt(new Date());
       });
-    }, 800);
-
-    return () => {
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [draftPayload, draftQueryParam, enableDrafts, mode]);
+      setSaveStatus("saved");
+      setSavedAt(new Date());
+    } catch {
+      setSaveStatus("idle");
+    }
+  }
 
   const essentialFilled = countFilled([
     !!watchedValues.name?.trim(),
@@ -768,8 +816,14 @@ export function ExerciseForm({
       mode === "create" ? "/api/exercises" : `/api/exercises/${exerciseId}`;
     const method = mode === "create" ? "POST" : "PUT";
 
+    // Derive legacy difficulty from PMV nivel for backwards compatibility.
+    const derivedDifficulty: Difficulty | undefined = values.nivel
+      ? NIVEL_TO_DIFFICULTY[values.nivel]
+      : values.difficulty;
+
     const payload = {
       ...values,
+      difficulty: derivedDifficulty,
       description: values.description?.trim() || null,
       objectives: values.objectives?.trim() || null,
       tips: values.tips?.trim() || null,
@@ -793,6 +847,12 @@ export function ExerciseForm({
           description: s.description.trim(),
         })),
       materials: materials.filter(Boolean),
+      // PMV taxonomy fields
+      nivel: values.nivel ?? null,
+      aspectoJuego: values.aspectoJuegoPmv ?? null,
+      parametro: values.parametro ?? null,
+      tipologia: values.tipologia ?? null,
+      duracionRango: values.duracionRango ?? null,
     };
 
     const res = await fetch(url, {
@@ -842,6 +902,10 @@ export function ExerciseForm({
     } else {
       onSuccess?.(responseData.data);
     }
+  }
+
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    void handleSubmit(onSubmit)(event);
   }
 
   const basicSection = (
@@ -924,58 +988,37 @@ export function ExerciseForm({
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Dificultad
+            Nivel
           </label>
           <Controller
-            name="difficulty"
+            name="nivel"
             control={control}
             render={({ field }) => (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {DIFFICULTIES.map(
-                  ({
-                    id,
-                    label,
-                    desc,
-                    activeColor,
-                    activeBg,
-                    activeBorder,
-                  }) => {
-                    const isSelected = field.value === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => field.onChange(id)}
-                        className={cn(
-                          "flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-all duration-150",
-                          isSelected
-                            ? `${activeBg} ${activeBorder}`
-                            : "border-border hover:bg-muted"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-sm font-semibold",
-                            isSelected ? activeColor : "text-foreground"
-                          )}
-                        >
-                          {label}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {desc}
-                        </span>
-                      </button>
-                    );
-                  }
-                )}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {NIVELES_PMV.map(({ id, label, desc }) => {
+                  const isSelected = field.value === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => field.onChange(isSelected ? null : id)}
+                      className={cn(
+                        "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-3 text-left transition-all duration-150",
+                        isSelected
+                          ? "bg-brand/10 border-brand text-brand"
+                          : "border-border hover:bg-muted"
+                      )}
+                    >
+                      <span className="text-sm font-semibold">{label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {desc}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           />
-          {errors.difficulty ? (
-            <p className="text-xs text-destructive">
-              {errors.difficulty.message}
-            </p>
-          ) : null}
         </div>
 
         <div className="space-y-1.5">
@@ -1112,51 +1155,7 @@ export function ExerciseForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Zap className="size-3.5" /> Intensidad
-                </span>
-                <span className="ml-1 font-normal text-muted-foreground">
-                  (1-5, opcional)
-                </span>
-              </label>
-              <Controller
-                name="intensity"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((n) => {
-                      const isSelected = field.value === n;
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => field.onChange(isSelected ? null : n)}
-                          className={cn(
-                            "size-10 rounded-xl border text-sm font-semibold transition-all duration-150",
-                            isSelected
-                              ? "bg-brand text-brand-foreground border-brand"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {n}
-                        </button>
-                      );
-                    })}
-                    {field.value != null ? (
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(null)}
-                        className="ml-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                      >
-                        Limpiar
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-              />
-            </div>
+            {/* Intensidad eliminada del UI según PMV 260506 — se mantiene en BD */}
 
             {isAdmin ? (
               <div className="space-y-2 border-t border-border/60 pt-2">
@@ -1173,10 +1172,10 @@ export function ExerciseForm({
                       />
                       <div className="flex-1">
                         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                          <Globe className="size-3.5" /> Ejercicio global
+                          <Globe className="size-3.5" /> Ejercicio biblioteca
                         </span>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Disponible para todos los usuarios de TenPlanner.
+                          Pasa a la biblioteca pública de Ten Planner.
                         </p>
                       </div>
                     </label>
@@ -1258,7 +1257,7 @@ export function ExerciseForm({
               control={control}
               render={({ field }) => (
                 <div className="flex flex-wrap items-center gap-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => {
+                  {[1, 2, 3, 4, 5, 6].map((n) => {
                     const isSelected = field.value === n;
                     return (
                       <button
@@ -1459,6 +1458,150 @@ export function ExerciseForm({
               );
             })}
           </div>
+        </div>
+
+        {/* PMV: Aspecto del juego */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Aspecto del juego{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          <Controller
+            name="aspectoJuegoPmv"
+            control={control}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-2">
+                {ASPECTOS_JUEGO.map(({ id, label }) => {
+                  const isSelected = field.value === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => field.onChange(isSelected ? null : id)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                        isSelected
+                          ? "bg-brand/10 border-brand text-brand"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          />
+        </div>
+
+        {/* PMV: Parámetro */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Parámetro{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          <Controller
+            name="parametro"
+            control={control}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-2">
+                {PARAMETROS.map(({ id, label }) => {
+                  const isSelected = field.value === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => field.onChange(isSelected ? null : id)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                        isSelected
+                          ? "bg-brand/10 border-brand text-brand"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          />
+        </div>
+
+        {/* PMV: Tipología */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Tipología{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          <Controller
+            name="tipologia"
+            control={control}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-2">
+                {TIPOLOGIAS.map(({ id, label }) => {
+                  const isSelected = field.value === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => field.onChange(isSelected ? null : id)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                        isSelected
+                          ? "bg-brand/10 border-brand text-brand"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          />
+        </div>
+
+        {/* PMV: Duración por rangos */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Rango de duración{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          <Controller
+            name="duracionRango"
+            control={control}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-2">
+                {DURACION_RANGOS.map(({ id, label }) => {
+                  const isSelected = field.value === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => field.onChange(isSelected ? null : id)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                        isSelected
+                          ? "bg-brand/10 border-brand text-brand"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          />
         </div>
       </div>
     </section>
@@ -1782,7 +1925,7 @@ export function ExerciseForm({
                 storagePath={`exercises/${exerciseId ?? "new"}/image-${idx}`}
                 bucket="exercise-media"
                 label={idx === 0 ? "Portada" : `Imagen ${idx + 1}`}
-                searchSuggestion="padel entrenamiento"
+                searchSuggestion="deportes de raqueta entrenamiento"
               />
             </div>
           ))}
@@ -1864,32 +2007,44 @@ export function ExerciseForm({
       </div>
     </section>
   );
+  void stepsSection;
+  void resourcesSection;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
+    <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
       {/* Mode selector */}
-      <div className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-lg border border-foreground/10 bg-card p-3 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
-            Modo de creación
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formMode === "quick"
-              ? "Solo lo esencial: nombre, categoría, dificultad y duración."
-              : "Vista completa con todos los campos avanzados agrupados."}
+          <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+            Modo
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {enableDrafts && mode === "create" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleSaveDraft()}
+              disabled={saveStatus === "saving" || isSubmitting}
+              className="h-8 rounded-full px-3 text-[11px] font-bold"
+            >
+              {saveStatus === "saving" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              GUARDAR BORRADOR
+            </Button>
+          )}
+          {enableDrafts && mode === "create" && (
             <DraftStatusPill status={saveStatus} savedAt={savedAt} />
           )}
-          <div className="flex items-center rounded-xl border border-border bg-muted/30 p-1 gap-1">
+          <div className="flex items-center gap-1 rounded-full border border-foreground/10 bg-muted/30 p-1">
             <Button
               type="button"
               size="sm"
               variant={formMode === "quick" ? "default" : "ghost"}
               onClick={() => updateFormMode("quick")}
-              className="rounded-lg text-xs font-bold h-8 px-3"
+              className="h-8 rounded-full px-3 text-xs font-bold"
             >
               Rápido
             </Button>
@@ -1898,7 +2053,7 @@ export function ExerciseForm({
               size="sm"
               variant={formMode === "full" ? "default" : "ghost"}
               onClick={() => updateFormMode("full")}
-              className="rounded-lg text-xs font-bold h-8 px-3"
+              className="h-8 rounded-full px-3 text-xs font-bold"
             >
               Completo
             </Button>
@@ -1907,7 +2062,120 @@ export function ExerciseForm({
       </div>
 
       {formMode === "quick" ? (
-        basicSection
+        <section className="space-y-6 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+          <SectionHeader
+            icon={Dumbbell}
+            title="Información básica"
+            subtitle="Solo lo imprescindible: nombre, categoría y nivel"
+          />
+          {/* Nombre */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="quick-name"
+              className="block text-sm font-semibold text-foreground"
+            >
+              Nombre del ejercicio
+            </label>
+            <input
+              id="quick-name"
+              type="text"
+              placeholder="Ej: Bandeja cruzada de revés"
+              autoComplete="off"
+              aria-invalid={!!errors.name}
+              {...register("name")}
+              className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground font-medium"
+            />
+            {errors.name ? (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            ) : null}
+          </div>
+
+          {/* Categoría */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Categoría
+            </label>
+            <Controller
+              name="category"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {CATEGORIES.map(({ id, label }) => {
+                    const active = field.value === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => field.onChange(id)}
+                        className={cn(
+                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                          active
+                            ? "bg-brand/10 border-brand text-brand"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {errors.category ? (
+              <p className="text-xs text-destructive">
+                {errors.category.message as string}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Nivel PMV (sustituye a Dificultad) */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Nivel
+            </label>
+            <Controller
+              name="nivel"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {NIVELES_PMV.map(({ id, label, desc }) => {
+                    const active = field.value === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => field.onChange(active ? null : id)}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                          active
+                            ? "bg-brand/10 border-brand text-brand"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <span>{label}</span>
+                        <span className="text-[11px] font-normal text-muted-foreground">
+                          {desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground italic">
+            ¿Necesitas más detalle? Cambia a{" "}
+            <button
+              type="button"
+              onClick={() => updateFormMode("full")}
+              className="font-semibold text-brand hover:underline"
+            >
+              modo Completo
+            </button>{" "}
+            cuando quieras.
+          </p>
+        </section>
       ) : (
         <div className="flex flex-col gap-5">
           <AccordionSection
@@ -1922,18 +2190,14 @@ export function ExerciseForm({
           </AccordionSection>
 
           <AccordionSection
-            title="Contenido pedagógico"
-            subtitle="Objetivos, descripción, pasos, variantes y recursos."
+            title="Descripción y objetivos"
+            subtitle="Qué se trabaja en este ejercicio y qué se busca."
             filled={pedagogicalFilled}
             total={6}
             open={expandedSections.pedagogical}
             onToggle={(next) => toggleAccordion("pedagogical", next)}
           >
-            <div className="flex flex-col gap-8">
-              {workSection}
-              {stepsSection}
-              {resourcesSection}
-            </div>
+            <div className="flex flex-col gap-8">{workSection}</div>
           </AccordionSection>
 
           <AccordionSection
@@ -1969,11 +2233,11 @@ export function ExerciseForm({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+      <div className="flex flex-wrap items-center gap-3 border-t border-foreground/10 pt-4">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-bold px-6 py-2.5 rounded-xl shadow-sm hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-55"
+          className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8f52e] disabled:opacity-55"
         >
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
           {mode === "create" ? "Crear ejercicio" : "Guardar cambios"}
@@ -1982,14 +2246,14 @@ export function ExerciseForm({
           <button
             type="button"
             onClick={onCancel}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2.5"
+            className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Cancelar
           </button>
         ) : (
           <Link
             href="/exercises"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2.5"
+            className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Cancelar
           </Link>

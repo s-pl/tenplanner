@@ -21,7 +21,9 @@ export default function AdminError({
         <TriangleAlertIcon className="size-6 text-destructive" />
       </div>
       <div className="space-y-2">
-        <h1 className="font-heading text-2xl font-semibold">Error en el panel</h1>
+        <h1 className="font-heading text-2xl font-semibold">
+          Error en el panel
+        </h1>
         <p className="text-muted-foreground text-sm max-w-sm">
           Ha ocurrido un error inesperado en esta sección del administrador.
         </p>

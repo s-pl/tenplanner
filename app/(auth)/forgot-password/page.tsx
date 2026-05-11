@@ -46,13 +46,14 @@ export default function ForgotPasswordPage() {
 
   if (sentTo) {
     return (
-      <div className="space-y-6 text-center">
+      <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 text-center shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+        <div className="space-y-6">
         <div className="flex flex-col items-center gap-4">
-          <div className="size-16 rounded-2xl bg-brand/15 flex items-center justify-center">
-            <CheckCircle2 className="size-8 text-brand" />
+          <div className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground">
+            <CheckCircle2 className="size-8" />
           </div>
           <div className="space-y-1.5">
-            <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-3xl font-black leading-tight text-foreground">
               Enlace enviado
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -67,7 +68,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-muted/40 px-5 py-4 text-left">
+        <div className="rounded-[24px] border border-[#050505]/10 bg-[#F4F4F1] px-5 py-4 text-left dark:border-white/10 dark:bg-white/[0.04]">
           <p className="text-xs font-semibold text-foreground mb-1.5">
             ¿No lo encuentras?
           </p>
@@ -80,16 +81,18 @@ export default function ForgotPasswordPage() {
 
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 text-sm text-foreground font-medium hover:text-brand transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm font-black text-foreground transition-colors hover:text-brand"
         >
           <ArrowLeft className="size-4" /> Volver a iniciar sesión
         </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+      <div className="space-y-6">
       <div className="flex flex-col gap-3">
         <Link
           href="/login"
@@ -98,10 +101,11 @@ export default function ForgotPasswordPage() {
           <ArrowLeft className="size-3.5" /> Volver
         </Link>
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+          <p className="tp-kicker">Recuperación</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
             Recuperar contraseña
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-2 text-sm leading-6 text-foreground/62">
             Introduce tu email y te enviaremos un enlace para crear una nueva.
           </p>
         </div>
@@ -128,14 +132,14 @@ export default function ForgotPasswordPage() {
         </div>
 
         {serverError && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+          <div className="rounded-[22px] border border-destructive/20 bg-destructive/10 px-4 py-3">
             <p className="text-sm text-destructive">{serverError}</p>
           </div>
         )}
 
         <Button
           type="submit"
-          className="w-full h-10 bg-brand hover:bg-brand/90 text-brand-foreground font-semibold"
+          className="h-11 w-full rounded-full bg-brand font-black text-brand-foreground hover:bg-brand/90"
           disabled={loading}
         >
           {loading ? (
@@ -158,6 +162,7 @@ export default function ForgotPasswordPage() {
           Iniciar sesión
         </Link>
       </p>
+      </div>
     </div>
   );
 }

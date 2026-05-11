@@ -28,7 +28,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
           >
             Título
           </label>
-          <span className="text-[10px] text-destructive font-semibold">Obligatorio</span>
+          <span className="text-[10px] text-destructive font-semibold">
+            Obligatorio
+          </span>
         </div>
         <input
           id="title"
@@ -40,7 +42,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
           aria-invalid={!!errors.title}
           className={cn(
             "w-full h-12 px-4 text-base bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-all text-foreground placeholder:text-muted-foreground/50 font-medium",
-            errors.title ? "border-destructive ring-2 ring-destructive/20" : "border-border"
+            errors.title
+              ? "border-destructive ring-2 ring-destructive/20"
+              : "border-border"
           )}
         />
         {errors.title && (
@@ -53,7 +57,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Fecha y hora{" "}
-            <span className="text-[10px] text-destructive normal-case tracking-normal">Oblig.</span>
+            <span className="text-[10px] text-destructive normal-case tracking-normal">
+              Oblig.
+            </span>
           </label>
           <DateTimePicker
             value={state.scheduledAt}
@@ -61,14 +67,18 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
             error={!!errors.scheduledAt}
           />
           {errors.scheduledAt && (
-            <p className="text-xs text-destructive font-medium">{errors.scheduledAt}</p>
+            <p className="text-xs text-destructive font-medium">
+              {errors.scheduledAt}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Duración{" "}
-            <span className="text-[10px] normal-case tracking-normal text-muted-foreground font-normal">min</span>
+            <span className="text-[10px] normal-case tracking-normal text-muted-foreground font-normal">
+              min
+            </span>
           </label>
           <div className="flex items-center gap-2">
             <button
@@ -100,7 +110,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
             </button>
           </div>
           {errors.durationMinutes && (
-            <p className="text-xs text-destructive font-medium">{errors.durationMinutes}</p>
+            <p className="text-xs text-destructive font-medium">
+              {errors.durationMinutes}
+            </p>
           )}
         </div>
       </div>
@@ -109,7 +121,9 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
       <div className="space-y-2">
         <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Ubicación{" "}
-          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">opcional</span>
+          <span className="text-[10px] normal-case tracking-normal font-normal text-muted-foreground">
+            opcional
+          </span>
         </label>
         <div className="flex flex-wrap gap-2">
           {LOCATION_OPTIONS.map((loc) => {
@@ -122,7 +136,7 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
                 className={cn(
                   "h-9 px-4 text-xs font-semibold rounded-full border transition-all",
                   isSelected
-                    ? "bg-brand text-brand-foreground border-brand shadow-sm"
+                    ? "bg-brand text-brand-foreground border-brand"
                     : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-brand/40 hover:bg-brand/5"
                 )}
               >

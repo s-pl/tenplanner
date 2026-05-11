@@ -11,7 +11,10 @@ export default function GroupDetailLoading() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div
+            key={i}
+            className="bg-card border border-border rounded-2xl overflow-hidden"
+          >
             <div className="px-6 py-4 border-b border-border/50">
               <div className="h-5 w-36 rounded-lg bg-muted/30" />
             </div>

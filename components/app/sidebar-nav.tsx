@@ -1,100 +1,155 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Dumbbell,
-  ClipboardList,
+  BookOpen,
   CalendarDays,
+  ChevronRight,
+  ClipboardList,
+  Dumbbell,
+  GraduationCap,
+  Heart,
+  LayoutDashboard,
+  Lock,
+  LogOut,
+  MapPin,
+  Menu,
+  NotebookPen,
+  Plus,
+  ShieldCheck,
+  Store,
+  UserCircle,
   Users,
   Users2,
-  UserCircle,
-  LogOut,
-  Menu,
   X,
-  LayoutDashboard,
-  Bot,
-  Plus,
-  Lock,
-  Heart,
-  BookOpen,
-  Store,
-  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
+type FeatureKey =
+  | "drPlanner"
+  | "sessionTemplates"
+  | "exerciseCreation"
+  | "groups"
+  | "calendar";
+
+type FeatureMap = Record<FeatureKey, boolean>;
+
 interface SubItem {
   href: string;
   label: string;
-  tag?: string;
   accent?: boolean;
   icon?: React.ElementType;
+  feature?: FeatureKey;
 }
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  index: string;
   publicAccess?: boolean;
+  feature?: FeatureKey;
   submenu?: SubItem[];
+  /** Etiqueta usada para el primer item auto-generado del submenu (default "Ver todas") */
+  allLabel?: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, index: "01" },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   {
     href: "/exercises",
     label: "Ejercicios",
     icon: Dumbbell,
-    index: "02",
     publicAccess: true,
+    allLabel: "Ver todos",
     submenu: [
       { href: "/exercises", label: "Biblioteca", icon: BookOpen },
-      { href: "/exercises?tab=mine", label: "Mis ejercicios", tag: "MÍOS", icon: Dumbbell },
-      { href: "/exercises?tab=favorites", label: "Favoritos", tag: "♥", icon: Heart },
-      { href: "/exercises/new", label: "Nuevo ejercicio", tag: "MAN", icon: Plus },
+      { href: "/exercises?tab=mine", label: "Mis ejercicios", icon: Dumbbell },
+      { href: "/exercises?tab=favorites", label: "Favoritos", icon: Heart },
+      {
+        href: "/exercises/new",
+        label: "Nuevo ejercicio",
+        icon: Plus,
+        feature: "exerciseCreation",
+      },
+    ],
+  },
+  {
+    href: "/classes",
+    label: "Clases",
+    icon: GraduationCap,
+    publicAccess: true,
+    allLabel: "Ver todas",
+    submenu: [
+      { href: "/classes", label: "Biblioteca", icon: BookOpen },
+      { href: "/classes?tab=mine", label: "Mis clases", icon: GraduationCap },
+      { href: "/classes?tab=favorites", label: "Favoritos", icon: Heart },
+      { href: "/classes/new", label: "Nueva clase", icon: Plus },
     ],
   },
   {
     href: "/sessions",
     label: "Sesiones",
     icon: ClipboardList,
-    index: "03",
+    allLabel: "Ver todas",
     submenu: [
       { href: "/sessions", label: "Mis sesiones", icon: ClipboardList },
-      { href: "/sessions/templates", label: "Plantillas", tag: "MERCADO", icon: Store },
-      { href: "/sessions/new", label: "Nueva sesión", tag: "MAN", icon: Plus },
       {
-        href: "/sessions/dr-planner",
-        label: "Dr. Planner",
-        tag: "IA",
-        icon: Bot,
-        accent: true,
+        href: "/sessions/templates",
+        label: "Plantillas",
+        icon: Store,
+        feature: "sessionTemplates",
       },
+      { href: "/sessions/new", label: "Nueva sesion", icon: Plus },
     ],
+  },
+  {
+    href: "/calendar",
+    label: "Calendario",
+    icon: CalendarDays,
+    feature: "calendar",
   },
   {
     href: "/students",
     label: "Alumnos",
     icon: Users,
-    index: "04",
+    allLabel: "Ver todos",
     submenu: [
       { href: "/students", label: "Lista de alumnos", icon: Users },
-      { href: "/groups", label: "Grupos", icon: Users2 },
+      { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
     ],
   },
-  { href: "/calendar", label: "Calendario", icon: CalendarDays, index: "05" },
-  { href: "/profile", label: "Perfil", icon: UserCircle, index: "06" },
+  { href: "/places", label: "Lugares", icon: MapPin },
+  { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
 interface SidebarNavProps {
-  user: { email?: string | null; user_metadata?: { full_name?: string } } | null;
+  user: {
+    email?: string | null;
+    user_metadata?: { full_name?: string };
+  } | null;
   avatarUrl?: string | null;
   isAdmin?: boolean;
+  drPlannerEnabled?: boolean;
+  features?: Partial<FeatureMap>;
+  appName?: string;
+}
+
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "grid size-10 shrink-0 place-items-center rounded-lg bg-[#D6FF38] text-[#050505] shadow-[0_14px_40px_rgba(214,255,56,0.24)]",
+        className
+      )}
+    >
+      <NotebookPen className="size-4" strokeWidth={2} />
+    </span>
+  );
 }
 
 function NavContent({
@@ -103,14 +158,18 @@ function NavContent({
   user,
   avatarUrl,
   isAdmin,
+  features,
   onSignOut,
+  appName,
 }: {
   pathname: string;
   onNavigate?: () => void;
   user: SidebarNavProps["user"];
   avatarUrl?: string | null;
   isAdmin?: boolean;
+  features: FeatureMap;
   onSignOut: () => void;
+  appName?: string;
 }) {
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
@@ -121,272 +180,274 @@ function NavContent({
     .slice(0, 2)
     .toUpperCase();
 
-  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(() => {
-    if (!user) return {};
-    const initial: Record<string, boolean> = {};
-    for (const item of navItems) {
-      if (item.submenu && pathname.startsWith(item.href)) {
-        initial[item.href] = true;
+  const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(
+    () => {
+      if (!user) return {};
+      const initial: Record<string, boolean> = {};
+      for (const item of navItems) {
+        if (item.submenu && pathname.startsWith(item.href)) {
+          initial[item.href] = true;
+        }
       }
+      return initial;
     }
-    return initial;
-  });
+  );
 
   function toggleSubmenu(href: string) {
     setSubmenuOpen((prev) => ({ ...prev, [href]: !prev[href] }));
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ── Wordmark ── */}
-      <div className="px-6 pt-7 pb-5 border-b border-sidebar-border">
-        <Link href="/dashboard" className="block group" onClick={onNavigate}>
-          <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-foreground/45 mb-1.5">
-            Planner &amp; Coach
-          </p>
-          <p className="font-heading text-2xl leading-none tracking-tight text-foreground">
-            ten<em className="italic text-brand">planner</em>
-          </p>
-          <p className="mt-2 max-w-[14rem] text-[11px] leading-relaxed text-foreground/45">
-            Planifica con estructura, archiva con criterio y reutiliza lo que ya funciona.
-          </p>
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="border-b border-sidebar-border px-4 py-4">
+        <Link
+          href="/dashboard"
+          className="group flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-sidebar-accent"
+          onClick={onNavigate}
+        >
+          <BrandMark />
+          <div className="min-w-0">
+            <p className="truncate text-base font-black tracking-tight text-sidebar-foreground">
+              {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
+            </p>
+          </div>
         </Link>
       </div>
 
-      {/* ── Nav ── */}
-      <nav className="flex-1 px-4 py-5 overflow-y-auto">
-        <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 px-2 mb-3">
-          Navegación
-        </p>
-        <ul>
-          {navItems.map(({ href, label, icon: Icon, submenu, index, publicAccess }) => {
-            const isActive =
-              pathname === href || pathname.startsWith(href + "/");
-            const isOpen = !!submenuOpen[href];
-            const isLocked = !user && !publicAccess;
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <ul className="flex flex-col gap-1">
+          {navItems.map(
+            ({
+              href,
+              label,
+              icon: Icon,
+              submenu,
+              publicAccess,
+              feature,
+              allLabel,
+            }) => {
+              const isActive =
+                pathname === href || pathname.startsWith(href + "/");
+              const isOpen = !!submenuOpen[href];
+              const isLocked = !user && !publicAccess;
+              const featureLocked = feature ? !features[feature] : false;
 
-            if (isLocked) {
-              return (
-                <li
-                  key={href}
-                  className="border-b border-foreground/8 last:border-0"
-                >
-                  <Link
-                    href="/login"
-                    onClick={onNavigate}
-                    className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 transition-colors text-foreground/35 hover:text-foreground/55"
-                  >
-                    <span className="font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/20">
-                      {index}
+              if (isLocked) {
+                return (
+                  <li key={href}>
+                    <Link
+                      href="/login"
+                      onClick={onNavigate}
+                      className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sidebar-foreground/46 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground/78"
+                    >
+                      <Icon className="size-4" strokeWidth={1.6} />
+                      <span className="flex-1 truncate text-[13px] font-semibold">
+                        {label}
+                      </span>
+                      <Lock
+                        className="size-3 text-sidebar-foreground/34"
+                        strokeWidth={1.8}
+                      />
+                    </Link>
+                  </li>
+                );
+              }
+
+              if (featureLocked) {
+                return (
+                  <li key={href}>
+                    <span className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sidebar-foreground/38">
+                      <Icon className="size-4" strokeWidth={1.6} />
+                      <span className="flex-1 truncate text-[13px] font-semibold">
+                        {label}
+                      </span>
+                      <Lock
+                        className="size-3 text-sidebar-foreground/32"
+                        strokeWidth={1.8}
+                      />
                     </span>
-                    <Icon
-                      className="size-[15px] text-foreground/25"
-                      strokeWidth={1.6}
-                    />
-                    <span className="text-[14px]">{label}</span>
-                    <Lock className="size-[11px] text-foreground/30" strokeWidth={1.8} />
-                  </Link>
-                </li>
-              );
-            }
+                  </li>
+                );
+              }
 
-            if (submenu) {
-              return (
-                <li
-                  key={href}
-                  className="border-b border-foreground/8 last:border-0"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleSubmenu(href)}
-                    className={cn(
-                      "w-full grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 text-left transition-colors",
-                      isActive
-                        ? "text-foreground"
-                        : "text-foreground/65 hover:text-foreground"
-                    )}
-                  >
-                    <span
+              if (submenu) {
+                return (
+                  <li key={href}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSubmenu(href)}
                       className={cn(
-                        "font-sans text-[10px] tabular-nums tracking-[0.18em]",
-                        isActive ? "text-brand" : "text-foreground/35"
+                        "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors",
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       )}
                     >
-                      {index}
-                    </span>
+                      <Icon
+                        className={cn(
+                          "size-4",
+                          isActive ? "text-brand" : "text-sidebar-foreground/52"
+                        )}
+                        strokeWidth={1.6}
+                      />
+                      <span
+                        className={cn(
+                          "flex-1 truncate text-[13px] font-semibold",
+                          isActive && "text-sidebar-foreground"
+                        )}
+                      >
+                        {label}
+                      </span>
+                      <ChevronRight
+                        className={cn(
+                          "size-3.5 text-sidebar-foreground/38 transition-transform",
+                          isOpen && "rotate-90 text-brand"
+                        )}
+                        strokeWidth={1.8}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <ul className="ml-5 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border pb-2 pl-4 pr-1">
+                        <li>
+                          <Link
+                            href={href}
+                            onClick={onNavigate}
+                            className={cn(
+                              "block rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                              pathname === href
+                                ? "bg-brand text-brand-foreground"
+                                : "text-sidebar-foreground/58 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                            )}
+                          >
+                            {allLabel ?? "Ver todas"}
+                          </Link>
+                        </li>
+                        {submenu.map(
+                          ({
+                            href: subHref,
+                            label: subLabel,
+                            accent,
+                            feature,
+                            icon: SubIcon,
+                          }) => {
+                            const isSubActive =
+                              pathname === subHref ||
+                              pathname.startsWith(subHref + "/");
+                            const featureLocked = feature
+                              ? !features[feature]
+                              : false;
+
+                            if (featureLocked) {
+                              return (
+                                <li key={subHref}>
+                                  <span className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/38">
+                                    <span>{subLabel}</span>
+                                    <Lock className="size-3 text-sidebar-foreground/32" />
+                                  </span>
+                                </li>
+                              );
+                            }
+
+                            return (
+                              <li key={subHref}>
+                                <Link
+                                  href={subHref}
+                                  onClick={onNavigate}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                                    isSubActive
+                                      ? "bg-brand text-brand-foreground"
+                                      : accent
+                                        ? "text-brand hover:bg-sidebar-accent"
+                                        : "text-sidebar-foreground/58 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                  )}
+                                >
+                                  {SubIcon && (
+                                    <SubIcon
+                                      className="size-3.5 shrink-0"
+                                      strokeWidth={1.7}
+                                    />
+                                  )}
+                                  <span className="truncate">{subLabel}</span>
+                                </Link>
+                              </li>
+                            );
+                          }
+                        )}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex min-h-10 items-center gap-3 rounded-lg px-3 transition-colors",
+                      isActive
+                        ? "bg-brand text-brand-foreground shadow-[0_12px_32px_color-mix(in_oklab,var(--brand)_26%,transparent)]"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    )}
+                  >
                     <Icon
                       className={cn(
-                        "size-[15px]",
-                        isActive ? "text-brand" : "text-foreground/55"
+                        "size-4",
+                        isActive
+                          ? "text-brand-foreground"
+                          : "text-sidebar-foreground/52"
                       )}
                       strokeWidth={1.6}
                     />
                     <span
                       className={cn(
-                        "text-[14px]",
-                        isActive && "font-heading italic text-foreground"
+                        "flex-1 truncate text-[13px] font-semibold",
+                        isActive && "font-black text-brand-foreground"
                       )}
                     >
                       {label}
                     </span>
-                    <span
-                      className={cn(
-                        "font-sans text-[9px] tracking-[0.18em] text-foreground/35 transition-transform",
-                        isOpen && "rotate-90"
-                      )}
-                    >
-                      ▸
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <ul className="pb-2 pl-10 pr-2 space-y-0.5">
-                      <li>
-                        <Link
-                          href={href}
-                          onClick={onNavigate}
-                          className={cn(
-                            "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
-                            pathname === href
-                              ? "text-brand"
-                              : "text-foreground/55 hover:text-foreground"
-                          )}
-                        >
-                          <span>Ver todas</span>
-                          <span className="font-sans text-[9px] tracking-[0.18em] text-foreground/30">
-                            ALL
-                          </span>
-                        </Link>
-                      </li>
-                      {submenu.map(
-                        ({ href: subHref, label: subLabel, tag, accent }) => {
-                          const isSubActive =
-                            pathname === subHref ||
-                            pathname.startsWith(subHref + "/");
-                          return (
-                            <li key={subHref}>
-                              <Link
-                                href={subHref}
-                                onClick={onNavigate}
-                                className={cn(
-                                  "grid grid-cols-[1fr_auto] items-center py-1.5 text-[12px] transition-colors",
-                                  isSubActive
-                                    ? "text-brand"
-                                    : accent
-                                      ? "text-brand/75 hover:text-brand"
-                                      : "text-foreground/55 hover:text-foreground"
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    isSubActive &&
-                                      "italic font-heading text-[13px]"
-                                  )}
-                                >
-                                  {subLabel}
-                                </span>
-                                {tag && (
-                                  <span
-                                    className={cn(
-                                      "font-sans text-[9px] tracking-[0.18em]",
-                                      accent
-                                        ? "text-brand"
-                                        : "text-foreground/35"
-                                    )}
-                                  >
-                                    {tag}
-                                  </span>
-                                )}
-                              </Link>
-                            </li>
-                          );
-                        }
-                      )}
-                    </ul>
-                  )}
+                  </Link>
                 </li>
               );
             }
-
-            return (
-              <li
-                key={href}
-                className="border-b border-foreground/8 last:border-0"
-              >
-                <Link
-                  href={href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "grid grid-cols-[auto_auto_1fr_auto] items-center gap-3 px-2 py-3 transition-colors",
-                    isActive
-                      ? "text-foreground"
-                      : "text-foreground/65 hover:text-foreground"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "font-sans text-[10px] tabular-nums tracking-[0.18em]",
-                      isActive ? "text-brand" : "text-foreground/35"
-                    )}
-                  >
-                    {index}
-                  </span>
-                  <Icon
-                    className={cn(
-                      "size-[15px]",
-                      isActive ? "text-brand" : "text-foreground/55"
-                    )}
-                    strokeWidth={1.6}
-                  />
-                  <span
-                    className={cn(
-                      "text-[14px]",
-                      isActive && "font-heading italic text-foreground"
-                    )}
-                  >
-                    {label}
-                  </span>
-                  {isActive && (
-                    <span className="size-1 rounded-full bg-brand" />
-                  )}
-                </Link>
-              </li>
-            );
-          })}
+          )}
         </ul>
       </nav>
 
-      {/* ── User footer ── */}
-      <div className="border-t border-sidebar-border">
+      <div className="border-t border-sidebar-border bg-sidebar-accent/45">
         {isAdmin && (
           <div className="px-4 pt-3">
             <Link
               href="/admin"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[12px] font-medium transition-colors",
+                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-bold transition-colors",
                 pathname.startsWith("/admin")
-                  ? "bg-brand/10 text-brand border border-brand/20"
-                  : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.04] border border-transparent"
+                  ? "border-brand/70 bg-brand text-brand-foreground"
+                  : "border-sidebar-border text-sidebar-foreground/64 hover:border-sidebar-ring/45 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )}
             >
               <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
-              Panel de administración
+              Panel de administracion
             </Link>
           </div>
         )}
         {user ? (
           <>
             <div className="px-4 pt-4 pb-3">
-              <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 px-1 mb-2.5">
+              <p className="mb-2.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/40">
                 Cuenta
               </p>
               <Link
                 href="/profile"
                 onClick={onNavigate}
-                className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.025] px-3 py-3 transition-colors hover:border-brand/25 hover:bg-foreground/[0.04] group"
+                className="group grid grid-cols-[auto_1fr] items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 py-3 transition-colors hover:border-sidebar-ring/50 hover:bg-sidebar-accent"
               >
-                <div className="size-9 rounded-full border border-foreground/20 bg-foreground/[0.03] overflow-hidden flex items-center justify-center shrink-0 group-hover:border-brand/60 transition-colors">
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-border bg-sidebar transition-colors group-hover:border-sidebar-ring/70">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -396,42 +457,42 @@ function NavContent({
                       className="size-full object-cover"
                     />
                   ) : (
-                    <span className="font-heading text-[11px] text-foreground/80">
+                    <span className="text-[11px] font-black text-sidebar-foreground">
                       {initials}
                     </span>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] text-foreground truncate leading-tight">
+                  <p className="truncate text-[13px] font-bold leading-tight text-sidebar-foreground">
                     {displayName}
                   </p>
-                  <p className="text-[11px] text-foreground/50 truncate mt-px tabular-nums">
+                  <p className="mt-px truncate text-[11px] tabular-nums text-sidebar-foreground/50">
                     {user.email}
                   </p>
                 </div>
               </Link>
             </div>
-            <div className="px-4 pb-4 grid grid-cols-[1fr_auto] items-center gap-2">
+            <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-4 pb-4">
               <button
                 type="button"
                 onClick={onSignOut}
-                className="flex items-center gap-2 py-2 text-[12px] text-foreground/55 hover:text-foreground transition-colors group"
+                className="group flex items-center gap-2 rounded-lg py-2 text-left text-[12px] font-semibold text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
               >
                 <LogOut className="size-3.5" strokeWidth={1.6} />
-                Cerrar sesión
+                Cerrar sesion
               </button>
               <ThemeToggle compact />
             </div>
           </>
         ) : (
-          <div className="px-4 py-4 grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-4 py-4">
             <Link
               href="/login"
               onClick={onNavigate}
-              className="flex items-center gap-2 py-2 px-3 rounded-lg text-[12px] font-medium text-foreground bg-foreground/[0.04] border border-foreground/12 hover:bg-brand hover:text-brand-foreground hover:border-brand transition-colors"
+              className="flex min-h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 text-[12px] font-bold text-sidebar-foreground transition-colors hover:border-sidebar-ring hover:bg-brand hover:text-brand-foreground"
             >
               <Lock className="size-3.5" strokeWidth={1.8} />
-              Iniciar sesión
+              Iniciar sesion
             </Link>
             <ThemeToggle compact />
           </div>
@@ -441,7 +502,14 @@ function NavContent({
   );
 }
 
-export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps) {
+export function SidebarNav({
+  user,
+  avatarUrl,
+  isAdmin = false,
+  drPlannerEnabled = true,
+  features,
+  appName,
+}: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -453,9 +521,19 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
     navItems.find(
       (item) => pathname === item.href || pathname.startsWith(item.href + "/")
     )?.label ?? "TenPlanner";
+  const resolvedFeatures: FeatureMap = {
+    drPlanner: drPlannerEnabled,
+    sessionTemplates: features?.sessionTemplates ?? true,
+    exerciseCreation: features?.exerciseCreation ?? true,
+    groups: features?.groups ?? true,
+    calendar: features?.calendar ?? true,
+  };
 
   useEffect(() => {
     if (mobileOpen) {
+      prevOpenRef.current = true;
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
       closeButtonRef.current?.focus();
 
       function handleKeyDown(e: KeyboardEvent) {
@@ -477,20 +555,23 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
             e.preventDefault();
             last.focus();
           }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
+        } else if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
         }
       }
 
       document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    } else if (prevOpenRef.current) {
-      triggerRef.current?.focus();
+      return () => {
+        document.body.style.overflow = previousOverflow;
+        document.removeEventListener("keydown", handleKeyDown);
+      };
     }
-    prevOpenRef.current = mobileOpen;
+
+    if (prevOpenRef.current) {
+      triggerRef.current?.focus();
+      prevOpenRef.current = false;
+    }
   }, [mobileOpen]);
 
   async function handleSignOut() {
@@ -501,70 +582,78 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex h-dvh w-72 shrink-0 sticky top-0 flex-col border-r border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_94%,var(--background))] backdrop-blur">
+      <aside className="sticky top-0 hidden h-dvh w-[18.5rem] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <NavContent
           pathname={pathname}
           user={user}
           avatarUrl={avatarUrl}
           isAdmin={isAdmin}
+          features={resolvedFeatures}
           onSignOut={handleSignOut}
+          appName={appName}
         />
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_92%,var(--background))]/95 px-5 backdrop-blur">
-        <div className="flex items-center gap-2 min-w-0">
-          <Link href="/dashboard" className="flex items-baseline gap-1 shrink-0">
-            <span className="font-heading text-base tracking-tight text-foreground">
-              ten
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground md:hidden">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Link
+            href="/dashboard"
+            className="flex min-w-0 shrink items-center gap-2.5"
+          >
+            <BrandMark className="size-9" />
+            <span className="truncate text-sm font-black tracking-tight">
+              {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
             </span>
-            <em className="font-heading italic text-base text-brand">planner</em>
           </Link>
-          <span className="text-foreground/25 text-sm select-none">/</span>
-          <span className="font-heading text-sm text-foreground/70 truncate">{activeLabel}</span>
+          <span className="text-sidebar-foreground/24" aria-hidden>
+            /
+          </span>
+          <span className="truncate text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/54">
+            {activeLabel}
+          </span>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           <ThemeToggle compact />
           <button
             ref={triggerRef}
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
-            aria-label="Abrir menú"
+            className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            aria-label="Abrir menu"
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav-drawer"
           >
-            <Menu className="size-5" strokeWidth={1.6} />
+            <Menu className="size-5" strokeWidth={1.8} />
           </button>
         </div>
       </header>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div
           ref={drawerRef}
           id="mobile-nav-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Menú de navegación"
-          className="md:hidden fixed inset-0 z-50 flex"
+          aria-label="Menu de navegacion"
+          className="fixed inset-0 z-50 flex md:hidden"
         >
-          <div
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-[#050505]/68 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
+            aria-label="Cerrar menu de navegacion"
+            tabIndex={-1}
           />
-          <aside className="relative flex h-full w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-[color-mix(in_oklab,var(--sidebar)_94%,var(--background))] backdrop-blur">
-            <div className="absolute top-4 right-4">
+          <aside className="relative flex h-full w-[min(20rem,calc(100vw-2rem))] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[24px_0_80px_rgba(0,0,0,0.32)]">
+            <div className="absolute right-3 top-3 z-10">
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="size-8 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
-                aria-label="Cerrar menú"
+                className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/68 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                aria-label="Cerrar menu"
               >
-                <X className="size-4" strokeWidth={1.6} />
+                <X className="size-4" strokeWidth={1.8} />
               </button>
             </div>
             <NavContent
@@ -573,7 +662,9 @@ export function SidebarNav({ user, avatarUrl, isAdmin = false }: SidebarNavProps
               user={user}
               avatarUrl={avatarUrl}
               isAdmin={isAdmin}
+              features={resolvedFeatures}
               onSignOut={handleSignOut}
+              appName={appName}
             />
           </aside>
         </div>

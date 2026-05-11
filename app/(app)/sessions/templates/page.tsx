@@ -4,14 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { sessionTemplates, users } from "@/db/schema";
 import { and, desc, eq, ilike } from "drizzle-orm";
-import {
-  Clock,
-  Zap,
-  Download,
-  Plus,
-  Search,
-  BookOpen,
-} from "lucide-react";
+import { Clock, Zap, Download, Plus, Search, BookOpen } from "lucide-react";
+import { FeatureLocked } from "@/components/app/feature-locked";
+import { getBooleanSetting } from "@/lib/app-settings";
 
 interface PageProps {
   searchParams: Promise<{ q?: string; filter?: string; tag?: string }>;
@@ -25,7 +20,9 @@ const INTENSITY_LABEL: Record<number, string> = {
   5: "Muy alta",
 };
 
-export default async function SessionTemplatesPage({ searchParams }: PageProps) {
+export default async function SessionTemplatesPage({
+  searchParams,
+}: PageProps) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -33,13 +30,28 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return (
+      <FeatureLocked
+        title="Plantillas desactivadas"
+        description="El administrador ha pausado temporalmente la biblioteca de plantillas de sesión."
+        href="/sessions"
+        cta="Volver a sesiones"
+      />
+    );
+  }
+
   const { q, filter, tag } = await searchParams;
   const isMine = filter === "mine";
   const searchTerm = q?.trim() ?? "";
 
   const conditions = [];
   if (isMine) conditions.push(eq(sessionTemplates.authorId, user.id));
-  if (searchTerm) conditions.push(ilike(sessionTemplates.title, `%${searchTerm}%`));
+  if (searchTerm)
+    conditions.push(ilike(sessionTemplates.title, `%${searchTerm}%`));
 
   const rows = await db
     .select({
@@ -59,7 +71,10 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
     .from(sessionTemplates)
     .leftJoin(users, eq(sessionTemplates.authorId, users.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(sessionTemplates.adoptionsCount), desc(sessionTemplates.createdAt))
+    .orderBy(
+      desc(sessionTemplates.adoptionsCount),
+      desc(sessionTemplates.createdAt)
+    )
     .limit(60);
 
   const templates = tag
@@ -67,54 +82,40 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
     : rows;
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden lg:block"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px)",
-          backgroundSize: "calc(100%/12) 100%",
-        }}
-      />
-
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-8">
         {/* Masthead */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              Planificación · Mercado
-            </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 tabular-nums">
-              {templates.length.toString().padStart(3, "0")} plantillas
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
+        <header className="tp-hero-panel flex flex-col gap-6 p-6 text-white sm:p-8 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
-                <em className="italic text-brand">Plantillas</em>{" "}
-                de sesión
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+                <BookOpen className="size-3.5" />
+                Biblioteca
+              </div>
+              <h1 className="text-4xl font-black leading-tight md:text-5xl">
+                Plantillas de sesión
               </h1>
-              <p className="mt-3 text-[15px] text-foreground/65 leading-relaxed">
-                Sesiones publicadas por entrenadores. Adóptalas, adáptalas a tu grupo y asígnalas a tus alumnos.
+              <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
+                Sesiones publicadas por entrenadores. Adóptalas, adáptalas a tu
+                grupo y asígnalas a tus alumnos.
               </p>
             </div>
             <Link
               href="/sessions/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors shrink-0"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-black text-[#050505] transition-transform hover:-translate-y-0.5"
             >
               <Plus className="size-4" /> Nueva sesión
             </Link>
-          </div>
         </header>
 
         {/* Filter tabs */}
-        <nav className="flex items-end gap-8 border-b border-foreground/15">
-          {([
-            ["all", "Todas"],
-            ["mine", "Mis plantillas"],
-          ] as const).map(([key, label]) => {
+        <nav className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-[#050505]/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10100e]">
+          <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "Todas"],
+              ["mine", "Mis plantillas"],
+            ] as const
+          ).map(([key, label]) => {
             const isActive = key === "mine" ? isMine : !isMine;
             const href =
               key === "mine"
@@ -124,24 +125,20 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
               <Link
                 key={key}
                 href={href}
-                className={`pb-3 -mb-px flex items-baseline gap-2 border-b-2 transition-colors ${
+                className={`flex h-10 items-center rounded-full px-4 text-sm font-black transition-colors ${
                   isActive
-                    ? "border-brand"
-                    : "border-transparent hover:border-foreground/25"
+                    ? "bg-brand text-brand-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <span
-                  className={`text-[15px] ${
-                    isActive
-                      ? "font-heading italic text-foreground"
-                      : "text-foreground/60 hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </span>
+                {label}
               </Link>
             );
           })}
+          </div>
+          <p className="rounded-full bg-[#F4F4F1] px-3 py-2 text-[11px] font-black uppercase tabular-nums text-foreground/55 dark:bg-white/[0.04]">
+            {templates.length.toString().padStart(3, "0")} plantillas
+          </p>
         </nav>
 
         {/* Search bar */}
@@ -153,22 +150,22 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
             name="q"
             defaultValue={searchTerm}
             placeholder="Buscar plantillas…"
-            className="w-full rounded-lg border border-foreground/15 bg-foreground/[0.02] pl-9 pr-4 py-2 text-[13px] text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-brand/50"
+            className="tp-field h-11 w-full pl-9 pr-4 text-[13px] font-medium placeholder:text-foreground/35"
           />
         </form>
 
         {/* Grid */}
         {templates.length === 0 ? (
-          <section className="py-16 border-t border-foreground/10">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/35 mb-4">
+          <section className="tp-panel border-dashed px-6 py-16">
+            <p className="tp-kicker mb-4">
               Sin resultados
             </p>
-            <h2 className="font-heading text-2xl text-foreground/60">
+            <h2 className="text-2xl font-black text-foreground/65">
               {isMine
                 ? "Aún no has publicado ninguna plantilla"
                 : "No se encontraron plantillas"}
             </h2>
-            <p className="mt-2 text-[14px] text-foreground/45">
+            <p className="mt-2 text-[14px] text-foreground/50">
               {isMine
                 ? "Publica una de tus sesiones existentes para compartirla con la comunidad."
                 : "Prueba con otro término de búsqueda."}
@@ -176,7 +173,7 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
             {isMine && (
               <Link
                 href="/sessions"
-                className="mt-6 inline-flex items-center gap-2 rounded-lg border border-foreground/20 px-4 py-2.5 text-[13px] font-medium text-foreground/70 hover:border-brand/40 hover:text-brand transition-colors"
+                className="mt-6 inline-flex h-11 items-center gap-2 rounded-full border border-[#050505]/10 px-4 text-[13px] font-black text-foreground/70 transition-colors hover:border-brand/40 hover:text-brand dark:border-white/10"
               >
                 <BookOpen className="size-4" /> Ver mis sesiones
               </Link>
@@ -188,14 +185,14 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
               <Link
                 key={t.id}
                 href={`/sessions/templates/${t.id}`}
-                className="group relative flex flex-col gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5 hover:border-brand/30 hover:bg-brand/[0.02] transition-colors"
+                className="group relative flex min-h-[245px] flex-col gap-3 rounded-[28px] border border-[#050505]/10 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] transition-all hover:-translate-y-0.5 hover:border-brand/40 dark:border-white/10 dark:bg-[#10100e]"
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/35 tabular-nums">
                     {(i + 1).toString().padStart(2, "0")}
                   </span>
                   {t.adoptionsCount > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/8 border border-brand/20 px-2 py-0.5 text-[10px] font-sans text-brand">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/15 px-2 py-0.5 text-[10px] font-black text-foreground">
                       <Download className="size-3" />
                       {t.adoptionsCount}
                     </span>
@@ -203,7 +200,7 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="font-heading text-[17px] leading-snug text-foreground group-hover:text-brand transition-colors line-clamp-2">
+                  <h3 className="line-clamp-2 text-[18px] font-black leading-snug text-foreground transition-colors group-hover:text-brand">
                     {t.title}
                   </h3>
                   {t.objective && (
@@ -213,7 +210,7 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
                   )}
                 </div>
 
-                <div className="mt-auto pt-3 border-t border-foreground/10 flex items-center gap-3 flex-wrap">
+                <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-[#050505]/10 pt-3 dark:border-white/10">
                   <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
                     <Clock className="size-3.5" />
                     {t.durationMinutes} min
@@ -236,7 +233,7 @@ export default async function SessionTemplatesPage({ searchParams }: PageProps) 
                     {(t.tags as string[]).slice(0, 3).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-brand/8 border border-brand/20 px-2 py-0.5 text-[10px] font-sans text-brand"
+                        className="rounded-full border border-brand/20 bg-brand/15 px-2 py-0.5 text-[10px] font-black text-foreground"
                       >
                         {tag}
                       </span>

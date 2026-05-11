@@ -11,6 +11,7 @@ import {
   users,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getBooleanSetting } from "@/lib/app-settings";
 import { z } from "zod";
 
 const adoptTemplateSchema = z.object({
@@ -35,6 +36,16 @@ export async function POST(
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const templatesEnabled = await getBooleanSetting(
+    "feature.session_templates_enabled"
+  );
+  if (!templatesEnabled) {
+    return NextResponse.json(
+      { error: "Las plantillas de sesión están desactivadas." },
+      { status: 403 }
+    );
   }
 
   const { id: templateId } = await params;
@@ -86,7 +97,11 @@ export async function POST(
 
   for (const te of templateExerciseRows) {
     const [ex] = await db
-      .select({ id: exercises.id, isGlobal: exercises.isGlobal, createdBy: exercises.createdBy })
+      .select({
+        id: exercises.id,
+        isGlobal: exercises.isGlobal,
+        createdBy: exercises.createdBy,
+      })
       .from(exercises)
       .where(eq(exercises.id, te.exerciseId))
       .limit(1);
@@ -172,5 +187,8 @@ export async function POST(
     .set({ adoptionsCount: sql`${sessionTemplates.adoptionsCount} + 1` })
     .where(eq(sessionTemplates.id, templateId));
 
-  return NextResponse.json({ data: { sessionId: newSession.id } }, { status: 201 });
+  return NextResponse.json(
+    { data: { sessionId: newSession.id } },
+    { status: 201 }
+  );
 }

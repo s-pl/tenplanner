@@ -42,21 +42,37 @@ export default function AvisoLegalPage() {
 
       <H2 id="titular">1. Titular</H2>
       <div className="border border-foreground/15 rounded-md px-4 py-3 my-4 text-[13px] text-foreground/80 space-y-1">
-        <p><strong>Denominación:</strong> {legal.companyName}</p>
-        <p><strong>NIF / CIF:</strong> {legal.nif}</p>
-        <p><strong>Domicilio:</strong> {legal.address}</p>
-        <p><strong>Correo electrónico:</strong> <a href={`mailto:${legal.contactEmail}`} className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground">{legal.contactEmail}</a></p>
+        <p>
+          <strong>Denominación:</strong> {legal.companyName}
+        </p>
+        <p>
+          <strong>NIF / CIF:</strong> {legal.nif}
+        </p>
+        <p>
+          <strong>Domicilio:</strong> {legal.address}
+        </p>
+        <p>
+          <strong>Correo electrónico:</strong>{" "}
+          <a
+            href={`mailto:${legal.contactEmail}`}
+            className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground"
+          >
+            {legal.contactEmail}
+          </a>
+        </p>
         {legal.mercantileRegistry && (
-          <p><strong>Registro Mercantil:</strong> {legal.mercantileRegistry}</p>
+          <p>
+            <strong>Registro Mercantil:</strong> {legal.mercantileRegistry}
+          </p>
         )}
       </div>
 
       <H2 id="objeto">2. Objeto</H2>
       <P>
         El presente aviso legal regula el uso del sitio web accesible en el
-        dominio donde se aloja TenPlanner. El acceso y uso del sitio atribuye
-        la condición de usuario e implica la aceptación de las condiciones
-        aquí publicadas.
+        dominio donde se aloja TenPlanner. El acceso y uso del sitio atribuye la
+        condición de usuario e implica la aceptación de las condiciones aquí
+        publicadas.
       </P>
 
       <H2 id="propiedad">3. Propiedad intelectual e industrial</H2>
@@ -71,8 +87,8 @@ export default function AvisoLegalPage() {
       <P>
         El titular no se responsabiliza de los daños o perjuicios derivados de:
         interrupciones del servicio por causas técnicas ajenas, el uso
-        incorrecto de la plataforma por parte del usuario, o la veracidad de
-        los datos introducidos por el entrenador respecto a sus alumnos.
+        incorrecto de la plataforma por parte del usuario, o la veracidad de los
+        datos introducidos por el entrenador respecto a sus alumnos.
       </P>
 
       <H2 id="enlaces">5. Enlaces a terceros</H2>

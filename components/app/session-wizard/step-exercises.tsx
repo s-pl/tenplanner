@@ -115,10 +115,6 @@ export function StepExercises({
     if (editingDurationIdx !== null) durationInputRef.current?.focus();
   }, [editingDurationIdx]);
 
-  useEffect(() => {
-    setLibraryExercises(availableExercises);
-  }, [availableExercises]);
-
   function setExercises(next: WizardExercise[]) {
     update({ exercises: next });
   }
@@ -361,7 +357,7 @@ export function StepExercises({
           <DialogHeader>
             <DialogTitle>Crear ejercicio rápido</DialogTitle>
             <DialogDescription>
-              Crea un ejercicio mínimo sin salir del wizard y añádelo
+              Crea un ejercicio mínimo sin salir de la sesión y añádelo
               automáticamente a esta sesión.
             </DialogDescription>
           </DialogHeader>
@@ -485,7 +481,7 @@ export function StepExercises({
                             "group bg-card border rounded-xl transition-all",
                             isDragging
                               ? "opacity-40 border-dashed border-border cursor-grabbing"
-                              : "border-border hover:border-brand/30 hover:shadow-sm cursor-grab active:cursor-grabbing"
+                              : "border-border hover:border-brand/30 cursor-grab active:cursor-grabbing"
                           )}
                         >
                           <div className="flex items-center gap-2 px-3 py-2.5">
@@ -513,11 +509,6 @@ export function StepExercises({
                                 {ex.phase && (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
                                     {PHASE_LABELS[ex.phase]}
-                                  </span>
-                                )}
-                                {ex.intensity !== null && (
-                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
-                                    Int. {ex.intensity}
                                   </span>
                                 )}
                               </div>
@@ -572,8 +563,7 @@ export function StepExercises({
                                 "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
                                 isExpanded ||
                                   ex.notes ||
-                                  ex.phase ||
-                                  ex.intensity !== null
+                                  ex.phase
                                   ? "text-brand bg-brand/10"
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
                               )}
@@ -594,7 +584,7 @@ export function StepExercises({
                             <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
                               <div className="space-y-1.5">
                                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                  Fase
+                                  Bloque
                                 </label>
                                 <div className="flex flex-wrap gap-1.5">
                                   <button
@@ -628,45 +618,6 @@ export function StepExercises({
                                       )}
                                     >
                                       {PHASE_LABELS[p]}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                  Intensidad
-                                </label>
-                                <div className="flex flex-wrap gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      patchItem(idx, { intensity: null })
-                                    }
-                                    className={cn(
-                                      "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                      ex.intensity === null
-                                        ? "bg-muted border-border text-foreground"
-                                        : "border-transparent text-muted-foreground hover:text-foreground"
-                                    )}
-                                  >
-                                    Auto
-                                  </button>
-                                  {[1, 2, 3, 4, 5].map((n) => (
-                                    <button
-                                      key={n}
-                                      type="button"
-                                      onClick={() =>
-                                        patchItem(idx, { intensity: n })
-                                      }
-                                      className={cn(
-                                        "size-7 text-[10px] font-bold rounded-full border transition-colors",
-                                        ex.intensity === n
-                                          ? "bg-brand text-brand-foreground border-brand"
-                                          : "bg-background border-border text-muted-foreground hover:text-foreground"
-                                      )}
-                                    >
-                                      {n}
                                     </button>
                                   ))}
                                 </div>

@@ -25,24 +25,22 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ROLES = [
-  { id: "coach", label: "Entrenador" },
-  { id: "player", label: "Jugador" },
-  { id: "both", label: "Entrenador & Jugador" },
-];
-
-const LEVELS = [
-  { id: "beginner", label: "Principiante" },
-  { id: "intermediate", label: "Intermedio" },
-  { id: "advanced", label: "Avanzado" },
-  { id: "pro", label: "Profesional" },
-];
-
 const FONT_SIZES = [
   { id: "sm", label: "A", size: "text-xs", desc: "Compacto" },
   { id: "md", label: "A", size: "text-sm", desc: "Normal" },
   { id: "lg", label: "A", size: "text-base", desc: "Grande" },
 ];
+
+function getTimeBasedDarkMode() {
+  const hour = new Date().getHours();
+  return hour < 7 || hour >= 21;
+}
+
+function applyThemePreference(isDark: boolean) {
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+  document.documentElement.classList.toggle("dark", isDark);
+  applyAccentColor(localStorage.getItem("accent") ?? "blue");
+}
 
 type Tab = "profile" | "appearance" | "stats" | "data";
 
@@ -51,9 +49,6 @@ interface ProfileClientProps {
     id: string;
     email: string | null;
     full_name: string | null;
-    role: string | null;
-    skill_level: string | null;
-    bio: string | null;
     avatar_color: string | null;
     avatar_url: string | null;
     provider: string;
@@ -79,9 +74,6 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
   // Profile state
   const [name, setName] = useState(user.full_name ?? "");
-  const [role, setRole] = useState(user.role ?? "coach");
-  const [level, setLevel] = useState(user.skill_level ?? "intermediate");
-  const [bio, setBio] = useState(user.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     user.avatar_url ?? null
   );
@@ -93,8 +85,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   // Appearance state
-  const [accent, setAccent] = useState("green");
+  const [accent, setAccent] = useState("blue");
   const [fontSize, setFontSize] = useState("md");
+  const [autoTheme, setAutoTheme] = useState(true);
 
   // Export state
   const [exportingJson, setExportingJson] = useState(false);
@@ -136,8 +129,19 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   }
 
   useEffect(() => {
-    setAccent(localStorage.getItem("accent") ?? "green");
-    setFontSize(localStorage.getItem("font-size") ?? "md");
+    function syncAppearance() {
+      setAccent(localStorage.getItem("accent") ?? "blue");
+      setFontSize(localStorage.getItem("font-size") ?? "md");
+      setAutoTheme(localStorage.getItem("theme-auto") !== "false");
+    }
+
+    syncAppearance();
+    window.addEventListener("storage", syncAppearance);
+    window.addEventListener("theme-auto-change", syncAppearance);
+    return () => {
+      window.removeEventListener("storage", syncAppearance);
+      window.removeEventListener("theme-auto-change", syncAppearance);
+    };
   }, []);
 
   function handleAccentChange(id: string) {
@@ -150,6 +154,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     setFontSize(id);
     localStorage.setItem("font-size", id);
     applyFontSize(id);
+  }
+
+  function handleAutoThemeChange(next: boolean) {
+    setAutoTheme(next);
+    localStorage.setItem("theme-auto", next ? "true" : "false");
+    if (next) applyThemePreference(getTimeBasedDarkMode());
+    window.dispatchEvent(new Event("theme-auto-change"));
   }
 
   async function handleAvatarUpload(file: File) {
@@ -194,7 +205,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: name, role, skill_level: level, bio },
+        data: { full_name: name },
       });
       if (error) throw error;
       setSaved(true);
@@ -260,37 +271,21 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "?";
-  const currentAccentMeta = ACCENT_COLORS.find((c) => c.id === accent);
 
   return (
     <div className="space-y-8">
       {/* Identity hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-foreground/15 bg-foreground/[0.015]">
-        {/* Gradient banner */}
-        <div className="relative h-28 sm:h-32 overflow-hidden">
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-br from-brand/30 via-brand/10 to-transparent"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 opacity-[0.08]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 14px)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute -top-16 -right-10 size-56 rounded-full bg-brand/25 blur-3xl"
-          />
+      <section className="tp-panel relative overflow-hidden p-0 shadow-[0_24px_80px_-64px_color-mix(in_oklab,var(--foreground)_72%,transparent)]">
+        <div className="relative h-24 overflow-hidden border-b border-foreground/10 bg-[#050505] sm:h-28">
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(214,255,56,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:42px_42px] opacity-45" />
+          <div className="absolute inset-x-6 bottom-5 h-px bg-white/18" />
         </div>
 
-        <div className="px-5 sm:px-8 pb-6 -mt-14">
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] md:items-end gap-5">
+        <div className="-mt-14 px-5 pb-6 sm:px-8">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[auto_1fr_auto] md:items-end">
             {/* Avatar */}
             <div className="relative w-fit">
-              <div className="size-28 rounded-full border-4 border-background bg-foreground/[0.04] overflow-hidden shadow-xl shadow-brand/10 ring-1 ring-brand/30 flex items-center justify-center">
+              <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-background ring-2 ring-brand/45">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -300,7 +295,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     className="size-full object-cover"
                   />
                 ) : (
-                  <span className="font-heading text-3xl text-foreground/75">
+                  <span className="text-3xl font-black text-foreground/75">
                     {initials}
                   </span>
                 )}
@@ -309,7 +304,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
                 title="Cambiar foto"
-                className="absolute bottom-1 right-1 size-8 rounded-full bg-background border border-foreground/20 shadow-sm flex items-center justify-center text-foreground/65 hover:text-brand hover:border-brand transition-colors disabled:opacity-60"
+                className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full border border-foreground/10 bg-card text-foreground/65 transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground disabled:opacity-60"
               >
                 {avatarUploading ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -329,26 +324,16 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               />
             </div>
 
-            {/* Name + email + pills */}
+            {/* Name + email */}
             <div className="min-w-0 md:pb-1">
-              <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-1">
-                Identidad · № 06
-              </p>
-              <h2 className="font-heading text-3xl sm:text-4xl italic text-foreground leading-tight truncate">
+              <h2 className="truncate text-2xl font-black leading-tight text-foreground sm:text-3xl">
                 {name || "Tu nombre"}
               </h2>
-              <p className="text-[12px] text-foreground/55 truncate mt-1 tabular-nums">
+              <p className="text-[13px] text-foreground/55 truncate mt-1">
                 {user.email}
               </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-brand/10 text-brand border border-brand/25 font-medium">
-                  <span className="size-1.5 rounded-full bg-brand" />
-                  {ROLES.find((r) => r.id === role)?.label ?? "—"}
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-foreground/5 text-foreground/75 border border-foreground/15">
-                  {LEVELS.find((l) => l.id === level)?.label ?? "—"}
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-foreground/5 text-foreground/60 border border-foreground/15 capitalize">
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                <span className="inline-flex items-center rounded-full border border-foreground/10 px-2.5 py-1 text-[11px] font-bold capitalize text-foreground/55">
                   {user.provider === "google" ? "Google" : "Correo"}
                 </span>
               </div>
@@ -360,7 +345,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             </div>
 
             {/* Micro stats */}
-            <dl className="hidden md:grid grid-cols-3 gap-2 md:pb-1">
+              <dl className="hidden grid-cols-3 gap-2 md:grid md:pb-1">
               {[
                 {
                   icon: Activity,
@@ -380,15 +365,15 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="text-right bg-background/60 backdrop-blur border border-foreground/12 rounded-xl px-3 py-2.5 min-w-[76px]"
+                  className="min-w-[76px] rounded-[18px] border border-foreground/10 bg-background px-3 py-2.5 text-right"
                 >
                   <div className="flex items-center justify-end gap-1 text-foreground/45">
                     <Icon className="size-3" strokeWidth={1.6} />
-                    <dt className="font-sans text-[9px] uppercase tracking-[0.22em]">
+                    <dt className="text-[11px] font-medium text-foreground/55">
                       {label}
                     </dt>
                   </div>
-                  <dd className="font-heading text-xl tabular-nums text-foreground mt-0.5 leading-none">
+                  <dd className="mt-0.5 text-xl font-black tabular-nums leading-none text-foreground">
                     {value}
                   </dd>
                 </div>
@@ -398,34 +383,22 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
         </div>
       </section>
 
-      {/* Tab rail */}
-      <nav className="flex flex-wrap gap-x-8 gap-y-2 border-b border-foreground/15">
-        {TABS.map(({ id, label, code }) => {
+      {/* Tabs */}
+      <nav className="flex flex-wrap gap-2 rounded-full border border-foreground/10 bg-card p-1 shadow-[0_12px_34px_color-mix(in_oklab,var(--foreground)_5%,transparent)]">
+        {TABS.map(({ id, label }) => {
           const isActive = tab === id;
           return (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                "group -mb-px pb-3 flex items-baseline gap-2 border-b-2 transition-colors",
+                "rounded-full px-4 py-2.5 text-[14px] font-black transition-colors",
                 isActive
-                  ? "border-brand text-foreground"
-                  : "border-transparent text-foreground/55 hover:text-foreground"
+                  ? "bg-brand text-brand-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <span
-                className={cn(
-                  "font-sans text-[10px] tabular-nums tracking-[0.22em]",
-                  isActive ? "text-brand" : "text-foreground/40"
-                )}
-              >
-                {code}
-              </span>
-              <span
-                className={cn("text-[14px]", isActive && "font-heading italic")}
-              >
-                {label}
-              </span>
+              {label}
             </button>
           );
         })}
@@ -433,12 +406,12 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── PROFILE ── */}
       {tab === "profile" && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div>
               <label
                 htmlFor="name"
-                className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2"
+                className="mb-2 block text-[12px] font-black uppercase text-foreground/52"
               >
                 Nombre para mostrar
               </label>
@@ -448,11 +421,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre completo"
-                className="w-full h-10 bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-[15px] text-foreground placeholder:text-foreground/35 transition-colors"
+                className="tp-field h-11 w-full px-4 text-[15px] font-medium placeholder:text-foreground/35"
               />
             </div>
             <div>
-              <label className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+              <label className="mb-2 block text-[12px] font-black uppercase text-foreground/52">
                 <Mail
                   className="inline size-3 mr-1 -mt-0.5"
                   strokeWidth={1.6}
@@ -463,97 +436,27 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 type="email"
                 value={user.email ?? ""}
                 disabled
-                className="w-full h-10 bg-transparent border-0 border-b border-foreground/15 text-[15px] text-foreground/50 cursor-not-allowed tabular-nums"
+                className="tp-field h-11 w-full cursor-not-allowed px-4 text-[15px] font-medium tabular-nums text-foreground/50"
               />
             </div>
           </div>
 
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
-              Rol
-            </p>
-            <div className="flex gap-0 border border-foreground/15 w-fit">
-              {ROLES.map((r, i) => (
-                <button
-                  key={r.id}
-                  onClick={() => setRole(r.id)}
-                  className={cn(
-                    "px-4 py-2.5 text-[13px] transition-colors",
-                    i > 0 && "border-l border-foreground/15",
-                    role === r.id
-                      ? "bg-brand text-brand-foreground font-semibold"
-                      : "text-foreground/65 hover:text-foreground hover:bg-foreground/[0.03]"
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
-              Nivel
-            </p>
-            <div className="flex gap-0 border border-foreground/15 w-fit flex-wrap">
-              {LEVELS.map((l, i) => (
-                <button
-                  key={l.id}
-                  onClick={() => setLevel(l.id)}
-                  className={cn(
-                    "px-4 py-2.5 text-[13px] transition-colors",
-                    i > 0 && "border-l border-foreground/15",
-                    level === l.id
-                      ? "bg-brand text-brand-foreground font-semibold"
-                      : "text-foreground/65 hover:text-foreground hover:bg-foreground/[0.03]"
-                  )}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="bio"
-              className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2"
-            >
-              Bio{" "}
-              <span className="text-foreground/35 normal-case tracking-normal">
-                · opcional
-              </span>
-            </label>
-            <textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Filosofía de entrenamiento, objetivos, ejercicios favoritos…"
-              rows={3}
-              maxLength={300}
-              className="w-full px-0 py-2 text-[14px] bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-foreground placeholder:text-foreground/35 resize-none italic font-heading transition-colors"
-            />
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40 text-right">
-              {bio.length}/300
-            </p>
-          </div>
-
           {profileError && (
-            <div className="border-l-2 border-destructive pl-4 py-1">
+            <div className="rounded-[20px] border border-destructive/25 bg-destructive/10 px-4 py-3">
               <p className="text-[13px] text-destructive">{profileError}</p>
             </div>
           )}
 
-          <div className="flex items-center gap-4 pt-2 border-t border-foreground/10">
+          <div className="flex items-center gap-3 border-t border-foreground/10 pt-4">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-black text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
               {saving ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : saved ? (
-                <CheckCircle2 className="size-3.5" />
+                <CheckCircle2 className="size-4" />
               ) : null}
               {saving ? "Guardando…" : saved ? "Guardado" : "Guardar cambios"}
             </button>
@@ -561,9 +464,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               role="status"
               aria-live="polite"
               aria-atomic="true"
-              className="text-[12px] text-brand font-sans tracking-wide uppercase"
+              className="text-[13px] text-brand"
             >
-              {saved ? "◆ Cambios guardados" : ""}
+              {saved ? "Cambios guardados" : ""}
             </p>
           </div>
         </div>
@@ -571,29 +474,20 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── APPEARANCE ── */}
       {tab === "appearance" && (
-        <div className="space-y-10">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
           <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                A
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                Color de acento
-              </p>
-            </div>
-            <p className="text-[12px] text-foreground/55 mt-3 mb-5">
-              Se aplica a botones, estados activos y destacados.
-            </p>
-            <div className="flex flex-wrap gap-0 border border-foreground/15 w-fit">
-              {ACCENT_COLORS.map((c, i) => (
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
+              Color de acento
+            </h3>
+            <div className="mt-4 flex w-fit flex-wrap gap-1 rounded-full border border-foreground/10 bg-background p-1">
+              {ACCENT_COLORS.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => handleAccentChange(c.id)}
                   className={cn(
-                    "flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] transition-colors",
-                    i > 0 && "border-l border-foreground/15",
+                    "flex items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[12px] font-bold transition-colors",
                     accent === c.id
-                      ? "bg-foreground/[0.04] text-foreground"
+                      ? "bg-card text-foreground shadow-sm"
                       : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.02]"
                   )}
                 >
@@ -602,45 +496,29 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     style={{ backgroundColor: c.preview }}
                   />
                   {c.label}
-                  {accent === c.id && (
-                    <span className="text-[10px] tracking-[0.22em] text-brand">
-                      ◆
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
-            {currentAccentMeta && (
-              <p className="font-sans text-[10px] tracking-[0.22em] uppercase text-foreground/40 mt-3">
-                Activo · {currentAccentMeta.label}
-              </p>
-            )}
           </div>
 
           <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                B
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                Tamaño del texto
-              </p>
-            </div>
-            <div className="flex gap-0 mt-4 border border-foreground/15 w-fit">
-              {FONT_SIZES.map((f, i) => (
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
+              Tamaño del texto
+            </h3>
+            <div className="mt-4 flex w-fit gap-1 rounded-full border border-foreground/10 bg-background p-1">
+              {FONT_SIZES.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => handleFontSizeChange(f.id)}
                   className={cn(
-                    "flex flex-col items-center px-6 py-3 transition-colors min-w-[88px]",
-                    i > 0 && "border-l border-foreground/15",
+                    "flex min-w-[88px] flex-col items-center rounded-full px-6 py-3 transition-colors",
                     fontSize === f.id
-                      ? "bg-brand/10 text-brand"
+                      ? "bg-brand text-brand-foreground"
                       : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03]"
                   )}
                 >
                   <span className={cn("font-bold", f.size)}>{f.label}</span>
-                  <span className="font-sans text-[9px] uppercase tracking-[0.22em] mt-0.5">
+                  <span className="text-[11px] font-medium text-foreground/55 mt-0.5">
                     {f.desc}
                   </span>
                 </button>
@@ -649,19 +527,27 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </div>
 
           <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                C
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                Tema
-              </p>
-            </div>
-            <p className="text-[12px] text-foreground/55 mt-3 mb-4">
-              El modo oscuro está pensado para sesiones de entrenamiento
-              nocturnas.
-            </p>
-            <div className="w-fit">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
+              Tema
+            </h3>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                aria-pressed={autoTheme}
+                onClick={() => handleAutoThemeChange(!autoTheme)}
+                className={cn(
+                  "inline-flex h-10 w-fit items-center gap-2 rounded-full border px-4 text-[12px] font-black transition-colors",
+                  autoTheme
+                    ? "border-brand/45 bg-brand/10 text-brand"
+                    : "border-foreground/15 text-foreground/60 hover:border-brand/45 hover:text-brand"
+                )}
+              >
+                <Clock className="size-3.5" strokeWidth={1.6} />
+                Auto por hora
+                <span className="font-mono text-[10px]">
+                  {autoTheme ? "ON" : "OFF"}
+                </span>
+              </button>
               <ThemeToggle />
             </div>
           </div>
@@ -670,8 +556,8 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── STATS ── */}
       {tab === "stats" && (
-        <div className="space-y-10">
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               {
                 label: "Sesiones totales",
@@ -698,10 +584,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <div
                 key={label}
                 className={cn(
-                  "relative overflow-hidden rounded-2xl border p-5 transition-colors",
+                  "relative overflow-hidden rounded-[24px] border p-5 transition-colors",
                   isAccent
-                    ? "border-brand/25 bg-brand/5 hover:bg-brand/[0.07]"
-                    : "border-foreground/15 bg-foreground/[0.015] hover:bg-foreground/[0.03]"
+                    ? "border-brand/30 bg-brand/10 hover:bg-brand/15"
+                    : "border-foreground/10 bg-background hover:bg-muted/70"
                 )}
               >
                 {isAccent && (
@@ -718,13 +604,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     )}
                     strokeWidth={1.6}
                   />
-                  <p className="font-sans text-[9px] uppercase tracking-[0.22em]">
+                  <p className="text-[11px] font-bold text-foreground/55">
                     {label}
                   </p>
                 </div>
                 <p
                   className={cn(
-                    "relative font-heading text-4xl tabular-nums leading-none",
+                    "relative text-4xl font-black tabular-nums leading-none",
                     isAccent ? "text-brand" : "text-foreground"
                   )}
                 >
@@ -735,14 +621,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </section>
 
           <section>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                ·
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                Cuenta · detalles
-              </p>
-            </div>
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
+              Detalles de la cuenta
+            </h3>
             <dl className="divide-y divide-foreground/10">
               {[
                 { label: "Correo electrónico", value: user.email ?? "—" },
@@ -768,7 +649,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   key={label}
                   className="grid gap-1 py-3.5 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4"
                 >
-                  <dt className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                  <dt className="text-[12px] font-bold text-foreground/65">
                     {label}
                   </dt>
                   <dd className="text-[13px] text-foreground tabular-nums">
@@ -783,78 +664,65 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── DATA ── */}
       {tab === "data" && (
-        <div className="space-y-10">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
           <section>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
-                01
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                Exportar · copia de tus datos
-              </p>
-            </div>
-            <p className="text-[13px] text-foreground/60 mt-4 mb-6 max-w-xl">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
+              Exportar tus datos
+            </h3>
+            <p className="text-[13px] text-foreground/60 mt-4 mb-5 max-w-xl">
               Descarga una copia completa de sesiones, ejercicios y metadatos.
             </p>
-            <div className="flex flex-wrap gap-0 border border-foreground/15 w-fit">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleExportJson}
                 disabled={exportingJson}
-                className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/10 bg-card px-4 text-[13px] font-black text-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-60"
               >
                 {exportingJson ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <FileJson className="size-3.5 text-brand" strokeWidth={1.6} />
+                  <FileJson className="size-4 text-brand" strokeWidth={1.6} />
                 )}
-                JSON · completo
+                JSON completo
               </button>
               <button
                 onClick={handleExportCsv}
                 disabled={exportingCsv}
-                className="inline-flex items-center gap-2.5 px-4 py-3 text-[12px] tracking-wide uppercase text-foreground hover:bg-foreground/[0.03] transition-colors border-l border-foreground/15 disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/10 bg-card px-4 text-[13px] font-black text-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-60"
               >
                 {exportingCsv ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <FileText
-                    className="size-3.5 text-foreground/60"
+                    className="size-4 text-foreground/60"
                     strokeWidth={1.6}
                   />
                 )}
-                CSV · sesiones
+                CSV sesiones
               </button>
             </div>
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 max-w-xl">
+            <ul className="mt-5 grid max-w-xl grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-foreground/60 sm:grid-cols-2">
               {[
                 "Todas las sesiones con fechas y duraciones",
                 "Biblioteca completa de ejercicios",
                 "Relaciones sesión–ejercicio",
                 "Metadatos de la cuenta",
               ].map((item) => (
-                <p
-                  key={item}
-                  className="text-[12px] text-foreground/55 flex items-start gap-2"
-                >
-                  <span className="text-brand mt-0.5">◆</span>
+                <li key={item} className="flex items-start gap-2">
+                  <span className="text-brand mt-0.5 shrink-0">·</span>
                   {item}
-                </p>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
 
           <section>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-destructive/30">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-destructive">
-                △
-              </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-destructive">
-                Zona de peligro
-              </p>
-            </div>
+            <h3 className="border-b border-destructive/30 pb-2 text-[14px] font-black text-destructive">
+              Zona de peligro
+            </h3>
             <div className="mt-5 grid gap-4 border-l-2 border-destructive/40 py-2 pl-4 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6">
               <div>
-                <p className="font-heading italic text-[15px] text-foreground">
+                <p className="text-[15px] font-black text-foreground">
                   Eliminar cuenta
                 </p>
                 <p className="text-[12px] text-foreground/55 mt-1 max-w-md">
@@ -868,7 +736,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   setDeleteError(null);
                   setDeleteOpen(true);
                 }}
-                className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-destructive/40 px-3 py-2 text-[11px] font-black uppercase text-destructive transition-colors hover:bg-destructive/10"
               >
                 <Trash2 className="size-3" strokeWidth={1.6} />
                 Eliminar
@@ -888,27 +756,27 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             if (!deleting && e.target === e.currentTarget) setDeleteOpen(false);
           }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-destructive/40 bg-card shadow-xl p-6 space-y-4">
+          <div className="w-full max-w-md space-y-4 rounded-[28px] border border-destructive/35 bg-card p-6 shadow-xl">
             <div className="flex items-start gap-3">
-              <div className="size-10 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center text-destructive shrink-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-destructive/30 bg-destructive/10 text-destructive">
                 <Trash2 className="size-4" strokeWidth={1.6} />
               </div>
               <div className="min-w-0">
                 <p
                   id="delete-account-title"
-                  className="font-heading italic text-lg text-foreground"
+                  className="text-lg font-black text-foreground"
                 >
                   Eliminar cuenta
                 </p>
                 <p className="text-[13px] text-foreground/70 mt-1 leading-relaxed">
                   Esta acción es <strong>irreversible</strong>. Se eliminarán
-                  tus sesiones, alumnos, ejercicios propios, conversaciones
-                  con Dr. Planner y tu cuenta de autenticación.
+                  tus sesiones, alumnos, ejercicios propios, conversaciones con
+                  Dr. Planner y tu cuenta de autenticación.
                 </p>
               </div>
             </div>
             <div>
-              <label className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 block mb-2">
+              <label className="mb-2 block text-[12px] font-black text-foreground/65">
                 Escribe <span className="text-destructive">ELIMINAR</span> para
                 confirmar
               </label>
@@ -918,25 +786,25 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 disabled={deleting}
-                className="w-full h-10 rounded-md border border-foreground/20 bg-background px-3 text-[14px] text-foreground focus:outline-none focus:border-destructive"
+                className="tp-field h-10 w-full px-3 text-[14px] font-medium focus:border-destructive focus:ring-destructive/20"
                 placeholder="ELIMINAR"
               />
             </div>
             {deleteError && (
               <p className="text-[12px] text-destructive">{deleteError}</p>
             )}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-foreground/10">
+            <div className="flex items-center justify-end gap-2 border-t border-foreground/10 pt-2">
               <button
                 onClick={() => setDeleteOpen(false)}
                 disabled={deleting}
-                className="text-[12px] tracking-wide uppercase text-foreground/70 hover:text-foreground px-4 py-2 disabled:opacity-50"
+                className="rounded-full px-4 py-2 text-[12px] font-black uppercase text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleting || deleteConfirmText !== "ELIMINAR"}
-                className="inline-flex items-center gap-2 bg-destructive text-destructive-foreground text-[12px] font-semibold tracking-wide uppercase px-4 py-2 rounded-md hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-[12px] font-black uppercase text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deleting ? (
                   <Loader2 className="size-3.5 animate-spin" />

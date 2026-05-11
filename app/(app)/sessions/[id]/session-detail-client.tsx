@@ -20,6 +20,7 @@ import {
   Star,
   Play,
   Upload,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -29,7 +30,7 @@ import {
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
-import { Target, Flame, MapPin, Hash, Package } from "lucide-react";
+import { Target, MapPin, Hash, Package } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -61,6 +62,9 @@ export interface SessionData {
   createdAt: string;
   updatedAt: string;
   objective: string | null;
+  material: string | null;
+  observations: string | null;
+  sourceClassId: string | null;
   intensity: number | null;
   tags: string[];
   location: string | null;
@@ -72,6 +76,8 @@ export interface SessionStudentData {
   name: string;
   imageUrl: string | null;
   attended: boolean | null;
+  rating: number | null;
+  feedback: string | null;
 }
 
 export interface SessionExerciseData {
@@ -83,6 +89,10 @@ export interface SessionExerciseData {
   durationMinutes: number;
   notes: string | null;
   coachRating: number | null;
+  actualDurationSeconds: number | null;
+  completedAt: string | null;
+  executionNotes: string | null;
+  wasSkipped: boolean;
   materials: string[];
 }
 
@@ -111,6 +121,14 @@ function formatTime(isoString: string) {
   }).format(new Date(isoString));
 }
 
+function formatSeconds(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes === 0) return `${rest}s`;
+  if (rest === 0) return `${minutes}min`;
+  return `${minutes}min ${rest}s`;
+}
+
 interface Props {
   session: SessionData;
   sessionExercises: SessionExerciseData[];
@@ -118,28 +136,29 @@ interface Props {
   analytics: SessionAnalytics;
   students: SessionStudentData[];
   favoritedExerciseIds: string[];
+  sessionBlocks: SessionBlockData[];
 }
 
-function IntensityIndicator({ value }: { value: number }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className={cn(
-            "size-1.5 rounded-full",
-            n <= value ? "bg-brand" : "bg-muted-foreground/30"
-          )}
-        />
-      ))}
-    </span>
-  );
+export interface SessionBlockData {
+  id: string;
+  orderIndex: number;
+  title: string | null;
+  notes: string | null;
+  items: Array<{
+    id: string;
+    orderIndex: number;
+    exerciseId: string | null;
+    exerciseName: string | null;
+    exerciseDescription: string | null;
+    freeText: string | null;
+    durationMinutes: number | null;
+    notes: string | null;
+  }>;
 }
 
 function MetadataChips({ session }: { session: SessionData }) {
   const hasAny =
     !!session.objective ||
-    typeof session.intensity === "number" ||
     !!session.location ||
     session.tags.length > 0;
   if (!hasAny) return null;
@@ -150,15 +169,6 @@ function MetadataChips({ session }: { session: SessionData }) {
         <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
           <Target className="size-3 text-muted-foreground" />
           <span className="truncate max-w-[24ch]">{session.objective}</span>
-        </span>
-      )}
-      {typeof session.intensity === "number" && (
-        <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
-          <Flame className="size-3 text-muted-foreground" />
-          <IntensityIndicator value={session.intensity} />
-          <span className="font-mono text-muted-foreground">
-            {session.intensity}/5
-          </span>
         </span>
       )}
       {session.location && (
@@ -200,6 +210,13 @@ function StudentsSection({
   const [attendance, setAttendance] = useState<Record<string, boolean | null>>(
     () => Object.fromEntries(students.map((s) => [s.id, s.attended]))
   );
+  const [ratings, setRatings] = useState<Record<string, number | null>>(() =>
+    Object.fromEntries(students.map((s) => [s.id, s.rating]))
+  );
+  const [feedbacks, setFeedbacks] = useState<Record<string, string>>(() =>
+    Object.fromEntries(students.map((s) => [s.id, s.feedback ?? ""]))
+  );
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   async function toggleAttendance(studentId: string) {
@@ -213,6 +230,25 @@ function StudentsSection({
     });
     if (res.ok) setAttendance((prev) => ({ ...prev, [studentId]: next }));
     setSaving(null);
+  }
+
+  async function setRating(studentId: string, rating: number) {
+    const next = ratings[studentId] === rating ? null : rating;
+    setRatings((prev) => ({ ...prev, [studentId]: next }));
+    await fetch(`/api/sessions/${sessionId}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, rating: next }),
+    });
+  }
+
+  async function commitFeedback(studentId: string) {
+    const value = feedbacks[studentId] ?? "";
+    await fetch(`/api/sessions/${sessionId}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, feedback: value || null }),
+    });
   }
 
   const presentCount = Object.values(attendance).filter(Boolean).length;
@@ -235,54 +271,115 @@ function StudentsSection({
         ) : (
           students.map((s) => {
             const attended = attendance[s.id];
+            const rating = ratings[s.id];
+            const feedback = feedbacks[s.id] ?? "";
             const isSaving = saving === s.id;
+            const isOpen = expanded[s.id];
+            const hasNotes = (rating ?? 0) > 0 || feedback.trim().length > 0;
             return (
-              <div key={s.id} className="flex items-center gap-3 px-6 py-3">
-                {s.imageUrl ? (
-                  <Image
-                    src={s.imageUrl}
-                    alt={s.name}
-                    width={32}
-                    height={32}
-                    className="size-8 rounded-full object-cover shrink-0"
-                  />
-                ) : (
-                  <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
-                    {getInitials(s.name)}
-                  </span>
-                )}
-                <span className="flex-1 text-sm font-medium text-foreground truncate">
-                  {s.name}
-                </span>
-                <button
-                  onClick={() => toggleAttendance(s.id)}
-                  disabled={isSaving}
-                  aria-label={attended ? "Marcar ausente" : "Marcar presente"}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
-                    attended === true
-                      ? "bg-brand/10 border-brand/30 text-brand"
-                      : attended === false
-                        ? "bg-destructive/10 border-destructive/30 text-destructive"
-                        : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {isSaving ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : attended === true ? (
-                    <>
-                      <CheckCircle2 className="size-3" /> Presente
-                    </>
-                  ) : attended === false ? (
-                    <>
-                      <XCircle className="size-3" /> Ausente
-                    </>
+              <div key={s.id}>
+                <div className="flex items-center gap-3 px-6 py-3">
+                  {s.imageUrl ? (
+                    <Image
+                      src={s.imageUrl}
+                      alt={s.name}
+                      width={32}
+                      height={32}
+                      className="size-8 rounded-full object-cover shrink-0"
+                    />
                   ) : (
-                    <>
-                      <Circle className="size-3" /> Sin marcar
-                    </>
+                    <span className="size-8 rounded-full bg-brand/20 text-brand text-[11px] font-bold flex items-center justify-center shrink-0">
+                      {getInitials(s.name)}
+                    </span>
                   )}
-                </button>
+                  <span className="flex-1 text-sm font-medium text-foreground truncate">
+                    {s.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpanded((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
+                    }
+                    className={cn(
+                      "text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors",
+                      hasNotes
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {hasNotes ? "★ Notas" : "Notas"}
+                  </button>
+                  <button
+                    onClick={() => toggleAttendance(s.id)}
+                    disabled={isSaving}
+                    aria-label={attended ? "Marcar ausente" : "Marcar presente"}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
+                      attended === true
+                        ? "bg-brand/10 border-brand/30 text-brand"
+                        : attended === false
+                          ? "bg-destructive/10 border-destructive/30 text-destructive"
+                          : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : attended === true ? (
+                      <>
+                        <CheckCircle2 className="size-3" /> Presente
+                      </>
+                    ) : attended === false ? (
+                      <>
+                        <XCircle className="size-3" /> Ausente
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="size-3" /> Sin marcar
+                      </>
+                    )}
+                  </button>
+                </div>
+                {isOpen && (
+                  <div className="px-6 pb-4 pl-[60px] space-y-2 bg-muted/20">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setRating(s.id, n)}
+                          className={cn(
+                            "size-7 flex items-center justify-center transition-colors",
+                            (rating ?? 0) >= n
+                              ? "text-amber-500"
+                              : "text-muted-foreground/40 hover:text-amber-500/60"
+                          )}
+                          aria-label={`Valorar ${n} estrellas`}
+                        >
+                          <span className="text-base">★</span>
+                        </button>
+                      ))}
+                      {rating != null && (
+                        <span className="ml-2 text-[11px] text-muted-foreground">
+                          {rating}/5
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      rows={2}
+                      maxLength={2000}
+                      value={feedback}
+                      onChange={(e) =>
+                        setFeedbacks((prev) => ({
+                          ...prev,
+                          [s.id]: e.target.value,
+                        }))
+                      }
+                      onBlur={() => commitFeedback(s.id)}
+                      placeholder="Observaciones del alumno…"
+                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground placeholder:text-muted-foreground resize-none"
+                    />
+                  </div>
+                )}
               </div>
             );
           })
@@ -430,6 +527,7 @@ export function SessionDetailClient({
   availableExercises,
   analytics,
   students,
+  sessionBlocks,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -444,6 +542,13 @@ export function SessionDetailClient({
   const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusDialog, setStatusDialog] = useState<
+    | { kind: "complete" | "cancel"; note: string }
+    | null
+  >(null);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatDates, setRepeatDates] = useState<string[]>([""]);
+  const [repeating, setRepeating] = useState(false);
   const [exerciseRatings, setExerciseRatings] = useState<
     Record<string, number>
   >(() =>
@@ -477,13 +582,16 @@ export function SessionDetailClient({
   }
 
   async function handleStatusChange(
-    newStatus: "completed" | "cancelled" | "scheduled"
+    newStatus: "completed" | "cancelled" | "scheduled",
+    note?: string | null
   ) {
     setUpdatingStatus(true);
+    const body: Record<string, unknown> = { status: newStatus };
+    if (note !== undefined) body.statusNote = note;
     const res = await fetch(`/api/sessions/${session.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       setStatus(newStatus);
@@ -545,11 +653,11 @@ export function SessionDetailClient({
 
   if (mode === "edit") {
     return (
-      <div className="px-4 md:px-8 py-8 space-y-6">
-        <div className="flex items-center gap-4">
+      <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] md:px-8">
+        <div className="flex items-center gap-4 rounded-lg border border-[#050505]/10 bg-white p-4 shadow-[0_14px_42px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
           <button
             onClick={() => setMode("view")}
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-[#F4F4F1] text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -588,26 +696,30 @@ export function SessionDetailClient({
   }
 
   return (
-    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-8">
+    <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] sm:px-6 md:px-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-4 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:flex sm:items-start sm:justify-between sm:gap-4">
+        <div
+          aria-hidden
+          className="court-grid pointer-events-none absolute inset-0 opacity-35 dark:opacity-20"
+        />
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/sessions"
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-[#F4F4F1] text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <p className="text-xs text-muted-foreground font-medium truncate">
+          <p className="relative rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground dark:bg-[#050505]/70">
             Sesiones de Entrenamiento
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+        <div className="relative mt-4 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0 sm:justify-end">
           {/* Execute session — only for upcoming/scheduled */}
           {status === "scheduled" && (
             <Link
               href={`/sessions/${session.id}/execute`}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-background bg-brand px-3 py-2 rounded-lg hover:bg-brand/90 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
             >
               <Play className="size-3.5" />
               <span className="hidden sm:inline">Dar clase</span>
@@ -616,14 +728,14 @@ export function SessionDetailClient({
           {/* Reutilizar */}
           <Link
             href={`/sessions/new?from=${session.id}`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
             <Copy className="size-3.5" />
             <span className="hidden sm:inline">Reutilizar</span>
           </Link>
           <button
             onClick={() => setShowPublishDialog(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand border border-brand/30 px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#D6FF38]/45 bg-[#D6FF38]/10 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#D6FF38]/20"
           >
             <Upload className="size-3.5" />
             <span className="hidden sm:inline">Publicar</span>
@@ -631,7 +743,7 @@ export function SessionDetailClient({
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/[0.035]"
           >
             {downloadingPdf ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -642,14 +754,14 @@ export function SessionDetailClient({
           </button>
           <button
             onClick={() => setMode("edit")}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
             <Pencil className="size-3.5" />
             <span className="hidden sm:inline">Editar</span>
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white/70 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.035]"
           >
             <Trash2 className="size-3.5" />
             <span className="hidden sm:inline">Eliminar</span>
@@ -658,12 +770,12 @@ export function SessionDetailClient({
       </div>
 
       {/* Session card */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-[0_18px_60px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
         {/* Header stripe */}
-        <div className="border-b border-border/50 bg-muted/20 px-4 py-5 sm:px-6">
+        <div className="border-b border-border/50 bg-[#050505] px-4 py-5 text-white dark:bg-white/[0.06] sm:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/10">
                 {status === "completed" ? (
                   <CheckCircle2 className="size-5 text-brand" />
                 ) : status === "cancelled" ? (
@@ -677,10 +789,10 @@ export function SessionDetailClient({
                   className={cn(
                     "text-xs font-bold uppercase tracking-widest",
                     status === "completed"
-                      ? "text-brand"
+                    ? "text-[#D6FF38]"
                       : status === "cancelled"
                         ? "text-destructive"
-                        : "text-muted-foreground"
+                        : "text-white/60"
                   )}
                 >
                   {status === "completed"
@@ -690,7 +802,7 @@ export function SessionDetailClient({
                       : "Programada"}
                 </span>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 text-xs text-white/65">
                     <Calendar className="size-3" />
                     {formatDate(session.scheduledAt)} a las{" "}
                     {formatTime(session.scheduledAt)}
@@ -705,7 +817,7 @@ export function SessionDetailClient({
         {status !== "completed" && status !== "cancelled" && (
           <div className="flex flex-wrap items-center gap-2 border-b border-border/50 px-4 py-3 sm:px-6">
             <button
-              onClick={() => handleStatusChange("completed")}
+              onClick={() => setStatusDialog({ kind: "complete", note: "" })}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors disabled:opacity-50"
             >
@@ -717,12 +829,20 @@ export function SessionDetailClient({
               Marcar completada
             </button>
             <button
-              onClick={() => handleStatusChange("cancelled")}
+              onClick={() => setStatusDialog({ kind: "cancel", note: "" })}
               disabled={updatingStatus}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive border border-destructive/30 bg-destructive/5 px-3 py-1.5 rounded-full hover:bg-destructive/15 transition-colors disabled:opacity-50"
             >
               <XCircle className="size-3" />
               Cancelar sesión
+            </button>
+            <button
+              onClick={() => setRepeatOpen(true)}
+              disabled={updatingStatus}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground border border-border bg-background px-3 py-1.5 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <CalendarClock className="size-3" />
+              Repetir en otras fechas
             </button>
           </div>
         )}
@@ -763,6 +883,31 @@ export function SessionDetailClient({
 
           <MetadataChips session={session} />
 
+          {(session.material || session.observations) && (
+            <div className="grid gap-4 border-t border-border/50 pt-4 sm:grid-cols-2">
+              {session.material && (
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                    Material
+                  </p>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {session.material}
+                  </p>
+                </div>
+              )}
+              {session.observations && (
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                    Observaciones
+                  </p>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {session.observations}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {session.description && (
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
@@ -788,6 +933,65 @@ export function SessionDetailClient({
           exercises={sessionExercises}
           totalMinutes={session.durationMinutes}
         />
+      )}
+
+      {sessionBlocks.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-foreground">
+              Bloques de la sesion
+            </h2>
+            <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              Snapshot
+            </span>
+          </div>
+          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-3">
+            {sessionBlocks.map((block) => (
+              <div
+                key={block.id}
+                className="rounded-lg border border-border/80 bg-background p-4"
+              >
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {block.title ?? `Bloque ${block.orderIndex}`}
+                </p>
+                {block.notes && (
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {block.notes}
+                  </p>
+                )}
+                <div className="mt-3 space-y-2">
+                  {block.items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Sin items definidos.
+                    </p>
+                  ) : (
+                    block.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          {item.exerciseName ?? item.freeText ?? "Item"}
+                        </p>
+                        {item.exerciseDescription && (
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {item.exerciseDescription}
+                          </p>
+                        )}
+                        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {item.durationMinutes && (
+                            <span>{item.durationMinutes} min</span>
+                          )}
+                          {item.notes && <span>{item.notes}</span>}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Materials summary */}
@@ -836,13 +1040,16 @@ export function SessionDetailClient({
               </p>
             )}
           </div>
-          <div className="divide-y divide-border/60">
+          <div className="flex flex-col gap-3 p-4 sm:p-5">
             {sessionExercises.map((ex, idx) => {
               const diff = DIFFICULTY_META[ex.difficulty];
               const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
               const isSaving = savingRating === ex.exerciseId;
               return (
-                <div key={ex.exerciseId} className="px-6 py-4">
+                <div
+                  key={ex.exerciseId}
+                  className="rounded-lg border border-border/80 bg-background px-4 py-4 shadow-sm transition-colors hover:border-brand/30"
+                >
                   <div className="flex items-start gap-4">
                     <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0 text-right mt-0.5">
                       {idx + 1}
@@ -890,6 +1097,37 @@ export function SessionDetailClient({
                         <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed italic">
                           {ex.notes}
                         </p>
+                      )}
+                      {(ex.completedAt ||
+                        ex.actualDurationSeconds != null ||
+                        ex.executionNotes ||
+                        ex.wasSkipped) && (
+                        <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                            {ex.wasSkipped ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-amber-500">
+                                <XCircle className="size-3" />
+                                Saltado
+                              </span>
+                            ) : ex.completedAt ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-brand">
+                                <CheckCircle2 className="size-3" />
+                                Ejecutado
+                              </span>
+                            ) : null}
+                            {ex.actualDurationSeconds != null && (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                Real: {formatSeconds(ex.actualDurationSeconds)}
+                              </span>
+                            )}
+                          </div>
+                          {ex.executionNotes && (
+                            <p className="mt-1.5 text-xs leading-relaxed text-foreground/65">
+                              {ex.executionNotes}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -1003,7 +1241,7 @@ export function SessionDetailClient({
                 Publicar como plantilla
               </p>
               <h2 className="font-heading text-[20px] text-foreground">
-                Compartir en el mercado
+                Compartir en la biblioteca
               </h2>
               <p className="mt-1 text-[13px] text-foreground/50 leading-relaxed">
                 Se crea una copia pública. Tu información personal no se
@@ -1117,6 +1355,173 @@ export function SessionDetailClient({
                   <Upload className="size-4" />
                 )}
                 Publicar plantilla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status note dialog */}
+      {statusDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          onClick={() => setStatusDialog(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-heading text-xl text-foreground">
+              {statusDialog.kind === "complete"
+                ? "Marcar como completada"
+                : "Cancelar sesión"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {statusDialog.kind === "complete"
+                ? "Anota cómo fue la sesión (opcional)."
+                : "Indica el motivo de la cancelación."}
+            </p>
+            <textarea
+              autoFocus
+              rows={4}
+              maxLength={2000}
+              value={statusDialog.note}
+              onChange={(e) =>
+                setStatusDialog({ ...statusDialog, note: e.target.value })
+              }
+              placeholder={
+                statusDialog.kind === "complete"
+                  ? "Buen ritmo, los alumnos respondieron bien…"
+                  : "Lluvia, lesión, ausencia del grupo…"
+              }
+              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground resize-none"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setStatusDialog(null)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={async () => {
+                  const targetStatus =
+                    statusDialog.kind === "complete" ? "completed" : "cancelled";
+                  await handleStatusChange(
+                    targetStatus,
+                    statusDialog.note.trim() || null
+                  );
+                  setStatusDialog(null);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl text-brand-foreground transition-colors disabled:opacity-60",
+                  statusDialog.kind === "complete"
+                    ? "bg-brand hover:bg-brand/90"
+                    : "bg-destructive hover:bg-destructive/90 text-white"
+                )}
+              >
+                {updatingStatus && <Loader2 className="size-4 animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Repeat dialog */}
+      {repeatOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          onClick={() => setRepeatOpen(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-heading text-xl text-foreground">
+              Repetir sesión
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Clona esta sesión (con sus ejercicios) en una o varias fechas.
+              Los alumnos asignados <em>no</em> se copian.
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {repeatDates.map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={d}
+                    onChange={(e) =>
+                      setRepeatDates((prev) =>
+                        prev.map((v, j) => (j === i ? e.target.value : v))
+                      )
+                    }
+                    className="flex-1 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 text-foreground"
+                  />
+                  {repeatDates.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRepeatDates((prev) =>
+                          prev.filter((_, j) => j !== i)
+                        )
+                      }
+                      className="size-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Quitar fecha"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRepeatDates((prev) => [...prev, ""])}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                + Añadir fecha
+              </button>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRepeatOpen(false)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={repeating}
+                onClick={async () => {
+                  const validDates = repeatDates
+                    .filter((d) => d.trim())
+                    .map((d) => new Date(d).toISOString());
+                  if (validDates.length === 0) return;
+                  setRepeating(true);
+                  const res = await fetch(
+                    `/api/sessions/${session.id}/repeat`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ dates: validDates }),
+                    }
+                  );
+                  setRepeating(false);
+                  if (res.ok) {
+                    setRepeatOpen(false);
+                    setRepeatDates([""]);
+                    router.push("/sessions");
+                    router.refresh();
+                  }
+                }}
+                className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-60"
+              >
+                {repeating && <Loader2 className="size-4 animate-spin" />}
+                Crear sesiones
               </button>
             </div>
           </div>

@@ -24,11 +24,7 @@ export async function GET() {
 
   const [userRow, userSessions, userStudents, userExercises, userChats] =
     await Promise.all([
-      db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, user.id))
-        .limit(1),
+      db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1),
       db.select().from(sessionsTable).where(eq(sessionsTable.userId, user.id)),
       db.select().from(studentsTable).where(eq(studentsTable.coachId, user.id)),
       db

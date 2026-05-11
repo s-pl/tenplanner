@@ -49,33 +49,18 @@ export default async function ProfilePage() {
   const upcomingSessions = Number(sessionStats?.upcomingSessions ?? 0);
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px calc(100%/12))",
-        }}
-      />
-      <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-8">
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
-              Cuenta · Preferencias
-            </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
-              № 06
-            </p>
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
+        <header className="tp-hero-panel p-6 text-white sm:p-8">
+          <div className="mb-5 inline-flex rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+            Cuenta
           </div>
-          <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-            Tu <em className="italic text-brand">perfil</em>,
-            <br />
-            tu manera de entrenar.
+          <h1 className="text-4xl font-black leading-tight sm:text-5xl">
+            Perfil
           </h1>
-          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            Ajusta los datos que te representan, la apariencia de la app y el
-            resumen de tu actividad como entrenador.
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/62">
+            Ajusta tus datos, apariencia, exportación y actividad desde un solo
+            panel de trabajo.
           </p>
         </header>
 
@@ -84,9 +69,6 @@ export default async function ProfilePage() {
             id: user.id,
             email: user.email ?? null,
             full_name: user.user_metadata?.full_name ?? null,
-            role: user.user_metadata?.role ?? null,
-            skill_level: user.user_metadata?.skill_level ?? null,
-            bio: user.user_metadata?.bio ?? null,
             avatar_color: user.user_metadata?.avatar_color ?? null,
             avatar_url:
               dbUser[0]?.image ?? user.user_metadata?.avatar_url ?? null,

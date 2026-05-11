@@ -17,7 +17,10 @@
     "db:migrate": "tsx db/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx db/seeders/exercises.ts"
+    "db:seed": "tsx db/seeders/seed-all.ts",
+    "db:seed:exercises": "tsx db/seeders/exercises.ts",
+    "db:seed:classes": "tsx db/seeders/classes.ts",
+    "db:seed:fixtures": "tsx db/seeders/coach-fixtures.ts"
   },
   "pnpm": {
     "overrides": {

@@ -78,15 +78,15 @@ export function QuickSessionCreator() {
   }
 
   return (
-    <Card className="border-border/70 bg-card/80 shadow-sm">
+    <Card className="border-border/70 bg-card/80">
       <CardHeader className="border-b border-border/60">
         <CardTitle className="flex items-center gap-2">
           <Zap className="size-4 text-brand" />
           Crear sesión rápida
         </CardTitle>
         <CardDescription>
-          Solo pide un título. La fecha queda para dentro de una hora y el
-          resto lo podrás completar después desde el detalle.
+          Solo pide un título. La fecha queda para dentro de una hora y el resto
+          lo podrás completar después desde el detalle.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 pt-4">

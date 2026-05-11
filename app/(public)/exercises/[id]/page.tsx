@@ -20,14 +20,21 @@ export default async function ExercisePage({ params }: PageProps) {
 
   let exercise;
   let dbUser;
-  let ratingData: { avg: number | null; total: number } = { avg: null, total: 0 };
+  let ratingData: { avg: number | null; total: number } = {
+    avg: null,
+    total: 0,
+  };
   let userRating: number | null = null;
 
   try {
     const [exerciseResult, userResult, ratingResult] = await Promise.all([
       db.select().from(exercises).where(eq(exercises.id, id)).limit(1),
       user
-        ? db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, user.id)).limit(1)
+        ? db
+            .select({ isAdmin: users.isAdmin })
+            .from(users)
+            .where(eq(users.id, user.id))
+            .limit(1)
         : Promise.resolve([]),
       db
         .select({ avg: avg(exerciseRatings.rating), total: count() })
@@ -46,7 +53,12 @@ export default async function ExercisePage({ params }: PageProps) {
       const userRatingResult = await db
         .select({ rating: exerciseRatings.rating })
         .from(exerciseRatings)
-        .where(and(eq(exerciseRatings.userId, user.id), eq(exerciseRatings.exerciseId, id)))
+        .where(
+          and(
+            eq(exerciseRatings.userId, user.id),
+            eq(exerciseRatings.exerciseId, id)
+          )
+        )
         .limit(1);
       userRating = userRatingResult[0]?.rating ?? null;
     }
@@ -56,7 +68,10 @@ export default async function ExercisePage({ params }: PageProps) {
 
   if (!exercise) notFound();
 
-  const canAccess = exercise.isGlobal || exercise.createdBy === null || exercise.createdBy === user?.id;
+  const canAccess =
+    exercise.isGlobal ||
+    exercise.createdBy === null ||
+    exercise.createdBy === user?.id;
   if (!canAccess) notFound();
 
   const isAdmin = !!dbUser?.isAdmin;
@@ -80,18 +95,46 @@ export default async function ExercisePage({ params }: PageProps) {
         durationMinutes: exercise.durationMinutes,
         objectives: exercise.objectives ?? null,
         steps:
-          (exercise.steps as Array<{ title: string; description: string }> | null) ?? null,
+          (exercise.steps as Array<{
+            title: string;
+            description: string;
+          }> | null) ?? null,
         materials: (exercise.materials as string[] | null) ?? null,
-        location: (exercise.location as "indoor" | "outdoor" | "any" | null) ?? null,
+        location:
+          (exercise.location as
+            | "pista"
+            | "pared"
+            | "playa"
+            | "casa"
+            | null) ?? null,
         videoUrl: exercise.videoUrl ?? null,
         tips: exercise.tips ?? null,
         imageUrl: exercise.imageUrl ?? null,
         imageUrls: (exercise.imageUrls as string[] | null) ?? null,
         variantes: exercise.variantes ?? null,
-        formato: (exercise.formato as "individual" | "parejas" | "grupal" | "multigrupo" | null) ?? null,
+        formato:
+          (exercise.formato as
+            | "individual"
+            | "parejas"
+            | "grupal"
+            | "multigrupo"
+            | null) ?? null,
         numJugadores: exercise.numJugadores ?? null,
-        tipoPelota: (exercise.tipoPelota as "normal" | "lenta" | "rapida" | "sin_pelota" | null) ?? null,
-        tipoActividad: (exercise.tipoActividad as "tecnico_tactico" | "fisico" | "cognitivo" | "competitivo" | "ludico" | null) ?? null,
+        tipoPelota:
+          (exercise.tipoPelota as
+            | "normal"
+            | "lenta"
+            | "rapida"
+            | "sin_pelota"
+            | null) ?? null,
+        tipoActividad:
+          (exercise.tipoActividad as
+            | "tecnico_tactico"
+            | "fisico"
+            | "cognitivo"
+            | "competitivo"
+            | "ludico"
+            | null) ?? null,
         golpes: (exercise.golpes as string[] | null) ?? null,
         efecto: (exercise.efecto as string[] | null) ?? null,
         phase: exercise.phase ?? null,

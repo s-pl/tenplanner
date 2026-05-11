@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { drPlannerChats, drPlannerMessages } from "@/db/schema";
+import { drPlannerChats, drPlannerMessages, users } from "@/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { DrPlannerChat } from "./chat-client";
+import { isDrPlannerEnabled } from "@/lib/app-settings";
+import { DrPlannerLocked } from "@/components/app/dr-planner/dr-planner-locked";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,19 @@ export default async function DrPlannerChatPage({ params }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
+
+  const [enabled, profile] = await Promise.all([
+    isDrPlannerEnabled(),
+    db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  ]);
+
+  if (!enabled) {
+    return <DrPlannerLocked isAdmin={profile[0]?.isAdmin ?? false} />;
+  }
 
   const [chat] = await db
     .select({ title: drPlannerChats.title })

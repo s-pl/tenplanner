@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Trash2,
@@ -15,6 +16,8 @@ import {
   Bot,
   Clock,
   BarChart2,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 import {
   Table,
@@ -29,6 +32,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  adminActionClass,
+  adminInputClass,
+  adminPrimaryActionClass,
+  adminTableShellClass,
+} from "../_components/admin-ui";
 
 interface Exercise {
   id: string;
@@ -56,26 +65,39 @@ interface Session {
   exerciseCount: number;
 }
 
+type ExFilter = "all" | "global" | "private" | "ai";
+
+interface Props {
+  exercises: Exercise[];
+  exerciseTotal: number;
+  exercisePage: number;
+  exerciseTotalPages: number;
+  sessions: Session[];
+  sessionTotal: number;
+  sessionPage: number;
+  sessionTotalPages: number;
+  q: string;
+  exFilter: ExFilter;
+  tab: string;
+}
+
 const DIFF_LABEL: Record<string, string> = {
   beginner: "Inicio",
   intermediate: "Medio",
   advanced: "Avanzado",
 };
-
 const CAT_LABEL: Record<string, string> = {
   technique: "Técnica",
   tactics: "Táctica",
   fitness: "Físico",
   "warm-up": "Calentamiento",
 };
-
 const CAT_COLOR: Record<string, string> = {
   technique: "text-blue-400 border-blue-400/30 bg-blue-400/8",
   tactics: "text-purple-400 border-purple-400/30 bg-purple-400/8",
   fitness: "text-amber-400 border-amber-400/30 bg-amber-400/8",
   "warm-up": "text-brand border-brand/30 bg-brand/8",
 };
-
 const STATUS_LABEL: Record<string, string> = {
   scheduled: "Programada",
   completed: "Completada",
@@ -83,52 +105,98 @@ const STATUS_LABEL: Record<string, string> = {
   draft: "Borrador",
 };
 
-type ExFilter = "all" | "global" | "private" | "ai";
+function buildHref(opts: {
+  q?: string;
+  exFilter?: string;
+  exPage?: number;
+  sPage?: number;
+  tab?: string;
+}) {
+  const p = new URLSearchParams();
+  if (opts.q) p.set("q", opts.q);
+  if (opts.tab && opts.tab !== "exercises") p.set("tab", opts.tab);
+  if (opts.exFilter && opts.exFilter !== "all")
+    p.set("exFilter", opts.exFilter);
+  if (opts.exPage && opts.exPage > 1) p.set("exPage", String(opts.exPage));
+  if (opts.sPage && opts.sPage > 1) p.set("sPage", String(opts.sPage));
+  const qs = p.toString();
+  return `/admin/content${qs ? `?${qs}` : ""}`;
+}
+
+function PaginationBar({
+  page,
+  totalPages,
+  href,
+}: {
+  page: number;
+  totalPages: number;
+  href: (p: number) => string;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <footer className="flex items-center justify-between pt-1">
+      <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
+        Pág. {page} / {totalPages}
+      </p>
+      <div className="flex items-center gap-4">
+        {page > 1 ? (
+          <Link
+            href={href(page - 1)}
+            className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+          >
+            <ArrowLeft className="size-3" /> Anterior
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+            <ArrowLeft className="size-3" /> Anterior
+          </span>
+        )}
+        {page < totalPages ? (
+          <Link
+            href={href(page + 1)}
+            className="inline-flex items-center gap-1.5 text-[12px] text-foreground/70 hover:text-brand transition-colors"
+          >
+            Siguiente <ArrowRight className="size-3" />
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
+            Siguiente <ArrowRight className="size-3" />
+          </span>
+        )}
+      </div>
+    </footer>
+  );
+}
 
 export function AdminContentClient({
   exercises: initialExercises,
-  sessions: initialSessions,
-}: {
-  exercises: Exercise[];
-  sessions: Session[];
-}) {
+  exerciseTotal,
+  exercisePage,
+  exerciseTotalPages,
+  sessions,
+  sessionTotal,
+  sessionPage,
+  sessionTotalPages,
+  q,
+  exFilter,
+  tab,
+}: Props) {
+  const router = useRouter();
   const [exercises, setExercises] = useState(initialExercises);
-  const [sessions] = useState(initialSessions);
-  const [search, setSearch] = useState("");
-  const [exFilter, setExFilter] = useState<ExFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
+  const [searchDraft, setSearchDraft] = useState(q);
 
-  const filteredExercises = useMemo(() => {
-    let rows = exercises;
-    if (search)
-      rows = rows.filter(
-        (e) =>
-          e.name.toLowerCase().includes(search.toLowerCase()) ||
-          (e.createdByName ?? "").toLowerCase().includes(search.toLowerCase())
-      );
-    if (exFilter === "global") rows = rows.filter((e) => e.isGlobal);
-    if (exFilter === "private") rows = rows.filter((e) => !e.isGlobal);
-    if (exFilter === "ai") rows = rows.filter((e) => e.isAiGenerated);
-    return rows;
-  }, [exercises, search, exFilter]);
-
-  const filteredSessions = useMemo(
-    () =>
-      sessions.filter(
-        (s) =>
-          s.title.toLowerCase().includes(search.toLowerCase()) ||
-          (s.userName ?? "").toLowerCase().includes(search.toLowerCase())
-      ),
-    [sessions, search]
-  );
-
-  const globalCount = exercises.filter((e) => e.isGlobal).length;
-  const aiCount = exercises.filter((e) => e.isAiGenerated).length;
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    router.push(
+      buildHref({ q: searchDraft, exFilter, tab, exPage: 1, sPage: 1 })
+    );
+  }
 
   async function toggleGlobal(id: string, makeGlobal: boolean) {
     setBusy(id);
@@ -218,72 +286,79 @@ export function AdminContentClient({
   }
 
   function toggleSelectAll() {
-    if (selected.size === filteredExercises.length) {
+    if (selected.size === exercises.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(filteredExercises.map((e) => e.id)));
+      setSelected(new Set(exercises.map((e) => e.id)));
     }
   }
 
   const allSelected =
-    filteredExercises.length > 0 && selected.size === filteredExercises.length;
+    exercises.length > 0 && selected.size === exercises.length;
+
+  const exFilterOptions: [ExFilter, string][] = [
+    ["all", `Todos (${exerciseTotal})`],
+    ["global", "Globales"],
+    ["private", "Privados"],
+    ["ai", "IA"],
+  ];
 
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="relative">
+      <form onSubmit={handleSearchSubmit} className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-foreground/40" />
         <input
           type="text"
           placeholder="Buscar por nombre o autor…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-foreground/15 bg-foreground/[0.02] text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50"
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
+          className={cn(adminInputClass, "w-full pl-9 pr-4")}
         />
-      </div>
+      </form>
 
-      <Tabs defaultValue="exercises">
-        <TabsList className="bg-foreground/5 border border-foreground/10">
+      <Tabs
+        defaultValue={tab}
+        onValueChange={(t) =>
+          router.push(buildHref({ q, exFilter, tab: t, exPage: 1, sPage: 1 }))
+        }
+      >
+        <TabsList className="rounded-lg border border-foreground/12 bg-card/90">
           <TabsTrigger value="exercises">
-            Ejercicios ({filteredExercises.length})
+            Ejercicios ({exerciseTotal.toLocaleString("es-ES")})
           </TabsTrigger>
           <TabsTrigger value="sessions">
-            Sesiones ({filteredSessions.length})
+            Sesiones ({sessionTotal.toLocaleString("es-ES")})
           </TabsTrigger>
         </TabsList>
 
         {/* ── EXERCISES ── */}
         <TabsContent value="exercises" className="mt-4 space-y-3">
-          {/* Filter pills + stats */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               <Filter className="size-3.5 text-foreground/40 shrink-0" />
-              {(["all", "global", "private", "ai"] as ExFilter[]).map((f) => (
-                <button
+              {exFilterOptions.map(([f, label]) => (
+                <Link
                   key={f}
-                  onClick={() => {
-                    setExFilter(f);
-                    setSelected(new Set());
-                  }}
+                  href={buildHref({
+                    q,
+                    exFilter: f,
+                    tab: "exercises",
+                    exPage: 1,
+                    sPage: sessionPage,
+                  })}
                   className={cn(
-                    "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors",
+                    "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap",
                     exFilter === f
-                      ? "bg-brand text-brand-foreground"
-                      : "bg-foreground/5 text-foreground/50 hover:text-foreground"
+                      ? "bg-[#D6FF38] text-[#050505]"
+                      : "bg-card text-foreground/55 ring-1 ring-foreground/10 hover:text-foreground"
                   )}
                 >
-                  {f === "all"
-                    ? `Todos (${exercises.length})`
-                    : f === "global"
-                      ? `Globales (${globalCount})`
-                      : f === "private"
-                        ? `Privados (${exercises.length - globalCount})`
-                        : `IA (${aiCount})`}
-                </button>
+                  {label}
+                </Link>
               ))}
             </div>
 
-            {/* Bulk actions */}
             {selected.size > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-foreground/50">
@@ -292,14 +367,14 @@ export function AdminContentClient({
                 <button
                   onClick={() => void bulkToggleGlobal(true)}
                   disabled={busy === "bulk"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-medium hover:bg-brand/20 transition-colors disabled:opacity-50"
+                  className={cn(adminPrimaryActionClass, "h-7 px-2.5 text-[11px]")}
                 >
                   <Globe className="size-3" /> Publicar todos
                 </button>
                 <button
                   onClick={() => void bulkToggleGlobal(false)}
                   disabled={busy === "bulk"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-foreground/5 text-foreground/60 text-xs font-medium hover:bg-foreground/10 transition-colors disabled:opacity-50"
+                  className={cn(adminActionClass, "h-7 px-2.5 text-[11px]")}
                 >
                   <Lock className="size-3" /> Privar todos
                 </button>
@@ -307,17 +382,18 @@ export function AdminContentClient({
             )}
           </div>
 
+          {/* Mobile cards */}
           <div className="grid gap-3 md:hidden">
-            {filteredExercises.length === 0 && (
-              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+            {exercises.length === 0 && (
+              <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-10 text-center text-sm text-foreground/40">
                 No hay ejercicios
               </div>
             )}
-            {filteredExercises.map((e) => (
+            {exercises.map((e) => (
               <article
                 key={e.id}
                 className={cn(
-                  "rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4",
+                  "rounded-lg border border-foreground/12 bg-card/90 p-4",
                   selected.has(e.id) && "border-brand/30 bg-brand/[0.03]"
                 )}
               >
@@ -325,11 +401,6 @@ export function AdminContentClient({
                   <button
                     onClick={() => toggleSelect(e.id)}
                     className="mt-0.5 text-foreground/40 transition-colors hover:text-brand"
-                    aria-label={
-                      selected.has(e.id)
-                        ? "Deseleccionar ejercicio"
-                        : "Seleccionar ejercicio"
-                    }
                   >
                     {selected.has(e.id) ? (
                       <CheckSquare className="size-4 text-brand" />
@@ -397,15 +468,14 @@ export function AdminContentClient({
                   <Link
                     href={`/exercises/${e.id}`}
                     target="_blank"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-foreground/5 px-3 py-2 text-xs font-medium text-foreground/60 transition-colors hover:text-foreground"
+                    className={adminActionClass}
                   >
-                    <ExternalLink className="size-3.5" />
-                    Ver
+                    <ExternalLink className="size-3.5" /> Ver
                   </Link>
                   <button
                     onClick={() => void toggleGlobal(e.id, !e.isGlobal)}
                     disabled={busy === e.id || busy === "bulk"}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand/10 px-3 py-2 text-xs font-medium text-brand transition-colors hover:bg-brand/15 disabled:opacity-40"
+                    className={cn(adminPrimaryActionClass, "disabled:opacity-40")}
                   >
                     {busy === e.id ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -421,15 +491,15 @@ export function AdminContentClient({
                     disabled={busy === e.id || busy === "bulk"}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 disabled:opacity-40"
                   >
-                    <Trash2 className="size-3.5" />
-                    Eliminar
+                    <Trash2 className="size-3.5" /> Eliminar
                   </button>
                 </div>
               </article>
             ))}
           </div>
 
-          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
+          {/* Desktop table */}
+          <div className={cn(adminTableShellClass, "hidden md:block")}>
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">
@@ -466,7 +536,7 @@ export function AdminContentClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredExercises.length === 0 && (
+                {exercises.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={9}
@@ -476,7 +546,7 @@ export function AdminContentClient({
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredExercises.map((e) => (
+                {exercises.map((e) => (
                   <TableRow
                     key={e.id}
                     className={cn(
@@ -497,16 +567,12 @@ export function AdminContentClient({
                       </button>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {e.name}
-                          </p>
-                          <p className="text-xs text-foreground/40">
-                            {DIFF_LABEL[e.difficulty] ?? e.difficulty}
-                          </p>
-                        </div>
-                      </div>
+                      <p className="text-sm font-medium text-foreground">
+                        {e.name}
+                      </p>
+                      <p className="text-xs text-foreground/40">
+                        {DIFF_LABEL[e.difficulty] ?? e.difficulty}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -626,20 +692,34 @@ export function AdminContentClient({
               </TableBody>
             </Table>
           </div>
+
+          <PaginationBar
+            page={exercisePage}
+            totalPages={exerciseTotalPages}
+            href={(p) =>
+              buildHref({
+                q,
+                exFilter,
+                tab: "exercises",
+                exPage: p,
+                sPage: sessionPage,
+              })
+            }
+          />
         </TabsContent>
 
         {/* ── SESSIONS ── */}
-        <TabsContent value="sessions" className="mt-4">
+        <TabsContent value="sessions" className="mt-4 space-y-3">
           <div className="grid gap-3 md:hidden">
-            {filteredSessions.length === 0 && (
-              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+            {sessions.length === 0 && (
+              <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-10 text-center text-sm text-foreground/40">
                 No hay sesiones
               </div>
             )}
-            {filteredSessions.map((s) => (
+            {sessions.map((s) => (
               <article
                 key={s.id}
-                className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
+                className="rounded-lg border border-foreground/12 bg-card/90 p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -696,7 +776,7 @@ export function AdminContentClient({
             ))}
           </div>
 
-          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
+          <div className={cn(adminTableShellClass, "hidden md:block")}>
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">
@@ -718,7 +798,7 @@ export function AdminContentClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSessions.length === 0 && (
+                {sessions.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={7}
@@ -728,7 +808,7 @@ export function AdminContentClient({
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredSessions.map((s) => (
+                {sessions.map((s) => (
                   <TableRow
                     key={s.id}
                     className="border-foreground/8 hover:bg-foreground/[0.02]"
@@ -779,8 +859,23 @@ export function AdminContentClient({
               </TableBody>
             </Table>
           </div>
+
+          <PaginationBar
+            page={sessionPage}
+            totalPages={sessionTotalPages}
+            href={(p) =>
+              buildHref({
+                q,
+                exFilter,
+                tab: "sessions",
+                exPage: exercisePage,
+                sPage: p,
+              })
+            }
+          />
         </TabsContent>
       </Tabs>
+
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {

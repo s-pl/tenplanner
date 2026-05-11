@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
 
   const q = request.nextUrl.searchParams.get("q")?.trim();
   const pageParam = request.nextUrl.searchParams.get("page") ?? "1";
-  const pageNum = Math.max(1, Math.min(50, Number.parseInt(pageParam, 10) || 1));
+  const pageNum = Math.max(
+    1,
+    Math.min(50, Number.parseInt(pageParam, 10) || 1)
+  );
 
   if (!q) return NextResponse.json({ photos: [], total_results: 0 });
   if (q.length > 100) {

@@ -6,32 +6,34 @@ Plantillas HTML para los correos transaccionales de autenticación que envía Su
 
 Cada plantilla tiene un destino fijo:
 
-| Archivo | Pegar en → | Asunto sugerido |
-|---|---|---|
-| `confirm-signup.html` | **Confirm signup** | `Confirma tu cuenta · TenPlanner` |
-| `magic-link.html` | **Magic Link** | `Tu enlace de acceso · TenPlanner` |
-| `reset-password.html` | **Reset Password** | `Recuperar contraseña · TenPlanner` |
-| `change-email.html` | **Change Email Address** | `Confirma tu nuevo correo · TenPlanner` |
+| Archivo               | Pegar en →               | Asunto sugerido                         |
+| --------------------- | ------------------------ | --------------------------------------- |
+| `confirm-signup.html` | **Confirm signup**       | `Confirma tu cuenta · TenPlanner`       |
+| `magic-link.html`     | **Magic Link**           | `Tu enlace de acceso · TenPlanner`      |
+| `reset-password.html` | **Reset Password**       | `Recuperar contraseña · TenPlanner`     |
+| `change-email.html`   | **Change Email Address** | `Confirma tu nuevo correo · TenPlanner` |
 
 ## Variables de Supabase
 
 Las plantillas usan la sintaxis Go `{{ .Variable }}` que Supabase sustituye al enviar:
 
-| Variable | Qué es |
-|---|---|
-| `{{ .ConfirmationURL }}` | URL completa que pulsa el usuario (ya firmada por Supabase) |
-| `{{ .SiteURL }}` | URL base del proyecto (definida en **Settings → Auth → Site URL**) |
-| `{{ .Email }}` | Email del destinatario |
-| `{{ .Token }}` | OTP de 6 dígitos (solo si activas **OTP + link**) |
-| `{{ .TokenHash }}` | Hash del token |
-| `{{ .RedirectTo }}` | URL de redirección tras el click |
+| Variable                 | Qué es                                                             |
+| ------------------------ | ------------------------------------------------------------------ |
+| `{{ .ConfirmationURL }}` | URL completa que pulsa el usuario (ya firmada por Supabase)        |
+| `{{ .SiteURL }}`         | URL base del proyecto (definida en **Settings → Auth → Site URL**) |
+| `{{ .Email }}`           | Email del destinatario                                             |
+| `{{ .Token }}`           | OTP de 6 dígitos (solo si activas **OTP + link**)                  |
+| `{{ .TokenHash }}`       | Hash del token                                                     |
+| `{{ .RedirectTo }}`      | URL de redirección tras el click                                   |
 
 Las plantillas que ves solo usan `{{ .ConfirmationURL }}`. Si prefieres enseñar un OTP visible junto al botón, añade dentro del bloque del CTA:
 
 ```html
 <p style="margin:18px 0 0 0;font-size:12px;color:#6b6b6b;">
   ¿Prefieres un código? Úsalo en la app:
-  <span style="font-family:'SF Mono',Consolas,monospace;letter-spacing:0.22em;font-size:18px;color:#111111;">
+  <span
+    style="font-family:'SF Mono',Consolas,monospace;letter-spacing:0.22em;font-size:18px;color:#111111;"
+  >
     {{ .Token }}
   </span>
 </p>

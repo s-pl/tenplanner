@@ -28,6 +28,24 @@ const exerciseItemSchema = z.object({
     .nullable(),
 });
 
+const sessionBlockItemSchema = z
+  .object({
+    exerciseId: z.string().uuid("ID de ejercicio invalido").optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+    notes: z.string().trim().max(1000).optional().nullable(),
+  })
+  .refine((item) => !!item.exerciseId || !!item.freeText?.trim(), {
+    message: "Cada item de bloque necesita ejercicio o texto",
+  });
+
+const sessionBlockSchema = z.object({
+  orderIndex: z.number().int().min(1).max(3),
+  title: z.string().trim().max(120).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  items: z.array(sessionBlockItemSchema).default([]),
+});
+
 const tagsSchema = z
   .array(z.string().trim().min(1).max(30, "Máximo 30 caracteres por etiqueta"))
   .max(10, "Máximo 10 etiquetas")
@@ -94,11 +112,16 @@ export const createSessionSchema = z.object({
     .max(2000, "Máximo 2000 caracteres")
     .optional()
     .nullable(),
+  material: z.string().trim().max(2000).optional().nullable(),
+  observations: z.string().trim().max(4000).optional().nullable(),
+  sourceClassId: z.string().uuid("ID de clase invalido").optional().nullable(),
   intensity: intensitySchema,
   tags: tagsSchema,
   location: locationSchema,
+  placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
   studentIds: studentIdsSchema,
   exercises: z.array(exerciseItemSchema).default([]),
+  blocks: z.array(sessionBlockSchema).max(3).optional().nullable(),
 });
 
 export const updateSessionSchema = z
@@ -131,11 +154,16 @@ export const updateSessionSchema = z
       .max(2000, "Máximo 2000 caracteres")
       .optional()
       .nullable(),
+    material: z.string().trim().max(2000).optional().nullable(),
+    observations: z.string().trim().max(4000).optional().nullable(),
+    sourceClassId: z.string().uuid("ID de clase invalido").optional().nullable(),
     intensity: intensitySchema,
     tags: tagsSchema,
     location: locationSchema,
+    placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
     studentIds: z.array(z.string().uuid("ID de alumno inválido")).optional(),
     exercises: z.array(exerciseItemSchema).optional(),
+    blocks: z.array(sessionBlockSchema).max(3).optional().nullable(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required for update",

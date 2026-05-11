@@ -14,19 +14,27 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: sessionId } = await context.params;
 
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 422 }
+    );
   }
 
   const [session] = await db
@@ -35,8 +43,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     .where(eq(sessions.id, sessionId))
     .limit(1);
 
-  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (session.userId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (session.userId !== user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await db
     .update(sessionExercises)

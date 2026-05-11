@@ -7,7 +7,7 @@ export default function NewSessionLoading() {
           <div key={i} className="h-9 w-28 rounded-xl bg-muted/30" />
         ))}
       </div>
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-5 max-w-2xl">
+      <div className="w-full bg-card border border-border rounded-2xl p-6 space-y-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="space-y-1.5">
             <div className="h-3 w-24 rounded bg-muted/30" />
@@ -16,7 +16,10 @@ export default function NewSessionLoading() {
         ))}
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/10">
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 rounded-xl bg-muted/10"
+            >
               <div className="size-8 rounded-lg bg-muted/30 shrink-0" />
               <div className="flex-1 space-y-1">
                 <div className="h-4 w-40 rounded bg-muted/30" />

@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Zap } from "lucide-react";
-import { QuotesRotator } from "@/components/app/quotes-rotator";
+import { NotebookPen } from "lucide-react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 
 export default function AuthLayout({
@@ -9,68 +9,83 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left branding panel */}
-      <div className="hidden md:flex md:w-1/2 lg:w-2/5 relative bg-sidebar border-r border-sidebar-border flex-col p-12 overflow-hidden court-grid">
-        <div className="absolute inset-0 bg-gradient-to-br from-background/70 via-background/50 to-transparent pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-brand/8 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white">
+      <div className="grid min-h-screen lg:grid-cols-[minmax(360px,0.92fr)_minmax(0,1.08fr)]">
+        <aside className="relative hidden overflow-hidden border-r border-[#050505]/10 bg-[#050505] text-white dark:border-white/10 lg:block">
+          <Image
+            src="/landing/racket-motion.jpg"
+            alt="Entrenamiento de deportes de raqueta en pista"
+            fill
+            priority
+            sizes="42vw"
+            className="object-cover opacity-58 saturate-125"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.16),rgba(5,5,5,0.88))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(214,255,56,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:52px_52px] opacity-30" />
 
-        <div className="relative z-10 flex flex-col h-full">
-          <Link href="/" className="flex items-center gap-2.5 mb-auto">
-            <div className="size-9 rounded-xl bg-brand flex items-center justify-center">
-              <Zap className="size-5 text-brand-foreground" strokeWidth={2.5} />
-            </div>
-            <span className="font-heading font-semibold text-xl tracking-tight">
-              ten<span className="text-brand">planner</span>
-            </span>
-          </Link>
-
-          <div className="mt-auto">
-            <div className="mb-6">
-              <div className="text-5xl text-brand/20 font-heading font-bold leading-none select-none mb-3">
-                &ldquo;
-              </div>
-              <QuotesRotator />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col bg-background">
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border md:border-0">
-          {/* Mobile logo */}
-          <div className="md:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="size-7 rounded-lg bg-brand flex items-center justify-center">
-                <Zap
-                  className="size-3.5 text-brand-foreground"
-                  strokeWidth={2.5}
-                />
-              </div>
-              <span className="font-heading font-semibold text-lg">
-                ten<span className="text-brand">planner</span>
+          <div className="relative z-10 flex h-full flex-col justify-between p-8 xl:p-10">
+            <Link href="/" className="flex w-fit items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-lg bg-[#D6FF38] text-[#050505]">
+                <NotebookPen className="size-4" strokeWidth={2} />
+              </span>
+              <span className="text-lg font-black tracking-tight">
+                TenPlanner
               </span>
             </Link>
+
+            <div className="max-w-xl pb-4">
+              <span className="inline-flex rounded-lg bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#050505]">
+                Deportes de raqueta
+              </span>
+              <h2 className="mt-5 text-5xl font-black leading-[0.92] xl:text-6xl">
+                Planifica mejor. Entrena con método.
+              </h2>
+              <p className="mt-5 max-w-md text-sm font-semibold leading-7 text-white/66">
+                Ejercicios, clases, sesiones, alumnos y grupos organizados en
+                un sistema operativo para entrenadores.
+              </p>
+            </div>
           </div>
-          <div className="hidden md:block" />
-          <ThemeToggle compact />
-        </div>
+        </aside>
 
-        {/* Form */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-full max-w-sm">{children}</div>
+        <div className="flex min-w-0 flex-col">
+          <header className="flex items-center justify-between border-b border-[#050505]/10 bg-white/70 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] lg:justify-end lg:border-0 lg:bg-transparent lg:px-6 lg:pt-5">
+            <Link href="/" className="flex items-center gap-2 lg:hidden">
+              <span className="grid size-9 place-items-center rounded-lg bg-[#D6FF38] text-[#050505]">
+                <NotebookPen className="size-4" strokeWidth={2} />
+              </span>
+              <span className="text-sm font-black tracking-tight">
+                TenPlanner
+              </span>
+            </Link>
+            <ThemeToggle compact />
+          </header>
 
-          <p className="mt-8 text-xs text-muted-foreground">
+          <main
+            id="main"
+            className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-10"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(5,5,5,.45) 1px, transparent 1px), linear-gradient(90deg, rgba(5,5,5,.45) 1px, transparent 1px)",
+                backgroundSize: "44px 44px",
+              }}
+            />
+            <div className="relative w-full max-w-md">{children}</div>
+          </main>
+
+          <footer className="px-4 pb-6 text-center text-xs font-medium text-[#050505]/46 dark:text-white/40">
             Al continuar, aceptas nuestros{" "}
             <Link
-              href="/"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
+              href="/terminos"
+              className="font-bold underline decoration-[#050505]/20 underline-offset-4 transition-colors hover:text-[#050505] dark:decoration-white/20 dark:hover:text-white"
             >
               Términos de Servicio
             </Link>
-          </p>
+          </footer>
         </div>
       </div>
     </div>

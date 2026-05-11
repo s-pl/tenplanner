@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Dynamic upload/blob previews cannot be optimized reliably by next/image. */
+
 import { useState, useRef, DragEvent, KeyboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -41,7 +43,7 @@ export function MediaUploader({
   storagePath,
   bucket = "exercise-media",
   label = "Imagen",
-  searchSuggestion = "padel",
+  searchSuggestion = "deportes de raqueta",
 }: MediaUploaderProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("upload");
@@ -295,7 +297,7 @@ export function MediaUploader({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKey}
-                    placeholder="Ej: padel, tenis, entrenamiento…"
+                    placeholder="Ej: raqueta, entrenamiento, pista"
                     className="flex-1 h-9 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
                   />
                   <button

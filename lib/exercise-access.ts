@@ -37,7 +37,9 @@ export async function getAccessibleExerciseDurationMap(
       )
     );
 
-  const durationById = new Map(rows.map((row) => [row.id, row.durationMinutes]));
+  const durationById = new Map(
+    rows.map((row) => [row.id, row.durationMinutes])
+  );
   const inaccessibleIds = uniqueIds.filter((id) => !durationById.has(id));
 
   return { durationById, inaccessibleIds };

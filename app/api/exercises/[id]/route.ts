@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { embedExercise } from "@/lib/ai/semantic-search";
 import {
   exerciseIdParamsSchema,
   updateExerciseSchema,
@@ -171,8 +173,7 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       d.imageUrls !== undefined
         ? (d.imageUrls ?? null)
         : ((existing.imageUrls as string[] | null) ?? null);
-    const totalImages =
-      (finalImageUrl ? 1 : 0) + (finalImageUrls?.length ?? 0);
+    const totalImages = (finalImageUrl ? 1 : 0) + (finalImageUrls?.length ?? 0);
 
     if (totalImages > 4) {
       return NextResponse.json(
@@ -206,6 +207,11 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "efecto",
       "variantes",
       "imageUrls",
+      "nivel",
+      "aspectoJuego",
+      "parametro",
+      "tipologia",
+      "duracionRango",
     ] as const;
 
     for (const field of fields) {
@@ -230,6 +236,24 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
         { status: 404 }
       );
     }
+
+    after(() =>
+      embedExercise({
+        id: updatedExercise.id,
+        ownerId: updatedExercise.isGlobal
+          ? null
+          : (updatedExercise.createdBy ?? user.id),
+        name: updatedExercise.name,
+        category: updatedExercise.category,
+        difficulty: updatedExercise.difficulty,
+        durationMinutes: updatedExercise.durationMinutes,
+        description: updatedExercise.description,
+        objectives: updatedExercise.objectives,
+        tips: updatedExercise.tips,
+        materials: updatedExercise.materials as string[] | null,
+        location: updatedExercise.location,
+      }).catch(console.error)
+    );
 
     return NextResponse.json({ data: updatedExercise });
   } catch {
