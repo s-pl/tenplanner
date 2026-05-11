@@ -35,7 +35,7 @@ function buildCsp(nonce: string): string {
     "img-src 'self' data: blob: https://*.supabase.co https://images.pexels.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? "" : " 'unsafe-eval'"}`,
+    `script-src 'self'${isProd ? ` 'nonce-${nonce}' 'strict-dynamic'` : " 'unsafe-inline' 'unsafe-eval'"}`,
     "connect-src 'self' https://*.supabase.co https://api.anthropic.com https://api.pexels.com",
     "media-src 'self' blob: https://*.supabase.co",
     "object-src 'none'",
