@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isAllowedImageUrl, isPublicHttpUrl } from "@/lib/url-safety";
 
 export const exerciseCategorySchema = z.enum([
   "technique",
@@ -131,6 +132,32 @@ const descriptionSchema = z
   .trim()
   .max(2000, "Description must be 2000 characters or fewer");
 
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine(isAllowedImageUrl, {
+    message:
+      "La URL de imagen debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
+  });
+
+const optionalImageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((value) => value === "" || isAllowedImageUrl(value), {
+    message:
+      "La URL de imagen debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
+  });
+
+const optionalPublicUrlSchema = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((value) => value === "" || isPublicHttpUrl(value), {
+    message: "La URL debe ser http(s) y no puede apuntar a una red local.",
+  });
+
 export const exerciseIdParamsSchema = z.object({
   id: z.string().uuid("Exercise id must be a valid UUID"),
 });
@@ -186,9 +213,9 @@ export const createExerciseSchema = z.object({
     .max(300, "Duration must be 300 minutes or fewer"),
   objectives: descriptionSchema.optional().nullable(),
   tips: descriptionSchema.optional().nullable(),
-  imageUrl: z.string().max(1000).optional().nullable(),
+  imageUrl: optionalImageUrlSchema.optional().nullable(),
   location: locationSchema.optional().nullable(),
-  videoUrl: z.string().max(500).optional().nullable(),
+  videoUrl: optionalPublicUrlSchema.optional().nullable(),
   phase: trainingPhaseSchema.optional().nullable(),
   intensity: z
     .number()
@@ -204,7 +231,7 @@ export const createExerciseSchema = z.object({
   golpes: z.array(golpeSchema).max(15).optional().nullable(),
   efecto: z.array(efectoSchema).max(5).optional().nullable(),
   variantes: z.string().trim().max(2000).optional().nullable(),
-  imageUrls: z.array(z.string().url().max(1000)).max(4).optional().nullable(),
+  imageUrls: z.array(imageUrlSchema).max(4).optional().nullable(),
   isGlobal: z.boolean().optional(),
   nivel: nivelPmvSchema.optional().nullable(),
   aspectoJuego: aspectoJuegoSchema.optional().nullable(),

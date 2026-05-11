@@ -11,8 +11,23 @@ import {
 } from "@/db/schema";
 import { count, desc, gte, sql, eq } from "drizzle-orm";
 import Link from "next/link";
+import { AdminPageHeader, adminPageShell } from "./_components/admin-ui";
 
-// ─── Data fetchers ────────────────────────────────────────────────────────────
+export const dynamic = "force-dynamic";
+
+const metricCardClass =
+  "rounded-[26px] border border-foreground/10 bg-card/92 p-4 shadow-[0_14px_45px_color-mix(in_oklab,var(--foreground)_4%,transparent)] dark:bg-card/82 dark:shadow-none sm:p-5";
+const sectionCardClass =
+  "rounded-[28px] border border-foreground/10 bg-card/92 p-4 shadow-[0_18px_55px_color-mix(in_oklab,var(--foreground)_5%,transparent)] dark:bg-card/82 dark:shadow-none sm:p-6";
+const sectionCardOverflowClass =
+  "overflow-hidden rounded-[28px] border border-foreground/10 bg-card/92 shadow-[0_18px_55px_color-mix(in_oklab,var(--foreground)_5%,transparent)] dark:bg-card/82 dark:shadow-none";
+const metricValueClass = "font-heading text-3xl font-black";
+const aiTextClass = "text-[#6f42c1] dark:text-violet-400";
+const positiveTextClass = "text-[#057a55] dark:text-emerald-400";
+const infoTextClass = "text-[#126b89] dark:text-sky-400";
+const warningTextClass = "text-[#8a5a00] dark:text-amber-400";
+
+// Data fetchers
 
 async function getQuickStats() {
   const last7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -165,7 +180,7 @@ async function getRecentSessions() {
     );
 }
 
-// ─── Section components ───────────────────────────────────────────────────────
+// Section components
 
 async function QuickStatsSection() {
   const m = await getQuickStats();
@@ -176,16 +191,16 @@ async function QuickStatsSection() {
       value: m.totalUsers,
       color: "text-foreground",
     },
-    { label: "Nuevos (7 días)", value: m.newUsers7, color: "text-brand" },
-    { label: "Nuevos (30 días)", value: m.newUsers30, color: "text-brand/70" },
+    { label: "Nuevos (7 dias)", value: m.newUsers7, color: "text-brand" },
+    { label: "Nuevos (30 dias)", value: m.newUsers30, color: "text-brand" },
   ];
 
   const contentStats = [
     { label: "Ejercicios", value: m.totalExercises, color: "text-foreground" },
     { label: "Globales", value: m.globalExercises, color: "text-brand" },
-    { label: "Generados IA", value: m.aiExercises, color: "text-violet-400" },
+    { label: "Generados IA", value: m.aiExercises, color: aiTextClass },
     { label: "Sesiones", value: m.totalSessions, color: "text-foreground" },
-    { label: "Plantillas", value: m.totalTemplates, color: "text-amber-400" },
+    { label: "Plantillas", value: m.totalTemplates, color: warningTextClass },
   ];
 
   return (
@@ -199,21 +214,21 @@ async function QuickStatsSection() {
           {userStats.map((s) => (
             <div
               key={s.label}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5"
+              className={metricCardClass}
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
                 {s.label}
               </p>
-              <p className={`font-heading text-3xl font-semibold ${s.color}`}>
+              <p className={`${metricValueClass} ${s.color}`}>
                 {s.value.toLocaleString("es-ES")}
               </p>
             </div>
           ))}
-          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5">
+          <div className={metricCardClass}>
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
               Alumnos
             </p>
-            <p className="font-heading text-3xl font-semibold text-emerald-400">
+            <p className={`${metricValueClass} ${positiveTextClass}`}>
               {m.totalStudents.toLocaleString("es-ES")}
             </p>
           </div>
@@ -229,21 +244,21 @@ async function QuickStatsSection() {
           {contentStats.map((s) => (
             <div
               key={s.label}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5"
+              className={metricCardClass}
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
                 {s.label}
               </p>
-              <p className={`font-heading text-3xl font-semibold ${s.color}`}>
+              <p className={`${metricValueClass} ${s.color}`}>
                 {s.value.toLocaleString("es-ES")}
               </p>
             </div>
           ))}
-          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5">
+          <div className={metricCardClass}>
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
               Sesiones (7d)
             </p>
-            <p className="font-heading text-3xl font-semibold text-sky-400">
+            <p className={`${metricValueClass} ${infoTextClass}`}>
               {m.newSessions7.toLocaleString("es-ES")}
             </p>
           </div>
@@ -256,34 +271,34 @@ async function QuickStatsSection() {
           Dr. Planner
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
-          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5">
+          <div className={metricCardClass}>
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
               Chats totales
             </p>
-            <p className="font-heading text-3xl font-semibold text-violet-400">
+            <p className={`${metricValueClass} ${aiTextClass}`}>
               {m.totalChats.toLocaleString("es-ES")}
             </p>
           </div>
           <Link
             href="/admin/ai"
-            className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5 transition-colors hover:bg-foreground/[0.04]"
+            className={`${metricCardClass} transition-colors hover:border-brand/70 hover:bg-brand/8`}
           >
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
-              Configuración IA
+              Configuracion IA
             </p>
             <p className="font-heading text-base font-semibold text-foreground/60">
-              Ver ajustes →
+              Ver ajustes -&gt;
             </p>
           </Link>
           <Link
             href="/admin/embeddings"
-            className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5 transition-colors hover:bg-foreground/[0.04]"
+            className={`${metricCardClass} transition-colors hover:border-brand/70 hover:bg-brand/8`}
           >
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
               Embeddings
             </p>
             <p className="font-heading text-base font-semibold text-foreground/60">
-              Gestionar →
+              Gestionar -&gt;
             </p>
           </Link>
         </div>
@@ -292,9 +307,9 @@ async function QuickStatsSection() {
       {/* Exercise distribution */}
       {m.totalExercises > 0 && (
         <section>
-          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6">
+          <div className={sectionCardClass}>
             <h2 className="font-heading text-base font-semibold text-foreground mb-4">
-              Distribución de ejercicios
+              Distribucion de ejercicios
             </h2>
             <div className="space-y-3">
               <div>
@@ -324,7 +339,7 @@ async function QuickStatsSection() {
                 </div>
                 <div className="h-2 rounded-full bg-foreground/8">
                   <div
-                    className="h-full rounded-full bg-violet-400"
+                    className="h-full rounded-full bg-[#6f42c1] dark:bg-violet-400"
                     style={{
                       width: `${(m.aiExercises / m.totalExercises) * 100}%`,
                     }}
@@ -348,7 +363,7 @@ async function ChartsSection() {
   return (
     <section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6">
+        <div className={sectionCardClass}>
           <div className="mb-4 flex items-baseline justify-between gap-2">
             <h2 className="font-heading text-base font-semibold text-foreground">
               Registros (30d)
@@ -386,7 +401,7 @@ async function ChartsSection() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6">
+        <div className={sectionCardClass}>
           <div className="mb-4 flex items-baseline justify-between gap-2">
             <h2 className="font-heading text-base font-semibold text-foreground">
               Sesiones creadas (30d)
@@ -409,7 +424,7 @@ async function ChartsSection() {
                     </span>
                     <div className="flex-1 h-1.5 rounded-full bg-foreground/8 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-sky-400 transition-all"
+                        className="h-full rounded-full bg-[#126b89] transition-all dark:bg-sky-400"
                         style={{
                           width: `${Math.max(4, (Number(row.total) / maxSessions) * 100)}%`,
                         }}
@@ -443,15 +458,15 @@ async function AiUsageSection() {
   return (
     <section>
       <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 mb-3">
-        Uso de IA — últimos 30 días
+        Uso de IA - ultimos 30 dias
       </p>
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6">
+      <div className={sectionCardClass}>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 mb-6">
           <div>
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-1">
               Peticiones
             </p>
-            <p className="font-heading text-3xl font-semibold text-violet-400">
+            <p className={`${metricValueClass} ${aiTextClass}`}>
               {aiRequests30.toLocaleString("es-ES")}
             </p>
           </div>
@@ -459,7 +474,7 @@ async function AiUsageSection() {
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-1">
               Tokens totales
             </p>
-            <p className="font-heading text-3xl font-semibold text-violet-400">
+            <p className={`${metricValueClass} ${aiTextClass}`}>
               {totalAiTokensFormatted}
             </p>
           </div>
@@ -467,7 +482,7 @@ async function AiUsageSection() {
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-1">
               Modelos activos
             </p>
-            <p className="font-heading text-3xl font-semibold text-violet-400">
+            <p className={`${metricValueClass} ${aiTextClass}`}>
               {aiByModel.length}
             </p>
           </div>
@@ -489,7 +504,7 @@ async function AiUsageSection() {
                     </span>
                     <div className="flex-1 h-1.5 rounded-full bg-foreground/8 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-violet-400 transition-all"
+                        className="h-full rounded-full bg-[#6f42c1] transition-all dark:bg-violet-400"
                         style={{
                           width: `${Math.max(4, (tokens / maxTokens) * 100)}%`,
                         }}
@@ -518,7 +533,7 @@ async function RecentActivitySection() {
       <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 mb-3">
         Actividad reciente
       </p>
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] overflow-hidden">
+      <div className={sectionCardOverflowClass}>
         <div className="divide-y divide-foreground/8">
           {recentSessions.map((session) => (
             <div
@@ -527,7 +542,7 @@ async function RecentActivitySection() {
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">
-                  {session.title || "Sin título"}
+                  {session.title || "Sin titulo"}
                 </p>
                 <p className="text-xs text-foreground/45 truncate">
                   {session.userName ??
@@ -542,7 +557,7 @@ async function RecentActivitySection() {
                       month: "short",
                       year: "2-digit",
                     })
-                  : "—"}
+                  : "-"}
               </time>
             </div>
           ))}
@@ -578,36 +593,36 @@ async function SystemHealthSection() {
       <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 mb-3">
         Estado del sistema
       </p>
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6">
+      <div className={sectionCardClass}>
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="font-heading text-base font-semibold text-foreground">
-            Diagnóstico de entorno
+            Diagnostico de entorno
           </h2>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
               allOk
-                ? "bg-emerald-400/10 text-emerald-400"
-                : "bg-amber-400/10 text-amber-400"
+                ? "bg-emerald-500/10 text-[#057a55] dark:text-emerald-300"
+                : "bg-amber-500/10 text-[#8a5a00] dark:text-amber-300"
             }`}
           >
             <span
-              className={`size-1.5 rounded-full ${allOk ? "bg-emerald-400" : "bg-amber-400"}`}
+              className={`size-1.5 rounded-full ${allOk ? "bg-[#057a55] dark:bg-emerald-400" : "bg-[#8a5a00] dark:bg-amber-400"}`}
             />
-            {allOk ? "Todo en orden" : "Atención requerida"}
+            {allOk ? "Todo en orden" : "Atencion requerida"}
           </span>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {/* DB connectivity */}
           <div className="flex items-center gap-2.5 rounded-xl border border-foreground/8 bg-background px-3 py-2.5">
             <span
-              className={`size-2 shrink-0 rounded-full ${dbOk ? "bg-emerald-400" : "bg-red-400"}`}
+              className={`size-2 shrink-0 rounded-full ${dbOk ? "bg-[#057a55] dark:bg-emerald-400" : "bg-[#dc2626] dark:bg-red-400"}`}
             />
             <div className="min-w-0">
               <p className="text-xs font-medium text-foreground">
                 Base de datos
               </p>
               <p className="font-mono text-[10px] text-foreground/40">
-                {dbOk ? "Conectada" : "Sin conexión"}
+                {dbOk ? "Conectada" : "Sin conexion"}
               </p>
             </div>
           </div>
@@ -618,7 +633,7 @@ async function SystemHealthSection() {
               className="flex items-center gap-2.5 rounded-xl border border-foreground/8 bg-background px-3 py-2.5"
             >
               <span
-                className={`size-2 shrink-0 rounded-full ${c.ok ? "bg-emerald-400" : "bg-amber-400"}`}
+                className={`size-2 shrink-0 rounded-full ${c.ok ? "bg-[#057a55] dark:bg-emerald-400" : "bg-[#8a5a00] dark:bg-amber-400"}`}
               />
               <div className="min-w-0">
                 <p className="font-mono text-[10px] font-medium text-foreground truncate">
@@ -636,7 +651,7 @@ async function SystemHealthSection() {
   );
 }
 
-// ─── Skeletons ────────────────────────────────────────────────────────────────
+// Skeletons
 
 function StatsSkeleton() {
   return (
@@ -647,7 +662,7 @@ function StatsSkeleton() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5 space-y-2"
+              className={`${metricCardClass} space-y-2`}
             >
               <div className="h-2 w-20 rounded bg-foreground/8 animate-pulse" />
               <div className="h-8 w-12 rounded bg-foreground/8 animate-pulse" />
@@ -661,7 +676,7 @@ function StatsSkeleton() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-5 space-y-2"
+              className={`${metricCardClass} space-y-2`}
             >
               <div className="h-2 w-16 rounded bg-foreground/8 animate-pulse" />
               <div className="h-8 w-10 rounded bg-foreground/8 animate-pulse" />
@@ -680,7 +695,7 @@ function ChartsSkeleton() {
         {[0, 1].map((i) => (
           <div
             key={i}
-            className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6 space-y-3"
+            className={`${sectionCardClass} space-y-3`}
           >
             <div className="h-4 w-32 rounded bg-foreground/8 animate-pulse" />
             {Array.from({ length: 8 }).map((_, j) => (
@@ -699,7 +714,7 @@ function ChartsSkeleton() {
 
 function SectionSkeleton() {
   return (
-    <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6 space-y-3">
+    <div className={`${sectionCardClass} space-y-3`}>
       <div className="h-4 w-40 rounded bg-foreground/8 animate-pulse" />
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
@@ -712,19 +727,16 @@ function SectionSkeleton() {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// Page
 
 export default function AdminDashboard() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Métricas
-        </h1>
-        <p className="text-sm text-foreground/50 mt-1">
-          Vista general de la plataforma
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / Control"
+        title="Metricas"
+        description="Vista general operacional de la plataforma."
+      />
 
       <Suspense fallback={<StatsSkeleton />}>
         <QuickStatsSection />

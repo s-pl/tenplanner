@@ -13,12 +13,23 @@ import {
   places,
   users,
 } from "@/db/schema";
-import { eq, asc, or } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
-import type { WizardExercise } from "@/components/app/session-wizard/types";
+import type {
+  TrainingPhase,
+  WizardExercise,
+  WizardSessionBlock,
+} from "@/components/app/session-wizard/types";
 import { getBooleanSetting } from "@/lib/app-settings";
 import { FeatureLocked } from "@/components/app/feature-locked";
+import {
+  ArrowLeft,
+  BookOpen,
+  PencilLine,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 
 interface PageProps {
   searchParams: Promise<{
@@ -94,8 +105,15 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
   } = await searchParams;
 
   // Pre-fill from a class library template
-  let fromClass: { name: string; objetivos: string | null } | null = null;
-  let fromClassExercises: WizardExercise[] = [];
+  let fromClass: {
+    id: string;
+    name: string;
+    objetivos: string | null;
+    material: string | null;
+    observations: string | null;
+  } | null = null;
+  const fromClassExercises: WizardExercise[] = [];
+  let fromClassBlocks: WizardSessionBlock[] = [];
 
   if (fromClassId) {
     const [cls] = await db
@@ -103,6 +121,8 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         id: classes.id,
         name: classes.name,
         objetivos: classes.objetivos,
+        material: classes.material,
+        observations: classes.aspectosImportantes,
         isLibrary: classes.isLibrary,
         createdBy: classes.createdBy,
       })
@@ -111,38 +131,99 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
       .limit(1);
 
     if (cls && (cls.isLibrary || cls.createdBy === user.id)) {
-      fromClass = { name: cls.name, objetivos: cls.objetivos };
+      fromClass = {
+        id: cls.id,
+        name: cls.name,
+        objetivos: cls.objetivos,
+        material: cls.material,
+        observations: cls.observations,
+      };
       const items = await db
         .select({
+          blockOrder: classBlocks.orderIndex,
+          blockTitle: classBlocks.title,
+          blockNotes: classBlocks.notes,
+          itemExerciseId: classBlockExercises.exerciseId,
+          freeText: classBlockExercises.freeText,
+          itemDuration: classBlockExercises.durationMinutes,
+          itemOrderIndex: classBlockExercises.orderIndex,
           exerciseId: exercises.id,
           name: exercises.name,
           category: exercises.category,
           defaultDuration: exercises.durationMinutes,
-          itemDuration: classBlockExercises.durationMinutes,
-          orderIndex: classBlockExercises.orderIndex,
-          blockOrder: classBlocks.orderIndex,
         })
-        .from(classBlockExercises)
-        .innerJoin(
-          classBlocks,
-          eq(classBlocks.id, classBlockExercises.blockId)
+        .from(classBlocks)
+        .leftJoin(
+          classBlockExercises,
+          eq(classBlockExercises.blockId, classBlocks.id)
         )
-        .innerJoin(
-          exercises,
-          eq(exercises.id, classBlockExercises.exerciseId)
-        )
+        .leftJoin(exercises, eq(exercises.id, classBlockExercises.exerciseId))
         .where(eq(classBlocks.classId, fromClassId))
         .orderBy(asc(classBlocks.orderIndex), asc(classBlockExercises.orderIndex));
-      fromClassExercises = items.map((e) => ({
-        exerciseId: e.exerciseId,
-        name: e.name,
-        category: e.category,
-        durationMinutes: e.itemDuration ?? e.defaultDuration,
-        overrideDuration: e.itemDuration ?? null,
-        notes: "",
-        phase: null,
-        intensity: null,
-      }));
+
+      const blockMap = new Map<number, WizardSessionBlock>();
+      function phaseFromBlock(orderIndex: number): TrainingPhase {
+        if (orderIndex === 1) return "activation";
+        if (orderIndex === 3) return "cooldown";
+        return "main";
+      }
+
+      for (const row of items) {
+        const orderIndex =
+          row.blockOrder === 1 || row.blockOrder === 3 ? row.blockOrder : 2;
+        const block =
+          blockMap.get(orderIndex) ??
+          ({
+            orderIndex,
+            title:
+              row.blockTitle ??
+              (orderIndex === 1
+                ? "Bloque inicial"
+                : orderIndex === 3
+                  ? "Bloque final"
+                  : "Bloque principal"),
+            notes: row.blockNotes ?? "",
+            items: [],
+          } satisfies WizardSessionBlock);
+
+        if (row.itemOrderIndex !== null) {
+          block.items.push({
+            exerciseId: row.itemExerciseId,
+            freeText: row.freeText,
+            durationMinutes: row.itemDuration,
+            notes: null,
+          });
+        }
+        blockMap.set(orderIndex, block);
+
+        if (row.exerciseId && row.name && row.category) {
+          fromClassExercises.push({
+            exerciseId: row.exerciseId,
+            name: row.name,
+            category: row.category,
+            durationMinutes: row.itemDuration ?? row.defaultDuration ?? 0,
+            overrideDuration: row.itemDuration ?? null,
+            notes: "",
+            phase: phaseFromBlock(orderIndex),
+            intensity: null,
+          });
+        }
+      }
+
+      fromClassBlocks = [1, 2, 3].map((orderIndex) =>
+        blockMap.get(orderIndex) ??
+        ({
+          orderIndex: orderIndex as 1 | 2 | 3,
+          title:
+            orderIndex === 1
+              ? "Bloque inicial"
+              : orderIndex === 3
+                ? "Bloque final"
+                : "Bloque principal",
+          notes: "",
+          items: [],
+        } satisfies WizardSessionBlock)
+      );
     }
   }
 
@@ -233,17 +314,28 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     !fromSession && !fromClass && preSelected.length === 0;
 
   return (
-    <div className="relative min-h-full">
-      <div className="relative flex min-h-full flex-col px-4 py-6 sm:px-6 md:px-10 md:py-8">
-        <header className="flex items-center gap-4 border-b border-foreground/15 pb-5">
+    <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
+      <div className="relative flex min-h-full w-full flex-col px-4 py-6 sm:px-6 md:px-10 md:py-8">
+        <header className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:p-6">
+          <div
+            aria-hidden
+            className="court-grid pointer-events-none absolute inset-0 opacity-40 dark:opacity-25"
+          />
+          <div className="relative flex items-center gap-4">
           <Link
             href="/sessions"
             aria-label="Volver a sesiones"
-            className="flex size-9 shrink-0 items-center justify-center border border-foreground/18 text-foreground/55 transition-colors hover:border-brand hover:text-brand"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-[#F4F4F1] text-[0px] text-foreground/60 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
           >
+            <ArrowLeft className="size-4 text-foreground/60" />
             ←
           </Link>
-          <h1 className="font-heading text-2xl md:text-3xl leading-tight tracking-tight text-foreground">
+          <div className="min-w-0">
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
+              <Sparkles className="size-3.5 text-brand" />
+              Wizard de sesion
+            </p>
+          <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
             {fromSession ? (
               <>
                 Reutilizando{" "}
@@ -272,15 +364,18 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               </>
             )}
           </h1>
+          </div>
+          </div>
         </header>
 
         {noPreload && (
           <div className="grid sm:grid-cols-3 gap-3 pt-6">
             <Link
               href="/classes"
-              className="group rounded-2xl border border-foreground/15 bg-card hover:border-brand/50 hover:bg-brand/5 transition-colors p-5"
+              className="group rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)] transition-colors hover:border-[#D6FF38]/70 hover:bg-[#D6FF38]/10 dark:border-white/10 dark:bg-white/[0.045]"
             >
-              <div className="size-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-3">
+              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38]/20 text-foreground [&>span]:hidden">
+                <BookOpen className="size-4 text-brand" />
                 <span className="text-lg">📖</span>
               </div>
               <p className="font-heading text-base text-foreground group-hover:text-brand">
@@ -293,9 +388,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
 
             <Link
               href="/sessions?filter=past"
-              className="group rounded-2xl border border-foreground/15 bg-card hover:border-brand/50 hover:bg-brand/5 transition-colors p-5"
+              className="group rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)] transition-colors hover:border-[#D6FF38]/70 hover:bg-[#D6FF38]/10 dark:border-white/10 dark:bg-white/[0.045]"
             >
-              <div className="size-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-3">
+              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38]/20 text-foreground [&>span]:hidden">
+                <RotateCcw className="size-4 text-brand" />
                 <span className="text-lg">🔄</span>
               </div>
               <p className="font-heading text-base text-foreground group-hover:text-brand">
@@ -306,8 +402,9 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               </p>
             </Link>
 
-            <div className="rounded-2xl border-2 border-brand/40 bg-brand/5 p-5">
-              <div className="size-10 rounded-xl bg-brand text-brand-foreground flex items-center justify-center mb-3">
+            <div className="rounded-lg border border-[#D6FF38]/60 bg-[#D6FF38]/15 p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)]">
+              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505] [&>span]:hidden">
+                <PencilLine className="size-4" />
                 <span className="text-lg">✏️</span>
               </div>
               <p className="font-heading text-base text-brand">
@@ -329,6 +426,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               initialObjective={
                 fromSession?.objective ?? fromClass?.objetivos ?? undefined
               }
+              initialMaterial={fromClass?.material ?? undefined}
+              initialObservations={fromClass?.observations ?? undefined}
+              initialSourceClassId={fromClass?.id ?? null}
+              initialBlocks={fromClassBlocks}
               initialLocation={fromSession?.location ?? undefined}
               places={coachPlaces}
               monitorName={monitorName}

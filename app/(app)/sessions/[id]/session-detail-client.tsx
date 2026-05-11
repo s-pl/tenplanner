@@ -30,7 +30,7 @@ import {
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
-import { Target, Flame, MapPin, Hash, Package } from "lucide-react";
+import { Target, MapPin, Hash, Package } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -62,6 +62,9 @@ export interface SessionData {
   createdAt: string;
   updatedAt: string;
   objective: string | null;
+  material: string | null;
+  observations: string | null;
+  sourceClassId: string | null;
   intensity: number | null;
   tags: string[];
   location: string | null;
@@ -133,28 +136,29 @@ interface Props {
   analytics: SessionAnalytics;
   students: SessionStudentData[];
   favoritedExerciseIds: string[];
+  sessionBlocks: SessionBlockData[];
 }
 
-function IntensityIndicator({ value }: { value: number }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className={cn(
-            "size-1.5 rounded-full",
-            n <= value ? "bg-brand" : "bg-muted-foreground/30"
-          )}
-        />
-      ))}
-    </span>
-  );
+export interface SessionBlockData {
+  id: string;
+  orderIndex: number;
+  title: string | null;
+  notes: string | null;
+  items: Array<{
+    id: string;
+    orderIndex: number;
+    exerciseId: string | null;
+    exerciseName: string | null;
+    exerciseDescription: string | null;
+    freeText: string | null;
+    durationMinutes: number | null;
+    notes: string | null;
+  }>;
 }
 
 function MetadataChips({ session }: { session: SessionData }) {
   const hasAny =
     !!session.objective ||
-    typeof session.intensity === "number" ||
     !!session.location ||
     session.tags.length > 0;
   if (!hasAny) return null;
@@ -165,15 +169,6 @@ function MetadataChips({ session }: { session: SessionData }) {
         <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
           <Target className="size-3 text-muted-foreground" />
           <span className="truncate max-w-[24ch]">{session.objective}</span>
-        </span>
-      )}
-      {typeof session.intensity === "number" && (
-        <span className="inline-flex items-center gap-1.5 text-xs text-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-full">
-          <Flame className="size-3 text-muted-foreground" />
-          <IntensityIndicator value={session.intensity} />
-          <span className="font-mono text-muted-foreground">
-            {session.intensity}/5
-          </span>
         </span>
       )}
       {session.location && (
@@ -532,6 +527,7 @@ export function SessionDetailClient({
   availableExercises,
   analytics,
   students,
+  sessionBlocks,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -657,11 +653,11 @@ export function SessionDetailClient({
 
   if (mode === "edit") {
     return (
-      <div className="px-4 md:px-8 py-8 space-y-6">
-        <div className="flex items-center gap-4">
+      <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] md:px-8">
+        <div className="flex items-center gap-4 rounded-lg border border-[#050505]/10 bg-white p-4 shadow-[0_14px_42px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
           <button
             onClick={() => setMode("view")}
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-[#F4F4F1] text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -700,26 +696,30 @@ export function SessionDetailClient({
   }
 
   return (
-    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-8">
+    <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] sm:px-6 md:px-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-4 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:flex sm:items-start sm:justify-between sm:gap-4">
+        <div
+          aria-hidden
+          className="court-grid pointer-events-none absolute inset-0 opacity-35 dark:opacity-20"
+        />
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/sessions"
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-[#F4F4F1] text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <p className="text-xs text-muted-foreground font-medium truncate">
+          <p className="relative rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground dark:bg-[#050505]/70">
             Sesiones de Entrenamiento
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+        <div className="relative mt-4 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0 sm:justify-end">
           {/* Execute session — only for upcoming/scheduled */}
           {status === "scheduled" && (
             <Link
               href={`/sessions/${session.id}/execute`}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-background bg-brand px-3 py-2 rounded-lg hover:bg-brand/90 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
             >
               <Play className="size-3.5" />
               <span className="hidden sm:inline">Dar clase</span>
@@ -728,14 +728,14 @@ export function SessionDetailClient({
           {/* Reutilizar */}
           <Link
             href={`/sessions/new?from=${session.id}`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
             <Copy className="size-3.5" />
             <span className="hidden sm:inline">Reutilizar</span>
           </Link>
           <button
             onClick={() => setShowPublishDialog(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand border border-brand/30 px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#D6FF38]/45 bg-[#D6FF38]/10 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#D6FF38]/20"
           >
             <Upload className="size-3.5" />
             <span className="hidden sm:inline">Publicar</span>
@@ -743,7 +743,7 @@ export function SessionDetailClient({
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/[0.035]"
           >
             {downloadingPdf ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -754,14 +754,14 @@ export function SessionDetailClient({
           </button>
           <button
             onClick={() => setMode("edit")}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground border border-border px-3 py-2 rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
             <Pencil className="size-3.5" />
             <span className="hidden sm:inline">Editar</span>
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white/70 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.035]"
           >
             <Trash2 className="size-3.5" />
             <span className="hidden sm:inline">Eliminar</span>
@@ -770,12 +770,12 @@ export function SessionDetailClient({
       </div>
 
       {/* Session card */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-[0_18px_60px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
         {/* Header stripe */}
-        <div className="border-b border-border/50 bg-muted/20 px-4 py-5 sm:px-6">
+        <div className="border-b border-border/50 bg-[#050505] px-4 py-5 text-white dark:bg-white/[0.06] sm:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/10">
                 {status === "completed" ? (
                   <CheckCircle2 className="size-5 text-brand" />
                 ) : status === "cancelled" ? (
@@ -789,10 +789,10 @@ export function SessionDetailClient({
                   className={cn(
                     "text-xs font-bold uppercase tracking-widest",
                     status === "completed"
-                      ? "text-brand"
+                    ? "text-[#D6FF38]"
                       : status === "cancelled"
                         ? "text-destructive"
-                        : "text-muted-foreground"
+                        : "text-white/60"
                   )}
                 >
                   {status === "completed"
@@ -802,7 +802,7 @@ export function SessionDetailClient({
                       : "Programada"}
                 </span>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 text-xs text-white/65">
                     <Calendar className="size-3" />
                     {formatDate(session.scheduledAt)} a las{" "}
                     {formatTime(session.scheduledAt)}
@@ -883,6 +883,31 @@ export function SessionDetailClient({
 
           <MetadataChips session={session} />
 
+          {(session.material || session.observations) && (
+            <div className="grid gap-4 border-t border-border/50 pt-4 sm:grid-cols-2">
+              {session.material && (
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                    Material
+                  </p>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {session.material}
+                  </p>
+                </div>
+              )}
+              {session.observations && (
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                    Observaciones
+                  </p>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                    {session.observations}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {session.description && (
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
@@ -908,6 +933,65 @@ export function SessionDetailClient({
           exercises={sessionExercises}
           totalMinutes={session.durationMinutes}
         />
+      )}
+
+      {sessionBlocks.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-foreground">
+              Bloques de la sesion
+            </h2>
+            <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              Snapshot
+            </span>
+          </div>
+          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-3">
+            {sessionBlocks.map((block) => (
+              <div
+                key={block.id}
+                className="rounded-lg border border-border/80 bg-background p-4"
+              >
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {block.title ?? `Bloque ${block.orderIndex}`}
+                </p>
+                {block.notes && (
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {block.notes}
+                  </p>
+                )}
+                <div className="mt-3 space-y-2">
+                  {block.items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Sin items definidos.
+                    </p>
+                  ) : (
+                    block.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          {item.exerciseName ?? item.freeText ?? "Item"}
+                        </p>
+                        {item.exerciseDescription && (
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {item.exerciseDescription}
+                          </p>
+                        )}
+                        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {item.durationMinutes && (
+                            <span>{item.durationMinutes} min</span>
+                          )}
+                          {item.notes && <span>{item.notes}</span>}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Materials summary */}
@@ -1157,7 +1241,7 @@ export function SessionDetailClient({
                 Publicar como plantilla
               </p>
               <h2 className="font-heading text-[20px] text-foreground">
-                Compartir en el mercado
+                Compartir en la biblioteca
               </h2>
               <p className="mt-1 text-[13px] text-foreground/50 leading-relaxed">
                 Se crea una copia pública. Tu información personal no se

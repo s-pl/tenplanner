@@ -7,7 +7,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { Download } from "lucide-react";
+import { CalendarDays, Download, Plus } from "lucide-react";
 
 // Sessions loaded into the calendar are limited to this window to keep
 // initial payload bounded. User can navigate the UI within this range.
@@ -68,43 +68,55 @@ export default async function CalendarPage() {
   const total = serialized.length;
 
   return (
-    <div className="relative">
-      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
-        <header className="pb-5 border-b border-border">
-          <h1 className="font-heading text-3xl font-semibold text-foreground">
-            Calendario
-          </h1>
-          <p className="text-[14px] text-foreground/60 mt-1.5">
-            {total} sesión{total !== 1 ? "es" : ""} planificada
-            {total !== 1 ? "s" : ""}.
-          </p>
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
+        <header className="tp-hero-panel flex flex-col gap-6 p-6 text-white sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+              <CalendarDays className="size-3.5" />
+              Agenda operativa
+            </div>
+            <h1 className="text-4xl font-black leading-tight sm:text-5xl">
+              Calendario
+            </h1>
+            <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
+              {total} sesión{total !== 1 ? "es" : ""} planificada
+              {total !== 1 ? "s" : ""} dentro de la ventana activa.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/api/calendar/ical"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/14 px-4 text-sm font-black text-white transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
+            >
+              <Download className="size-4" />
+              Exportar iCal
+            </Link>
+            <Link
+              href="/sessions/new"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-sm font-black text-[#050505] transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Nueva sesión
+            </Link>
+          </div>
         </header>
         {total === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-            <p className="text-foreground/50 text-sm max-w-xs">
+          <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
+            <p className="max-w-xs text-sm leading-6 text-foreground/55">
               Aún no tienes sesiones planificadas. Crea tu primera sesión para
               verla aquí.
             </p>
             <Link
               href="/sessions/new"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-4 text-sm font-black text-brand-foreground transition-opacity hover:opacity-90"
             >
+              <Plus className="size-4" />
               Crear primera sesión
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <Link
-                href="/api/calendar/ical"
-                className="inline-flex items-center gap-2 rounded-lg border border-foreground/15 px-3 py-2 text-xs font-medium text-foreground/55 transition-colors hover:border-brand/40 hover:text-brand"
-              >
-                <Download className="size-3.5" />
-                Exportar iCal
-              </Link>
-            </div>
-            <CalendarClient sessions={serialized} />
-          </div>
+          <CalendarClient sessions={serialized} />
         )}
       </div>
     </div>

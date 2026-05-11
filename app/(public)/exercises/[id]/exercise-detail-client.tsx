@@ -84,42 +84,34 @@ interface SavedListSummary {
 
 const CATEGORY_META: Record<
   Category,
-  { label: string; color: string; bg: string; icon: React.ElementType }
+  { label: string; icon: React.ElementType }
 > = {
   technique: {
     label: "Técnica",
-    color: "text-blue-400",
-    bg: "bg-blue-400/10",
     icon: Target,
   },
   tactics: {
     label: "Táctica",
-    color: "text-purple-400",
-    bg: "bg-purple-400/10",
     icon: Brain,
   },
   fitness: {
     label: "Fitness",
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
     icon: Dumbbell,
   },
   "warm-up": {
     label: "Calentamiento",
-    color: "text-brand",
-    bg: "bg-brand/10",
     icon: Flame,
   },
 };
 
-const DIFFICULTY_META: Record<Difficulty, { label: string; color: string }> = {
-  beginner: { label: "Principiante", color: "text-brand" },
-  intermediate: { label: "Intermedio", color: "text-amber-400" },
-  advanced: { label: "Avanzado", color: "text-red-400" },
+const DIFFICULTY_META: Record<Difficulty, { label: string }> = {
+  beginner: { label: "Principiante" },
+  intermediate: { label: "Intermedio" },
+  advanced: { label: "Avanzado" },
 };
 
 const LOCATION_LABELS: Record<string, string> = {
-  pista: "🎾 Pista de tenis",
+  pista: "Pista/cancha",
   pared: "🧱 Pared",
   playa: "🏖️ Playa",
   casa: "🏠 Casa",
@@ -240,7 +232,8 @@ export function ExerciseDetailClient({
   }, [exercise.id, userId]);
 
   useEffect(() => {
-    void refreshSavedLists();
+    const id = window.setTimeout(() => void refreshSavedLists(), 0);
+    return () => window.clearTimeout(id);
   }, [refreshSavedLists]);
 
   async function handleDelete() {
@@ -260,11 +253,11 @@ export function ExerciseDetailClient({
 
   if (mode === "edit" && canEdit) {
     return (
-      <div className="px-4 md:px-8 py-8 space-y-6 max-w-5xl">
+      <div className="w-full space-y-6 bg-[#F4F4F1] px-4 py-8 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] md:px-10">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setMode("view")}
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#050505]/12 bg-white text-muted-foreground transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -277,7 +270,7 @@ export function ExerciseDetailClient({
             </p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="rounded-lg border border-[#050505]/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
           <ExerciseForm
             mode="edit"
             exerciseId={exercise.id}
@@ -327,13 +320,14 @@ export function ExerciseDetailClient({
     (exercise.efecto && exercise.efecto.length > 0);
 
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
+    <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.22),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.16),transparent_34%)]" />
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/exercises"
-            className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#050505]/12 bg-white text-muted-foreground shadow-sm transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
             <ArrowLeft className="size-4" />
           </Link>
@@ -345,21 +339,21 @@ export function ExerciseDetailClient({
           <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
             <button
               onClick={() => setMode("edit")}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex-none"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#050505]/12 bg-white px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04] sm:flex-none"
             >
               <Pencil className="size-3.5" />
               <span className="hidden sm:inline">Editar</span>
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 sm:flex-none"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-destructive/30 bg-white px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.04] sm:flex-none"
             >
               <Trash2 className="size-3.5" />
               <span className="hidden sm:inline">Eliminar</span>
             </button>
           </div>
         ) : userId && exercise.isGlobal && !isAdmin ? (
-          <div className="flex w-full items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground sm:w-auto sm:shrink-0">
+          <div className="flex w-full items-center gap-1.5 rounded-full border border-[#050505]/12 bg-white/70 px-3 py-2 text-[11px] text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:w-auto sm:shrink-0">
             <ShieldAlert className="size-3.5 shrink-0" strokeWidth={1.6} />
             <span className="hidden sm:inline">
               Solo administradores pueden modificar ejercicios globales
@@ -370,44 +364,38 @@ export function ExerciseDetailClient({
       </div>
 
       {/* Main card */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-[0_24px_70px_rgba(5,5,5,0.10)] dark:border-white/10 dark:bg-white/[0.04]">
         {/* Category stripe */}
-        <div
-          className={`${cat.bg} border-b border-border/50 px-4 py-5 sm:px-6`}
-        >
+        <div className="border-b border-white/10 bg-[#050505] px-4 py-5 text-white sm:px-6">
           <div className="flex items-center gap-3">
-            <div
-              className={`size-11 rounded-xl ${cat.bg} border border-current/10 flex items-center justify-center shrink-0`}
-            >
-              <CategoryIcon className={`size-5 ${cat.color}`} />
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-[#D6FF38]/40 bg-[#D6FF38]">
+              <CategoryIcon className="size-5 text-[#050505]" />
             </div>
             <div>
-              <p
-                className={`text-xs font-bold ${cat.color} uppercase tracking-widest`}
-              >
+              <p className="text-xs font-bold uppercase tracking-widest text-[#D6FF38]">
                 {cat.label}
               </p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className={`text-xs font-medium ${diff.color}`}>
+                <span className="text-xs font-medium text-white/78">
                   {diff.label}
                 </span>
-                <span className="text-muted-foreground/50 text-xs">·</span>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="text-xs text-white/35">·</span>
+                <span className="flex items-center gap-1 text-xs text-white/66">
                   <Clock className="size-3" />
                   {exercise.durationMinutes} min
                 </span>
                 {exercise.location && (
                   <>
-                    <span className="text-muted-foreground/50 text-xs">·</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-white/35">·</span>
+                    <span className="text-xs text-white/66">
                       {LOCATION_LABELS[exercise.location]}
                     </span>
                   </>
                 )}
-                {exercise.intensity && (
+                {false && exercise.intensity && (
                   <>
-                    <span className="text-muted-foreground/50 text-xs">·</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-white/35">·</span>
+                    <span className="text-xs text-white/66">
                       Intensidad {exercise.intensity}/5
                     </span>
                   </>
@@ -419,7 +407,7 @@ export function ExerciseDetailClient({
 
         {/* Hero image */}
         {exercise.imageUrl && (
-          <div className="aspect-video w-full overflow-hidden bg-muted relative">
+          <div className="relative aspect-video w-full overflow-hidden bg-[#050505]">
             <Image
               src={exercise.imageUrl}
               alt={exercise.name}
@@ -431,7 +419,7 @@ export function ExerciseDetailClient({
 
         {/* Content */}
         <div className="space-y-6 p-4 sm:p-6">
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground leading-snug">
+          <h1 className="max-w-4xl font-heading text-3xl font-semibold leading-tight tracking-normal text-foreground sm:text-4xl">
             {exercise.name}
           </h1>
 
@@ -442,7 +430,7 @@ export function ExerciseDetailClient({
                 <button
                   type="button"
                   onClick={() => setShowListPicker(true)}
-                  className="inline-flex items-center gap-2 text-sm font-medium border border-border px-4 py-2 rounded-xl hover:bg-muted transition-colors text-foreground"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38]/15 dark:border-white/10 dark:bg-[#050505]"
                 >
                   <BookMarked className="size-4 text-brand" strokeWidth={1.6} />
                   {savedInLists.length > 0
@@ -451,7 +439,7 @@ export function ExerciseDetailClient({
                 </button>
                 <Link
                   href={`/sessions/new?exercises=${exercise.id}`}
-                  className="inline-flex items-center gap-2 text-sm font-medium border border-border px-4 py-2 rounded-xl hover:bg-muted transition-colors text-foreground"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38]/15 dark:border-white/10 dark:bg-[#050505]"
                 >
                   <CalendarPlus
                     className="size-4 text-brand"
@@ -464,7 +452,7 @@ export function ExerciseDetailClient({
             {!userId && (
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 text-sm font-medium border border-brand/40 bg-brand/5 text-brand px-4 py-2 rounded-xl hover:bg-brand/10 transition-colors"
+                className="inline-flex items-center gap-2 rounded-full border border-[#D6FF38]/50 bg-[#D6FF38]/15 px-4 py-2 text-sm font-semibold text-[#5E6F00] transition-colors hover:bg-[#D6FF38]/25 dark:text-[#D6FF38]"
               >
                 <Lock className="size-3.5" strokeWidth={1.8} />
                 Inicia sesión para guardar
@@ -484,7 +472,7 @@ export function ExerciseDetailClient({
           </div>
 
           {userId ? (
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <div className="rounded-lg border border-[#050505]/10 bg-[#F4F4F1] p-4 dark:border-white/10 dark:bg-[#050505]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -507,7 +495,7 @@ export function ExerciseDetailClient({
                     {savedInLists.map((list) => (
                       <span
                         key={list.id}
-                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#050505]/10 bg-white px-3 py-2 text-sm text-foreground dark:border-white/10 dark:bg-white/[0.04]"
                       >
                         <span>{list.emoji ?? "📋"}</span>
                         <span>{list.name}</span>
@@ -520,7 +508,7 @@ export function ExerciseDetailClient({
                   <div className="mt-4">
                     <Link
                       href="/exercises?view=lists"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-brand transition-colors hover:text-brand/80"
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5E6F00] transition-colors hover:text-[#050505] dark:text-[#D6FF38] dark:hover:text-white"
                     >
                       Ver todas tus listas
                       <ExternalLink className="size-3.5" />
@@ -535,22 +523,22 @@ export function ExerciseDetailClient({
           {hasParams && (
             <div className="flex flex-wrap gap-2">
               {exercise.formato && (
-                <span className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg">
+                <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
                   👥 {FORMATO_LABELS[exercise.formato]}
                 </span>
               )}
               {exercise.numJugadores && (
-                <span className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg">
+                <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
                   {exercise.numJugadores} jugadores
                 </span>
               )}
               {exercise.tipoActividad && (
-                <span className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg">
+                <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
                   {TIPO_ACTIVIDAD_LABELS[exercise.tipoActividad]}
                 </span>
               )}
               {exercise.tipoPelota && (
-                <span className="text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-lg">
+                <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
                   🎾 {TIPO_PELOTA_LABELS[exercise.tipoPelota]}
                 </span>
               )}
@@ -558,7 +546,7 @@ export function ExerciseDetailClient({
                 exercise.golpes.map((g) => (
                   <span
                     key={g}
-                    className="text-xs font-medium bg-blue-400/10 text-blue-400 px-2.5 py-1 rounded-lg"
+                    className="rounded-full bg-[#D6FF38]/15 px-2.5 py-1 text-xs font-semibold text-[#5E6F00] dark:text-[#D6FF38]"
                   >
                     {GOLPE_LABELS[g] ?? g}
                   </span>
@@ -567,7 +555,7 @@ export function ExerciseDetailClient({
                 exercise.efecto.map((e) => (
                   <span
                     key={e}
-                    className="text-xs font-medium bg-purple-400/10 text-purple-400 px-2.5 py-1 rounded-lg"
+                    className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
                   >
                     {EFECTO_LABELS[e] ?? e}
                   </span>
@@ -734,7 +722,7 @@ export function ExerciseDetailClient({
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => !deleting && setShowDeleteConfirm(false)}
           />
-          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="relative w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-start gap-4 mb-5">
               <div className="size-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
                 <Trash2 className="size-5 text-destructive" />

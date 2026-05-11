@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Check, Loader2, Lock, Save, Unlock } from "lucide-react";
 import { toast } from "sonner";
+import { adminPanelClass, adminTableShellClass } from "../_components/admin-ui";
 
 interface TopUser {
   userId: string;
@@ -203,7 +204,7 @@ export function AdminAiOperationsClient({
   return (
     <div className="flex flex-col gap-6">
       <section className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
-        <Card>
+        <Card className={adminPanelClass}>
           <CardHeader>
             <CardTitle>Consumo diario</CardTitle>
             <CardDescription>
@@ -250,7 +251,7 @@ export function AdminAiOperationsClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={adminPanelClass}>
           <CardHeader>
             <CardTitle>Modelos y presupuesto</CardTitle>
             <CardDescription>
@@ -312,7 +313,7 @@ export function AdminAiOperationsClient({
         </Card>
       </section>
 
-      <Card>
+      <Card className={adminPanelClass}>
         <CardHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -327,7 +328,7 @@ export function AdminAiOperationsClient({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border border-foreground/10">
+          <div className={adminTableShellClass}>
             <Table>
               <TableHeader>
                 <TableRow>

@@ -47,7 +47,7 @@ export default async function SessionTemplatePage({ params }: PageProps) {
     return (
       <FeatureLocked
         title="Plantillas desactivadas"
-        description="El administrador ha pausado temporalmente el mercado de plantillas de sesión."
+        description="El administrador ha pausado temporalmente la biblioteca de plantillas de sesión."
         href="/sessions"
         cta="Volver a sesiones"
       />
@@ -103,57 +103,57 @@ export default async function SessionTemplatePage({ params }: PageProps) {
   const isAuthor = template.authorId === user.id;
 
   return (
-    <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 lg:px-14 py-10 md:py-14 space-y-10">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-8">
         {/* Back */}
         <Link
           href="/sessions/templates"
-          className="inline-flex items-center gap-1.5 text-[12px] text-foreground/50 hover:text-foreground transition-colors"
+          className="inline-flex h-10 w-fit items-center gap-1.5 rounded-full border border-[#050505]/10 bg-white px-4 text-[12px] font-black text-foreground/60 transition-colors hover:text-foreground dark:border-white/10 dark:bg-[#10100e]"
         >
           <ArrowLeft className="size-3.5" /> Plantillas
         </Link>
 
         {/* Masthead */}
-        <header className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-              Planificación · Plantilla
+        <header className="tp-hero-panel space-y-6 p-6 text-white sm:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <p className="inline-flex rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+              Plantilla
             </p>
             {template.adoptionsCount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand/8 border border-brand/20 px-2.5 py-1 text-[10px] font-sans text-brand">
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[10px] font-black text-white">
                 <Download className="size-3" />
                 {template.adoptionsCount} adopciones
               </span>
             )}
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-foreground/15">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl space-y-3">
-              <h1 className="font-heading text-4xl md:text-5xl leading-[1.05] tracking-tight text-foreground">
+              <h1 className="text-4xl font-black leading-tight text-white md:text-5xl">
                 {template.title}
               </h1>
               {template.objective && (
-                <p className="text-[15px] text-foreground/65 leading-relaxed">
+                <p className="text-sm font-semibold leading-6 text-white/62">
                   {template.objective}
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/8 px-3 py-1 text-[12px] font-bold text-white/70">
                   <Clock className="size-3.5" /> {template.durationMinutes} min
                 </span>
                 {template.intensity != null && (
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/8 px-3 py-1 text-[12px] font-bold text-white/70">
                     <Zap className="size-3.5" /> Intensidad {template.intensity}
                     /5
                   </span>
                 )}
                 {template.location && (
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/8 px-3 py-1 text-[12px] font-bold text-white/70">
                     <MapPin className="size-3.5" /> {template.location}
                   </span>
                 )}
                 {template.authorName && (
-                  <span className="text-[12px] text-foreground/40">
+                  <span className="text-[12px] font-semibold text-white/45">
                     por {template.authorName}
                   </span>
                 )}
@@ -164,7 +164,7 @@ export default async function SessionTemplatePage({ params }: PageProps) {
                     {(template.tags as string[]).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-brand/8 border border-brand/20 px-2.5 py-0.5 text-[11px] font-sans text-brand"
+                        className="rounded-full border border-[#D6FF38]/35 bg-[#D6FF38]/15 px-2.5 py-0.5 text-[11px] font-black text-[#D6FF38]"
                       >
                         {tag}
                       </span>
@@ -184,8 +184,8 @@ export default async function SessionTemplatePage({ params }: PageProps) {
         </header>
 
         {/* Exercise list */}
-        <section className="space-y-4">
-          <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
+        <section className="tp-panel space-y-4 p-5 sm:p-6">
+          <p className="tp-kicker">
             {templateExercises.length.toString().padStart(2, "0")} ejercicios
           </p>
 
@@ -198,13 +198,13 @@ export default async function SessionTemplatePage({ params }: PageProps) {
               {templateExercises.map((te, i) => (
                 <div
                   key={te.id}
-                  className="flex items-start gap-4 rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3"
+                  className="flex items-start gap-4 rounded-[22px] border border-[#050505]/10 bg-[#F4F4F1] px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]"
                 >
                   <span className="font-sans text-[10px] tabular-nums text-foreground/30 mt-0.5 shrink-0">
                     {(i + 1).toString().padStart(2, "0")}
                   </span>
                   <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="font-heading text-[15px] text-foreground leading-snug">
+                    <p className="text-[15px] font-black leading-snug text-foreground">
                       {te.exercise?.name ?? "Ejercicio eliminado"}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">

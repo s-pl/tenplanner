@@ -13,6 +13,7 @@ import {
   drPlannerMessages,
   aiDocumentEmbeddings,
 } from "@/db/schema";
+import { AdminPageHeader, adminPageShell } from "../_components/admin-ui";
 import { AdminToolsClient } from "./tools-client";
 
 async function requireAdmin() {
@@ -73,19 +74,12 @@ export default async function AdminToolsPage() {
   const stats = await getDbStats();
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      <div className="border-b border-foreground/10 pb-5">
-        <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
-          Administración
-        </p>
-        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">
-          Herramientas
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-foreground/55">
-          Mantenimiento de base de datos, limpieza de datos temporales y
-          exportaciones. Las acciones destructivas son irreversibles.
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / Operaciones"
+        title="Herramientas"
+        description="Mantenimiento de base de datos, limpieza de datos temporales y exportaciones. Las acciones destructivas son irreversibles."
+      />
 
       <AdminToolsClient stats={stats} />
     </div>

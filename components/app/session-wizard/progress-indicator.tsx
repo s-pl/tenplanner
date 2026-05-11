@@ -15,7 +15,7 @@ export function ProgressIndicator({
   labels,
 }: ProgressIndicatorProps) {
   return (
-    <div className="flex items-start">
+    <div className="flex items-start rounded-full border border-foreground/10 bg-[#F4F4F1] p-2 dark:bg-[#050505]/70">
       {Array.from({ length: total }).map((_, i) => {
         const idx = i + 1;
         const isDone = idx < step;
@@ -26,11 +26,11 @@ export function ProgressIndicator({
             <div className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  "flex size-9 items-center justify-center rounded-lg border text-sm font-bold transition-colors",
+                  "flex size-9 items-center justify-center rounded-full border text-sm font-bold transition-colors",
                   isDone
-                    ? "border-brand bg-brand text-brand-foreground"
+                    ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
                     : isCurrent
-                      ? "border-brand bg-brand/10 text-brand"
+                      ? "border-[#D6FF38]/70 bg-[#D6FF38]/15 text-foreground"
                       : "border-border bg-background text-muted-foreground"
                 )}
               >

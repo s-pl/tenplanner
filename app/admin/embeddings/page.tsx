@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, exercises, sessions, aiDocumentEmbeddings } from "@/db/schema";
+import { AdminPageHeader, adminPageShell } from "../_components/admin-ui";
 import { EmbeddingsClient } from "./embeddings-client";
 
 async function requireAdmin() {
@@ -71,20 +72,12 @@ export default async function AdminEmbeddingsPage() {
   const stats = await getEmbeddingStats();
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      <div className="border-b border-foreground/10 pb-5">
-        <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
-          Administración
-        </p>
-        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">
-          Búsqueda semántica
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-foreground/55">
-          Gestión de embeddings vectoriales para Dr. Planner. Los nuevos
-          ejercicios y sesiones se indexan automáticamente. Usa el backfill para
-          indexar contenido existente.
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / IA"
+        title="Búsqueda semántica"
+        description="Gestión de embeddings vectoriales para Dr. Planner. Los nuevos ejercicios y sesiones se indexan automáticamente. Usa el backfill para indexar contenido existente."
+      />
 
       <EmbeddingsClient stats={stats} />
     </div>

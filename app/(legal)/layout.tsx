@@ -14,23 +14,23 @@ export default function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-foreground/10">
-        <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1]">
+      <header className="sticky top-0 z-40 border-b border-[#050505]/10 bg-[#F4F4F1]/90 backdrop-blur dark:border-white/10 dark:bg-[#050505]/90">
+        <div className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-4 lg:px-10">
           <Link href="/" className="flex items-center gap-2">
-            <div className="size-7 rounded-lg bg-brand flex items-center justify-center">
-              <Zap
-                className="size-3.5 text-brand-foreground"
-                strokeWidth={2.5}
-              />
+            <div className="flex size-8 items-center justify-center rounded-lg bg-[#050505] text-[#D6FF38] dark:bg-[#D6FF38] dark:text-[#050505]">
+              <Zap className="size-3.5" strokeWidth={2.5} />
             </div>
-            <span className="font-heading text-lg">
-              ten<span className="italic text-brand">planner</span>
+            <span className="font-heading text-lg font-semibold">
+              ten
+              <span className="italic text-[#6D7F00] dark:text-[#D6FF38]">
+                planner
+              </span>
             </span>
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-[12px] text-foreground/60 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#050505]/12 bg-white/70 px-3 py-2 text-[12px] font-semibold text-foreground/60 transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
             <ArrowLeft className="size-3.5" />
             Volver al inicio
@@ -38,41 +38,62 @@ export default function LegalLayout({
         </div>
       </header>
 
-      <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
-        <div className="grid lg:grid-cols-[220px_1fr] gap-8 lg:gap-14 items-start">
-          <aside className="lg:sticky lg:top-24">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 mb-4">
-              Información legal
-            </p>
-            <nav className="space-y-0 border-t border-foreground/15">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="group grid grid-cols-[auto_1fr] gap-3 items-baseline py-3 border-b border-foreground/10 text-[13px] text-foreground/75 hover:text-brand transition-colors"
-                >
-                  <span className="font-sans text-[10px] tabular-nums tracking-[0.2em] text-foreground/40 group-hover:text-brand">
-                    {item.code}
-                  </span>
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-            </nav>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 mt-8">
-              Jurisdicción
-            </p>
-            <p className="text-[12px] text-foreground/60 mt-2 leading-relaxed">
-              Reino de España · RGPD (UE) 2016/679 · LOPDGDD 3/2018 · LSSI-CE
-              34/2002
-            </p>
-          </aside>
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_80%_8%,rgba(214,255,56,0.24),transparent_34%)]" />
+        <div className="relative mx-auto max-w-[1180px] px-5 py-8 lg:px-10 lg:py-12">
+          <div className="mb-8 overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
+            <div className="p-6 lg:p-8">
+              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                TenPlanner legal
+              </p>
+              <h1 className="mt-3 max-w-3xl font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
+                Documentacion legal del servicio
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/62">
+                Privacidad, condiciones, cookies y datos del prestador para
+                entrenadores que trabajan con alumnos y grupos.
+              </p>
+            </div>
+            <div className="h-2 bg-[#D6FF38]" />
+          </div>
 
-          <main className="prose-like">{children}</main>
+          <div className="grid items-start gap-8 lg:grid-cols-[240px_1fr] lg:gap-14">
+            <aside className="lg:sticky lg:top-24">
+              <p className="mb-4 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                Información legal
+              </p>
+              <nav className="space-y-2">
+                {NAV.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="group grid grid-cols-[auto_1fr] items-baseline gap-3 rounded-lg border border-[#050505]/10 bg-white/60 px-3 py-3 text-[13px] text-foreground/75 transition-colors hover:border-[#D6FF38] hover:bg-white dark:border-white/10 dark:bg-white/[0.04]"
+                  >
+                    <span className="font-sans text-[10px] tabular-nums tracking-[0.2em] text-foreground/40 group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
+                      {item.code}
+                    </span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </nav>
+              <p className="mt-8 font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
+                Jurisdicción
+              </p>
+              <p className="mt-2 text-[12px] leading-relaxed text-foreground/60">
+                Reino de España · RGPD (UE) 2016/679 · LOPDGDD 3/2018 · LSSI-CE
+                34/2002
+              </p>
+            </aside>
+
+            <main className="rounded-lg border border-[#050505]/10 bg-white/70 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-8">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
-      <footer className="border-t border-foreground/10 mt-16">
-        <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-8 text-[12px] text-foreground/55">
+      <footer className="mt-16 border-t border-[#050505]/10 dark:border-white/10">
+        <div className="mx-auto max-w-[1180px] px-5 py-8 text-[12px] text-foreground/55 lg:px-10">
           © {new Date().getFullYear()} TenPlanner · Autoridad de control:{" "}
           <a
             href="https://www.aepd.es"

@@ -272,14 +272,16 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
   if (exercises.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <Dumbbell className="size-10 text-muted-foreground/40 mb-4" />
-        <p className="font-heading text-2xl text-foreground/60 italic mb-2">
+      <div className="tp-page flex min-h-screen flex-col items-center justify-center p-6 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-brand/15">
+          <Dumbbell className="size-7 text-foreground/45" />
+        </div>
+        <p className="mb-2 text-2xl font-black text-foreground/70">
           Esta sesión no tiene ejercicios.
         </p>
         <Link
           href={`/sessions/${session.id}`}
-          className="text-sm text-brand border-b border-brand/30 mt-2"
+          className="mt-2 inline-flex h-10 items-center rounded-full border border-brand/30 px-4 text-sm font-black text-brand"
         >
           Volver a la sesión
         </Link>
@@ -290,11 +292,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
   // ── Preparation screen ──────────────────────────────────────────────
   if (!started) {
     return (
-      <div className="min-h-[100dvh] flex flex-col bg-background">
-        <header className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur">
+      <div className="flex min-h-[100dvh] flex-col bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
           <Link
             href={`/sessions/${session.id}`}
-            className="size-9 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
           >
             <X className="size-4" />
           </Link>
@@ -304,13 +306,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           <div className="w-9" />
         </header>
 
-        <main className="flex-1 flex flex-col px-4 py-8 max-w-xl mx-auto w-full gap-8">
+        <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8 px-4 py-8">
           {/* Session overview */}
           <div className="text-center space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand">
+            <p className="tp-kicker">
               Preparación
             </p>
-            <h1 className="font-heading text-3xl font-semibold text-foreground leading-tight">
+            <h1 className="text-3xl font-black leading-tight text-foreground">
               {session.title}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -331,13 +333,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
           {/* Materials checklist */}
           {allMaterials.length > 0 && (
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-border/50 flex items-center gap-2">
+            <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+              <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
                 <Package className="size-4 text-brand" />
-                <h2 className="text-sm font-bold text-foreground">
+                <h2 className="text-sm font-black text-foreground">
                   Material necesario
                 </h2>
-                <span className="ml-auto text-[10px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
                   {allMaterials.length}
                 </span>
               </div>
@@ -345,7 +347,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                 {allMaterials.map((m) => (
                   <span
                     key={m}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold bg-brand/10 text-brand border border-brand/20 px-3 py-1.5 rounded-full"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/15 px-3 py-1.5 text-xs font-black text-foreground"
                   >
                     <Package className="size-3 opacity-70" />
                     {m}
@@ -356,11 +358,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           )}
 
           {/* Exercise list preview */}
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-border/50">
-              <h2 className="text-sm font-bold text-foreground">Ejercicios</h2>
+          <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+            <div className="border-b border-[#050505]/10 px-5 py-3.5 dark:border-white/10">
+              <h2 className="text-sm font-black text-foreground">Ejercicios</h2>
             </div>
-            <div className="divide-y divide-border/50">
+            <div className="divide-y divide-[#050505]/10 dark:divide-white/10">
               {exercises.map((ex, idx) => (
                 <div
                   key={ex.exerciseId}
@@ -382,7 +384,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     )}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="truncate text-sm font-black text-foreground">
                       {ex.name}
                     </p>
                     <p
@@ -403,10 +405,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           </div>
         </main>
 
-        <footer className="px-4 py-5 border-t border-border pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+        <footer className="border-t border-[#050505]/10 bg-white/86 px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
           <button
             onClick={handleStart}
-            className="w-full h-14 flex items-center justify-center gap-2.5 rounded-2xl bg-brand text-brand-foreground font-bold text-base shadow-sm hover:bg-brand/90 active:scale-[0.98] transition-all"
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-brand text-base font-black text-brand-foreground shadow-sm transition-all hover:bg-brand/90 active:scale-[0.98]"
           >
             <Play className="size-5 translate-x-0.5" />
             Comenzar sesión
@@ -429,12 +431,12 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     notes: "",
   };
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div className="flex min-h-[100dvh] flex-col bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white">
       {/* Top bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
         <Link
           href={`/sessions/${session.id}`}
-          className="size-9 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
         >
           <X className="size-4" />
         </Link>
@@ -470,19 +472,20 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         {/* Category + name */}
         <div
           className={cn(
-            "rounded-2xl border p-6",
-            CATEGORY_COLORS[current.category] ?? "border-border bg-card"
+            "rounded-[28px] border p-6 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)]",
+            CATEGORY_COLORS[current.category] ??
+              "border-[#050505]/10 bg-white dark:border-white/10 dark:bg-[#10100e]"
           )}
         >
           <p
             className={cn(
-              "text-[10px] font-bold uppercase tracking-widest mb-2",
+              "mb-2 text-[10px] font-black uppercase",
               CATEGORY_ACCENT[current.category] ?? "text-brand"
             )}
           >
             {CATEGORY_LABELS[current.category] ?? current.category}
           </p>
-          <h1 className="font-heading text-3xl text-foreground leading-tight mb-3">
+          <h1 className="mb-3 text-3xl font-black leading-tight text-foreground">
             {current.name}
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -500,7 +503,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         </div>
 
         {/* Timer */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
           {/* Countdown progress bar */}
           {countdownMode && (
             <div className="h-1 bg-border">
@@ -517,7 +520,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               />
             </div>
           )}
-          <div className="p-5 flex items-center gap-4">
+          <div className="flex items-center gap-4 p-5">
             <span
               className={cn(
                 "font-mono text-3xl tabular-nums flex-1",
@@ -531,7 +534,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setTimerRunning((r) => !r)}
-                className="size-11 flex items-center justify-center rounded-xl bg-brand text-background hover:bg-brand/90 active:scale-95 transition-all"
+                className="flex size-11 items-center justify-center rounded-full bg-brand text-brand-foreground transition-all hover:bg-brand/90 active:scale-95"
                 aria-label={timerRunning ? "Pausar" : "Iniciar"}
               >
                 {timerRunning ? (
@@ -547,7 +550,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     countdownMode ? current.durationMinutes * 60 : 0
                   );
                 }}
-                className="size-11 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className="flex size-11 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
                 aria-label="Reiniciar"
               >
                 <RotateCcw className="size-4" />
@@ -560,10 +563,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     : "Cambiar a cuenta atrás"
                 }
                 className={cn(
-                  "size-11 flex items-center justify-center rounded-xl border transition-colors",
+                  "flex size-11 items-center justify-center rounded-full border transition-colors",
                   countdownMode
                     ? "border-brand bg-brand/10 text-brand"
-                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "border-[#050505]/10 text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/10"
                 )}
                 aria-label={
                   countdownMode ? "Modo cronómetro" : "Modo cuenta atrás"
@@ -576,10 +579,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         </div>
 
         {/* Live execution notes */}
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+        <div className="space-y-4 rounded-[28px] border border-[#050505]/10 bg-white p-4 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <p className="text-[10px] font-black uppercase text-muted-foreground">
                 Registro de pista
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -595,10 +598,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     updateExecution(current.exerciseId, { rating: value })
                   }
                   className={cn(
-                    "size-8 rounded-lg border text-xs font-bold transition-colors",
+                    "size-8 rounded-full border text-xs font-black transition-colors",
                     currentExecution.rating === value
-                      ? "border-brand bg-brand text-background"
-                      : "border-border text-muted-foreground hover:border-brand/40 hover:text-foreground"
+                      ? "border-brand bg-brand text-brand-foreground"
+                      : "border-[#050505]/10 text-muted-foreground hover:border-brand/40 hover:text-foreground dark:border-white/10"
                   )}
                   aria-label={`Valorar ejercicio con ${value}`}
                 >
@@ -615,19 +618,19 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             rows={3}
             maxLength={1000}
             placeholder="Notas rápidas: ajuste aplicado, respuesta del alumno, variante usada..."
-            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-brand/50 focus:ring-2 focus:ring-brand/20"
+            className="tp-field w-full resize-none px-3 py-2 text-sm placeholder:text-muted-foreground"
           />
         </div>
 
         {/* Materials for this exercise */}
         {current.materials && current.materials.length > 0 && (
-          <div className="flex items-start gap-3 px-4 py-3 bg-muted/30 border border-border/50 rounded-xl">
+          <div className="flex items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#10100e]">
             <Package className="size-4 text-brand mt-0.5 shrink-0" />
             <div className="flex flex-wrap gap-1.5">
               {current.materials.map((m) => (
                 <span
                   key={m}
-                  className="text-[11px] font-semibold bg-brand/10 text-brand px-2 py-1 rounded-full"
+                  className="rounded-full bg-brand/15 px-2 py-1 text-[11px] font-black text-foreground"
                 >
                   {m}
                 </span>
@@ -646,13 +649,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         {/* Steps */}
         {current.steps.length > 0 && (
           <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <p className="text-[10px] font-black uppercase text-muted-foreground">
               Pasos
             </p>
             <ol className="space-y-3">
               {current.steps.map((step, i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="size-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-[11px] font-bold text-brand shrink-0 mt-0.5">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-brand/20 bg-brand/15 text-[11px] font-black text-foreground">
                     {i + 1}
                   </span>
                   <div>
@@ -673,8 +676,8 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
         {/* Coach notes */}
         {current.notes && (
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/70 mb-1.5">
+          <div className="rounded-[22px] border border-amber-500/20 bg-amber-500/10 p-4">
+            <p className="mb-1.5 text-[10px] font-black uppercase text-amber-500/80">
               Notas del entrenador
             </p>
             <p className="text-sm text-foreground/80 leading-relaxed">
@@ -685,8 +688,8 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
 
         {/* Tips */}
         {current.tips && (
-          <div className="bg-muted/40 border border-border rounded-xl p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+          <div className="rounded-[22px] border border-[#050505]/10 bg-white p-4 dark:border-white/10 dark:bg-[#10100e]">
+            <p className="mb-1.5 text-[10px] font-black uppercase text-muted-foreground">
               Tips
             </p>
             <p className="text-sm text-foreground/70 leading-relaxed">
@@ -697,7 +700,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
       </main>
 
       {/* Exercise index strip */}
-      <div className="flex items-center gap-1.5 px-4 py-3 overflow-x-auto border-t border-border scrollbar-none">
+      <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto border-t border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
         {exercises.map((ex, idx) => {
           const isDone = done.has(ex.exerciseId);
           const isCurrent = idx === currentIdx;
@@ -709,7 +712,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               className={cn(
                 "shrink-0 size-8 rounded-full text-[10px] font-mono transition-all flex items-center justify-center",
                 isCurrent
-                  ? "bg-brand text-background ring-2 ring-brand ring-offset-2 ring-offset-background"
+                  ? "bg-brand text-brand-foreground ring-2 ring-brand ring-offset-2 ring-offset-background"
                   : isDone
                     ? "bg-brand/15 text-brand border border-brand/30"
                     : "bg-muted text-muted-foreground hover:bg-muted/60"
@@ -726,25 +729,25 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
       </div>
 
       {/* Bottom nav */}
-      <footer className="flex items-center gap-3 px-4 py-4 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <footer className="flex items-center gap-3 border-t border-[#050505]/10 bg-white/86 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
         <button
           onClick={goPrev}
           disabled={currentIdx === 0}
-          className="size-12 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex size-12 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 dark:border-white/10"
         >
           <ChevronLeft className="size-5" />
         </button>
 
         <button
           onClick={skipCurrent}
-          className="h-12 shrink-0 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-12 shrink-0 rounded-full border border-[#050505]/10 px-4 text-xs font-black text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
         >
           Saltar
         </button>
 
         <button
           onClick={goNext}
-          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-bold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all"
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-sm font-black text-background transition-all hover:bg-foreground/90 active:scale-[0.98]"
         >
           {currentIdx < totalExercises - 1 ? (
             <>
@@ -767,12 +770,12 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => !finishing && setShowFinish(false)}
           />
-          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="relative w-full max-w-sm rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
             <div className="text-center mb-6">
-              <div className="size-14 rounded-full bg-brand/15 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="size-7 text-brand" />
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                <CheckCircle2 className="size-7" />
               </div>
-              <h2 className="font-heading text-2xl text-foreground mb-1">
+              <h2 className="mb-1 text-2xl font-black text-foreground">
                 ¡Sesión completada!
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -783,14 +786,14 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               <button
                 onClick={() => setShowFinish(false)}
                 disabled={finishing}
-                className="flex-1 text-sm font-medium text-muted-foreground border border-border px-4 py-2.5 rounded-xl hover:bg-muted transition-colors"
+                className="flex-1 rounded-full border border-[#050505]/10 px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
               >
                 Seguir
               </button>
               <button
                 onClick={handleFinish}
                 disabled={finishing}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-brand text-background text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all disabled:opacity-60"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60"
               >
                 {finishing && <Loader2 className="size-4 animate-spin" />}
                 Guardar y salir

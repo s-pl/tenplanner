@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { exercises, sessions, users } from "@/db/schema";
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { AdminPageHeader, adminPageShell } from "../_components/admin-ui";
 import { AdminUsersClient } from "./users-client";
 
 const PER_PAGE = 50;
@@ -77,15 +78,12 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(Number(total) / PER_PAGE);
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Usuarios
-        </h1>
-        <p className="text-sm text-foreground/50 mt-1">
-          {Number(total).toLocaleString("es-ES")} usuarios
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / Directorio"
+        title="Usuarios"
+        description={`${Number(total).toLocaleString("es-ES")} usuarios registrados, roles y actividad de contenido.`}
+      />
       <AdminUsersClient
         users={rows.map((u) => ({
           ...u,

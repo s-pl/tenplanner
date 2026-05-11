@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { adminPanelClass } from "../_components/admin-ui";
 
 interface DbStats {
   users: number;
@@ -108,7 +109,7 @@ function ActionCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border bg-card",
+        adminPanelClass,
         danger ? "border-destructive/20" : "border-foreground/12"
       )}
     >
@@ -118,7 +119,7 @@ function ActionCard({
             "flex size-8 shrink-0 items-center justify-center rounded-md border",
             danger
               ? "border-destructive/20 bg-destructive/8 text-destructive"
-              : "border-brand/20 bg-brand/8 text-brand"
+              : "border-[#D6FF38]/35 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]"
           )}
         >
           <Icon className="size-4" />
@@ -219,10 +220,10 @@ export function AdminToolsClient({ stats: initialStats }: Props) {
   return (
     <div className="flex flex-col gap-5">
       {/* DB snapshot */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <div className="flex items-center justify-between border-b border-foreground/10 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-md border border-brand/20 bg-brand/8 text-brand">
+            <span className="flex size-8 items-center justify-center rounded-md border border-[#D6FF38]/35 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]">
               <Database className="size-4" />
             </span>
             <div>

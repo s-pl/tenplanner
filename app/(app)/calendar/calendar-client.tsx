@@ -96,21 +96,21 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
   return (
     <div className="space-y-6">
       {/* Calendar header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="tp-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center justify-between gap-3 sm:justify-start">
           <button
             onClick={goToPrev}
-            className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
+            className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
             aria-label="Mes anterior"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h2 className="min-w-0 flex-1 text-center font-heading text-xl font-bold text-foreground sm:min-w-[180px] sm:flex-none">
+          <h2 className="min-w-0 flex-1 text-center text-xl font-black text-foreground sm:min-w-[180px] sm:flex-none">
             {MONTHS[viewMonth]} {viewYear}
           </h2>
           <button
             onClick={goToNext}
-            className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
+            className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
             aria-label="Mes siguiente"
           >
             <ChevronRight className="size-4" />
@@ -119,13 +119,13 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
         <div className="flex items-center gap-2 sm:justify-end">
           <button
             onClick={goToToday}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+            className="h-10 rounded-full border border-[#050505]/10 bg-white px-4 text-sm font-black text-foreground/62 transition-colors hover:bg-muted hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
             Hoy
           </button>
           <Link
             href="/sessions/new"
-            className="inline-flex items-center gap-1.5 bg-brand text-brand-foreground text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-brand/90 transition-colors"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-black text-brand-foreground transition-colors hover:bg-brand/90"
           >
             <Plus className="size-3.5" />
             <span className="hidden sm:inline">Añadir sesión</span>
@@ -134,13 +134,13 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
       </div>
 
       {/* Calendar grid */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-border">
+        <div className="grid grid-cols-7 border-b border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
           {DAYS.map((d) => (
             <div
               key={d}
-              className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+              className="py-3 text-center text-xs font-black uppercase text-foreground/52"
             >
               {d}
             </div>
@@ -179,12 +179,12 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                   setSelectedDay(dayNum === selectedDay ? null : dayNum)
                 }
                 className={cn(
-                  "min-h-[72px] p-2 border-b border-r border-border/50 last-of-type:border-r-0 transition-colors",
+                  "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
                   isValid ? "cursor-pointer" : "cursor-default",
-                  !isValid && "bg-muted/20",
+                  !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
                   isValid && isPast && !isSelected && "opacity-50",
-                  isSelected && "bg-brand/10",
-                  isValid && !isSelected && "hover:bg-muted/50",
+                  isSelected && "bg-brand/15",
+                  isValid && !isSelected && "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
                   // Remove border on last row
                   idx >= totalCells - 7 && "border-b-0"
                 )}
@@ -194,9 +194,9 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                     <div className="flex items-center justify-between">
                       <span
                         className={cn(
-                          "size-7 flex items-center justify-center rounded-full text-sm font-medium",
-                          isToday && "bg-brand text-brand-foreground font-bold",
-                          !isToday && isSelected && "text-brand font-semibold",
+                          "flex size-8 items-center justify-center rounded-full text-sm font-black",
+                          isToday && "bg-brand text-brand-foreground",
+                          !isToday && isSelected && "text-foreground",
                           !isToday && !isSelected && "text-foreground"
                         )}
                       >
@@ -211,7 +211,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                         {daySessions.slice(0, 2).map((s) => (
                           <div
                             key={s.id}
-                            className="text-[10px] leading-tight px-1.5 py-0.5 rounded bg-brand/15 text-brand truncate"
+                            className="truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground"
                           >
                             {s.title}
                           </div>
@@ -234,22 +234,22 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
       {/* Selected day sessions */}
       {selectedDay !== null && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-foreground">
+          <h3 className="text-lg font-black text-foreground">
             {MONTHS[viewMonth]} {selectedDay}
             {selectedSessions.length === 0 && (
-              <span className="text-muted-foreground font-normal text-sm ml-2">
+              <span className="ml-2 text-sm font-semibold text-muted-foreground">
                 — Sin sesiones
               </span>
             )}
           </h3>
           {selectedSessions.length === 0 ? (
-            <div className="bg-card border border-dashed border-border rounded-xl p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-3">
+            <div className="tp-panel border-dashed p-6 text-center">
+              <p className="mb-3 text-sm text-muted-foreground">
                 No hay sesiones este día.
               </p>
               <Link
                 href="/sessions/new"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-black text-brand transition-colors hover:text-brand/80"
               >
                 <Plus className="size-4" />
                 Planificar una sesión
@@ -260,9 +260,9 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
               {selectedSessions.map((s) => (
                 <div
                   key={s.id}
-                  className="bg-card border border-border rounded-xl p-4 flex items-center gap-4"
+                  className="tp-panel flex items-center gap-4 p-4"
                 >
-                  <div className="size-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand/12">
                     <span className="text-brand font-bold text-sm">
                       {new Date(s.scheduledAt)
                         .getHours()
@@ -282,7 +282,7 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                   </div>
                   <Link
                     href={`/sessions/${s.id}`}
-                    className="text-xs font-medium text-brand hover:text-brand/80 transition-colors"
+                    className="rounded-full border border-brand/30 px-3 py-1.5 text-xs font-black text-brand transition-colors hover:bg-brand hover:text-brand-foreground"
                   >
                     Ver
                   </Link>

@@ -13,27 +13,29 @@ export default async function NewStudentPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="max-w-4xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
-      <div className="flex items-center gap-4">
+    <div className="w-full px-4 py-8 sm:px-6 md:px-10">
+      <div className="mb-6 flex items-start gap-4 border-b border-foreground/10 pb-5">
         <Link
           href="/students"
-          className="size-9 rounded-xl border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-muted-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38] hover:text-[#050505]"
+          aria-label="Volver a alumnos"
         >
           <ArrowLeft className="size-4" />
         </Link>
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#D6FF38]">
+            Ficha de alumno
+          </p>
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Nuevo alumno
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="mt-1 max-w-prose text-sm text-muted-foreground">
             Registra un nuevo alumno en tu cartera
           </p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <StudentForm mode="create" />
-      </div>
+      <StudentForm mode="create" />
     </div>
   );
 }

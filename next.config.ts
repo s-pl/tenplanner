@@ -32,15 +32,27 @@ const nextConfig: NextConfig = {
     ? { allowedDevOrigins: devOrigins }
     : {}),
   images: {
+    maximumRedirects: 1,
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "pitsasnwfilyyipkhhim.supabase.co",
+        hostname: "**.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
       {
         protocol: "https",
         hostname: "images.pexels.com",
+        pathname: "/photos/**",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+        pathname: "/**",
       },
     ],
   },

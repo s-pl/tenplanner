@@ -1,6 +1,11 @@
 import { db } from "@/db";
 import { drPlannerChats, drPlannerMessages, users } from "@/db/schema";
 import { count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import {
+  AdminMetricCard,
+  AdminPageHeader,
+  adminPageShell,
+} from "../_components/admin-ui";
 import { AdminChatsClient } from "./chats-client";
 
 const PER_PAGE = 50;
@@ -73,23 +78,20 @@ export default async function AdminChatsPage({ searchParams }: PageProps) {
   const totalNum = Number(total ?? 0);
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Chats Dr. Planner
-        </h1>
-        <p className="text-sm text-foreground/50 mt-1">
-          Historial de conversaciones de todos los usuarios
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / Dr. Planner"
+        title="Chats Dr. Planner"
+        description="Historial de conversaciones de todos los usuarios."
+      />
 
       {/* Summary stats */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         {[
           {
             label: "Chats totales",
             value: Number(stats?.totalChats ?? 0),
-            color: "text-violet-400",
+            color: "text-[#6F8500] dark:text-[#D6FF38]",
           },
           {
             label: "Mensajes totales",
@@ -102,17 +104,12 @@ export default async function AdminChatsPage({ searchParams }: PageProps) {
             color: "text-brand",
           },
         ].map((s) => (
-          <div
+          <AdminMetricCard
             key={s.label}
-            className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
-          >
-            <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-1">
-              {s.label}
-            </p>
-            <p className={`font-heading text-2xl font-semibold ${s.color}`}>
-              {Number(s.value).toLocaleString("es-ES")}
-            </p>
-          </div>
+            label={s.label}
+            value={Number(s.value).toLocaleString("es-ES")}
+            valueClassName={s.color}
+          />
         ))}
       </div>
 

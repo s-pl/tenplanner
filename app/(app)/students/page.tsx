@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, asc, count, eq, ilike, type SQL } from "drizzle-orm";
-import { Plus, Search, ArrowLeft, ArrowUpRight } from "lucide-react";
+import { Plus, Search, ArrowLeft, ArrowUpRight, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable } from "@/db/schema";
@@ -105,14 +105,18 @@ export default async function StudentsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="relative">
-      <div className="px-4 sm:px-6 md:px-10 py-8">
-        <header className="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-border">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
+        <header className="tp-hero-panel flex flex-wrap items-end justify-between gap-5 p-6 text-white sm:p-8">
           <div>
-            <h1 className="font-heading text-3xl font-semibold text-foreground">
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+              <Users className="size-3.5" />
+              Cartera
+            </p>
+            <h1 className="text-4xl font-black leading-tight text-white sm:text-5xl">
               Alumnos
             </h1>
-            <p className="text-[14px] text-foreground/60 mt-1.5">
+            <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
               {totalStudents} alumno{totalStudents !== 1 ? "s" : ""} registrado
               {totalStudents !== 1 ? "s" : ""}.
             </p>
@@ -120,7 +124,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           {totalStudents > 0 && (
             <Link
               href="/students/new"
-              className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-black text-[#050505] transition-transform hover:-translate-y-0.5"
             >
               <Plus className="size-4" />
               Nuevo alumno
@@ -130,16 +134,16 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
         {/* Level strip */}
         {totalStudents > 0 && (
-          <section className="grid grid-cols-2 border-b border-foreground/15 sm:grid-cols-3 lg:grid-cols-5">
+          <section className="tp-panel grid grid-cols-2 overflow-hidden p-0 sm:grid-cols-3 lg:grid-cols-5">
             {(Object.keys(LEVEL_LABEL) as PlayerLevel[]).map((lvl) => (
               <div
                 key={lvl}
-                className="border-t border-foreground/10 px-3 py-4 first:border-t-0 sm:px-4 sm:py-5 sm:[&:nth-child(-n+3)]:border-t-0 lg:border-l lg:border-t-0 lg:first:border-l-0"
+                className="border-t border-[#050505]/10 px-3 py-4 first:border-t-0 dark:border-white/10 sm:px-4 sm:py-5 sm:[&:nth-child(-n+3)]:border-t-0 lg:border-l lg:border-t-0 lg:first:border-l-0"
               >
-                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
+                <p className="mb-1.5 text-[9px] font-black uppercase text-foreground/45">
                   {LEVEL_CODE[lvl]} · {LEVEL_LABEL[lvl]}
                 </p>
-                <p className="font-heading text-3xl tabular-nums text-foreground leading-none">
+                <p className="text-3xl font-black tabular-nums leading-none text-foreground">
                   {levelCounts[lvl]}
                 </p>
               </div>
@@ -149,21 +153,21 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
         {/* Search rail */}
         {totalStudents > 0 && (
-          <section className="py-5 border-b border-foreground/15 grid grid-cols-[auto_1fr_auto] items-center gap-4">
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+          <section className="tp-panel grid grid-cols-[auto_1fr_auto] items-center gap-4 p-4">
+            <p className="text-[10px] font-black tabular-nums text-brand">
               01
             </p>
             <form className="relative" action="/students" method="get">
-              <Search className="absolute left-0 top-1/2 -translate-y-1/2 size-3.5 text-foreground/40 pointer-events-none" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/40" />
               <input
                 type="search"
                 name="q"
                 placeholder="Buscar por nombre…"
                 defaultValue={searchTerm}
-                className="w-full sm:max-w-md h-9 pl-6 pr-4 text-[13px] bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-foreground placeholder:text-foreground/40 transition-colors"
+                className="tp-field h-10 w-full pl-8 pr-4 text-[13px] font-medium placeholder:text-foreground/40 sm:max-w-md"
               />
             </form>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/50">
+            <p className="text-[10px] font-black tabular-nums text-foreground/50">
               {filtered.length}/{totalStudents}
             </p>
           </section>
@@ -171,12 +175,12 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
         {/* Empty */}
         {totalStudents === 0 ? (
-          <div className="py-20 text-center border-b border-foreground/15">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-4">
+          <div className="tp-panel border-dashed px-6 py-20 text-center">
+            <p className="tp-kicker mb-4">
               Estantería vacía
             </p>
-            <h2 className="font-heading text-3xl text-foreground mb-3">
-              Todavía no tienes <em className="italic text-brand">alumnos</em>.
+            <h2 className="mb-3 text-3xl font-black text-foreground">
+              Todavía no tienes alumnos.
             </h2>
             <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
               Crea tu primera ficha para empezar a planificar sesiones
@@ -184,20 +188,20 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             </p>
             <Link
               href="/students/new"
-              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[12px] font-black uppercase text-[#050505] transition-colors hover:bg-[#c8f52e]"
             >
               <Plus className="size-3.5" strokeWidth={2} />
               Crear alumno
             </Link>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center border-b border-foreground/15">
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 mb-2">
+          <div className="tp-panel border-dashed px-6 py-16 text-center">
+            <p className="tp-kicker mb-2">
               Sin resultados
             </p>
-            <p className="font-heading text-2xl text-foreground mb-3">
+            <p className="mb-3 text-2xl font-black text-foreground">
               Ningún alumno coincide con &ldquo;
-              <em className="italic text-brand">{searchTerm}</em>&rdquo;.
+              <span className="text-brand">{searchTerm}</span>&rdquo;.
             </p>
             <Link
               href="/students"
@@ -208,31 +212,31 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </div>
         ) : (
           <section>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 py-4 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 rounded-t-[28px] border border-[#050505]/10 bg-white px-4 py-4 dark:border-white/10 dark:bg-[#10100e]">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 02
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Fichas · ordenadas alfabéticamente
               </p>
             </div>
-            <ul>
+            <ul className="overflow-hidden rounded-b-[28px] border-x border-b border-[#050505]/10 bg-white dark:border-white/10 dark:bg-[#10100e]">
               {filtered.map((student, idx) => {
                 const level = student.playerLevel as PlayerLevel | null;
                 const n = String(idx + 1).padStart(3, "0");
                 return (
                   <li
                     key={student.id}
-                    className="border-b border-foreground/10"
+                    className="border-b border-[#050505]/10 last:border-b-0 dark:border-white/10"
                   >
                     <Link
                       href={`/students/${student.id}`}
-                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-5 transition-colors hover:bg-brand/[0.025] sm:grid-cols-[auto_auto_1fr_auto_auto] sm:gap-5"
+                      className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 transition-colors hover:bg-brand/10 sm:grid-cols-[auto_auto_1fr_auto_auto] sm:gap-5"
                     >
                       <span className="hidden w-8 font-sans text-[10px] tabular-nums tracking-[0.18em] text-foreground/35 sm:inline">
                         {n}
                       </span>
-                      <div className="size-10 rounded-full border border-foreground/20 bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#050505]/10 bg-muted dark:border-white/10">
                         {student.imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
@@ -241,13 +245,13 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                             className="size-full object-cover"
                           />
                         ) : (
-                          <span className="font-heading text-[12px] text-foreground/75">
+                          <span className="text-[12px] font-black text-foreground/75">
                             {initialsFromName(student.name)}
                           </span>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-foreground truncate group-hover:text-brand transition-colors">
+                        <p className="truncate text-[15px] font-black text-foreground transition-colors group-hover:text-brand">
                           {student.name}
                         </p>
                         {student.email && (
@@ -283,7 +287,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
 
         {/* Pagination */}
         {(currentPage > 1 || hasNextPage) && (
-          <nav className="flex flex-col gap-3 border-t border-foreground/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <nav className="tp-panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
               {filtered.length > 0
                 ? `${offset + 1}–${offset + filtered.length}`
@@ -324,7 +328,6 @@ export default async function StudentsPage({ searchParams }: PageProps) {
             </div>
           </nav>
         )}
-
       </div>
     </div>
   );

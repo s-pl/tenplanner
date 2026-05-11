@@ -50,7 +50,7 @@ export default function TerminosPage() {
 
       <H2 id="objeto">1. Objeto</H2>
       <P>
-        TenPlanner es una plataforma SaaS para entrenadores de pádel que permite
+        TenPlanner es una plataforma SaaS para entrenadores de deportes de raqueta que permite
         planificar sesiones, gestionar una biblioteca de ejercicios, registrar
         alumnos y usar un asistente de IA (Dr. Planner). Al crear una cuenta
         aceptas estos términos.

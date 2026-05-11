@@ -87,6 +87,8 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     name: string;
     duracionMinutes: number;
     alumnosTipo: string | null;
+    numAlumnos: number | null;
+    objetivos: string | null;
     nivel: string | null;
     isLibrary: boolean;
     createdAt: Date;
@@ -148,6 +150,8 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         name: classes.name,
         duracionMinutes: classes.duracionMinutes,
         alumnosTipo: classes.alumnosTipo,
+        numAlumnos: classes.numAlumnos,
+        objetivos: classes.objetivos,
         nivel: classes.nivel,
         isLibrary: classes.isLibrary,
         createdAt: classes.createdAt,
@@ -168,301 +172,347 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   const favorites = new Set(favRows.map((f) => f.classId));
 
   return (
-    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-10">
-      <div className="flex items-end justify-between gap-4 border-b border-border pb-5 flex-wrap">
-        <div>
-          <h1 className="font-heading text-3xl font-semibold text-foreground">
-            Clases
-          </h1>
-          <p className="text-[14px] text-foreground/60 mt-1.5 max-w-prose">
-            Plantillas reutilizables con bloques y ejercicios. Cárgalas en una
-            sesión para impartirlas.
-          </p>
-        </div>
-        {user && (
-          <Link
-            href="/classes/new"
-            className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
-          >
-            <Plus className="size-4" />
-            Nueva clase
-          </Link>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-border">
-        {TABS.map((t) => {
-          if (!user && (t === "mine" || t === "favorites" || t === "drafts"))
-            return null;
-          const active = activeTab === t;
-          const sp = new URLSearchParams();
-          if (t !== "all") sp.set("tab", t);
-          if (q) sp.set("q", q);
-          if (nivel) sp.set("nivel", nivel);
-          if (duracion) sp.set("duracion", duracion);
-          if (aspecto) sp.set("aspecto", aspecto);
-          if (golpe) sp.set("golpe", golpe);
-          return (
-            <Link
-              key={t}
-              href={sp.toString() ? `/classes?${sp.toString()}` : "/classes"}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
-                active
-                  ? "border-brand text-brand"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {TAB_LABELS[t]}
-              {t === "drafts" && draftCount > 0 && (
-                <span className="ml-1.5 text-[10px] tabular-nums text-brand/80">
-                  ({draftCount})
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {activeTab === "drafts" && user ? (
-        draftRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center border-t border-foreground/15">
-            <div className="size-14 rounded-2xl bg-foreground/5 border border-foreground/10 flex items-center justify-center">
-              <FileText className="size-6 text-foreground/20" />
-            </div>
+    <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.24),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.18),transparent_34%)]" />
+      <div className="relative space-y-6">
+        <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
+          <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
             <div>
-              <p className="text-base font-semibold text-foreground/40">
-                Sin borradores
+              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                Biblioteca de clases
               </p>
-              <p className="text-sm text-foreground/30 mt-1">
-                Las clases que guardes como borrador aparecerán aquí.
+              <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
+                Clases
+              </h1>
+              <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
+                Plantillas reutilizables con bloques y ejercicios para preparar
+                sesiones completas sin perder criterio en pista o cancha.
               </p>
             </div>
-            <Link
-              href="/classes/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand text-background px-4 py-2 text-[13px] font-semibold hover:bg-brand/90 transition-colors mt-1"
-            >
-              Crear clase
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {draftRows.map((draft, i) => {
-              const name =
-                (typeof draft.payload?.name === "string" &&
-                  (draft.payload.name as string).trim()) ||
-                "Clase sin título";
-              return (
-                <li
-                  key={draft.id}
-                  className="flex items-center gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3"
-                >
-                  <span className="font-sans text-[9px] tabular-nums text-foreground/30 shrink-0">
-                    {(i + 1).toString().padStart(2, "0")}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-heading text-foreground truncate">
-                      {name}
-                    </p>
-                    <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums">
-                      {new Intl.DateTimeFormat("es-ES", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      }).format(new Date(draft.updatedAt))}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/classes/new?draft=${draft.id}`}
-                    className="inline-flex items-center gap-1 rounded-lg bg-brand text-background px-2.5 py-1.5 text-[12px] font-medium hover:bg-brand/90 transition-colors"
-                  >
-                    Continuar
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )
-      ) : (
-        <>
-          {/* Filtros: search + nivel + duración + aspecto + golpe */}
-          <form className="flex flex-wrap gap-3 items-end" action="/classes">
-            {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
-            <div className="flex-1 min-w-[200px]">
-              <label
-                htmlFor="q"
-                className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Buscar
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-                <input
-                  id="q"
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Nombre, contenido, objetivos…"
-                  className="w-full h-10 pl-9 pr-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground"
-                />
+            <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-[#D6FF38]">
+                    {rows.length}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    visibles
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
+                  <p className="font-heading text-2xl leading-none text-white">
+                    {draftCount}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
+                    borradores
+                  </p>
+                </div>
               </div>
-            </div>
-            <div>
-              <label
-                htmlFor="nivel"
-                className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Nivel
-              </label>
-              <select
-                id="nivel"
-                name="nivel"
-                defaultValue={nivel}
-                className="h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
-              >
-                {NIVEL_FILTERS.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="duracion"
-                className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Duración
-              </label>
-              <select
-                id="duracion"
-                name="duracion"
-                defaultValue={duracion}
-                className="h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
-              >
-                {DURACION_FILTERS.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="aspecto"
-                className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Aspecto
-              </label>
-              <select
-                id="aspecto"
-                name="aspecto"
-                defaultValue={aspecto}
-                className="h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
-              >
-                {ASPECTO_FILTERS.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="golpe"
-                className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Golpe
-              </label>
-              <select
-                id="golpe"
-                name="golpe"
-                defaultValue={golpe}
-                className="h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
-              >
-                <option value="">Cualquiera</option>
-                {GOLPES_FILTERS.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="h-10 px-4 text-sm font-semibold bg-foreground text-background rounded-xl hover:bg-foreground/90 transition-colors"
-            >
-              Filtrar
-            </button>
-          </form>
-
-          {/* Listado */}
-          {rows.length === 0 ? (
-            <div className="border border-dashed border-border rounded-lg bg-card/40 px-6 py-16 text-center">
-              <p className="text-[15px] font-medium text-foreground mb-2">
-                No hay clases que coincidan
-              </p>
-              <p className="text-[13px] text-foreground/55 max-w-md mx-auto">
-                Prueba a quitar algún filtro o crea una clase nueva.
-              </p>
               {user && (
                 <Link
                   href="/classes/new"
-                  className="inline-flex items-center gap-1.5 mt-5 rounded-md bg-brand text-brand-foreground px-4 py-2 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
                 >
-                  <Plus className="size-3.5" />
-                  Crear la primera
+                  <Plus className="size-4" />
+                  Nueva clase
                 </Link>
               )}
             </div>
+          </div>
+          <div className="h-2 bg-[#D6FF38]" />
+        </header>
+
+        {/* Tabs */}
+        <nav className="flex gap-2 overflow-x-auto rounded-lg border border-[#050505]/10 bg-white/70 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04]">
+          {TABS.map((t) => {
+            if (!user && (t === "mine" || t === "favorites" || t === "drafts"))
+              return null;
+            const active = activeTab === t;
+            const sp = new URLSearchParams();
+            if (t !== "all") sp.set("tab", t);
+            if (q) sp.set("q", q);
+            if (nivel) sp.set("nivel", nivel);
+            if (duracion) sp.set("duracion", duracion);
+            if (aspecto) sp.set("aspecto", aspecto);
+            if (golpe) sp.set("golpe", golpe);
+            return (
+              <Link
+                key={t}
+                href={sp.toString() ? `/classes?${sp.toString()}` : "/classes"}
+                className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-[#D6FF38] text-[#050505]"
+                    : "text-muted-foreground hover:bg-[#050505]/5 hover:text-foreground dark:hover:bg-white/8"
+                }`}
+              >
+                {TAB_LABELS[t]}
+                {t === "drafts" && draftCount > 0 && (
+                  <span className="ml-1.5 text-[10px] tabular-nums opacity-60">
+                    ({draftCount})
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {activeTab === "drafts" && user ? (
+          draftRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-20 text-center dark:border-white/15 dark:bg-white/[0.04]">
+              <div className="flex size-14 items-center justify-center rounded-lg border border-[#D6FF38]/40 bg-[#D6FF38]/20">
+                <FileText className="size-6 text-[#6D7F00] dark:text-[#D6FF38]" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-foreground/40">
+                  Sin borradores
+                </p>
+                <p className="text-sm text-foreground/30 mt-1">
+                  Las clases que guardes como borrador aparecerán aquí.
+                </p>
+              </div>
+              <Link
+                href="/classes/new"
+                className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
+              >
+                Crear clase
+              </Link>
+            </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((cls) => (
-                <li key={cls.id}>
-                  <Link
-                    href={`/classes/${cls.id}`}
-                    className="group flex h-full flex-col justify-between rounded-lg border border-border bg-card p-5 transition-colors hover:border-brand/40"
+            <ul className="space-y-2">
+              {draftRows.map((draft, i) => {
+                const name =
+                  (typeof draft.payload?.name === "string" &&
+                    (draft.payload.name as string).trim()) ||
+                  "Clase sin título";
+                return (
+                  <li
+                    key={draft.id}
+                    className="flex items-center gap-3 rounded-lg border border-[#050505]/10 bg-white/70 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <span className="text-[11.5px] font-medium text-foreground/55 tabular-nums">
-                          {cls.duracionMinutes} min
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {cls.isLibrary && (
-                            <span className="text-[10px] font-medium text-brand border border-brand/30 bg-brand/[0.06] px-1.5 py-0.5 rounded">
-                              Biblioteca
-                            </span>
-                          )}
-                          {favorites.has(cls.id) && (
-                            <Heart
-                              className="size-3.5 fill-pink-500 text-pink-500"
-                              aria-label="Favorito"
-                            />
+                    <span className="font-sans text-[9px] tabular-nums text-foreground/30 shrink-0">
+                      {(i + 1).toString().padStart(2, "0")}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-heading text-foreground truncate">
+                        {name}
+                      </p>
+                      <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums">
+                        {new Intl.DateTimeFormat("es-ES", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(draft.updatedAt))}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/classes/new?draft=${draft.id}`}
+                      className="inline-flex items-center gap-1 rounded-full bg-[#D6FF38] px-3 py-1.5 text-[12px] font-semibold text-[#050505] transition hover:bg-[#050505] hover:text-white dark:hover:bg-white"
+                    >
+                      Continuar
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : (
+          <>
+            {/* Filtros: search + nivel + duración + aspecto + golpe */}
+            <form
+              className="grid gap-3 rounded-lg border border-[#050505]/10 bg-white/70 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04] md:grid-cols-[minmax(220px,1fr)_repeat(4,auto)_auto] md:items-end"
+              action="/classes"
+            >
+              {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
+              <div className="flex-1 min-w-[200px]">
+                <label
+                  htmlFor="q"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Buscar
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+                  <input
+                    id="q"
+                    name="q"
+                    defaultValue={q}
+                    placeholder="Nombre, contenido, objetivos…"
+                    className="h-11 w-full rounded-full border border-[#050505]/12 bg-[#F4F4F1] pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="nivel"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Nivel
+                </label>
+                <select
+                  id="nivel"
+                  name="nivel"
+                  defaultValue={nivel}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {NIVEL_FILTERS.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="duracion"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Duración
+                </label>
+                <select
+                  id="duracion"
+                  name="duracion"
+                  defaultValue={duracion}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {DURACION_FILTERS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="aspecto"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Aspecto
+                </label>
+                <select
+                  id="aspecto"
+                  name="aspecto"
+                  defaultValue={aspecto}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  {ASPECTO_FILTERS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="golpe"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
+                >
+                  Golpe
+                </label>
+                <select
+                  id="golpe"
+                  name="golpe"
+                  defaultValue={golpe}
+                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
+                >
+                  <option value="">Cualquiera</option>
+                  {GOLPES_FILTERS.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="h-11 rounded-full bg-[#050505] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
+              >
+                Filtrar
+              </button>
+            </form>
+
+            {/* Listado */}
+            {rows.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
+                <p className="text-[15px] font-medium text-foreground mb-2">
+                  No hay clases que coincidan
+                </p>
+                <p className="text-[13px] text-foreground/55 max-w-md mx-auto">
+                  Prueba a quitar algún filtro o crea una clase nueva.
+                </p>
+                {user && (
+                  <Link
+                    href="/classes/new"
+                    className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
+                  >
+                    <Plus className="size-3.5" />
+                    Crear la primera
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {rows.map((cls) => (
+                  <li key={cls.id}>
+                    <Link
+                      href={`/classes/${cls.id}`}
+                      className="group flex h-full flex-col justify-between overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#D6FF38] hover:shadow-[0_24px_50px_rgba(5,5,5,0.12)] dark:border-white/10 dark:bg-white/[0.04]"
+                    >
+                      <div>
+                        <div className="mb-4 flex items-start justify-between gap-3 bg-[#050505] px-5 py-3 text-white">
+                          <span className="rounded-full bg-[#D6FF38] px-2.5 py-1 text-[11.5px] font-bold tabular-nums text-[#050505]">
+                            {cls.duracionMinutes} min
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {cls.isLibrary && (
+                              <span className="rounded-full border border-[#D6FF38]/50 bg-[#D6FF38]/15 px-2 py-0.5 text-[10px] font-semibold text-[#D6FF38]">
+                                Biblioteca
+                              </span>
+                            )}
+                            {favorites.has(cls.id) && (
+                              <Heart
+                                className="size-3.5 fill-pink-500 text-pink-500"
+                                aria-label="Favorito"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="px-5">
+                          <h3 className="line-clamp-3 font-heading text-[19px] font-semibold leading-snug text-foreground transition-colors group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
+                            {cls.name}
+                          </h3>
+                          {cls.objetivos && (
+                            <p className="mt-3 line-clamp-3 text-[13px] leading-5 text-muted-foreground">
+                              {cls.objetivos}
+                            </p>
                           )}
                         </div>
                       </div>
-                      <h3 className="font-heading text-[17px] font-semibold text-foreground group-hover:text-brand transition-colors line-clamp-3 leading-snug">
-                        {cls.name}
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 pt-4 mt-4 border-t border-border">
-                      {cls.alumnosTipo && (
-                        <span className="text-[10.5px] px-1.5 py-0.5 rounded border border-border text-foreground/60 capitalize">
-                          {cls.alumnosTipo}
+                      <div className="mx-5 mb-5 mt-5 flex flex-wrap gap-1.5 border-t border-border pt-4">
+                        <span className="rounded-full border border-border px-2 py-1 text-[10.5px] text-foreground/60">
+                          {cls.numAlumnos
+                            ? `${cls.numAlumnos} alumnos`
+                            : cls.alumnosTipo === "individual"
+                              ? "1 alumno"
+                              : "Grupo"}
                         </span>
-                      )}
-                      {cls.nivel && (
-                        <span className="text-[10.5px] px-1.5 py-0.5 rounded border border-brand/30 bg-brand/[0.06] text-brand">
-                          {cls.nivel.replace(/_/g, " ")}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
+                        {cls.alumnosTipo && (
+                          <span className="rounded-full border border-border px-2 py-1 text-[10.5px] capitalize text-foreground/60">
+                            {cls.alumnosTipo}
+                          </span>
+                        )}
+                        {cls.nivel && (
+                          <span className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]">
+                            {cls.nivel.replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

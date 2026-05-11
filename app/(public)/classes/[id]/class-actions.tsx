@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClassListPicker } from "./class-list-picker";
 
 interface ClassActionsProps {
   classId: string;
@@ -34,20 +35,21 @@ export function ClassActions({ classId, initialFavorite }: ClassActionsProps) {
       <button
         type="button"
         onClick={addToSession}
-        className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all duration-150"
+        className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2.5 text-sm font-black text-[#050505] transition hover:bg-white active:scale-95"
       >
         <Plus className="size-4" /> Añadir a mis sesiones
       </button>
+      <ClassListPicker classId={classId} />
       <button
         type="button"
         onClick={toggleFavorite}
         disabled={busy}
         aria-label={fav ? "Quitar de favoritos" : "Añadir a favoritos"}
         className={cn(
-          "size-10 rounded-xl border flex items-center justify-center transition-colors",
+          "flex size-10 items-center justify-center rounded-full border transition-colors",
           fav
-            ? "border-pink-500/40 bg-pink-500/10 text-pink-500"
-            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+            ? "border-[#D6FF38]/60 bg-[#D6FF38]/15 text-[#D6FF38]"
+            : "border-white/16 text-white/55 hover:border-[#D6FF38] hover:text-[#D6FF38]",
           busy && "opacity-60"
         )}
       >

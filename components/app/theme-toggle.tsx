@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sun, Moon } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { applyAccentColor } from "@/lib/accent-colors";
 
 type VTDocument = Document & {
@@ -21,13 +22,15 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     function syncThemeState() {
       const autoTheme = localStorage.getItem("theme-auto") !== "false";
       const stored = localStorage.getItem("theme");
-      setIsDark(
-        autoTheme
-          ? getTimeBasedDarkMode()
-          : stored
-            ? stored === "dark"
-            : getTimeBasedDarkMode()
-      );
+      const nextDark = autoTheme
+        ? getTimeBasedDarkMode()
+        : stored
+          ? stored === "dark"
+          : getTimeBasedDarkMode();
+
+      setIsDark(nextDark);
+      document.documentElement.classList.toggle("dark", nextDark);
+      applyAccentColor(localStorage.getItem("accent") ?? "blue");
     }
 
     /* eslint-disable react-hooks/set-state-in-effect -- hydration-safe read from localStorage */
@@ -90,24 +93,31 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  if (!mounted) return <div className={compact ? "size-8" : "h-10"} />;
+  if (!mounted) return <div className={compact ? "size-9" : "h-10"} />;
 
   return (
     <button
       onClick={toggle}
+      aria-pressed={isDark}
       aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-      className={
+      className={cn(
+        "group border font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D6FF38] disabled:pointer-events-none disabled:opacity-50",
         compact
-          ? "size-8 flex items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors text-muted-foreground hover:text-foreground"
-          : "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
-      }
-    >
-      {isDark ? (
-        <Sun className="size-4 shrink-0" />
-      ) : (
-        <Moon className="size-4 shrink-0" />
+          ? "flex size-9 items-center justify-center rounded-lg border-[#050505]/10 bg-white text-[#050505] shadow-sm hover:bg-[#D6FF38] dark:border-white/10 dark:bg-white/[0.08] dark:text-white dark:hover:bg-[#D6FF38] dark:hover:text-[#050505]"
+          : "flex h-10 w-full items-center justify-between gap-3 rounded-lg border-border bg-card px-3 text-sm text-foreground hover:border-[#D6FF38] hover:bg-[#D6FF38] hover:text-[#050505] dark:border-white/10 dark:bg-white/[0.05] dark:text-white"
       )}
-      {!compact && <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>}
+    >
+      <span className="inline-flex items-center gap-2">
+        {isDark ? (
+          <Sun className="size-4 shrink-0" />
+        ) : (
+          <Moon className="size-4 shrink-0" />
+        )}
+        {!compact && <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>}
+      </span>
+      {!compact && (
+        <span className="size-2 rounded-full bg-[#D6FF38] shadow-[0_0_0_4px_rgba(214,255,56,0.16)]" />
+      )}
     </button>
   );
 }

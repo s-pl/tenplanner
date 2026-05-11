@@ -32,6 +32,16 @@ const ASPECTOS = [
   { id: "fisico", label: "Físico" },
 ];
 
+const GOLPES = [
+  { id: "derecha", label: "Derecha" },
+  { id: "reves", label: "Reves" },
+  { id: "saque", label: "Saque" },
+  { id: "volea", label: "Volea" },
+  { id: "remate", label: "Remate" },
+  { id: "dejada", label: "Dejada" },
+  { id: "globo", label: "Globo" },
+];
+
 const DURACIONES = [30, 45, 60, 75, 90, 120];
 
 const BLOCK_TITLES = [
@@ -47,7 +57,12 @@ interface AvailableExercise {
 }
 
 type BlockItem =
-  | { kind: "exercise"; exerciseId: string; name: string; durationMinutes: number | null }
+  | {
+      kind: "exercise";
+      exerciseId: string;
+      name: string;
+      durationMinutes: number | null;
+    }
   | { kind: "text"; freeText: string; durationMinutes: number | null };
 
 interface BlockState {
@@ -61,8 +76,10 @@ export interface ClassInitialData {
   name: string;
   duracionMinutes: number;
   alumnosTipo: "individual" | "grupal" | null;
+  numAlumnos: number | null;
   nivel: string | null;
   aspectoJuego: string | null;
+  golpes: string[] | null;
   objetivos: string | null;
   material: string | null;
   videoUrl: string | null;
@@ -99,10 +116,14 @@ export function ClassForm({
   const [alumnosTipo, setAlumnosTipo] = useState<"individual" | "grupal" | "">(
     initialData?.alumnosTipo ?? ""
   );
+  const [numAlumnos, setNumAlumnos] = useState<number | "">(
+    initialData?.numAlumnos ?? ""
+  );
   const [nivel, setNivel] = useState<string>(initialData?.nivel ?? "");
   const [aspectoJuego, setAspectoJuego] = useState<string>(
     initialData?.aspectoJuego ?? ""
   );
+  const [golpes, setGolpes] = useState<string[]>(initialData?.golpes ?? []);
   const [objetivos, setObjetivos] = useState(initialData?.objetivos ?? "");
   const [material, setMaterial] = useState(initialData?.material ?? "");
   const [videoUrl, setVideoUrl] = useState(initialData?.videoUrl ?? "");
@@ -194,7 +215,11 @@ export function ClassForm({
     );
   }
 
-  function updateItem(blockIdx: number, itemIdx: number, patch: Partial<BlockItem>) {
+  function updateItem(
+    blockIdx: number,
+    itemIdx: number,
+    patch: Partial<BlockItem>
+  ) {
     setBlocks((prev) =>
       prev.map((b, i) =>
         i === blockIdx
@@ -227,18 +252,16 @@ export function ClassForm({
     });
   }
 
-  const [dragSource, setDragSource] = useState<
-    { blockIdx: number; itemIdx: number } | null
-  >(null);
-  const [dragOverTarget, setDragOverTarget] = useState<
-    { blockIdx: number; itemIdx: number } | null
-  >(null);
+  const [dragSource, setDragSource] = useState<{
+    blockIdx: number;
+    itemIdx: number;
+  } | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<{
+    blockIdx: number;
+    itemIdx: number;
+  } | null>(null);
 
-  function handleDragStart(
-    e: DragEvent,
-    blockIdx: number,
-    itemIdx: number
-  ) {
+  function handleDragStart(e: DragEvent, blockIdx: number, itemIdx: number) {
     e.dataTransfer.setData("text/plain", `${blockIdx}:${itemIdx}`);
     e.dataTransfer.effectAllowed = "move";
     setDragSource({ blockIdx, itemIdx });
@@ -249,21 +272,13 @@ export function ClassForm({
     setDragOverTarget(null);
   }
 
-  function handleDragOverItem(
-    e: DragEvent,
-    blockIdx: number,
-    itemIdx: number
-  ) {
+  function handleDragOverItem(e: DragEvent, blockIdx: number, itemIdx: number) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOverTarget({ blockIdx, itemIdx });
   }
 
-  function handleDropOnItem(
-    e: DragEvent,
-    blockIdx: number,
-    itemIdx: number
-  ) {
+  function handleDropOnItem(e: DragEvent, blockIdx: number, itemIdx: number) {
     e.preventDefault();
     e.stopPropagation();
     const data = e.dataTransfer.getData("text/plain");
@@ -283,6 +298,12 @@ export function ClassForm({
     handleDragEnd();
   }
 
+  function toggleGolpe(id: string) {
+    setGolpes((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -296,12 +317,14 @@ export function ClassForm({
       name: name.trim(),
       duracionMinutes,
       alumnosTipo: alumnosTipo || null,
+      numAlumnos: numAlumnos === "" ? null : Number(numAlumnos),
       objetivos: objetivos.trim() || null,
       material: material.trim() || null,
       videoUrl: videoUrl.trim() || null,
       aspectosImportantes: aspectosImportantes.trim() || null,
       nivel: nivel || null,
       aspectoJuego: aspectoJuego || null,
+      golpes: golpes.length > 0 ? golpes : null,
       isLibrary: isAdmin ? isLibrary : false,
       blocks: blocks
         .filter((b) => b.items.length > 0 || b.notes.trim())
@@ -363,16 +386,18 @@ export function ClassForm({
     );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Identidad */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-5">
-        <div className="flex items-center gap-3 pb-3 border-b border-border/60">
-          <div className="size-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+      <section className="space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+        <div className="flex items-center gap-3 border-b border-foreground/10 pb-4">
+          <div className="flex size-9 items-center justify-center rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/12 text-[#D6FF38]">
             <GraduationCap className="size-4" strokeWidth={1.8} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Datos de la clase</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
+              Datos de la clase
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
               Identidad, nivel y duración
             </p>
           </div>
@@ -393,11 +418,11 @@ export function ClassForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Derecha y revés verde"
-            className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground font-medium"
+            className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
           />
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-foreground">
               Duración
@@ -405,7 +430,7 @@ export function ClassForm({
             <select
               value={duracionMinutes}
               onChange={(e) => setDuracionMinutes(Number(e.target.value))}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             >
               {DURACIONES.map((d) => (
                 <option key={d} value={d}>
@@ -424,12 +449,33 @@ export function ClassForm({
               onChange={(e) =>
                 setAlumnosTipo(e.target.value as "individual" | "grupal" | "")
               }
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             >
               <option value="">— Selecciona —</option>
               <option value="individual">Individual</option>
               <option value="grupal">Grupal</option>
             </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="numAlumnos"
+              className="block text-sm font-semibold text-foreground"
+            >
+              Alumnos
+            </label>
+            <input
+              id="numAlumnos"
+              type="number"
+              min={1}
+              max={60}
+              value={numAlumnos}
+              onChange={(e) =>
+                setNumAlumnos(e.target.value ? Number(e.target.value) : "")
+              }
+              placeholder="4"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -439,7 +485,7 @@ export function ClassForm({
             <select
               value={nivel}
               onChange={(e) => setNivel(e.target.value)}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             >
               <option value="">— Selecciona —</option>
               {NIVELES.map((n) => (
@@ -464,10 +510,10 @@ export function ClassForm({
                   type="button"
                   onClick={() => setAspectoJuego(active ? "" : a.id)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
                     active
-                      ? "bg-brand/10 border-brand text-brand"
-                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                      : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {a.label}
@@ -476,11 +522,37 @@ export function ClassForm({
             })}
           </div>
         </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Golpes
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {GOLPES.map((g) => {
+              const active = golpes.includes(g.id);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => toggleGolpe(g.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                    active
+                      ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                      : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* Objetivos / Material / Vídeo */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-5">
-        <p className="text-sm font-semibold text-foreground border-b border-border/60 pb-3">
+      <section className="space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+        <p className="border-b border-foreground/10 pb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
           Contenido
         </p>
 
@@ -501,7 +573,7 @@ export function ClassForm({
             value={objetivos}
             onChange={(e) => setObjetivos(e.target.value)}
             placeholder="1) preparar la raqueta antes del bote 2) terminar el golpe…"
-            className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground resize-none"
+            className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
           />
         </div>
 
@@ -523,7 +595,7 @@ export function ClassForm({
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
               placeholder="Pelotas verdes, 9 aros, conos…"
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground resize-none"
+              className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
 
@@ -544,7 +616,7 @@ export function ClassForm({
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               placeholder="https://…"
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
         </div>
@@ -552,14 +624,14 @@ export function ClassForm({
 
       {/* Estructura por bloques */}
       <section className="space-y-4">
-        <p className="text-sm font-semibold text-foreground">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
           Estructura por bloques
         </p>
 
         {blocks.map((block, blockIdx) => (
           <div
             key={block.orderIndex}
-            className="rounded-2xl border border-border bg-card p-5 space-y-4"
+            className="space-y-4 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -570,8 +642,10 @@ export function ClassForm({
                   type="text"
                   maxLength={120}
                   value={block.title}
-                  onChange={(e) => updateBlock(blockIdx, { title: e.target.value })}
-                  className="font-heading text-lg bg-transparent border-0 border-b border-transparent hover:border-border focus:border-brand focus:outline-none px-1 py-0.5 text-foreground transition-colors"
+                  onChange={(e) =>
+                    updateBlock(blockIdx, { title: e.target.value })
+                  }
+                  className="border-0 border-b border-transparent bg-transparent px-1 py-0.5 font-heading text-lg text-foreground transition-colors hover:border-foreground/20 focus:border-[#D6FF38] focus:outline-none"
                 />
               </div>
             </div>
@@ -594,81 +668,83 @@ export function ClassForm({
                     dragOverTarget?.itemIdx === itemIdx &&
                     !isDraggingThis;
                   return (
-                  <li
-                    key={itemIdx}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, blockIdx, itemIdx)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleDragOverItem(e, blockIdx, itemIdx)}
-                    onDrop={(e) => handleDropOnItem(e, blockIdx, itemIdx)}
-                    className={cn(
-                      "flex items-start gap-2 bg-muted/40 border rounded-xl p-3 transition-colors",
-                      isDraggingThis
-                        ? "opacity-40 border-brand/40"
-                        : isDropTarget
-                          ? "border-brand/60 bg-brand/5"
-                          : "border-border"
-                    )}
-                  >
-                    <span
-                      className="cursor-grab active:cursor-grabbing pt-1 text-muted-foreground/60 hover:text-foreground"
-                      title="Arrastrar"
-                    >
-                      <GripVertical className="size-3.5" />
-                    </span>
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums pt-1">
-                      {String(itemIdx + 1).padStart(2, "0")}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      {item.kind === "exercise" ? (
-                        <div className="flex items-center gap-2">
-                          <Dumbbell className="size-3.5 text-brand shrink-0" />
-                          <span className="text-sm text-foreground truncate">
-                            {item.name}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-2">
-                          <Type className="size-3.5 text-muted-foreground mt-1 shrink-0" />
-                          <textarea
-                            rows={2}
-                            value={item.freeText}
-                            onChange={(e) =>
-                              updateItem(blockIdx, itemIdx, {
-                                kind: "text",
-                                freeText: e.target.value,
-                              } as Partial<BlockItem>)
-                            }
-                            placeholder="Escribe la actividad…"
-                            className="flex-1 text-sm bg-transparent border-0 focus:outline-none text-foreground resize-none placeholder:text-muted-foreground"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      type="number"
-                      min={1}
-                      max={300}
-                      placeholder="min"
-                      value={item.durationMinutes ?? ""}
-                      onChange={(e) =>
-                        updateItem(blockIdx, itemIdx, {
-                          durationMinutes: e.target.value
-                            ? Number(e.target.value)
-                            : null,
-                        } as Partial<BlockItem>)
+                    <li
+                      key={itemIdx}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, blockIdx, itemIdx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) =>
+                        handleDragOverItem(e, blockIdx, itemIdx)
                       }
-                      className="w-16 h-8 px-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground tabular-nums"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(blockIdx, itemIdx)}
-                      aria-label="Quitar"
-                      className="size-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onDrop={(e) => handleDropOnItem(e, blockIdx, itemIdx)}
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg border bg-muted/30 p-3 transition-colors",
+                        isDraggingThis
+                          ? "opacity-40 border-brand/40"
+                          : isDropTarget
+                            ? "border-brand/60 bg-brand/5"
+                            : "border-foreground/10"
+                      )}
                     >
-                      <X className="size-3.5" />
-                    </button>
-                  </li>
+                      <span
+                        className="cursor-grab active:cursor-grabbing pt-1 text-muted-foreground/60 hover:text-foreground"
+                        title="Arrastrar"
+                      >
+                        <GripVertical className="size-3.5" />
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums pt-1">
+                        {String(itemIdx + 1).padStart(2, "0")}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {item.kind === "exercise" ? (
+                          <div className="flex items-center gap-2">
+                            <Dumbbell className="size-3.5 text-brand shrink-0" />
+                            <span className="text-sm text-foreground truncate">
+                              {item.name}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2">
+                            <Type className="size-3.5 text-muted-foreground mt-1 shrink-0" />
+                            <textarea
+                              rows={2}
+                              value={item.freeText}
+                              onChange={(e) =>
+                                updateItem(blockIdx, itemIdx, {
+                                  kind: "text",
+                                  freeText: e.target.value,
+                                } as Partial<BlockItem>)
+                              }
+                              placeholder="Escribe la actividad…"
+                              className="flex-1 text-sm bg-transparent border-0 focus:outline-none text-foreground resize-none placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min={1}
+                        max={300}
+                        placeholder="min"
+                        value={item.durationMinutes ?? ""}
+                        onChange={(e) =>
+                          updateItem(blockIdx, itemIdx, {
+                            durationMinutes: e.target.value
+                              ? Number(e.target.value)
+                              : null,
+                          } as Partial<BlockItem>)
+                        }
+                        className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(blockIdx, itemIdx)}
+                        aria-label="Quitar"
+                        className="size-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </li>
                   );
                 })}
               </ul>
@@ -679,14 +755,14 @@ export function ClassForm({
               <div
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDropOnBlockEnd(e, blockIdx)}
-                className="rounded-xl border-2 border-dashed border-brand/40 bg-brand/5 px-4 py-6 text-center text-xs text-brand"
+                className="rounded-lg border-2 border-dashed border-[#D6FF38]/50 bg-[#D6FF38]/10 px-4 py-6 text-center text-xs font-semibold text-foreground"
               >
                 Suelta aquí para mover al bloque {block.orderIndex}
               </div>
             )}
 
             {pickerOpen === blockIdx ? (
-              <div className="space-y-2 border border-brand/30 rounded-xl p-3 bg-brand/5">
+              <div className="space-y-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <input
                     type="text"
@@ -694,7 +770,7 @@ export function ClassForm({
                     onChange={(e) => setSearch(e.target.value)}
                     autoFocus
                     placeholder="Buscar ejercicio…"
-                    className="flex-1 h-9 px-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/40 text-foreground"
+                    className="h-9 flex-1 rounded-lg border border-foreground/15 bg-background/80 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
                   />
                   <button
                     type="button"
@@ -737,14 +813,14 @@ export function ClassForm({
                     setPickerOpen(blockIdx);
                     setSearch("");
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold border border-border rounded-lg px-3 py-1.5 hover:bg-muted text-foreground transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                 >
                   <Dumbbell className="size-3.5" /> Añadir ejercicio
                 </button>
                 <button
                   type="button"
                   onClick={() => addTextToBlock(blockIdx)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold border border-border rounded-lg px-3 py-1.5 hover:bg-muted text-foreground transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                 >
                   <Type className="size-3.5" /> Texto libre
                 </button>
@@ -758,9 +834,11 @@ export function ClassForm({
               <textarea
                 rows={2}
                 value={block.notes}
-                onChange={(e) => updateBlock(blockIdx, { notes: e.target.value })}
+                onChange={(e) =>
+                  updateBlock(blockIdx, { notes: e.target.value })
+                }
                 placeholder="Aspectos importantes de este bloque…"
-                className="mt-2 w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground placeholder:text-muted-foreground resize-none"
+                className="mt-2 w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
               />
             </details>
           </div>
@@ -768,7 +846,7 @@ export function ClassForm({
       </section>
 
       {/* Aspectos importantes */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-3">
+      <section className="space-y-3 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <label
           htmlFor="aspectos"
           className="block text-sm font-semibold text-foreground"
@@ -783,7 +861,7 @@ export function ClassForm({
           value={aspectosImportantes}
           onChange={(e) => setAspectosImportantes(e.target.value)}
           placeholder="Información extra valiosa para quien imparta esta clase…"
-          className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground placeholder:text-muted-foreground resize-none"
+          className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
         />
 
         {isAdmin && (
@@ -792,7 +870,7 @@ export function ClassForm({
               type="checkbox"
               checked={isLibrary}
               onChange={(e) => setIsLibrary(e.target.checked)}
-              className="size-4 rounded border-border text-brand focus:ring-brand/40"
+              className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
             />
             <span className="text-foreground/80">
               Marcar como Biblioteca Ten Planner (visible para todos)
@@ -802,16 +880,16 @@ export function ClassForm({
       </section>
 
       {error && (
-        <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
-      <div className="flex items-center gap-3 pt-2 border-t border-border/60">
+      <div className="flex items-center gap-3 border-t border-foreground/10 pt-4">
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-all hover:bg-[#c8f52e] active:scale-95 disabled:opacity-60"
         >
           {submitting && <Loader2 className="size-4 animate-spin" />}
           {mode === "edit" ? null : <Plus className="size-4" />}

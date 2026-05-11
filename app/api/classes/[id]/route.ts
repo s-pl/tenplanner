@@ -9,6 +9,7 @@ import {
   exercises,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { isPublicHttpUrl } from "@/lib/url-safety";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -29,12 +30,16 @@ const updateSchema = z.object({
   name: z.string().trim().min(1).max(255).optional(),
   duracionMinutes: z.number().int().min(1).max(600).optional(),
   alumnosTipo: z.enum(["individual", "grupal"]).nullable().optional(),
+  numAlumnos: z.number().int().min(1).max(60).nullable().optional(),
   objetivos: z.string().trim().max(4000).nullable().optional(),
   material: z.string().trim().max(2000).nullable().optional(),
   videoUrl: z
     .string()
     .trim()
     .max(500)
+    .refine((value) => value === "" || isPublicHttpUrl(value), {
+      message: "La URL de video debe ser http(s) y no apuntar a una red local.",
+    })
     .nullable()
     .optional()
     .or(z.literal("")),
@@ -189,6 +194,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
         updateValues.duracionMinutes = d.duracionMinutes;
       if (d.alumnosTipo !== undefined)
         updateValues.alumnosTipo = d.alumnosTipo;
+      if (d.numAlumnos !== undefined) updateValues.numAlumnos = d.numAlumnos;
       if (d.objetivos !== undefined) updateValues.objetivos = d.objetivos;
       if (d.material !== undefined) updateValues.material = d.material;
       if (d.videoUrl !== undefined)

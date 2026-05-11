@@ -9,6 +9,7 @@ import {
   exercises,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { isPublicHttpUrl } from "@/lib/url-safety";
 
 const blockExerciseSchema = z.object({
   exerciseId: z.string().uuid().optional().nullable(),
@@ -27,9 +28,19 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(255),
   duracionMinutes: z.number().int().min(1).max(600),
   alumnosTipo: z.enum(["individual", "grupal"]).optional().nullable(),
+  numAlumnos: z.number().int().min(1).max(60).optional().nullable(),
   objetivos: z.string().trim().max(4000).optional().nullable(),
   material: z.string().trim().max(2000).optional().nullable(),
-  videoUrl: z.string().trim().max(500).optional().nullable().or(z.literal("")),
+  videoUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => value === "" || isPublicHttpUrl(value), {
+      message: "La URL de video debe ser http(s) y no apuntar a una red local.",
+    })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   aspectosImportantes: z.string().trim().max(4000).optional().nullable(),
   nivel: z.string().trim().max(32).optional().nullable(),
   aspectoJuego: z.string().trim().max(16).optional().nullable(),
@@ -72,6 +83,7 @@ export async function GET(request: Request) {
       name: classes.name,
       duracionMinutes: classes.duracionMinutes,
       alumnosTipo: classes.alumnosTipo,
+      numAlumnos: classes.numAlumnos,
       nivel: classes.nivel,
       aspectoJuego: classes.aspectoJuego,
       isLibrary: classes.isLibrary,
@@ -151,6 +163,7 @@ export async function POST(request: Request) {
           name: d.name,
           duracionMinutes: d.duracionMinutes,
           alumnosTipo: d.alumnosTipo ?? null,
+          numAlumnos: d.numAlumnos ?? null,
           objetivos: d.objetivos ?? null,
           material: d.material ?? null,
           videoUrl: d.videoUrl || null,

@@ -1,29 +1,30 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Dumbbell,
-  ClipboardList,
+  BookOpen,
   CalendarDays,
+  ChevronRight,
+  ClipboardList,
+  Dumbbell,
+  GraduationCap,
+  Heart,
+  LayoutDashboard,
+  Lock,
+  LogOut,
+  MapPin,
+  Menu,
+  NotebookPen,
+  Plus,
+  ShieldCheck,
+  Store,
+  UserCircle,
   Users,
   Users2,
-  UserCircle,
-  LogOut,
-  Menu,
   X,
-  LayoutDashboard,
-  Plus,
-  Lock,
-  Heart,
-  BookOpen,
-  Store,
-  ShieldCheck,
-  ChevronRight,
-  GraduationCap,
-  MapPin,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,7 @@ interface NavItem {
   publicAccess?: boolean;
   feature?: FeatureKey;
   submenu?: SubItem[];
-  /** Etiqueta usada para el primer ítem auto-generado del submenú (default "Ver todas") */
+  /** Etiqueta usada para el primer item auto-generado del submenu (default "Ver todas") */
   allLabel?: string;
 }
 
@@ -103,7 +104,7 @@ const navItems: NavItem[] = [
         icon: Store,
         feature: "sessionTemplates",
       },
-      { href: "/sessions/new", label: "Nueva sesión", icon: Plus },
+      { href: "/sessions/new", label: "Nueva sesion", icon: Plus },
     ],
   },
   {
@@ -136,7 +137,19 @@ interface SidebarNavProps {
   drPlannerEnabled?: boolean;
   features?: Partial<FeatureMap>;
   appName?: string;
-  appTagline?: string;
+}
+
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "grid size-10 shrink-0 place-items-center rounded-lg bg-[#D6FF38] text-[#050505] shadow-[0_14px_40px_rgba(214,255,56,0.24)]",
+        className
+      )}
+    >
+      <NotebookPen className="size-4" strokeWidth={2} />
+    </span>
+  );
 }
 
 function NavContent({
@@ -148,7 +161,6 @@ function NavContent({
   features,
   onSignOut,
   appName,
-  appTagline,
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -158,7 +170,6 @@ function NavContent({
   features: FeatureMap;
   onSignOut: () => void;
   appName?: string;
-  appTagline?: string;
 }) {
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
@@ -187,30 +198,24 @@ function NavContent({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Wordmark */}
-      <div className="border-b border-sidebar-border px-5 py-5">
-        <Link href="/dashboard" className="block" onClick={onNavigate}>
-          <p className="font-heading text-2xl leading-none text-foreground">
-            {appName && appName !== "TenPlanner" ? (
-              <span className="text-brand">{appName}</span>
-            ) : (
-              <>
-                ten<em className="italic text-brand">planner</em>
-              </>
-            )}
-          </p>
-          {appTagline && (
-            <p className="mt-1 font-sans text-[11px] text-foreground/40">
-              {appTagline}
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="border-b border-sidebar-border px-4 py-4">
+        <Link
+          href="/dashboard"
+          className="group flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-sidebar-accent"
+          onClick={onNavigate}
+        >
+          <BrandMark />
+          <div className="min-w-0">
+            <p className="truncate text-base font-black tracking-tight text-sidebar-foreground">
+              {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
             </p>
-          )}
+          </div>
         </Link>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-1">
           {navItems.map(
             ({
               href,
@@ -233,11 +238,16 @@ function NavContent({
                     <Link
                       href="/login"
                       onClick={onNavigate}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/40 transition-colors hover:bg-sidebar-accent/55 hover:text-foreground/65"
+                      className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sidebar-foreground/46 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground/78"
                     >
                       <Icon className="size-4" strokeWidth={1.6} />
-                      <span className="flex-1 text-[14px]">{label}</span>
-                      <Lock className="size-3 text-foreground/30" strokeWidth={1.8} />
+                      <span className="flex-1 truncate text-[13px] font-semibold">
+                        {label}
+                      </span>
+                      <Lock
+                        className="size-3 text-sidebar-foreground/34"
+                        strokeWidth={1.8}
+                      />
                     </Link>
                   </li>
                 );
@@ -246,10 +256,15 @@ function NavContent({
               if (featureLocked) {
                 return (
                   <li key={href}>
-                    <span className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/40">
+                    <span className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sidebar-foreground/38">
                       <Icon className="size-4" strokeWidth={1.6} />
-                      <span className="flex-1 text-[14px]">{label}</span>
-                      <Lock className="size-3 text-foreground/30" strokeWidth={1.8} />
+                      <span className="flex-1 truncate text-[13px] font-semibold">
+                        {label}
+                      </span>
+                      <Lock
+                        className="size-3 text-sidebar-foreground/32"
+                        strokeWidth={1.8}
+                      />
                     </span>
                   </li>
                 );
@@ -262,30 +277,30 @@ function NavContent({
                       type="button"
                       onClick={() => toggleSubmenu(href)}
                       className={cn(
-                        "flex w-full items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
+                        "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors",
                         isActive
-                          ? "bg-sidebar-accent/60 text-foreground"
-                          : "text-foreground/70 hover:bg-sidebar-accent/45 hover:text-foreground"
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       )}
                     >
                       <Icon
                         className={cn(
                           "size-4",
-                          isActive ? "text-brand" : "text-foreground/60"
+                          isActive ? "text-brand" : "text-sidebar-foreground/52"
                         )}
                         strokeWidth={1.6}
                       />
                       <span
                         className={cn(
-                          "flex-1 text-[14px]",
-                          isActive && "font-medium text-foreground"
+                          "flex-1 truncate text-[13px] font-semibold",
+                          isActive && "text-sidebar-foreground"
                         )}
                       >
                         {label}
                       </span>
                       <ChevronRight
                         className={cn(
-                          "size-3.5 text-foreground/35 transition-transform",
+                          "size-3.5 text-sidebar-foreground/38 transition-transform",
                           isOpen && "rotate-90 text-brand"
                         )}
                         strokeWidth={1.8}
@@ -293,16 +308,16 @@ function NavContent({
                     </button>
 
                     {isOpen && (
-                      <ul className="flex flex-col gap-0.5 pb-2 pl-9 pr-2">
+                      <ul className="ml-5 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border pb-2 pl-4 pr-1">
                         <li>
                           <Link
                             href={href}
                             onClick={onNavigate}
                             className={cn(
-                              "block py-1.5 px-2 rounded-md text-[12.5px] transition-colors",
+                              "block rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
                               pathname === href
-                                ? "text-brand"
-                                : "text-foreground/55 hover:text-foreground"
+                                ? "bg-brand text-brand-foreground"
+                                : "text-sidebar-foreground/58 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                             )}
                           >
                             {allLabel ?? "Ver todas"}
@@ -314,6 +329,7 @@ function NavContent({
                             label: subLabel,
                             accent,
                             feature,
+                            icon: SubIcon,
                           }) => {
                             const isSubActive =
                               pathname === subHref ||
@@ -325,9 +341,9 @@ function NavContent({
                             if (featureLocked) {
                               return (
                                 <li key={subHref}>
-                                  <span className="flex items-center justify-between py-1.5 px-2 text-[12.5px] text-foreground/35">
+                                  <span className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/38">
                                     <span>{subLabel}</span>
-                                    <Lock className="size-3 text-foreground/30" />
+                                    <Lock className="size-3 text-sidebar-foreground/32" />
                                   </span>
                                 </li>
                               );
@@ -339,15 +355,21 @@ function NavContent({
                                   href={subHref}
                                   onClick={onNavigate}
                                   className={cn(
-                                    "block py-1.5 px-2 rounded-md text-[12.5px] transition-colors",
+                                    "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
                                     isSubActive
-                                      ? "text-brand font-medium"
+                                      ? "bg-brand text-brand-foreground"
                                       : accent
-                                        ? "text-brand/75 hover:text-brand"
-                                        : "text-foreground/55 hover:text-foreground"
+                                        ? "text-brand hover:bg-sidebar-accent"
+                                        : "text-sidebar-foreground/58 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                                   )}
                                 >
-                                  {subLabel}
+                                  {SubIcon && (
+                                    <SubIcon
+                                      className="size-3.5 shrink-0"
+                                      strokeWidth={1.7}
+                                    />
+                                  )}
+                                  <span className="truncate">{subLabel}</span>
                                 </Link>
                               </li>
                             );
@@ -365,23 +387,25 @@ function NavContent({
                     href={href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                      "flex min-h-10 items-center gap-3 rounded-lg px-3 transition-colors",
                       isActive
-                        ? "bg-sidebar-accent/60 text-foreground"
-                        : "text-foreground/70 hover:bg-sidebar-accent/45 hover:text-foreground"
+                        ? "bg-brand text-brand-foreground shadow-[0_12px_32px_color-mix(in_oklab,var(--brand)_26%,transparent)]"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     )}
                   >
                     <Icon
                       className={cn(
                         "size-4",
-                        isActive ? "text-brand" : "text-foreground/60"
+                        isActive
+                          ? "text-brand-foreground"
+                          : "text-sidebar-foreground/52"
                       )}
                       strokeWidth={1.6}
                     />
                     <span
                       className={cn(
-                        "flex-1 text-[14px]",
-                        isActive && "font-medium text-foreground"
+                        "flex-1 truncate text-[13px] font-semibold",
+                        isActive && "font-black text-brand-foreground"
                       )}
                     >
                       {label}
@@ -394,37 +418,36 @@ function NavContent({
         </ul>
       </nav>
 
-      {/* User footer */}
-      <div className="border-t border-sidebar-border">
+      <div className="border-t border-sidebar-border bg-sidebar-accent/45">
         {isAdmin && (
           <div className="px-4 pt-3">
             <Link
               href="/admin"
               onClick={onNavigate}
               className={cn(
-                "flex w-full items-center gap-2 border px-3 py-2 text-[12px] font-medium transition-colors",
+                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-bold transition-colors",
                 pathname.startsWith("/admin")
-                  ? "border-brand/35 bg-brand/10 text-brand"
-                  : "border-sidebar-border text-foreground/55 hover:bg-sidebar-accent/55 hover:text-foreground"
+                  ? "border-brand/70 bg-brand text-brand-foreground"
+                  : "border-sidebar-border text-sidebar-foreground/64 hover:border-sidebar-ring/45 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )}
             >
               <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
-              Panel de administración
+              Panel de administracion
             </Link>
           </div>
         )}
         {user ? (
           <>
             <div className="px-4 pt-4 pb-3">
-              <p className="mb-2.5 px-1 font-mono text-[10px] uppercase text-foreground/40">
+              <p className="mb-2.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/40">
                 Cuenta
               </p>
               <Link
                 href="/profile"
                 onClick={onNavigate}
-                className="group grid grid-cols-[auto_1fr] items-center gap-3 border border-sidebar-border bg-sidebar-accent/35 px-3 py-3 transition-colors hover:border-brand/35 hover:bg-sidebar-accent/65"
+                className="group grid grid-cols-[auto_1fr] items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 py-3 transition-colors hover:border-sidebar-ring/50 hover:bg-sidebar-accent"
               >
-                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden border border-foreground/20 bg-foreground/[0.03] transition-colors group-hover:border-brand/60">
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sidebar-border bg-sidebar transition-colors group-hover:border-sidebar-ring/70">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -434,42 +457,42 @@ function NavContent({
                       className="size-full object-cover"
                     />
                   ) : (
-                    <span className="font-heading text-[11px] text-foreground/80">
+                    <span className="text-[11px] font-black text-sidebar-foreground">
                       {initials}
                     </span>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] text-foreground truncate leading-tight">
+                  <p className="truncate text-[13px] font-bold leading-tight text-sidebar-foreground">
                     {displayName}
                   </p>
-                  <p className="text-[11px] text-foreground/50 truncate mt-px tabular-nums">
+                  <p className="mt-px truncate text-[11px] tabular-nums text-sidebar-foreground/50">
                     {user.email}
                   </p>
                 </div>
               </Link>
             </div>
-            <div className="px-4 pb-4 grid grid-cols-[1fr_auto] items-center gap-2">
+            <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-4 pb-4">
               <button
                 type="button"
                 onClick={onSignOut}
-                className="group flex items-center gap-2 py-2 text-[12px] text-foreground/55 transition-colors hover:text-foreground"
+                className="group flex items-center gap-2 rounded-lg py-2 text-left text-[12px] font-semibold text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
               >
                 <LogOut className="size-3.5" strokeWidth={1.6} />
-                Cerrar sesión
+                Cerrar sesion
               </button>
               <ThemeToggle compact />
             </div>
           </>
         ) : (
-          <div className="px-4 py-4 grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-4 py-4">
             <Link
               href="/login"
               onClick={onNavigate}
-              className="flex items-center gap-2 border border-foreground/12 bg-foreground/[0.04] px-3 py-2 text-[12px] font-medium text-foreground transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground"
+              className="flex min-h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 text-[12px] font-bold text-sidebar-foreground transition-colors hover:border-sidebar-ring hover:bg-brand hover:text-brand-foreground"
             >
               <Lock className="size-3.5" strokeWidth={1.8} />
-              Iniciar sesión
+              Iniciar sesion
             </Link>
             <ThemeToggle compact />
           </div>
@@ -486,7 +509,6 @@ export function SidebarNav({
   drPlannerEnabled = true,
   features,
   appName,
-  appTagline,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -509,6 +531,9 @@ export function SidebarNav({
 
   useEffect(() => {
     if (mobileOpen) {
+      prevOpenRef.current = true;
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
       closeButtonRef.current?.focus();
 
       function handleKeyDown(e: KeyboardEvent) {
@@ -530,20 +555,23 @@ export function SidebarNav({
             e.preventDefault();
             last.focus();
           }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
+        } else if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
         }
       }
 
       document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    } else if (prevOpenRef.current) {
-      triggerRef.current?.focus();
+      return () => {
+        document.body.style.overflow = previousOverflow;
+        document.removeEventListener("keydown", handleKeyDown);
+      };
     }
-    prevOpenRef.current = mobileOpen;
+
+    if (prevOpenRef.current) {
+      triggerRef.current?.focus();
+      prevOpenRef.current = false;
+    }
   }, [mobileOpen]);
 
   async function handleSignOut() {
@@ -554,8 +582,7 @@ export function SidebarNav({
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-[18.5rem] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <NavContent
           pathname={pathname}
           user={user}
@@ -564,78 +591,69 @@ export function SidebarNav({
           features={resolvedFeatures}
           onSignOut={handleSignOut}
           appName={appName}
-          appTagline={appTagline}
         />
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-5 md:hidden">
-        <div className="flex items-center gap-2 min-w-0">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground md:hidden">
+        <div className="flex min-w-0 items-center gap-2.5">
           <Link
             href="/dashboard"
-            className="flex shrink-0 items-baseline gap-1"
+            className="flex min-w-0 shrink items-center gap-2.5"
           >
-            {appName && appName !== "TenPlanner" ? (
-              <span className="font-heading text-base text-brand">
-                {appName}
-              </span>
-            ) : (
-              <>
-                <span className="font-heading text-base text-foreground">
-                  ten
-                </span>
-                <em className="font-heading italic text-base text-brand">
-                  planner
-                </em>
-              </>
-            )}
+            <BrandMark className="size-9" />
+            <span className="truncate text-sm font-black tracking-tight">
+              {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
+            </span>
           </Link>
-          <span className="text-foreground/25 text-sm select-none">/</span>
-          <span className="font-heading text-sm text-foreground/70 truncate">
+          <span className="text-sidebar-foreground/24" aria-hidden>
+            /
+          </span>
+          <span className="truncate text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/54">
             {activeLabel}
           </span>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           <ThemeToggle compact />
           <button
             ref={triggerRef}
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex size-8 items-center justify-center text-foreground/60 transition-colors hover:text-foreground"
-            aria-label="Abrir menú"
+            className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            aria-label="Abrir menu"
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav-drawer"
           >
-            <Menu className="size-5" strokeWidth={1.6} />
+            <Menu className="size-5" strokeWidth={1.8} />
           </button>
         </div>
       </header>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div
           ref={drawerRef}
           id="mobile-nav-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Menú de navegación"
-          className="md:hidden fixed inset-0 z-50 flex"
+          aria-label="Menu de navegacion"
+          className="fixed inset-0 z-50 flex md:hidden"
         >
-          <div
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-[#050505]/68 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
+            aria-label="Cerrar menu de navegacion"
+            tabIndex={-1}
           />
-          <aside className="relative flex h-full w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar">
-            <div className="absolute top-4 right-4">
+          <aside className="relative flex h-full w-[min(20rem,calc(100vw-2rem))] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[24px_0_80px_rgba(0,0,0,0.32)]">
+            <div className="absolute right-3 top-3 z-10">
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="flex size-8 items-center justify-center text-foreground/60 transition-colors hover:text-foreground"
-                aria-label="Cerrar menú"
+                className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/68 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                aria-label="Cerrar menu"
               >
-                <X className="size-4" strokeWidth={1.6} />
+                <X className="size-4" strokeWidth={1.8} />
               </button>
             </div>
             <NavContent
@@ -647,7 +665,6 @@ export function SidebarNav({
               features={resolvedFeatures}
               onSignOut={handleSignOut}
               appName={appName}
-              appTagline={appTagline}
             />
           </aside>
         </div>

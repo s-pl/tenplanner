@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { exercises, sessions, sessionExercises, users } from "@/db/schema";
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { AdminPageHeader, adminPageShell } from "../_components/admin-ui";
 import { AdminContentClient } from "./content-client";
 
 const PER_PAGE = 50;
@@ -124,16 +125,12 @@ export default async function AdminContentPage({ searchParams }: PageProps) {
   const sTotalNum = Number(sessionTotal[0]?.total ?? 0);
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Contenido
-        </h1>
-        <p className="text-sm text-foreground/50 mt-1">
-          {exTotalNum.toLocaleString("es-ES")} ejercicios ·{" "}
-          {sTotalNum.toLocaleString("es-ES")} sesiones
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / Biblioteca"
+        title="Contenido"
+        description={`${exTotalNum.toLocaleString("es-ES")} ejercicios · ${sTotalNum.toLocaleString("es-ES")} sesiones administrables.`}
+      />
       <AdminContentClient
         exercises={exerciseRows.map((e) => ({
           ...e,

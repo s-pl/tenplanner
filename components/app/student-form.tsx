@@ -144,6 +144,7 @@ export interface StudentFormProps {
     playerLevel?: PlayerLevel | null;
     yearsExperience?: number | null;
     yearStartedTennis?: number | null;
+    yearStartedRacketSports?: number | null;
     phone?: string | null;
     preferredSchedule?: string | null;
     notes?: string | null;
@@ -161,14 +162,16 @@ function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 pb-4 border-b border-border/60 mb-5">
-      <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-        <Icon className="size-4 text-muted-foreground" />
+    <div className="mb-5 flex items-start gap-3 border-b border-foreground/10 pb-4">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/12 text-[#D6FF38]">
+        <Icon className="size-4" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
+          {title}
+        </p>
         {subtitle && (
-          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
         )}
       </div>
     </div>
@@ -200,7 +203,10 @@ export function StudentForm({
       dominantHand: initialData?.dominantHand ?? null,
       playerLevel: initialData?.playerLevel ?? null,
       yearsExperience: initialData?.yearsExperience ?? "",
-      yearStartedTennis: initialData?.yearStartedTennis ?? "",
+      yearStartedTennis:
+        initialData?.yearStartedRacketSports ??
+        initialData?.yearStartedTennis ??
+        "",
       phone: initialData?.phone ?? "",
       preferredSchedule: initialData?.preferredSchedule ?? "",
       notes: initialData?.notes ?? "",
@@ -233,6 +239,10 @@ export function StudentForm({
         values.yearsExperience === "" || values.yearsExperience == null
           ? null
           : Number(values.yearsExperience),
+      yearStartedRacketSports:
+        values.yearStartedTennis === "" || values.yearStartedTennis == null
+          ? null
+          : Number(values.yearStartedTennis),
       yearStartedTennis:
         values.yearStartedTennis === "" || values.yearStartedTennis == null
           ? null
@@ -270,8 +280,8 @@ export function StudentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-      <section>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={User}
           title="Datos personales"
@@ -292,7 +302,7 @@ export function StudentForm({
               autoComplete="off"
               aria-invalid={!!errors.name}
               {...register("name")}
-              className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground font-medium"
+              className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name.message}</p>
@@ -317,7 +327,7 @@ export function StudentForm({
                 type="email"
                 placeholder="alumno@email.com"
                 {...register("email")}
-                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.email && (
                 <p className="text-xs text-destructive">
@@ -343,7 +353,7 @@ export function StudentForm({
                 type="tel"
                 placeholder="+34 600 00 00 00"
                 {...register("phone")}
-                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.phone && (
                 <p className="text-xs text-destructive">
@@ -366,7 +376,7 @@ export function StudentForm({
                 id="birthDate"
                 type="date"
                 {...register("birthDate")}
-                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.birthDate && (
                 <p className="text-xs text-destructive">
@@ -396,10 +406,10 @@ export function StudentForm({
                         type="button"
                         onClick={() => field.onChange(isSelected ? null : id)}
                         className={cn(
-                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150",
+                          "rounded-full border px-3 py-2.5 text-sm font-medium transition-all duration-150",
                           isSelected
-                            ? "bg-brand/10 border-brand text-brand"
-                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                            ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                            : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                         )}
                       >
                         {label}
@@ -413,7 +423,7 @@ export function StudentForm({
         </div>
       </section>
 
-      <section>
+      <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={Ruler}
           title="Datos físicos"
@@ -436,7 +446,7 @@ export function StudentForm({
                 max={250}
                 placeholder="175"
                 {...register("heightCm")}
-                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.heightCm && (
                 <p className="text-xs text-destructive">
@@ -459,7 +469,7 @@ export function StudentForm({
                 max={250}
                 placeholder="70"
                 {...register("weightKg")}
-                className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.weightKg && (
                 <p className="text-xs text-destructive">
@@ -489,10 +499,10 @@ export function StudentForm({
                         type="button"
                         onClick={() => field.onChange(isSelected ? null : id)}
                         className={cn(
-                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150",
+                          "rounded-full border px-3 py-2.5 text-sm font-medium transition-all duration-150",
                           isSelected
-                            ? "bg-brand/10 border-brand text-brand"
-                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                            ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                            : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                         )}
                       >
                         {label}
@@ -506,7 +516,7 @@ export function StudentForm({
         </div>
       </section>
 
-      <section>
+      <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={Trophy}
           title="Nivel de juego"
@@ -539,16 +549,18 @@ export function StudentForm({
                               field.onChange(isSelected ? null : id)
                             }
                             className={cn(
-                              "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all duration-150",
+                              "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
                               isSelected
-                                ? "bg-brand/10 border-brand"
-                                : "border-border hover:bg-muted"
+                                ? "border-[#D6FF38] bg-[#D6FF38]/12"
+                                : "border-foreground/15 hover:border-foreground/30 hover:bg-muted"
                             )}
                           >
                             <span
                               className={cn(
                                 "text-sm font-semibold",
-                                isSelected ? "text-brand" : "text-foreground"
+                                isSelected
+                                  ? "text-foreground"
+                                  : "text-foreground"
                               )}
                             >
                               {label}
@@ -593,7 +605,7 @@ export function StudentForm({
                 max={80}
                 placeholder="3"
                 {...register("yearsExperience")}
-                className="w-28 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-28 rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.yearsExperience && (
                 <p className="text-xs text-destructive">
@@ -607,7 +619,7 @@ export function StudentForm({
                 htmlFor="yearStartedTennis"
                 className="block text-sm font-semibold text-foreground"
               >
-                Año en que empezó a jugar{" "}
+                Año de inicio en deportes de raqueta{" "}
                 <span className="font-normal text-muted-foreground">
                   (opcional)
                 </span>
@@ -619,7 +631,7 @@ export function StudentForm({
                 max={2100}
                 placeholder="2018"
                 {...register("yearStartedTennis")}
-                className="w-32 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+                className="h-10 w-32 rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
               {errors.yearStartedTennis && (
                 <p className="text-xs text-destructive">
@@ -647,7 +659,7 @@ export function StudentForm({
               maxLength={500}
               placeholder="Ej: Martes y jueves por la tarde"
               {...register("preferredSchedule")}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
             {errors.preferredSchedule && (
               <p className="text-xs text-destructive">
@@ -658,7 +670,7 @@ export function StudentForm({
         </div>
       </section>
 
-      <section>
+      <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={FileText}
           title="Notas y foto"
@@ -682,7 +694,7 @@ export function StudentForm({
               type="url"
               placeholder="https://..."
               {...register("imageUrl")}
-              className="w-full h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
 
@@ -702,30 +714,30 @@ export function StudentForm({
               maxLength={2000}
               placeholder="Objetivos, lesiones, disponibilidad, fortalezas, áreas a mejorar…"
               {...register("notes")}
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
+              className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
         </div>
       </section>
 
       {serverError && (
-        <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
           <p className="text-sm text-destructive">{serverError}</p>
         </div>
       )}
 
-      <div className="flex items-center gap-3 pt-2 border-t border-border/60">
+      <div className="flex flex-wrap items-center gap-3 border-t border-foreground/10 pt-4">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-brand/90 active:scale-95 transition-all duration-150 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-all duration-150 hover:bg-[#c8f52e] active:scale-95 disabled:opacity-60"
         >
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {mode === "create" ? "Crear alumno" : "Guardar cambios"}
         </button>
         <Link
           href={mode === "create" ? "/students" : `/students/${studentId}`}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2.5"
+          className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           Cancelar
         </Link>

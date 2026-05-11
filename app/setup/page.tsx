@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function SetupPage() {
@@ -11,11 +11,18 @@ export default function SetupPage() {
     "idle"
   );
   const [message, setMessage] = useState("");
+  const [token, setToken] = useState("");
 
   async function handleBootstrap() {
     setStatus("loading");
     try {
-      const res = await fetch("/api/admin/bootstrap", { method: "POST" });
+      const headers = token.trim()
+        ? { "x-bootstrap-token": token.trim() }
+        : undefined;
+      const res = await fetch("/api/admin/bootstrap", {
+        method: "POST",
+        headers,
+      });
       const data = (await res.json()) as {
         ok?: boolean;
         message?: string;
@@ -36,53 +43,86 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-brand/30 bg-brand/10">
-          <Shield className="size-7 text-brand" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F4F4F1] p-4 text-[#050505] dark:bg-[#050505] dark:text-white sm:p-6">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.045] dark:opacity-[0.08]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(5,5,5,.48) 1px, transparent 1px), linear-gradient(90deg, rgba(5,5,5,.48) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+      <div className="relative w-full max-w-md rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+        <div className="mb-7 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-11 place-items-center rounded-full bg-[#D6FF38] text-[#050505]">
+              <Shield className="size-5" strokeWidth={2.2} />
+            </div>
+            <div>
+              <p className="text-sm font-black">TenPlanner</p>
+              <p className="text-xs font-semibold text-foreground/45">
+                Arranque seguro
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full border border-[#050505]/10 px-3 py-1 text-[11px] font-black uppercase text-foreground/55 dark:border-white/10">
+            Setup
+          </span>
         </div>
 
-        <div className="space-y-2">
-          <h1 className="font-heading text-2xl font-semibold text-foreground">
+        <div className="space-y-3">
+          <h1 className="text-3xl font-black leading-tight text-foreground">
             Configuración inicial
           </h1>
-          <p className="text-sm text-foreground/55">
-            Ningún administrador detectado. Haz clic para convertirte en el
-            primer administrador de la plataforma.
+          <p className="text-sm leading-6 text-foreground/62">
+            No hay administrador detectado. Usa este paso para crear el primer
+            acceso de control de la plataforma.
           </p>
-          <p className="text-xs text-foreground/35">
-            Este botón se desactiva automáticamente en cuanto existe un admin.
+          <p className="rounded-2xl border border-[#050505]/10 bg-[#F4F4F1] px-4 py-3 text-xs font-semibold leading-5 text-foreground/58 dark:border-white/10 dark:bg-white/[0.04]">
+            Este flujo se desactiva automáticamente cuando existe un admin.
           </p>
         </div>
 
+        <input
+          type="password"
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          placeholder="Token de arranque (opcional)"
+          className="tp-field mt-6 h-11 w-full px-4 text-sm font-medium placeholder:text-muted-foreground"
+        />
+
         {status === "idle" && (
-          <Button className="w-full" onClick={handleBootstrap}>
+          <Button
+            className="mt-4 h-11 w-full rounded-full"
+            onClick={handleBootstrap}
+          >
             Hacerme administrador
           </Button>
         )}
 
         {status === "loading" && (
-          <Button className="w-full" disabled>
+          <Button className="mt-4 h-11 w-full rounded-full" disabled>
             <Loader2 className="mr-2 size-4 animate-spin" />
-            Configurando…
+            Configurando...
           </Button>
         )}
 
         {status === "done" && (
-          <div className="rounded-xl border border-brand/25 bg-brand/8 px-4 py-4">
-            <div className="flex items-center gap-2 justify-center text-brand">
+          <div className="mt-4 rounded-3xl border border-brand/35 bg-brand/12 px-4 py-4">
+            <div className="flex items-center justify-center gap-2 text-foreground">
               <CheckCircle2 className="size-4 shrink-0" />
               <p className="text-sm font-medium">{message}</p>
             </div>
-            <p className="mt-1 text-xs text-foreground/50">
-              Redirigiendo al panel…
+            <p className="mt-1 text-center text-xs text-foreground/50">
+              Redirigiendo al panel...
             </p>
           </div>
         )}
 
         {status === "error" && (
-          <div className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-4">
-            <div className="flex items-center gap-2 justify-center text-destructive">
+          <div className="mt-4 rounded-3xl border border-destructive/25 bg-destructive/10 px-4 py-4">
+            <div className="flex items-center justify-center gap-2 text-destructive">
               <AlertTriangle className="size-4 shrink-0" />
               <p className="text-sm font-medium">{message}</p>
             </div>

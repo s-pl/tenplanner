@@ -4,6 +4,8 @@ import { db } from "@/db";
 import {
   exercises,
   sessions,
+  sessionBlockItems,
+  sessionBlocks,
   sessionExercises,
   sessionStudents,
   students,
@@ -18,6 +20,7 @@ import {
   resolvePhase,
   type AnalyticsExerciseInput,
 } from "@/lib/sessions/analytics";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,7 +37,7 @@ export default async function SessionPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const [[sessionRow], exerciseRows, allExercises, studentRows, favRows] =
+  const [[sessionRow], exerciseRows, allExercises, studentRows, favRows, blockRows] =
     await Promise.all([
       db.select().from(sessions).where(eq(sessions.id, id)).limit(1),
       db
@@ -71,6 +74,7 @@ export default async function SessionPage({ params }: PageProps) {
           durationMinutes: exercises.durationMinutes,
         })
         .from(exercises)
+        .where(exerciseVisibleToUserCondition(user.id))
         .orderBy(exercises.name)
         .limit(200),
       db
@@ -94,6 +98,25 @@ export default async function SessionPage({ params }: PageProps) {
           eq(exerciseLists.id, exerciseListItems.listId)
         )
         .where(eq(exerciseLists.userId, user.id)),
+      db
+        .select({
+          blockId: sessionBlocks.id,
+          blockOrderIndex: sessionBlocks.orderIndex,
+          blockTitle: sessionBlocks.title,
+          blockNotes: sessionBlocks.notes,
+          itemId: sessionBlockItems.id,
+          itemOrderIndex: sessionBlockItems.orderIndex,
+          itemExerciseId: sessionBlockItems.exerciseId,
+          itemExerciseName: sessionBlockItems.exerciseName,
+          itemExerciseDescription: sessionBlockItems.exerciseDescription,
+          itemFreeText: sessionBlockItems.freeText,
+          itemDurationMinutes: sessionBlockItems.durationMinutes,
+          itemNotes: sessionBlockItems.notes,
+        })
+        .from(sessionBlocks)
+        .leftJoin(sessionBlockItems, eq(sessionBlockItems.blockId, sessionBlocks.id))
+        .where(eq(sessionBlocks.sessionId, id))
+        .orderBy(asc(sessionBlocks.orderIndex), asc(sessionBlockItems.orderIndex)),
     ]);
 
   const session = sessionRow;
@@ -133,6 +156,50 @@ export default async function SessionPage({ params }: PageProps) {
 
   const tags = Array.isArray(session.tags) ? session.tags : [];
 
+  const sessionBlocksData = blockRows.reduce<
+    Array<{
+      id: string;
+      orderIndex: number;
+      title: string | null;
+      notes: string | null;
+      items: Array<{
+        id: string;
+        orderIndex: number;
+        exerciseId: string | null;
+        exerciseName: string | null;
+        exerciseDescription: string | null;
+        freeText: string | null;
+        durationMinutes: number | null;
+        notes: string | null;
+      }>;
+    }>
+  >((blocks, row) => {
+    let block = blocks.find((candidate) => candidate.id === row.blockId);
+    if (!block) {
+      block = {
+        id: row.blockId,
+        orderIndex: row.blockOrderIndex,
+        title: row.blockTitle,
+        notes: row.blockNotes,
+        items: [],
+      };
+      blocks.push(block);
+    }
+    if (row.itemId) {
+      block.items.push({
+        id: row.itemId,
+        orderIndex: row.itemOrderIndex ?? 0,
+        exerciseId: row.itemExerciseId,
+        exerciseName: row.itemExerciseName,
+        exerciseDescription: row.itemExerciseDescription,
+        freeText: row.itemFreeText,
+        durationMinutes: row.itemDurationMinutes,
+        notes: row.itemNotes,
+      });
+    }
+    return blocks;
+  }, []);
+
   const analytics = computeSessionAnalytics(
     analyticsInput,
     studentRows.length,
@@ -151,6 +218,9 @@ export default async function SessionPage({ params }: PageProps) {
         createdAt: session.createdAt.toISOString(),
         updatedAt: session.updatedAt.toISOString(),
         objective: session.objective,
+        material: session.material,
+        observations: session.observations,
+        sourceClassId: session.sourceClassId,
         intensity: session.intensity,
         tags,
         location: session.location,
@@ -161,6 +231,7 @@ export default async function SessionPage({ params }: PageProps) {
       analytics={analytics}
       students={studentRows}
       favoritedExerciseIds={Array.from(favoritedIds)}
+      sessionBlocks={sessionBlocksData}
     />
   );
 }

@@ -32,6 +32,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  adminActionClass,
+  adminInputClass,
+  adminPrimaryActionClass,
+  adminTableShellClass,
+} from "../_components/admin-ui";
 
 interface Exercise {
   id: string;
@@ -307,7 +313,7 @@ export function AdminContentClient({
           placeholder="Buscar por nombre o autor…"
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-foreground/15 bg-foreground/[0.02] text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50"
+          className={cn(adminInputClass, "w-full pl-9 pr-4")}
         />
       </form>
 
@@ -317,7 +323,7 @@ export function AdminContentClient({
           router.push(buildHref({ q, exFilter, tab: t, exPage: 1, sPage: 1 }))
         }
       >
-        <TabsList className="bg-foreground/5 border border-foreground/10">
+        <TabsList className="rounded-lg border border-foreground/12 bg-card/90">
           <TabsTrigger value="exercises">
             Ejercicios ({exerciseTotal.toLocaleString("es-ES")})
           </TabsTrigger>
@@ -344,8 +350,8 @@ export function AdminContentClient({
                   className={cn(
                     "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap",
                     exFilter === f
-                      ? "bg-brand text-brand-foreground"
-                      : "bg-foreground/5 text-foreground/50 hover:text-foreground"
+                      ? "bg-[#D6FF38] text-[#050505]"
+                      : "bg-card text-foreground/55 ring-1 ring-foreground/10 hover:text-foreground"
                   )}
                 >
                   {label}
@@ -361,14 +367,14 @@ export function AdminContentClient({
                 <button
                   onClick={() => void bulkToggleGlobal(true)}
                   disabled={busy === "bulk"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-medium hover:bg-brand/20 transition-colors disabled:opacity-50"
+                  className={cn(adminPrimaryActionClass, "h-7 px-2.5 text-[11px]")}
                 >
                   <Globe className="size-3" /> Publicar todos
                 </button>
                 <button
                   onClick={() => void bulkToggleGlobal(false)}
                   disabled={busy === "bulk"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-foreground/5 text-foreground/60 text-xs font-medium hover:bg-foreground/10 transition-colors disabled:opacity-50"
+                  className={cn(adminActionClass, "h-7 px-2.5 text-[11px]")}
                 >
                   <Lock className="size-3" /> Privar todos
                 </button>
@@ -379,7 +385,7 @@ export function AdminContentClient({
           {/* Mobile cards */}
           <div className="grid gap-3 md:hidden">
             {exercises.length === 0 && (
-              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+              <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-10 text-center text-sm text-foreground/40">
                 No hay ejercicios
               </div>
             )}
@@ -387,7 +393,7 @@ export function AdminContentClient({
               <article
                 key={e.id}
                 className={cn(
-                  "rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4",
+                  "rounded-lg border border-foreground/12 bg-card/90 p-4",
                   selected.has(e.id) && "border-brand/30 bg-brand/[0.03]"
                 )}
               >
@@ -462,14 +468,14 @@ export function AdminContentClient({
                   <Link
                     href={`/exercises/${e.id}`}
                     target="_blank"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-foreground/5 px-3 py-2 text-xs font-medium text-foreground/60 transition-colors hover:text-foreground"
+                    className={adminActionClass}
                   >
                     <ExternalLink className="size-3.5" /> Ver
                   </Link>
                   <button
                     onClick={() => void toggleGlobal(e.id, !e.isGlobal)}
                     disabled={busy === e.id || busy === "bulk"}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand/10 px-3 py-2 text-xs font-medium text-brand transition-colors hover:bg-brand/15 disabled:opacity-40"
+                    className={cn(adminPrimaryActionClass, "disabled:opacity-40")}
                   >
                     {busy === e.id ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -493,7 +499,7 @@ export function AdminContentClient({
           </div>
 
           {/* Desktop table */}
-          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
+          <div className={cn(adminTableShellClass, "hidden md:block")}>
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">
@@ -706,14 +712,14 @@ export function AdminContentClient({
         <TabsContent value="sessions" className="mt-4 space-y-3">
           <div className="grid gap-3 md:hidden">
             {sessions.length === 0 && (
-              <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+              <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-10 text-center text-sm text-foreground/40">
                 No hay sesiones
               </div>
             )}
             {sessions.map((s) => (
               <article
                 key={s.id}
-                className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
+                className="rounded-lg border border-foreground/12 bg-card/90 p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -770,7 +776,7 @@ export function AdminContentClient({
             ))}
           </div>
 
-          <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
+          <div className={cn(adminTableShellClass, "hidden md:block")}>
             <Table>
               <TableHeader>
                 <TableRow className="border-foreground/10 hover:bg-transparent">

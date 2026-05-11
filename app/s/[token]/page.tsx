@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { Zap } from "lucide-react";
+import { NotebookPen, ShieldCheck } from "lucide-react";
 import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { ProfileForm } from "./profile-form";
@@ -38,35 +38,54 @@ export default async function StudentProfilePage({ params }: PageProps) {
     !student.profileTokenExpiresAt || student.profileTokenExpiresAt < now;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="flex items-center gap-2 mb-8">
-          <div className="size-8 rounded-lg bg-brand flex items-center justify-center">
-            <Zap className="size-4 text-brand-foreground" strokeWidth={2.5} />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F4F4F1] p-4 text-[#050505] dark:bg-[#050505] dark:text-white sm:p-6">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(5,5,5,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(5,5,5,.5) 1px, transparent 1px)",
+          backgroundSize: "46px 46px",
+        }}
+      />
+
+      <div className="relative w-full max-w-lg">
+        <div className="mb-5 flex items-center justify-between rounded-full border border-[#050505]/10 bg-white/85 px-3 py-2 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/8">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-full bg-[#D6FF38] text-[#050505]">
+              <NotebookPen className="size-5" strokeWidth={2.3} />
+            </div>
+            <span className="text-sm font-black">
+              ten<span className="text-brand">planner</span>
+            </span>
           </div>
-          <span className="font-heading font-semibold text-lg">
-            ten<span className="text-brand">planner</span>
+          <span className="rounded-full border border-[#050505]/10 px-3 py-1 text-[11px] font-black uppercase text-foreground/55 dark:border-white/10">
+            Perfil seguro
           </span>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
           {expired ? (
-            <div className="py-4 text-center space-y-2">
-              <p className="text-base font-semibold text-foreground">
+            <div className="space-y-3 py-5 text-center">
+              <div className="mx-auto grid size-12 place-items-center rounded-full bg-destructive/10 text-destructive">
+                <ShieldCheck className="size-5" />
+              </div>
+              <p className="text-xl font-black text-foreground">
                 Enlace caducado
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="mx-auto max-w-sm text-sm leading-6 text-foreground/60">
                 Este enlace ya no es válido. Pide a tu entrenador que genere uno
                 nuevo.
               </p>
             </div>
           ) : (
             <>
-              <div className="mb-6">
-                <h1 className="text-xl font-bold text-foreground">
+              <div className="mb-6 space-y-2">
+                <p className="tp-kicker">Ficha de jugador</p>
+                <h1 className="text-3xl font-black leading-tight text-foreground">
                   Hola, {student.name}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm leading-6 text-foreground/62">
                   {coach?.name ?? "Tu entrenador/a"} te ha invitado a completar
                   tu perfil de jugador. Solo tardas un minuto.
                 </p>
@@ -80,10 +99,14 @@ export default async function StudentProfilePage({ params }: PageProps) {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-6">
+        <p className="mt-5 text-center text-[11px] leading-5 text-foreground/50">
           Este enlace expira en 7 días y es de uso exclusivo para ti. Al
           enviarlo aceptas la{" "}
-          <Link href="/privacidad" target="_blank" className="underline">
+          <Link
+            href="/privacidad"
+            target="_blank"
+            className="font-semibold underline underline-offset-4 hover:text-foreground"
+          >
             política de privacidad
           </Link>
           .

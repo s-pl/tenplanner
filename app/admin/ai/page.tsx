@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { aiUsageEvents, aiUserRestrictions, users } from "@/db/schema";
 import { getAppSettings } from "@/lib/app-settings";
 import { AI_MODEL_OPTIONS } from "@/lib/ai/model-options";
+import { AdminMetricCard, AdminPageHeader, adminPageShell } from "../_components/admin-ui";
 import { AdminAiOperationsClient } from "./ai-operations-client";
 
 type TopUserRow = {
@@ -227,18 +228,7 @@ function StatCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-lg border border-foreground/12 bg-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-          {label}
-        </p>
-        <Icon className="size-4 text-brand" />
-      </div>
-      <p className="mt-2 font-heading text-3xl font-semibold text-foreground">
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-foreground/45">{detail}</p>
-    </div>
+    <AdminMetricCard icon={Icon} label={label} value={value} detail={detail} />
   );
 }
 
@@ -253,19 +243,12 @@ export default async function AdminAiPage() {
       : 0;
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      <div className="border-b border-foreground/10 pb-5">
-        <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
-          Administración
-        </p>
-        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">
-          Operaciones IA
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm text-foreground/55">
-          Control de tokens, gasto estimado, modelos y restricciones de uso para
-          Dr. Planner.
-        </p>
-      </div>
+    <div className={adminPageShell}>
+      <AdminPageHeader
+        eyebrow="Admin / IA"
+        title="Operaciones IA"
+        description="Control de tokens, gasto estimado, modelos y restricciones de uso para Dr. Planner."
+      />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard

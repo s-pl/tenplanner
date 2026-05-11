@@ -10,7 +10,6 @@ import {
   Repeat,
   Tag,
   Users,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StepBasics } from "./step-basics";
@@ -25,22 +24,6 @@ interface StepConfigurationProps {
   places?: { id: string; name: string }[];
   monitorName?: string;
 }
-
-const INTENSITY_LABELS = ["Muy suave", "Suave", "Moderada", "Alta", "Máxima"];
-const INTENSITY_BAR = [
-  "bg-sky-400",
-  "bg-brand",
-  "bg-amber-400",
-  "bg-orange-400",
-  "bg-red-400",
-];
-const INTENSITY_TEXT = [
-  "text-sky-400",
-  "text-brand",
-  "text-amber-400",
-  "text-orange-400",
-  "text-red-400",
-];
 
 function formatScheduledAt(scheduledAt: string): string {
   try {
@@ -60,33 +43,24 @@ function formatScheduledAt(scheduledAt: string): string {
 
 function SessionPreview({ state }: { state: WizardState }) {
   const hasTitle = !!state.title.trim();
-  const intensityColor =
-    state.intensity !== null
-      ? {
-          bar: INTENSITY_BAR[state.intensity - 1],
-          text: INTENSITY_TEXT[state.intensity - 1],
-        }
-      : null;
 
   return (
     <div className="sticky top-6">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 pl-1">
+      <p className="mb-3 pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
         Vista previa
       </p>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <div className="p-5 space-y-4">
-          {/* Title */}
+        <div className="space-y-4 p-5">
           <p
             className={cn(
               "font-heading text-xl font-semibold leading-snug",
               hasTitle ? "text-foreground" : "text-muted-foreground/30 italic"
             )}
           >
-            {hasTitle ? state.title : "Título de la sesión"}
+            {hasTitle ? state.title : "Titulo de la sesion"}
           </p>
 
-          {/* Meta */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <Calendar className="size-3.5 shrink-0 text-brand" />
@@ -110,58 +84,53 @@ function SessionPreview({ state }: { state: WizardState }) {
             )}
           </div>
 
-          {/* Divider */}
           {(state.objective ||
-            state.intensity !== null ||
+            state.material ||
+            state.observations ||
             state.tags.length > 0 ||
             state.studentIds.length > 0) && (
             <div className="border-t border-border/40" />
           )}
 
-          {/* Objective */}
           {state.objective && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Objetivo
               </p>
-              <p className="text-xs text-foreground/65 leading-relaxed line-clamp-3">
+              <p className="line-clamp-3 text-xs leading-relaxed text-foreground/65">
                 {state.objective}
               </p>
             </div>
           )}
 
-          {/* Intensity */}
-          {state.intensity !== null && intensityColor && (
-            <div className="flex items-center gap-3">
-              <Zap className={cn("size-3.5 shrink-0", intensityColor.text)} />
-              <div className="flex-1">
-                <div className="flex gap-1 mb-1">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <div
-                      key={n}
-                      className={cn(
-                        "h-1.5 flex-1 rounded-full",
-                        n <= (state.intensity ?? 0)
-                          ? intensityColor.bar
-                          : "bg-border"
-                      )}
-                    />
-                  ))}
-                </div>
-                <p className={cn("text-[10px] font-bold", intensityColor.text)}>
-                  {INTENSITY_LABELS[(state.intensity ?? 1) - 1]}
-                </p>
-              </div>
+          {state.material && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Material
+              </p>
+              <p className="line-clamp-2 text-xs leading-relaxed text-foreground/65">
+                {state.material}
+              </p>
             </div>
           )}
 
-          {/* Tags */}
+          {state.observations && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Observaciones
+              </p>
+              <p className="line-clamp-2 text-xs leading-relaxed text-foreground/65">
+                {state.observations}
+              </p>
+            </div>
+          )}
+
           {state.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {state.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 pl-2 pr-2 h-5 text-[10px] font-semibold bg-brand/10 text-brand rounded-full"
+                  className="inline-flex h-5 items-center gap-1 rounded-full bg-brand/10 px-2 text-[10px] font-semibold text-brand"
                 >
                   <Tag className="size-2.5" />
                   {tag}
@@ -170,7 +139,6 @@ function SessionPreview({ state }: { state: WizardState }) {
             </div>
           )}
 
-          {/* Students */}
           {state.studentIds.length > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Users className="size-3.5 text-brand" />
@@ -182,10 +150,6 @@ function SessionPreview({ state }: { state: WizardState }) {
           )}
         </div>
       </div>
-
-      <p className="text-[10px] text-muted-foreground/40 text-center mt-3">
-        Actualización en tiempo real
-      </p>
     </div>
   );
 }
@@ -200,12 +164,10 @@ export function StepConfiguration({
   const [studentsOpen, setStudentsOpen] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_252px] gap-8">
-      {/* Left: form fields */}
-      <div className="flex flex-col gap-6 min-w-0">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_252px]">
+      <div className="flex min-w-0 flex-col gap-6">
         <StepBasics state={state} update={update} errors={errors} />
 
-        {/* Lugar (PMV) */}
         <div className="space-y-1.5">
           <label
             htmlFor="placeId"
@@ -217,13 +179,13 @@ export function StepConfiguration({
             </span>
           </label>
           {places.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">
-              Aún no tienes lugares.{" "}
+            <p className="text-xs italic text-muted-foreground">
+              Aun no tienes lugares.{" "}
               <a
                 href="/places"
-                className="text-brand font-semibold hover:underline"
+                className="font-semibold text-brand hover:underline"
               >
-                Crear lugar →
+                Crear lugar
               </a>
             </p>
           ) : (
@@ -233,7 +195,7 @@ export function StepConfiguration({
               onChange={(e) =>
                 update({ placeId: e.target.value ? e.target.value : null })
               }
-              className="w-full h-11 px-4 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+              className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
             >
               <option value="">Sin lugar asignado</option>
               {places.map((p) => (
@@ -248,9 +210,9 @@ export function StepConfiguration({
         {monitorName && (
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-foreground">
-              Monitor
+              Entrenador
             </label>
-            <div className="flex items-center h-11 px-4 text-sm bg-muted/40 border border-border rounded-xl text-foreground/80 cursor-not-allowed">
+            <div className="flex h-11 cursor-not-allowed items-center rounded-xl border border-border bg-muted/40 px-4 text-sm text-foreground/80">
               {monitorName}
             </div>
           </div>
@@ -260,12 +222,11 @@ export function StepConfiguration({
 
         <StepObjective state={state} update={update} errors={errors} />
 
-        {/* Students accordion */}
         <div className="rounded-2xl border border-border bg-card">
           <button
             type="button"
             onClick={() => setStudentsOpen((v) => !v)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
           >
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <Users className="size-4" />
@@ -275,7 +236,7 @@ export function StepConfiguration({
               <p className="text-xs text-muted-foreground">
                 {state.studentIds.length > 0
                   ? `${state.studentIds.length} alumno${state.studentIds.length !== 1 ? "s" : ""} asignado${state.studentIds.length !== 1 ? "s" : ""}`
-                  : "Asigna alumnos a esta sesión (opcional)"}
+                  : "Asigna alumnos a esta sesion (opcional)"}
               </p>
             </div>
             <div
@@ -299,11 +260,9 @@ export function StepConfiguration({
           )}
         </div>
 
-        {/* Recurrencia (PMV: "todos los lunes…") */}
         <RecurrenceBlock state={state} update={update} />
       </div>
 
-      {/* Right: live preview (desktop only) */}
       <div className="hidden lg:block">
         <SessionPreview state={state} />
       </div>
@@ -312,7 +271,6 @@ export function StepConfiguration({
 }
 
 const WEEKDAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
-// Map from display index (Monday-first) to JS Date getDay value (Sunday=0).
 const WEEKDAY_TO_JSDAY = [1, 2, 3, 4, 5, 6, 0];
 
 function RecurrenceBlock({
@@ -358,27 +316,25 @@ function RecurrenceBlock({
       <button
         type="button"
         onClick={() => toggleEnabled(!r.enabled)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
       >
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
           <Repeat className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">
-            Repetir sesión
+            Repetir sesion
           </p>
           <p className="text-xs text-muted-foreground">
             {r.enabled
-              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " · varios días" : ""}`
-              : "Crea esta misma sesión los próximos días que indiques"}
+              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " - varios dias" : ""}`
+              : "Crea esta misma sesion los proximos dias que indiques"}
           </p>
         </div>
         <span
           className={cn(
             "inline-flex h-6 w-11 items-center rounded-full border transition-colors",
-            r.enabled
-              ? "bg-brand border-brand"
-              : "bg-muted border-border"
+            r.enabled ? "border-brand bg-brand" : "border-border bg-muted"
           )}
         >
           <span
@@ -391,10 +347,10 @@ function RecurrenceBlock({
       </button>
 
       {r.enabled && (
-        <div className="border-t border-border px-4 py-4 space-y-4">
+        <div className="space-y-4 border-t border-border px-4 py-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Días de la semana
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Dias de la semana
             </p>
             <div className="flex flex-wrap gap-1.5">
               {WEEKDAY_LABELS.map((label, i) => {
@@ -408,7 +364,7 @@ function RecurrenceBlock({
                     className={cn(
                       "size-9 rounded-lg border text-sm font-semibold transition-colors",
                       active
-                        ? "bg-brand text-brand-foreground border-brand"
+                        ? "border-brand bg-brand text-brand-foreground"
                         : "border-border text-muted-foreground hover:bg-muted"
                     )}
                   >
@@ -418,8 +374,8 @@ function RecurrenceBlock({
               })}
             </div>
             {r.weekdays.length === 0 && baseWeekday !== null && (
-              <p className="text-[11px] text-muted-foreground mt-2 italic">
-                Si no eliges días, se usará el mismo día que la primera sesión.
+              <p className="mt-2 text-[11px] italic text-muted-foreground">
+                Si no eliges dias, se usara el mismo dia que la primera sesion.
               </p>
             )}
           </div>
@@ -427,9 +383,9 @@ function RecurrenceBlock({
           <div>
             <label
               htmlFor="recurrence-weeks"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
             >
-              Durante cuántas semanas
+              Durante cuantas semanas
             </label>
             <input
               id="recurrence-weeks"
@@ -448,16 +404,16 @@ function RecurrenceBlock({
                   },
                 })
               }
-              className="w-24 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 text-foreground"
+              className="h-10 w-24 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
             />
             <span className="ml-2 text-xs text-muted-foreground">
               semanas (incluida la primera)
             </span>
           </div>
 
-          <p className="text-[12px] text-muted-foreground italic">
-            Se crearán automáticamente todas las sesiones para los días
-            seleccionados. Después podrás editarlas o cancelarlas
+          <p className="text-[12px] italic text-muted-foreground">
+            Se crearan automaticamente todas las sesiones para los dias
+            seleccionados. Despues podras editarlas o cancelarlas
             individualmente.
           </p>
         </div>

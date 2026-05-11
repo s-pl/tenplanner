@@ -6,6 +6,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { isAllowedImageUrl } from "@/lib/url-safety";
 
 const bodySchema = z.object({
   id: z.string().uuid(),
@@ -95,7 +96,16 @@ export async function POST(request: Request) {
 }
 
 const patchSchema = z.object({
-  image: z.string().max(1000).optional().nullable(),
+  image: z
+    .string()
+    .trim()
+    .max(1000)
+    .refine((value) => value === "" || isAllowedImageUrl(value), {
+      message:
+        "La URL de imagen debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
+    })
+    .optional()
+    .nullable(),
 });
 
 export async function PATCH(request: Request) {
@@ -119,7 +129,7 @@ export async function PATCH(request: Request) {
 
   await db
     .update(users)
-    .set({ image: parsed.data.image ?? null })
+    .set({ image: parsed.data.image?.trim() || null })
     .where(eq(users.id, user.id));
   return NextResponse.json({ ok: true });
 }

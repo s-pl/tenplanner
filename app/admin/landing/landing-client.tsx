@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { adminPanelClass } from "../_components/admin-ui";
 import type {
   LandingFieldGroup,
   LandingStringKey,
@@ -126,7 +127,7 @@ export function AdminLandingClient({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex flex-col gap-6">
-        <Card>
+        <Card className={adminPanelClass}>
           <CardHeader className="border-b">
             <CardTitle>Copys editables</CardTitle>
             <CardDescription>
@@ -175,7 +176,7 @@ export function AdminLandingClient({
                           <div
                             key={field.key}
                             className={cn(
-                              "rounded-lg border bg-background p-3",
+                              "rounded-lg border border-foreground/12 bg-background/80 p-3",
                               field.multiline && "md:col-span-2",
                               isDirty && "border-brand/40 bg-brand/5"
                             )}
@@ -276,7 +277,7 @@ export function AdminLandingClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={adminPanelClass}>
           <CardHeader className="border-b">
             <CardTitle>Metricas del hero</CardTitle>
             <CardDescription>
@@ -305,7 +306,7 @@ export function AdminLandingClient({
               {specValues.map((item, index) => (
                 <div
                   key={index}
-                  className="rounded-lg border bg-background p-3"
+                  className="rounded-lg border border-foreground/12 bg-background/80 p-3"
                 >
                   <p className="mb-3 text-xs font-medium text-foreground/60">
                     Bloque {index + 1}
@@ -366,13 +367,13 @@ export function AdminLandingClient({
       </div>
 
       <aside className="lg:sticky lg:top-6 lg:self-start">
-        <Card>
+        <Card className={adminPanelClass}>
           <CardHeader className="border-b">
             <CardTitle>Vista rapida</CardTitle>
             <CardDescription>Resumen del contenido principal.</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
-            <div className="rounded-lg border bg-foreground/[0.02] p-4">
+            <div className="rounded-lg border border-foreground/12 bg-[#050505] p-4 text-white dark:bg-background">
               <p className="font-heading text-4xl leading-none">
                 {heroTitlePreview.map((line, index) => (
                   <span key={`${line}-${index}`}>
@@ -385,17 +386,17 @@ export function AdminLandingClient({
                 {values.hero_subtitle}
               </p>
               <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full bg-primary px-3 py-1 text-primary-foreground">
+                <span className="rounded-full bg-[#D6FF38] px-3 py-1 font-black text-[#050505]">
                   {values.hero_cta_primary}
                 </span>
-                <span className="rounded-full border px-3 py-1 text-muted-foreground">
+                <span className="rounded-full border border-white/18 px-3 py-1 text-white/70 dark:border-foreground/18 dark:text-muted-foreground">
                   {values.hero_cta_secondary}
                 </span>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {specValues.map((item) => (
-                <div key={item.k} className="rounded-lg border p-3">
+                <div key={item.k} className="rounded-lg border border-foreground/12 bg-card/80 p-3">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                     {item.k}
                   </p>

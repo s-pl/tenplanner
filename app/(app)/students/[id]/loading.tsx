@@ -1,6 +1,6 @@
 export default function StudentDetailLoading() {
   return (
-    <div className="px-4 md:px-8 py-8 space-y-6 max-w-5xl animate-pulse">
+    <div className="w-full px-4 py-8 md:px-10 space-y-6 animate-pulse">
       {/* Back nav */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">

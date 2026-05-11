@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { appSettings } from "@/db/schema";
 import { inArray } from "drizzle-orm";
+import { isAllowedImageUrl } from "@/lib/url-safety";
 
 export type SettingType = "boolean" | "string" | "number";
 export type SettingCategory = "Funciones" | "IA" | "Sistema" | "Marca";
@@ -18,7 +19,7 @@ export interface SettingDefinition<T = unknown> {
 export const SETTING_DEFINITIONS = [
   {
     key: "feature.dr_planner_enabled",
-    defaultValue: true,
+    defaultValue: false,
     type: "boolean",
     label: "Dr. Planner",
     description:
@@ -40,7 +41,7 @@ export const SETTING_DEFINITIONS = [
     defaultValue: true,
     type: "boolean",
     label: "Plantillas de sesión",
-    description: "Permite mostrar y usar el mercado de plantillas.",
+    description: "Permite mostrar y usar la biblioteca de plantillas.",
     category: "Funciones",
     isPublic: true,
   },
@@ -270,7 +271,7 @@ export const SETTING_DEFINITIONS = [
   },
   {
     key: "brand.app_tagline",
-    defaultValue: "Planificador de pádel",
+    defaultValue: "Planificador de deportes de raqueta",
     type: "string",
     label: "Subtítulo de la app",
     description: "Frase corta bajo el nombre en el sidebar.",
@@ -345,7 +346,25 @@ export function normalizeSettingValue(key: string, value: unknown) {
   if (!definition) return null;
   if (!valueMatchesType(value, definition.type)) return null;
   if (definition.type === "string" && typeof value === "string") {
-    return value.trim();
+    const trimmed = value.trim();
+    if (key === "brand.support_email" && trimmed.length > 0) {
+      const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+      if (!validEmail) return null;
+    }
+    if (
+      key === "brand.og_image_url" &&
+      trimmed.length > 0 &&
+      !isAllowedImageUrl(trimmed)
+    ) {
+      return null;
+    }
+    if (
+      key === "brand.default_accent" &&
+      !["blue", "green", "violet", "amber", "rose"].includes(trimmed)
+    ) {
+      return null;
+    }
+    return trimmed;
   }
   return value;
 }

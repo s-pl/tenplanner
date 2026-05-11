@@ -192,29 +192,29 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const level = student.playerLevel as PlayerLevel | null;
 
   return (
-    <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 py-10 space-y-10">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-8">
         {/* Masthead */}
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <div className="flex items-baseline gap-3">
+        <header className="tp-hero-panel p-6 text-white sm:p-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
               <Link
                 href="/students"
-                className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors"
+                className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-black uppercase text-white/70 transition-colors hover:text-white"
               >
                 ← Alumnos
               </Link>
-              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">
+              <span className="text-[11px] font-black uppercase text-white/25">
                 /
               </span>
-              <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              <p className="rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
                 Ficha individual
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Link
                 href={`/students/${student.id}/edit`}
-                className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-foreground/60 border-b border-foreground/20 hover:border-brand hover:text-brand transition-colors pb-0.5"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/12 px-3 text-[11px] font-black uppercase text-white/70 transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
               >
                 <Pencil className="size-3" strokeWidth={1.6} />
                 Editar
@@ -227,7 +227,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
 
           <div className="grid grid-cols-[auto_1fr] items-end gap-4 sm:gap-6">
-            <div className="size-20 rounded-full border border-foreground/25 bg-foreground/[0.02] flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white/18 bg-white/8">
               {student.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -236,33 +236,33 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   className="size-full object-cover"
                 />
               ) : (
-                <span className="font-heading text-2xl text-foreground/80">
+                <span className="text-2xl font-black text-white/86">
                   {initialsFromName(student.name)}
                 </span>
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="break-words font-heading text-4xl leading-[0.95] tracking-tight text-foreground md:text-5xl">
-                <em className="italic text-brand">{student.name}</em>
+              <h1 className="break-words text-4xl font-black leading-tight text-white md:text-5xl">
+                {student.name}
               </h1>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3 text-[12px] tabular-nums">
                 {level && (
-                  <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/60">
+                  <span className="rounded-full bg-white/8 px-3 py-1 text-[10px] font-black uppercase text-white/62">
                     {LEVEL_CODE[level]} · {LEVEL_LABEL[level]}
                   </span>
                 )}
                 {age != null && (
-                  <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+                  <span className="rounded-full bg-white/8 px-3 py-1 text-[10px] font-black uppercase text-white/58">
                     {age} años
                   </span>
                 )}
                 {isReliable && (
-                  <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-brand">
+                  <span className="rounded-full bg-[#D6FF38]/15 px-3 py-1 text-[10px] font-black uppercase text-[#D6FF38]">
                     ◆ Fiable
                   </span>
                 )}
                 {student.email && (
-                  <span className="text-foreground/50 truncate">
+                  <span className="truncate text-white/50">
                     {student.email}
                   </span>
                 )}
@@ -272,7 +272,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </header>
 
         {/* Stats strip */}
-        <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 border-y border-foreground/15">
+        <section className="tp-panel grid grid-cols-2 overflow-hidden p-0 md:grid-cols-4 lg:grid-cols-6">
           <StatCell label="Sesiones totales" value={totalSessions.toString()} />
           <StatCell label="Completadas" value={pastCount.toString()} />
           <StatCell label="Próximas" value={upcomingCount.toString()} accent />
@@ -291,17 +291,17 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </section>
 
         {/* Perfil + enlace */}
-        <section className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10">
-          <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
+          <div className="tp-panel p-5 sm:p-6">
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 01
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Ficha física
               </p>
             </div>
-            <dl className="grid grid-cols-2 md:grid-cols-3 divide-x divide-y divide-foreground/10 border-b border-foreground/10">
+            <dl className="grid grid-cols-2 divide-x divide-y divide-[#050505]/10 border-b border-[#050505]/10 dark:divide-white/10 dark:border-white/10 md:grid-cols-3">
               <InfoRow
                 label="Género"
                 value={
@@ -347,22 +347,22 @@ export default async function StudentDetailPage({ params }: PageProps) {
             </dl>
             {student.notes && (
               <div className="mt-6">
-                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50 mb-2">
+                <p className="mb-2 text-[10px] font-black uppercase text-foreground/50">
                   Notas del entrenador
                 </p>
-                <p className="font-heading italic text-[15px] text-foreground/80 leading-relaxed whitespace-pre-wrap border-l-2 border-brand/40 pl-4">
+                <p className="whitespace-pre-wrap rounded-[20px] border border-brand/20 bg-brand/10 p-4 text-[15px] font-semibold leading-relaxed text-foreground/80">
                   {student.notes}
                 </p>
               </div>
             )}
           </div>
 
-          <aside>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+          <aside className="tp-panel p-5 sm:p-6">
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 02
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Enlace de perfil
               </p>
             </div>
@@ -375,13 +375,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </section>
 
         {/* Fiabilidad + Proyección */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="tp-panel p-5 sm:p-6">
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 03
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Fiabilidad · asistencia
               </p>
             </div>
@@ -393,10 +393,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
             ) : (
               <div className="mt-5 space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55">
+                  <span className="text-[10px] font-black uppercase text-foreground/55">
                     Asistencia
                   </span>
-                  <span className="font-heading text-3xl tabular-nums text-foreground">
+                  <span className="text-3xl font-black tabular-nums text-foreground">
                     {Math.round((attendanceRate ?? 0) * 100)}%
                   </span>
                 </div>
@@ -428,18 +428,18 @@ export default async function StudentDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          <div>
-            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+          <div className="tp-panel p-5 sm:p-6">
+            <div className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 04
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Proyección · ritmo
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4 mt-5">
               <div>
-                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
+                <p className="mb-1 text-[9px] font-black uppercase text-foreground/45">
                   Próxima
                 </p>
                 {nextSession ? (
@@ -447,7 +447,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                     href={`/sessions/${nextSession.sessionId}`}
                     className="group block"
                   >
-                    <p className="font-heading italic text-[14px] text-foreground leading-tight group-hover:text-brand transition-colors truncate">
+                    <p className="truncate text-[14px] font-black leading-tight text-foreground transition-colors group-hover:text-brand">
                       {nextSession.title}
                     </p>
                     <p className="text-[11px] text-foreground/50 mt-0.5 tabular-nums">
@@ -459,10 +459,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 )}
               </div>
               <div>
-                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
+                <p className="mb-1 text-[9px] font-black uppercase text-foreground/45">
                   Ritmo
                 </p>
-                <p className="font-heading text-3xl tabular-nums text-foreground leading-none">
+                <p className="text-3xl font-black tabular-nums leading-none text-foreground">
                   {sessionsPerWeek}
                 </p>
                 <p className="text-[11px] text-foreground/50 mt-1">
@@ -470,10 +470,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 </p>
               </div>
               <div>
-                <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
+                <p className="mb-1 text-[9px] font-black uppercase text-foreground/45">
                   Acumuladas
                 </p>
-                <p className="font-heading text-3xl tabular-nums text-foreground leading-none">
+                <p className="text-3xl font-black tabular-nums leading-none text-foreground">
                   {Math.round(pastMinutes / 60)}h
                 </p>
                 <p className="text-[11px] text-foreground/50 mt-1">
@@ -486,15 +486,15 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
         {/* Evolución */}
         {recentEvolution.length > 0 && (
-          <section>
-            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 pb-3 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+          <section className="tp-panel p-5 sm:p-6">
+            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 05
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Evolución reciente
               </p>
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40">
+              <p className="text-[10px] font-black tabular-nums text-foreground/40">
                 últimas {recentEvolution.length}
               </p>
             </div>
@@ -512,15 +512,15 @@ export default async function StudentDetailPage({ params }: PageProps) {
         )}
 
         {/* Próximas */}
-        <section>
-          <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 pb-3 border-b border-foreground/15">
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+        <section className="tp-panel p-5 sm:p-6">
+          <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+            <p className="text-[10px] font-black tabular-nums text-brand">
               06
             </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+            <p className="text-[10px] font-black uppercase text-foreground/50">
               Próximas sesiones
             </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40">
+            <p className="text-[10px] font-black tabular-nums text-foreground/40">
               {upcomingCount}
             </p>
           </div>
@@ -538,15 +538,15 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </section>
 
         {/* Historial */}
-        <section>
-          <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 pb-3 border-b border-foreground/15">
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+        <section className="tp-panel p-5 sm:p-6">
+          <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
+            <p className="text-[10px] font-black tabular-nums text-brand">
               07
             </p>
-            <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+            <p className="text-[10px] font-black uppercase text-foreground/50">
               Historial y feedback
             </p>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40">
+            <p className="text-[10px] font-black tabular-nums text-foreground/40">
               {pastCount}
             </p>
           </div>
@@ -555,7 +555,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               Todavía no hay sesiones completadas.
             </p>
           ) : (
-            <ul className="divide-y divide-foreground/10">
+            <ul className="divide-y divide-[#050505]/10 dark:divide-white/10">
               {past.map((s, idx) => (
                 <li
                   key={s.ssId}
@@ -575,7 +575,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   <div className="min-w-0">
                     <Link
                       href={`/sessions/${s.sessionId}`}
-                      className="font-heading italic text-[17px] text-foreground hover:text-brand transition-colors truncate block"
+                      className="block truncate text-[17px] font-black text-foreground transition-colors hover:text-brand"
                     >
                       {s.title}
                     </Link>
@@ -613,11 +613,11 @@ export default async function StudentDetailPage({ params }: PageProps) {
           )}
         </section>
 
-        <footer className="grid gap-3 border-t border-foreground/10 pt-4 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
-          <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
+        <footer className="grid gap-3 pt-2 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
+          <p className="max-w-md text-[13px] font-semibold text-foreground/55">
             &ldquo;Entrenar es acompañar — cada ficha, una conversación.&rdquo;
           </p>
-          <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
+          <p className="font-black uppercase tabular-nums">
             /tenplanner · 04·{student.id.slice(0, 4)}
           </p>
         </footer>
@@ -636,13 +636,13 @@ function StatCell({
   accent?: boolean;
 }) {
   return (
-    <div className="px-4 py-5 border-l first:border-l-0 border-foreground/10">
-      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1.5">
+    <div className="border-l border-[#050505]/10 px-4 py-5 first:border-l-0 dark:border-white/10">
+      <p className="mb-1.5 text-[9px] font-black uppercase text-foreground/45">
         {label}
       </p>
       <p
         className={cn(
-          "font-heading text-3xl tabular-nums leading-none",
+          "text-3xl font-black tabular-nums leading-none",
           accent ? "text-brand" : "text-foreground"
         )}
       >
@@ -655,7 +655,7 @@ function StatCell({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="px-4 py-4">
-      <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/45 mb-1">
+      <p className="mb-1 text-[9px] font-black uppercase text-foreground/45">
         {label}
       </p>
       <p className="text-[14px] text-foreground">{value}</p>
@@ -673,7 +673,7 @@ function EvolutionChart({
   const max = 5;
   return (
     <div>
-      <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/55 mb-3">
+      <p className="mb-3 text-[10px] font-black uppercase text-foreground/55">
         {label}
       </p>
       <div className="flex items-end gap-1.5 h-20 border-b border-foreground/15">

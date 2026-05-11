@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { adminPanelClass, adminPrimaryActionClass } from "../_components/admin-ui";
 
 interface Stats {
   exercises: { total: number; embedded: number };
@@ -25,7 +26,7 @@ function CoverageBar({
   const missing = total - embedded;
 
   return (
-    <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5 sm:p-6">
+    <div className={cn(adminPanelClass, "p-5 sm:p-6")}>
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40">
@@ -130,7 +131,7 @@ export function EmbeddingsClient({ stats: initial }: { stats: Stats }) {
         />
       </div>
 
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5 sm:p-6">
+      <div className={cn(adminPanelClass, "p-5 sm:p-6")}>
         <h2 className="font-heading text-base font-semibold text-foreground mb-1">
           Backfill de embeddings
         </h2>
@@ -154,7 +155,7 @@ export function EmbeddingsClient({ stats: initial }: { stats: Stats }) {
             <button
               onClick={runBackfill}
               disabled={loading}
-              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[11px] font-semibold tracking-[0.18em] uppercase px-4 py-2 hover:bg-brand/90 transition-colors disabled:opacity-40"
+              className={cn(adminPrimaryActionClass, "h-9 px-4 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40")}
             >
               {loading ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -167,7 +168,7 @@ export function EmbeddingsClient({ stats: initial }: { stats: Stats }) {
         )}
 
         {result && (
-          <div className="mt-4 rounded-xl border border-foreground/10 bg-foreground/[0.02] p-4 space-y-1">
+          <div className="mt-4 space-y-1 rounded-lg border border-foreground/12 bg-card/80 p-4">
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
               Resultado
             </p>
@@ -192,7 +193,7 @@ export function EmbeddingsClient({ stats: initial }: { stats: Stats }) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5 sm:p-6">
+      <div className={cn(adminPanelClass, "p-5 sm:p-6")}>
         <h2 className="font-heading text-base font-semibold text-foreground mb-3">
           Cómo funciona
         </h2>

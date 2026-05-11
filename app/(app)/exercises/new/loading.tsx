@@ -6,7 +6,7 @@ export default function NewExerciseLoading() {
         <div className="h-4 w-20 rounded bg-muted/30" />
       </div>
       <div className="h-9 w-56 rounded-xl bg-muted/30" />
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-5 max-w-2xl">
+      <div className="w-full bg-card border border-border rounded-2xl p-6 space-y-5">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="space-y-1.5">
             <div className="h-3 w-24 rounded bg-muted/30" />

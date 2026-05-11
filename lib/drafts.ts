@@ -43,6 +43,9 @@ export interface SessionDraftPayload {
   location: string;
   placeId: string | null;
   objective: string;
+  material: string;
+  observations: string;
+  sourceClassId: string | null;
   intensity: number | null;
   tags: string[];
   studentIds: string[];
@@ -55,6 +58,17 @@ export interface SessionDraftPayload {
     notes: string;
     phase: "activation" | "main" | "cooldown" | null;
     intensity: number | null;
+  }>;
+  blocks: Array<{
+    orderIndex: 1 | 2 | 3;
+    title: string;
+    notes: string;
+    items: Array<{
+      exerciseId?: string | null;
+      freeText?: string | null;
+      durationMinutes?: number | null;
+      notes?: string | null;
+    }>;
   }>;
 }
 

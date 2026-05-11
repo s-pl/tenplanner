@@ -85,12 +85,14 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <CheckCircle2 className="size-12 text-brand" />
-        <p className="text-lg font-semibold text-foreground">
+      <div className="flex flex-col items-center gap-3 rounded-[28px] border border-brand/35 bg-brand/10 px-5 py-8 text-center">
+        <div className="grid size-14 place-items-center rounded-full bg-brand text-brand-foreground">
+          <CheckCircle2 className="size-7" />
+        </div>
+        <p className="text-xl font-black text-foreground">
           ¡Perfecto, {initialName}!
         </p>
-        <p className="text-sm text-muted-foreground max-w-xs">
+        <p className="max-w-xs text-sm leading-6 text-foreground/62">
           Tu entrenador ya puede ver tu información actualizada. Puedes cerrar
           esta página.
         </p>
@@ -99,9 +101,9 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
   }
 
   const inputCls =
-    "w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand/30";
+    "tp-field h-11 w-full px-4 text-sm font-medium placeholder:text-muted-foreground";
   const labelCls =
-    "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5";
+    "mb-1.5 block text-xs font-black uppercase text-foreground/52";
 
   const submitDisabled = isPending || !birthDate || ageTooLow || !consent;
 
@@ -134,7 +136,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
           aria-describedby="birth-help"
         />
         {ageTooLow && (
-          <p id="birth-help" className="text-[12px] text-destructive mt-1.5">
+          <p id="birth-help" className="mt-1.5 text-[12px] text-destructive">
             Esta aplicación requiere al menos {MIN_AGE} años. Pide a un adulto
             responsable que contacte con tu entrenador.
           </p>
@@ -182,7 +184,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
       </div>
 
       <div>
-        <label className={labelCls}>Años de experiencia en pádel</label>
+        <label className={labelCls}>Años de experiencia en deportes de raqueta</label>
         <input
           type="number"
           min={0}
@@ -194,15 +196,15 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+      <div className="overflow-hidden rounded-[24px] border border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
         <button
           type="button"
           onClick={() => setInfoOpen((v) => !v)}
-          className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left"
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
           aria-expanded={infoOpen}
         >
-          <span className="flex items-center gap-2 text-[12px] font-semibold text-foreground">
-            <ShieldCheck className="size-3.5 text-brand" />
+          <span className="flex items-center gap-2 text-[12px] font-black text-foreground">
+            <ShieldCheck className="size-4 text-brand" />
             Información sobre el tratamiento de tus datos
           </span>
           <ChevronDown
@@ -210,7 +212,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
           />
         </button>
         {infoOpen && (
-          <div className="px-3.5 pb-3.5 text-[12px] leading-relaxed text-muted-foreground space-y-2 border-t border-border/60">
+          <div className="space-y-2 border-t border-[#050505]/10 px-4 pb-4 pt-3 text-[12px] leading-relaxed text-foreground/62 dark:border-white/10">
             <p>
               <strong className="text-foreground">Responsable:</strong>{" "}
               {coachName ? `${coachName} (tu entrenador/a)` : "Tu entrenador/a"}
@@ -224,7 +226,7 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
             </p>
             <p>
               <strong className="text-foreground">Finalidad:</strong>{" "}
-              personalizar tu entrenamiento de pádel.
+              personalizar tu entrenamiento de deportes de raqueta.
             </p>
             <p>
               <strong className="text-foreground">Base jurídica:</strong> tu
@@ -270,12 +272,12 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
         )}
       </div>
 
-      <label className="flex items-start gap-2.5 text-[12px] leading-relaxed text-foreground cursor-pointer">
+      <label className="flex cursor-pointer items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-white px-4 py-3 text-[12px] leading-relaxed text-foreground dark:border-white/10 dark:bg-white/[0.04]">
         <input
           type="checkbox"
           checked={consent}
           onChange={(e) => setConsent(e.target.checked)}
-          className="mt-0.5 size-4 accent-brand shrink-0"
+          className="mt-0.5 size-4 shrink-0 accent-brand"
           required
         />
         <span>
@@ -291,13 +293,13 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
       <button
         type="submit"
         disabled={submitDisabled}
-        className="w-full inline-flex items-center justify-center gap-2 bg-brand text-brand-foreground font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand px-4 text-sm font-black text-brand-foreground transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
         Guardar mis datos
       </button>
 
-      <p className="text-[11px] text-muted-foreground text-center">
+      <p className="text-center text-[11px] leading-5 text-muted-foreground">
         Al enviar aceptas la{" "}
         <Link href="/privacidad" target="_blank" className="underline">
           política de privacidad

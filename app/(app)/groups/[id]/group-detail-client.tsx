@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -75,7 +75,7 @@ function Avatar({
   }
   return (
     <span
-      className="rounded-full bg-brand/15 text-brand font-bold flex items-center justify-center shrink-0 select-none"
+      className="flex shrink-0 select-none items-center justify-center rounded-full bg-brand/15 font-black text-foreground"
       style={{ width: size, height: size, fontSize: size * 0.33 }}
     >
       {text}
@@ -96,6 +96,10 @@ export function GroupDetailClient({
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [search, setSearch] = useState("");
+  const [dragging, setDragging] = useState<{
+    student: Student;
+    from: "members" | "available";
+  } | null>(null);
 
   const filteredAvailable = available.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -146,25 +150,41 @@ export function GroupDetailClient({
     setDeletingGroup(false);
   }
 
+  function onDropMembers(e: DragEvent) {
+    e.preventDefault();
+    if (dragging?.from === "available") void addStudent(dragging.student);
+    setDragging(null);
+  }
+
+  function onDropAvailable(e: DragEvent) {
+    e.preventDefault();
+    if (dragging?.from === "members") void removeStudent(dragging.student.id);
+    setDragging(null);
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_320px]">
       {/* Members roster */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4 sm:px-6">
+      <div
+        className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDropMembers}
+      >
+        <div className="flex items-center justify-between border-b border-[#050505]/10 px-4 py-4 dark:border-white/10 sm:px-6">
           <div className="flex items-center gap-2">
             <Users className="size-4 text-brand" />
-            <h2 className="font-bold text-[13px] text-foreground uppercase tracking-wide">
+            <h2 className="text-[13px] font-black uppercase text-foreground">
               Equipo
             </h2>
           </div>
-          <span className="inline-flex items-center gap-1 bg-brand/10 text-brand px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums">
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2.5 py-1 text-[11px] font-black tabular-nums text-foreground">
             {currentMembers.length}
           </span>
         </div>
 
         {currentMembers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <div className="size-12 rounded-2xl bg-foreground/5 border border-foreground/10 flex items-center justify-center">
+            <div className="flex size-14 items-center justify-center rounded-full border border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
               <Users className="size-5 text-foreground/20" />
             </div>
             <div>
@@ -177,11 +197,14 @@ export function GroupDetailClient({
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-border/40">
+          <div className="divide-y divide-[#050505]/10 dark:divide-white/10">
             {currentMembers.map((m, i) => (
               <div
                 key={m.id}
-                className="group/row flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/20 sm:px-5"
+                draggable
+                onDragStart={() => setDragging({ student: m, from: "members" })}
+                onDragEnd={() => setDragging(null)}
+                className="group/row flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04] sm:px-5"
               >
                 {/* Position number */}
                 <span className="font-mono text-[10px] text-foreground/20 tabular-nums w-5 shrink-0 text-right">
@@ -193,7 +216,7 @@ export function GroupDetailClient({
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/students/${m.id}`}
-                    className="text-[14px] font-semibold text-foreground hover:text-brand transition-colors truncate flex items-center gap-1 group/link"
+                    className="group/link flex items-center gap-1 truncate text-[14px] font-black text-foreground transition-colors hover:text-brand"
                   >
                     {m.name}
                     <ChevronRight className="size-3 opacity-0 group-hover/link:opacity-100 -translate-x-1 group-hover/link:translate-x-0 transition-all" />
@@ -201,9 +224,9 @@ export function GroupDetailClient({
                   {m.playerLevel && (
                     <span
                       className={cn(
-                        "inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-md mt-0.5",
+                        "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold",
                         LEVEL_COLOR[m.playerLevel] ??
-                          "bg-foreground/8 text-foreground/40"
+                          "bg-foreground/10 text-foreground/40"
                       )}
                     >
                       {LEVEL_LABEL[m.playerLevel] ?? m.playerLevel}
@@ -215,7 +238,7 @@ export function GroupDetailClient({
                   onClick={() => removeStudent(m.id)}
                   disabled={loadingId === m.id}
                   aria-label="Quitar del grupo"
-                  className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 md:opacity-0 md:group-hover/row:opacity-100"
+                  className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 md:opacity-0 md:group-hover/row:opacity-100"
                 >
                   {loadingId === m.id ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -232,10 +255,14 @@ export function GroupDetailClient({
       {/* Right panel: add students + danger zone */}
       <div className="space-y-4 lg:sticky lg:top-6">
         {/* Add students */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border/50 flex items-center gap-2">
+        <div
+          className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDropAvailable}
+        >
+          <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
             <UserPlus className="size-4 text-brand" />
-            <h2 className="font-bold text-[13px] text-foreground uppercase tracking-wide">
+            <h2 className="text-[13px] font-black uppercase text-foreground">
               Añadir alumno
             </h2>
           </div>
@@ -248,13 +275,13 @@ export function GroupDetailClient({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar alumno..."
-                  className="w-full bg-muted/40 border border-border rounded-xl pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/15"
+                  className="tp-field h-10 w-full pl-8 pr-3 text-[13px] font-medium placeholder:text-foreground/30"
                 />
               </div>
             </div>
           )}
 
-          <div className="divide-y divide-border/40 max-h-72 overflow-y-auto mt-2">
+          <div className="mt-2 max-h-72 divide-y divide-[#050505]/10 overflow-y-auto dark:divide-white/10">
             {filteredAvailable.length === 0 ? (
               <p className="px-5 py-6 text-[13px] text-muted-foreground italic text-center">
                 {available.length === 0
@@ -265,9 +292,14 @@ export function GroupDetailClient({
               filteredAvailable.map((s) => (
                 <button
                   key={s.id}
+                  draggable
+                  onDragStart={() =>
+                    setDragging({ student: s, from: "available" })
+                  }
+                  onDragEnd={() => setDragging(null)}
                   onClick={() => addStudent(s)}
                   disabled={loadingId === s.id}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-brand/5 transition-colors disabled:opacity-50 text-left touch-manipulation"
+                  className="flex w-full touch-manipulation items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand/10 disabled:opacity-50"
                 >
                   <Avatar name={s.name} imageUrl={s.imageUrl} size={30} />
                   <div className="flex-1 min-w-0">
@@ -280,7 +312,7 @@ export function GroupDetailClient({
                       </p>
                     )}
                   </div>
-                  <div className="size-7 flex items-center justify-center rounded-lg text-brand shrink-0">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full text-brand">
                     {loadingId === s.id ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
@@ -294,8 +326,8 @@ export function GroupDetailClient({
         </div>
 
         {/* Danger zone */}
-        <div className="bg-card border border-destructive/20 rounded-2xl p-5">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-destructive/50 mb-3">
+        <div className="rounded-[28px] border border-destructive/20 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:bg-[#10100e]">
+          <h3 className="mb-3 text-[10px] font-black uppercase text-destructive/60">
             Zona de peligro
           </h3>
           {showDeleteConfirm ? (
@@ -307,14 +339,14 @@ export function GroupDetailClient({
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 text-[13px] text-muted-foreground border border-border px-3 py-2 rounded-xl hover:bg-muted transition-colors"
+                  className="flex-1 rounded-full border border-[#050505]/10 px-3 py-2 text-[13px] font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={deleteGroup}
                   disabled={deletingGroup}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-destructive text-destructive-foreground text-[13px] font-semibold px-3 py-2 rounded-xl hover:bg-destructive/90 disabled:opacity-60 transition-colors"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[13px] font-black text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-60"
                 >
                   {deletingGroup && (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -326,7 +358,7 @@ export function GroupDetailClient({
           ) : (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-destructive border border-destructive/30 px-3 py-2 rounded-xl hover:bg-destructive/8 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 px-3 py-2 text-[13px] font-black text-destructive transition-colors hover:bg-destructive/10"
             >
               <Trash2 className="size-3.5" /> Eliminar grupo
             </button>

@@ -39,7 +39,7 @@ function getTimeBasedDarkMode() {
 function applyThemePreference(isDark: boolean) {
   localStorage.setItem("theme", isDark ? "dark" : "light");
   document.documentElement.classList.toggle("dark", isDark);
-  applyAccentColor(localStorage.getItem("accent") ?? "green");
+  applyAccentColor(localStorage.getItem("accent") ?? "blue");
 }
 
 type Tab = "profile" | "appearance" | "stats" | "data";
@@ -85,7 +85,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   // Appearance state
-  const [accent, setAccent] = useState("green");
+  const [accent, setAccent] = useState("blue");
   const [fontSize, setFontSize] = useState("md");
   const [autoTheme, setAutoTheme] = useState(true);
 
@@ -130,7 +130,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
   useEffect(() => {
     function syncAppearance() {
-      setAccent(localStorage.getItem("accent") ?? "green");
+      setAccent(localStorage.getItem("accent") ?? "blue");
       setFontSize(localStorage.getItem("font-size") ?? "md");
       setAutoTheme(localStorage.getItem("theme-auto") !== "false");
     }
@@ -275,16 +275,17 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
   return (
     <div className="space-y-8">
       {/* Identity hero */}
-      <section className="relative overflow-hidden rounded-lg border border-foreground/15 bg-card">
-        <div className="relative h-24 overflow-hidden border-b border-foreground/12 bg-brand/[0.07] sm:h-28">
-          <div className="absolute inset-x-6 bottom-5 h-px bg-foreground/16" />
+      <section className="tp-panel relative overflow-hidden p-0 shadow-[0_24px_80px_-64px_color-mix(in_oklab,var(--foreground)_72%,transparent)]">
+        <div className="relative h-24 overflow-hidden border-b border-foreground/10 bg-[#050505] sm:h-28">
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(214,255,56,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:42px_42px] opacity-45" />
+          <div className="absolute inset-x-6 bottom-5 h-px bg-white/18" />
         </div>
 
-        <div className="px-5 sm:px-8 pb-6 -mt-14">
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] md:items-end gap-5">
+        <div className="-mt-14 px-5 pb-6 sm:px-8">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[auto_1fr_auto] md:items-end">
             {/* Avatar */}
             <div className="relative w-fit">
-              <div className="size-28 rounded-full border-4 border-background bg-muted overflow-hidden ring-1 ring-brand/25 flex items-center justify-center">
+              <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-card bg-background ring-2 ring-brand/45">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -294,7 +295,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     className="size-full object-cover"
                   />
                 ) : (
-                  <span className="font-heading text-3xl text-foreground/75">
+                  <span className="text-3xl font-black text-foreground/75">
                     {initials}
                   </span>
                 )}
@@ -303,7 +304,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
                 title="Cambiar foto"
-                className="absolute bottom-1 right-1 flex size-8 items-center justify-center rounded-full border border-foreground/20 bg-background text-foreground/65 transition-colors hover:border-brand hover:text-brand disabled:opacity-60"
+                className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full border border-foreground/10 bg-card text-foreground/65 transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground disabled:opacity-60"
               >
                 {avatarUploading ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -325,14 +326,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
             {/* Name + email */}
             <div className="min-w-0 md:pb-1">
-              <h2 className="font-heading text-2xl sm:text-3xl font-semibold text-foreground leading-tight truncate">
+              <h2 className="truncate text-2xl font-black leading-tight text-foreground sm:text-3xl">
                 {name || "Tu nombre"}
               </h2>
               <p className="text-[13px] text-foreground/55 truncate mt-1">
                 {user.email}
               </p>
               <div className="flex flex-wrap gap-2 mt-2.5">
-                <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded border border-border text-foreground/55 capitalize">
+                <span className="inline-flex items-center rounded-full border border-foreground/10 px-2.5 py-1 text-[11px] font-bold capitalize text-foreground/55">
                   {user.provider === "google" ? "Google" : "Correo"}
                 </span>
               </div>
@@ -344,7 +345,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             </div>
 
             {/* Micro stats */}
-            <dl className="hidden md:grid grid-cols-3 gap-2 md:pb-1">
+              <dl className="hidden grid-cols-3 gap-2 md:grid md:pb-1">
               {[
                 {
                   icon: Activity,
@@ -364,7 +365,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="min-w-[76px] rounded-lg border border-foreground/12 bg-card px-3 py-2.5 text-right"
+                  className="min-w-[76px] rounded-[18px] border border-foreground/10 bg-background px-3 py-2.5 text-right"
                 >
                   <div className="flex items-center justify-end gap-1 text-foreground/45">
                     <Icon className="size-3" strokeWidth={1.6} />
@@ -372,7 +373,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                       {label}
                     </dt>
                   </div>
-                  <dd className="font-heading text-xl tabular-nums text-foreground mt-0.5 leading-none">
+                  <dd className="mt-0.5 text-xl font-black tabular-nums leading-none text-foreground">
                     {value}
                   </dd>
                 </div>
@@ -383,7 +384,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
       </section>
 
       {/* Tabs */}
-      <nav className="flex flex-wrap gap-1 border-b border-border">
+      <nav className="flex flex-wrap gap-2 rounded-full border border-foreground/10 bg-card p-1 shadow-[0_12px_34px_color-mix(in_oklab,var(--foreground)_5%,transparent)]">
         {TABS.map(({ id, label }) => {
           const isActive = tab === id;
           return (
@@ -391,10 +392,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                "px-4 py-2.5 text-[14px] font-medium transition-colors -mb-px border-b-2",
+                "rounded-full px-4 py-2.5 text-[14px] font-black transition-colors",
                 isActive
-                  ? "border-brand text-brand"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "bg-brand text-brand-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {label}
@@ -405,12 +406,12 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── PROFILE ── */}
       {tab === "profile" && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div>
               <label
                 htmlFor="name"
-                className="text-[12px] font-medium text-foreground/65 block mb-2"
+                className="mb-2 block text-[12px] font-black uppercase text-foreground/52"
               >
                 Nombre para mostrar
               </label>
@@ -420,11 +421,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre completo"
-                className="w-full h-10 bg-transparent border-0 border-b border-foreground/20 focus:outline-none focus:border-brand text-[15px] text-foreground placeholder:text-foreground/35 transition-colors"
+                className="tp-field h-11 w-full px-4 text-[15px] font-medium placeholder:text-foreground/35"
               />
             </div>
             <div>
-              <label className="text-[12px] font-medium text-foreground/65 block mb-2">
+              <label className="mb-2 block text-[12px] font-black uppercase text-foreground/52">
                 <Mail
                   className="inline size-3 mr-1 -mt-0.5"
                   strokeWidth={1.6}
@@ -435,22 +436,22 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 type="email"
                 value={user.email ?? ""}
                 disabled
-                className="w-full h-10 bg-transparent border-0 border-b border-foreground/15 text-[15px] text-foreground/50 cursor-not-allowed tabular-nums"
+                className="tp-field h-11 w-full cursor-not-allowed px-4 text-[15px] font-medium tabular-nums text-foreground/50"
               />
             </div>
           </div>
 
           {profileError && (
-            <div className="border-l-2 border-destructive pl-4 py-1">
+            <div className="rounded-[20px] border border-destructive/25 bg-destructive/10 px-4 py-3">
               <p className="text-[13px] text-destructive">{profileError}</p>
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-2 border-t border-border">
+          <div className="flex items-center gap-3 border-t border-foreground/10 pt-4">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-5 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90 disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-black text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -473,21 +474,20 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── APPEARANCE ── */}
       {tab === "appearance" && (
-        <div className="space-y-10">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
           <div>
-            <h3 className="text-[14px] font-semibold text-foreground pb-2 border-b border-border">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Color de acento
             </h3>
-            <div className="mt-4 flex flex-wrap gap-0 rounded-md border border-border w-fit overflow-hidden">
-              {ACCENT_COLORS.map((c, i) => (
+            <div className="mt-4 flex w-fit flex-wrap gap-1 rounded-full border border-foreground/10 bg-background p-1">
+              {ACCENT_COLORS.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => handleAccentChange(c.id)}
                   className={cn(
-                    "flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] transition-colors",
-                    i > 0 && "border-l border-foreground/15",
+                    "flex items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[12px] font-bold transition-colors",
                     accent === c.id
-                      ? "bg-foreground/[0.04] text-foreground"
+                      ? "bg-card text-foreground shadow-sm"
                       : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.02]"
                   )}
                 >
@@ -502,19 +502,18 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </div>
 
           <div>
-            <h3 className="text-[14px] font-semibold text-foreground pb-2 border-b border-border">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Tamaño del texto
             </h3>
-            <div className="flex gap-0 mt-4 rounded-md border border-border w-fit overflow-hidden">
-              {FONT_SIZES.map((f, i) => (
+            <div className="mt-4 flex w-fit gap-1 rounded-full border border-foreground/10 bg-background p-1">
+              {FONT_SIZES.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => handleFontSizeChange(f.id)}
                   className={cn(
-                    "flex flex-col items-center px-6 py-3 transition-colors min-w-[88px]",
-                    i > 0 && "border-l border-foreground/15",
+                    "flex min-w-[88px] flex-col items-center rounded-full px-6 py-3 transition-colors",
                     fontSize === f.id
-                      ? "bg-brand/10 text-brand"
+                      ? "bg-brand text-brand-foreground"
                       : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03]"
                   )}
                 >
@@ -528,7 +527,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </div>
 
           <div>
-            <h3 className="text-[14px] font-semibold text-foreground pb-2 border-b border-border">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Tema
             </h3>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -537,7 +536,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 aria-pressed={autoTheme}
                 onClick={() => handleAutoThemeChange(!autoTheme)}
                 className={cn(
-                  "inline-flex h-10 w-fit items-center gap-2 border px-3 text-[12px] font-semibold transition-colors",
+                  "inline-flex h-10 w-fit items-center gap-2 rounded-full border px-4 text-[12px] font-black transition-colors",
                   autoTheme
                     ? "border-brand/45 bg-brand/10 text-brand"
                     : "border-foreground/15 text-foreground/60 hover:border-brand/45 hover:text-brand"
@@ -557,8 +556,8 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── STATS ── */}
       {tab === "stats" && (
-        <div className="space-y-10">
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               {
                 label: "Sesiones totales",
@@ -585,10 +584,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <div
                 key={label}
                 className={cn(
-                  "relative overflow-hidden rounded-2xl border p-5 transition-colors",
+                  "relative overflow-hidden rounded-[24px] border p-5 transition-colors",
                   isAccent
-                    ? "border-brand/25 bg-brand/5 hover:bg-brand/[0.07]"
-                    : "border-foreground/15 bg-foreground/[0.015] hover:bg-foreground/[0.03]"
+                    ? "border-brand/30 bg-brand/10 hover:bg-brand/15"
+                    : "border-foreground/10 bg-background hover:bg-muted/70"
                 )}
               >
                 {isAccent && (
@@ -605,13 +604,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     )}
                     strokeWidth={1.6}
                   />
-                  <p className="text-[11px] font-medium text-foreground/55">
+                  <p className="text-[11px] font-bold text-foreground/55">
                     {label}
                   </p>
                 </div>
                 <p
                   className={cn(
-                    "relative font-heading text-4xl tabular-nums leading-none",
+                    "relative text-4xl font-black tabular-nums leading-none",
                     isAccent ? "text-brand" : "text-foreground"
                   )}
                 >
@@ -622,10 +621,10 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </section>
 
           <section>
-            <h3 className="text-[14px] font-semibold text-foreground pb-2 border-b border-border">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Detalles de la cuenta
             </h3>
-            <dl className="divide-y divide-border">
+            <dl className="divide-y divide-foreground/10">
               {[
                 { label: "Correo electrónico", value: user.email ?? "—" },
                 {
@@ -650,7 +649,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   key={label}
                   className="grid gap-1 py-3.5 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4"
                 >
-                  <dt className="text-[12px] font-medium text-foreground/65">
+                  <dt className="text-[12px] font-bold text-foreground/65">
                     {label}
                   </dt>
                   <dd className="text-[13px] text-foreground tabular-nums">
@@ -665,9 +664,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
 
       {/* ── DATA ── */}
       {tab === "data" && (
-        <div className="space-y-10">
+        <div className="tp-panel space-y-8 p-5 sm:p-6">
           <section>
-            <h3 className="text-[14px] font-semibold text-foreground pb-2 border-b border-border">
+            <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Exportar tus datos
             </h3>
             <p className="text-[13px] text-foreground/60 mt-4 mb-5 max-w-xl">
@@ -677,7 +676,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <button
                 onClick={handleExportJson}
                 disabled={exportingJson}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 h-10 text-[13px] font-medium text-foreground hover:border-brand/40 hover:text-brand transition-colors disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/10 bg-card px-4 text-[13px] font-black text-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-60"
               >
                 {exportingJson ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -689,7 +688,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <button
                 onClick={handleExportCsv}
                 disabled={exportingCsv}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 h-10 text-[13px] font-medium text-foreground hover:border-brand/40 hover:text-brand transition-colors disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/10 bg-card px-4 text-[13px] font-black text-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:opacity-60"
               >
                 {exportingCsv ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -702,7 +701,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 CSV sesiones
               </button>
             </div>
-            <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 max-w-xl text-[13px] text-foreground/60">
+            <ul className="mt-5 grid max-w-xl grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-foreground/60 sm:grid-cols-2">
               {[
                 "Todas las sesiones con fechas y duraciones",
                 "Biblioteca completa de ejercicios",
@@ -718,12 +717,12 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
           </section>
 
           <section>
-            <h3 className="text-[14px] font-semibold text-destructive pb-2 border-b border-destructive/30">
+            <h3 className="border-b border-destructive/30 pb-2 text-[14px] font-black text-destructive">
               Zona de peligro
             </h3>
             <div className="mt-5 grid gap-4 border-l-2 border-destructive/40 py-2 pl-4 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6">
               <div>
-                <p className="font-heading font-semibold text-[15px] text-foreground">
+                <p className="text-[15px] font-black text-foreground">
                   Eliminar cuenta
                 </p>
                 <p className="text-[12px] text-foreground/55 mt-1 max-w-md">
@@ -737,7 +736,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   setDeleteError(null);
                   setDeleteOpen(true);
                 }}
-                className="shrink-0 inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-destructive border border-destructive/40 px-3 py-2 hover:bg-destructive/10 transition-colors"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-destructive/40 px-3 py-2 text-[11px] font-black uppercase text-destructive transition-colors hover:bg-destructive/10"
               >
                 <Trash2 className="size-3" strokeWidth={1.6} />
                 Eliminar
@@ -757,15 +756,15 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             if (!deleting && e.target === e.currentTarget) setDeleteOpen(false);
           }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-destructive/40 bg-card shadow-xl p-6 space-y-4">
+          <div className="w-full max-w-md space-y-4 rounded-[28px] border border-destructive/35 bg-card p-6 shadow-xl">
             <div className="flex items-start gap-3">
-              <div className="size-10 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center text-destructive shrink-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-destructive/30 bg-destructive/10 text-destructive">
                 <Trash2 className="size-4" strokeWidth={1.6} />
               </div>
               <div className="min-w-0">
                 <p
                   id="delete-account-title"
-                  className="font-heading font-semibold text-lg text-foreground"
+                  className="text-lg font-black text-foreground"
                 >
                   Eliminar cuenta
                 </p>
@@ -777,7 +776,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               </div>
             </div>
             <div>
-              <label className="text-[12px] font-medium text-foreground/65 block mb-2">
+              <label className="mb-2 block text-[12px] font-black text-foreground/65">
                 Escribe <span className="text-destructive">ELIMINAR</span> para
                 confirmar
               </label>
@@ -787,25 +786,25 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 disabled={deleting}
-                className="w-full h-10 rounded-md border border-foreground/20 bg-background px-3 text-[14px] text-foreground focus:outline-none focus:border-destructive"
+                className="tp-field h-10 w-full px-3 text-[14px] font-medium focus:border-destructive focus:ring-destructive/20"
                 placeholder="ELIMINAR"
               />
             </div>
             {deleteError && (
               <p className="text-[12px] text-destructive">{deleteError}</p>
             )}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-foreground/10">
+            <div className="flex items-center justify-end gap-2 border-t border-foreground/10 pt-2">
               <button
                 onClick={() => setDeleteOpen(false)}
                 disabled={deleting}
-                className="text-[12px] tracking-wide uppercase text-foreground/70 hover:text-foreground px-4 py-2 disabled:opacity-50"
+                className="rounded-full px-4 py-2 text-[12px] font-black uppercase text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleting || deleteConfirmText !== "ELIMINAR"}
-                className="inline-flex items-center gap-2 bg-destructive text-destructive-foreground text-[12px] font-semibold tracking-wide uppercase px-4 py-2 rounded-md hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-[12px] font-black uppercase text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deleting ? (
                   <Loader2 className="size-3.5 animate-spin" />

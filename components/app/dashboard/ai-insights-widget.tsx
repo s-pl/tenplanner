@@ -1,9 +1,7 @@
-import Link from "next/link";
 import {
   AlertTriangle,
   Sparkles,
   TrendingUp,
-  ArrowRight,
   Flame,
   Activity,
 } from "lucide-react";
@@ -48,20 +46,13 @@ export async function AiInsightsWidget({ coachId }: { coachId: string }) {
             Insights de IA
           </h2>
         </div>
-        <Link
-          href="/sessions/dr-planner"
-          className="inline-flex items-center gap-1 font-mono text-[10px] uppercase text-foreground/45 transition-colors hover:text-brand"
-        >
-          Abrir Dr. Planner <ArrowRight className="size-3" />
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {inactive.length > 0 ? (
-          <Link
-            href="/sessions/dr-planner"
+          <div
             className={cn(
-              "group border border-destructive/45 bg-destructive/10 p-4 transition-colors hover:border-destructive/70",
+              "border border-destructive/45 bg-destructive/10 p-4",
               "md:col-span-1"
             )}
           >
@@ -89,12 +80,12 @@ export async function AiInsightsWidget({ coachId }: { coachId: string }) {
                     .join(", ")}
                   {inactive.length > 3 && "…"}
                 </p>
-                <span className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] uppercase text-brand transition-all group-hover:gap-1.5">
-                  Abordarlo <ArrowRight className="size-3" strokeWidth={2} />
+                <span className="mt-2 inline-flex font-mono text-[10px] uppercase text-brand">
+                  Revisar seguimiento
                 </span>
               </div>
             </div>
-          </Link>
+          </div>
         ) : (
           <div className="border border-foreground/12 bg-card/75 p-4">
             <div className="flex items-center gap-2">

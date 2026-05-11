@@ -26,6 +26,20 @@ export interface WizardExercise {
   intensity: number | null;
 }
 
+export interface WizardBlockItem {
+  exerciseId?: string | null;
+  freeText?: string | null;
+  durationMinutes?: number | null;
+  notes?: string | null;
+}
+
+export interface WizardSessionBlock {
+  orderIndex: 1 | 2 | 3;
+  title: string;
+  notes: string;
+  items: WizardBlockItem[];
+}
+
 export type WizardRecurrenceFrequency = "weekly";
 
 export interface WizardRecurrence {
@@ -42,10 +56,14 @@ export interface WizardState {
   location: string;
   placeId: string | null;
   objective: string;
+  material: string;
+  observations: string;
+  sourceClassId: string | null;
   intensity: number | null;
   tags: string[];
   studentIds: string[];
   exercises: WizardExercise[];
+  blocks: WizardSessionBlock[];
   recurrence: WizardRecurrence;
 }
 
@@ -55,14 +73,14 @@ export interface WizardPlace {
 }
 
 export const LOCATION_OPTIONS = [
-  "Pista cristal",
-  "Pista moqueta",
-  "Pista cemento",
+  "Pista/cancha cubierta",
+  "Pista/cancha exterior",
+  "Muro o pared",
   "Otro",
 ] as const;
 
 export const PHASE_LABELS: Record<TrainingPhase, string> = {
-  activation: "Activación",
-  main: "Principal",
-  cooldown: "Vuelta a la calma",
+  activation: "Bloque inicial",
+  main: "Bloque principal",
+  cooldown: "Bloque final",
 };

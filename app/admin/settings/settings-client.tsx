@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { adminInputClass, adminPanelClass } from "../_components/admin-ui";
 
 interface AdminSetting {
   key: string;
@@ -169,7 +170,7 @@ function PricingJsonEditor({
 
   return (
     <div className="w-full min-w-0 sm:min-w-[560px]">
-      <div className="overflow-x-auto rounded-lg border border-foreground/12 bg-background">
+      <div className="overflow-x-auto rounded-lg border border-foreground/12 bg-card/80">
         <div className="min-w-[34rem]">
           <div className="grid grid-cols-[minmax(9rem,1fr)_repeat(4,minmax(4.5rem,5.5rem))] gap-2 border-b border-foreground/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/40">
             <span>Modelo</span>
@@ -313,7 +314,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <section className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border border-foreground/12 bg-card p-4">
+        <div className={cn(adminPanelClass, "p-4")}>
           <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
             Flags activos
           </p>
@@ -321,7 +322,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
             {enabledCount}/{booleanCount}
           </p>
         </div>
-        <div className="rounded-lg border border-foreground/12 bg-card p-4">
+        <div className={cn(adminPanelClass, "p-4")}>
           <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
             Índice IA
           </p>
@@ -330,7 +331,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
             pgvector preparado
           </p>
         </div>
-        <div className="rounded-lg border border-foreground/12 bg-card p-4">
+        <div className={cn(adminPanelClass, "p-4")}>
           <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
             Dr. Planner
           </p>
@@ -355,11 +356,11 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
         return (
           <section
             key={category}
-            className="overflow-hidden rounded-lg border border-foreground/12 bg-card"
+            className={adminPanelClass}
           >
             <div className="flex items-center justify-between gap-4 border-b border-foreground/10 px-4 py-3 sm:px-5">
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-md border border-brand/20 bg-brand/8 text-brand">
+                <span className="flex size-8 items-center justify-center rounded-md border border-[#D6FF38]/35 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]">
                   <Icon className="size-4" />
                 </span>
                 <h2 className="font-heading text-base font-semibold text-foreground">
@@ -423,7 +424,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
                         className={cn(
                           "grid min-w-[136px] grid-cols-[auto_1fr] items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors disabled:opacity-60",
                           setting.value === true
-                            ? "border-brand/35 bg-brand/10 text-brand"
+                            ? "border-[#D6FF38]/55 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]"
                             : "border-foreground/15 bg-background text-foreground/55"
                         )}
                       >
@@ -431,7 +432,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
                           className={cn(
                             "relative h-5 w-9 rounded-full transition-colors",
                             setting.value === true
-                              ? "bg-brand"
+                              ? "bg-[#D6FF38]"
                               : "bg-foreground/18"
                           )}
                         >
@@ -490,7 +491,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
                             </SelectGroup>
                           </SelectContent>
                         </Select>
-                        <span className="flex size-8 shrink-0 items-center justify-center text-brand">
+                        <span className="flex size-8 shrink-0 items-center justify-center text-[#6F8500] dark:text-[#D6FF38]">
                           {isSaving ? (
                             <Loader2 className="size-3 animate-spin" />
                           ) : isSaved ? (
@@ -545,7 +546,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
                               [setting.key]: event.target.value,
                             }))
                           }
-                          className="h-10 min-w-0 flex-1 rounded-lg border border-foreground/15 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand/50"
+                          className={cn(adminInputClass, "min-w-0 flex-1 px-3")}
                         />
                         <Button
                           type="button"

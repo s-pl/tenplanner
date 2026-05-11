@@ -59,39 +59,38 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
   }
 
   return (
-    <div className="relative">
-      <div className="relative px-4 sm:px-6 md:px-10 py-10">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-8">
         {/* Masthead */}
-        <header className="pb-6 border-b border-foreground/15">
-          <div className="flex items-baseline justify-between gap-4 mb-3">
-            <div className="flex items-baseline gap-3">
+        <header className="tp-hero-panel p-6 text-white sm:p-8">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
               <Link
                 href="/sessions"
-                className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/45 hover:text-brand transition-colors"
+                className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-black uppercase text-white/70 transition-colors hover:text-white"
               >
                 ← Sesiones
               </Link>
-              <span className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/30">
+              <span className="text-[11px] font-black uppercase text-white/25">
                 /
               </span>
-              <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              <p className="rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
                 Dr. Planner · IA
               </p>
             </div>
-            <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/45">
+            <p className="rounded-full border border-white/12 px-3 py-1 text-[11px] font-black tabular-nums text-white/45">
               № {String(chats.length).padStart(3, "0")}
             </p>
           </div>
           <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-6">
-            <h1 className="font-heading text-4xl md:text-5xl leading-[0.95] tracking-tight text-foreground">
-              Conversaciones con el{" "}
-              <em className="italic text-brand">doctor</em>.
+            <h1 className="text-4xl font-black leading-tight text-white md:text-5xl">
+              Conversaciones con Dr. Planner
             </h1>
             {chats.length > 0 && (
               <button
                 onClick={handleNewChat}
                 disabled={creating}
-                className="inline-flex w-full items-center justify-center gap-2 border border-brand bg-brand px-4 py-2.5 text-[12px] font-semibold tracking-wide text-brand-foreground uppercase transition-colors hover:bg-brand/90 disabled:opacity-50 sm:w-auto sm:shrink-0"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[12px] font-black uppercase text-[#050505] transition-transform hover:-translate-y-0.5 disabled:opacity-50 sm:w-auto sm:shrink-0"
               >
                 {creating ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -102,21 +101,20 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               </button>
             )}
           </div>
-          <p className="text-[13px] text-foreground/60 mt-4 max-w-2xl">
-            Asistente de diseño de sesiones de pádel. Explícale contexto,
-            restricciones y objetivos — él propone la planificación.
+          <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/62">
+            Asistente de diseño de sesiones para deportes de raqueta. Explícale
+            contexto, restricciones y objetivos para preparar la planificación.
           </p>
         </header>
 
         {/* Body */}
         {chats.length === 0 ? (
-          <div className="py-20 text-center border-b border-foreground/15">
-            <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-foreground/50 mb-4">
+          <div className="tp-panel border-dashed px-6 py-20 text-center">
+            <p className="tp-kicker mb-4">
               Archivo vacío
             </p>
-            <h2 className="font-heading text-3xl text-foreground mb-3">
-              Aún no has hablado con{" "}
-              <em className="italic text-brand">Dr. Planner</em>.
+            <h2 className="mb-3 text-3xl font-black text-foreground">
+              Aún no has hablado con Dr. Planner.
             </h2>
             <p className="text-[13px] text-foreground/55 max-w-md mx-auto mb-6">
               Inicia una conversación para diseñar tu próxima sesión con la
@@ -125,7 +123,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
             <button
               onClick={handleNewChat}
               disabled={creating}
-              className="inline-flex items-center gap-2 border border-brand bg-brand text-brand-foreground text-[12px] font-semibold tracking-wide px-5 py-2.5 hover:bg-brand/90 transition-colors uppercase disabled:opacity-50"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[12px] font-black uppercase text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               {creating ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -137,14 +135,14 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
           </div>
         ) : (
           <section>
-            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-4 border-b border-foreground/15">
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-brand">
+            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 rounded-[24px] border border-[#050505]/10 bg-white px-4 py-4 dark:border-white/10 dark:bg-[#10100e]">
+              <p className="text-[10px] font-black tabular-nums text-brand">
                 01
               </p>
-              <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+              <p className="text-[10px] font-black uppercase text-foreground/50">
                 Historial · ordenadas por última actividad
               </p>
-              <p className="font-sans text-[10px] tabular-nums tracking-[0.22em] text-foreground/40">
+              <p className="text-[10px] font-black tabular-nums text-foreground/40">
                 {chats.length}
               </p>
             </div>
@@ -152,7 +150,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
               {chats.map((chat, idx) => (
                 <li
                   key={chat.id}
-                  className="group overflow-hidden rounded-lg border border-foreground/12 bg-card shadow-sm transition-colors hover:border-brand/30"
+                  className="group overflow-hidden rounded-[24px] border border-[#050505]/10 bg-white shadow-sm transition-colors hover:border-brand/40 dark:border-white/10 dark:bg-[#10100e]"
                 >
                   <div className="relative">
                     <Link
@@ -163,14 +161,14 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
                         {String(idx + 1).padStart(3, "0")}
                       </span>
                       <div className="min-w-0">
-                        <p className="font-heading text-[17px] italic text-foreground truncate group-hover:text-brand transition-colors">
+                        <p className="truncate text-[17px] font-black text-foreground transition-colors group-hover:text-brand">
                           {chat.title}
                         </p>
                         <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums tracking-wide">
                           {formatRelative(chat.updatedAt)}
                         </p>
                       </div>
-                      <span className="font-sans text-[11px] tracking-[0.22em] text-foreground/40 group-hover:text-brand transition-colors pr-10">
+                      <span className="pr-10 text-[11px] font-black text-foreground/40 transition-colors group-hover:text-brand">
                         →
                       </span>
                     </Link>
@@ -193,11 +191,11 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
           </section>
         )}
 
-        <footer className="grid gap-3 pt-8 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
-          <p className="font-heading italic text-[13px] text-foreground/55 max-w-md">
+        <footer className="grid gap-3 pt-2 text-[11px] text-foreground/45 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-4">
+          <p className="max-w-md text-[13px] font-semibold text-foreground/55">
             &ldquo;La mejor sesión empieza con una buena pregunta.&rdquo;
           </p>
-          <p className="font-sans tracking-[0.22em] tabular-nums uppercase">
+          <p className="font-black uppercase tabular-nums">
             /tenplanner · IA
           </p>
         </footer>

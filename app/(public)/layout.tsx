@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import AppShell from "@/components/app/app-shell";
-import { getStringSetting, isDrPlannerEnabled } from "@/lib/app-settings";
+import { getAppSettings } from "@/lib/app-settings";
 
 export default async function PublicLayout({
   children,
@@ -15,21 +15,29 @@ export default async function PublicLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const avatarUrl = user?.user_metadata?.avatar_url ?? null;
-
-  const [adminRows, maintenanceBanner, drPlannerEnabled] = await Promise.all([
+  const [adminRows, appSettings] = await Promise.all([
     user
       ? db
-          .select({ isAdmin: users.isAdmin })
+          .select({ isAdmin: users.isAdmin, image: users.image })
           .from(users)
           .where(eq(users.id, user.id))
           .limit(1)
-      : Promise.resolve([] as { isAdmin: boolean | null }[]),
-    getStringSetting("system.maintenance_banner", ""),
-    isDrPlannerEnabled(),
+      : Promise.resolve([] as { isAdmin: boolean | null; image: string | null }[]),
+    getAppSettings(["system.maintenance_banner", "feature.dr_planner_enabled"]),
   ]);
 
   const isAdmin = adminRows[0]?.isAdmin ?? false;
+  const avatarUrl =
+    adminRows[0]?.image ??
+    (typeof user?.user_metadata?.avatar_url === "string"
+      ? user.user_metadata.avatar_url
+      : null);
+  const maintenanceBanner =
+    typeof appSettings.get("system.maintenance_banner") === "string"
+      ? String(appSettings.get("system.maintenance_banner"))
+      : "";
+  const drPlannerEnabled =
+    appSettings.get("feature.dr_planner_enabled") === true;
 
   return (
     <AppShell

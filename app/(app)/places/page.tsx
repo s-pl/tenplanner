@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { places } from "@/db/schema";
+import { places, sessions } from "@/db/schema";
 import { PlacesClient } from "./places-client";
 
 export default async function PlacesPage() {
@@ -17,14 +17,27 @@ export default async function PlacesPage() {
       id: places.id,
       name: places.name,
       description: places.description,
+      createdAt: sql<string>`${places.createdAt}::text`,
+      updatedAt: sql<string>`${places.updatedAt}::text`,
+      totalSessions: sql<number>`COUNT(${sessions.id})::int`,
+      upcomingSessions: sql<number>`COUNT(${sessions.id}) FILTER (WHERE ${sessions.scheduledAt} >= now())::int`,
+      totalMinutes: sql<number>`COALESCE(SUM(${sessions.durationMinutes}), 0)::int`,
+      lastScheduledAt: sql<string | null>`MAX(${sessions.scheduledAt})::text`,
     })
     .from(places)
+    .leftJoin(
+      sessions,
+      and(eq(sessions.placeId, places.id), eq(sessions.userId, user.id))
+    )
     .where(eq(places.coachId, user.id))
+    .groupBy(places.id)
     .orderBy(places.name);
 
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 md:px-8">
-      <PlacesClient initialPlaces={rows} />
+    <div className="tp-page">
+      <div className="tp-page-pad">
+        <PlacesClient initialPlaces={rows} />
+      </div>
     </div>
   );
 }

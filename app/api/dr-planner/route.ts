@@ -770,7 +770,7 @@ export async function POST(request: Request) {
   const isFirstTurn = messages.filter((m) => m.role === "user").length <= 1;
 
   // Split stable vs dynamic so Anthropic prompt caching can hit the long static part.
-  const systemStable = `Eres Dr. Planner, asistente experto en diseño de sesiones de pádel. Hablas español, directo y breve. Sin emojis.
+  const systemStable = `Eres Dr. Planner, asistente experto en diseño de sesiones para deportes de raqueta. Hablas español, directo y breve. Sin emojis.
 
 ## Estilo
 - Máximo 3-4 frases por turno. El plan va en \`mostrar_ejercicios\` + \`configurar_sesion_meta\`, NO en texto.
@@ -1511,7 +1511,7 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
               const text = await generateTrackedInsight({
                 operation: "dr_planner_student_insight",
                 temperature: 0.3,
-                prompt: `Entrenador de pádel. Alumno: ${analytics.student.name} (${analytics.student.playerLevel ?? "sin nivel"}).
+                prompt: `Entrenador de deportes de raqueta. Alumno: ${analytics.student.name} (${analytics.student.playerLevel ?? "sin nivel"}).
 Datos 60d: ${analytics.sessionsLast60d} sesiones, última hace ${analytics.daysSinceLast ?? "?"} días, intensidad media ${analytics.avgIntensity ?? "?"}.
 Categorías: ${analytics.categoriesLast60d.map((c) => `${c.category} ${c.minutes}min`).join(", ") || "ninguna"}.
 Gaps: ${gaps.map((g) => g.label).join(", ") || "ninguno"}.
@@ -1601,7 +1601,7 @@ En 2 frases (máx 40 palabras), diagnóstico accionable para la próxima sesión
               const text = await generateTrackedInsight({
                 operation: "dr_planner_recommendation_insight",
                 temperature: 0.4,
-                prompt: `Entrenador de pádel. Propuesta para ${rec.targetStudents.map((s) => s.name).join(", ")}.
+                prompt: `Entrenador de deportes de raqueta. Propuesta para ${rec.targetStudents.map((s) => s.name).join(", ")}.
 Foco: ${rec.focus}. Duración: ${rec.durationSugerida}min, intensidad ${rec.intensitySugerida}/5.
 Gaps detectados: ${rec.gaps.map((g) => g.label).join(", ") || "ninguno"}.
 En 2 frases (máx 40 palabras), por qué esta propuesta tiene sentido ahora. Sin emojis, directo.`,

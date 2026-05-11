@@ -24,13 +24,16 @@ import {
   ArrowRight,
   ArrowLeft,
   ArrowUpRight,
-  Bot,
   Lock,
   Search,
+  CalendarClock,
+  Clock,
+  Dumbbell,
 } from "lucide-react";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
 import { getAppSettings } from "@/lib/app-settings";
+import { cn } from "@/lib/utils";
 type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
@@ -80,10 +83,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
   const settings = await getAppSettings([
-    "feature.dr_planner_enabled",
     "feature.session_creation_enabled",
   ]);
-  const drPlannerEnabled = settings.get("feature.dr_planner_enabled") !== false;
   const sessionCreationEnabled =
     settings.get("feature.session_creation_enabled") !== false;
 
@@ -211,62 +212,69 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     { key: "drafts", label: "Borradores", n: draftCount },
   ];
   return (
-    <div className="relative">
-      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-5 border-b border-border">
+    <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
+      <div className="w-full space-y-6 px-4 py-8 sm:px-6 md:px-10">
+        <header className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:p-6">
+          <div
+            aria-hidden
+            className="court-grid pointer-events-none absolute inset-0 opacity-40 dark:opacity-25"
+          />
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-semibold text-foreground">
+            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
+              <CalendarClock className="size-3.5 text-brand" />
+              Plan operativo
+            </p>
+            <h1 className="font-heading text-3xl font-semibold text-foreground md:text-4xl">
               Sesiones
             </h1>
-            <p className="mt-1.5 text-[14px] text-foreground/60">
+            <p className="mt-1.5 max-w-2xl text-[14px] text-foreground/60">
               Entrenamientos agendados con fecha, hora, lugar y alumnos.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {drPlannerEnabled && (
-              <Link
-                href="/sessions/dr-planner"
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3.5 h-10 text-[13px] font-medium text-foreground/80 transition-colors hover:border-brand/40 hover:text-brand"
-              >
-                <Bot className="size-4 text-brand" />
-                Dr. Planner
-              </Link>
-            )}
             {sessionCreationEnabled ? (
               <Link
                 href="/sessions/new"
-                className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
               >
                 <Plus className="size-4" />
                 Nueva sesión
               </Link>
             ) : (
-              <span className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/30 px-4 h-10 text-[13px] text-foreground/40">
+              <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
                 <Lock className="size-4" />
                 Bloqueado
               </span>
             )}
           </div>
+          </div>
         </header>
 
         <>
           {/* Tabs */}
-          <nav className="flex flex-wrap gap-1 border-b border-border">
+          <nav className="flex flex-wrap gap-2 rounded-lg border border-[#050505]/10 bg-white p-1.5 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
             {FILTERS.map(({ key, label, n }) => {
               const isActive = activeFilter === key;
               return (
                 <Link
                   key={key}
                   href={sessionsHref({ filter: key, page: 1 })}
-                  className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
+                  className={cn(
+                    "inline-flex min-h-9 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors",
                     isActive
-                      ? "border-brand text-brand"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                      ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                      : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                  )}
                 >
                   {label}
                   {n > 0 && (
-                    <span className="ml-1.5 text-[11px] tabular-nums text-foreground/45">
+                    <span
+                      className={cn(
+                        "text-[11px] tabular-nums",
+                        isActive ? "opacity-70" : "text-foreground/45"
+                      )}
+                    >
                       {n}
                     </span>
                   )}
@@ -276,13 +284,15 @@ export default async function SessionsPage({ searchParams }: PageProps) {
           </nav>
 
           {activeFilter === "drafts" ? (
-            <SessionDraftsPanel showEmptyState />
+            <div className="rounded-lg border border-[#050505]/10 bg-white p-3 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+              <SessionDraftsPanel showEmptyState />
+            </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-lg border border-[#050505]/10 bg-white p-3 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
                 <Suspense
                   fallback={
-                    <div className="h-10 w-full rounded-md border border-foreground/20 bg-transparent animate-pulse" />
+                    <div className="h-11 w-full animate-pulse rounded-full border border-foreground/15 bg-muted/30" />
                   }
                 >
                   <SessionsSearchInput defaultValue={searchTerm} />
@@ -302,7 +312,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                         q: undefined,
                         page: 1,
                       })}
-                      className="text-brand hover:underline"
+                      className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2.5 py-1 font-semibold text-foreground transition-colors hover:bg-[#D6FF38]/25"
                     >
                       Limpiar
                     </Link>
@@ -311,7 +321,14 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               </div>
 
               {sessionRows.length === 0 ? (
-                <div className="border border-dashed border-border rounded-lg py-16 text-center">
+                <div className="rounded-lg border border-dashed border-[#050505]/15 bg-white px-6 py-16 text-center shadow-[0_18px_50px_rgba(5,5,5,0.04)] dark:border-white/15 dark:bg-white/[0.035]">
+                  <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border border-[#D6FF38]/35 bg-[#D6FF38]/10">
+                    {searchTerm ? (
+                      <Search className="size-6 text-foreground/70" />
+                    ) : (
+                      <CalendarClock className="size-6 text-foreground/70" />
+                    )}
+                  </span>
                   <p className="text-[15px] font-medium text-foreground mb-2">
                     {searchTerm
                       ? "Sin coincidencias"
@@ -336,7 +353,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                           })
                         : "/sessions/new"
                     }
-                    className="inline-flex items-center gap-1.5 rounded-md bg-brand text-brand-foreground px-4 py-2 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
                   >
                     {searchTerm ? (
                       <>
@@ -350,7 +367,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="flex flex-col gap-2">
+                <ul className="grid gap-2">
                   {sessionRows.map((session) => {
                     const date = new Date(session.scheduledAt);
                     const isPast = date < now;
@@ -376,13 +393,13 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     return (
                       <li
                         key={session.id}
-                        className="rounded-lg border border-border bg-card transition-colors hover:border-brand/30"
+                        className="rounded-lg border border-[#050505]/10 bg-white shadow-[0_12px_36px_rgba(5,5,5,0.035)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
                       >
                         <Link
                           href={`/sessions/${session.id}`}
                           className="group flex items-center gap-4 px-4 py-3.5"
                         >
-                          <div className="w-20 shrink-0 border-r border-border pr-3">
+                          <div className="flex w-20 shrink-0 flex-col items-start border-r border-border pr-3">
                             <p className="font-heading text-xl leading-none tabular-nums text-foreground">
                               {formatDayMonth(date)}
                             </p>
@@ -408,12 +425,22 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                               {session.title}
                             </p>
                             <p className="mt-1 text-[12px] text-foreground/55 tabular-nums">
-                              {session.durationMinutes} min ·{" "}
-                              {count} {count === 1 ? "ejercicio" : "ejercicios"}
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                {session.durationMinutes} min
+                              </span>{" "}
+                              <span className="mx-1 text-foreground/25">/</span>
+                              <span className="inline-flex items-center gap-1">
+                                <Dumbbell className="size-3" />
+                                {count}{" "}
+                                {count === 1 ? "ejercicio" : "ejercicios"}
+                              </span>
                             </p>
                           </div>
 
-                          <ArrowRight className="size-4 text-foreground/30 group-hover:text-brand transition-colors" />
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-foreground/30 transition-colors group-hover:border-[#D6FF38]/70 group-hover:bg-[#D6FF38]/15 group-hover:text-foreground">
+                            <ArrowRight className="size-4" />
+                          </span>
                         </Link>
                       </li>
                     );
@@ -422,7 +449,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               )}
 
               {totalFiltered > 0 && totalPages > 1 && (
-                <footer className="flex items-center justify-between pt-3 border-t border-border">
+                <footer className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#050505]/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.045]">
                   <p className="text-[12px] text-foreground/50 tabular-nums">
                     {offset + 1}–{offset + sessionRows.length} de {totalFiltered}
                   </p>
@@ -430,12 +457,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     {safePage > 1 ? (
                       <Link
                         href={sessionsHref({ page: safePage - 1 })}
-                        className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70 hover:text-brand transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground"
                       >
                         <ArrowLeft className="size-3.5" /> Anterior
                       </Link>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/25">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[13px] text-foreground/25">
                         <ArrowLeft className="size-3.5" /> Anterior
                       </span>
                     )}
@@ -445,12 +472,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     {safePage < totalPages ? (
                       <Link
                         href={sessionsHref({ page: safePage + 1 })}
-                        className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70 hover:text-brand transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground"
                       >
                         Siguiente <ArrowUpRight className="size-3.5" />
                       </Link>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/25">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[13px] text-foreground/25">
                         Siguiente <ArrowUpRight className="size-3.5" />
                       </span>
                     )}

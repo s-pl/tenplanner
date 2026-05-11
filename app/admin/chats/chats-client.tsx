@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { adminInputClass, adminTableShellClass } from "../_components/admin-ui";
 
 interface Chat {
   id: string;
@@ -72,7 +73,7 @@ export function AdminChatsClient({ chats, total, page, totalPages, q }: Props) {
           placeholder="Buscar por título, usuario o email…"
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-foreground/15 bg-foreground/[0.02] text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50"
+          className={cn(adminInputClass, "w-full pl-9 pr-4")}
         />
       </form>
 
@@ -82,11 +83,11 @@ export function AdminChatsClient({ chats, total, page, totalPages, q }: Props) {
       </p>
 
       {chats.length === 0 ? (
-        <div className="rounded-2xl border border-foreground/10 px-4 py-16 text-center text-sm text-foreground/40">
+        <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-16 text-center text-sm text-foreground/40">
           No hay conversaciones
         </div>
       ) : (
-        <div className="rounded-2xl border border-foreground/10 overflow-hidden">
+        <div className={adminTableShellClass}>
           <div className="divide-y divide-foreground/8">
             {chats.map((chat) => (
               <div
@@ -94,8 +95,8 @@ export function AdminChatsClient({ chats, total, page, totalPages, q }: Props) {
                 className="flex items-center gap-4 px-4 py-3 sm:px-5 hover:bg-foreground/[0.02] transition-colors"
               >
                 {/* Icon */}
-                <div className="shrink-0 flex size-8 items-center justify-center rounded-lg bg-violet-400/10">
-                  <MessageSquare className="size-4 text-violet-400" />
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#D6FF38]/25 bg-[#D6FF38]/12">
+                  <MessageSquare className="size-4 text-[#6F8500] dark:text-[#D6FF38]" />
                 </div>
 
                 {/* Content */}

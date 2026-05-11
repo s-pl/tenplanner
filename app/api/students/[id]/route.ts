@@ -92,6 +92,7 @@ export async function PUT(request: Request, context: StudentRouteContext) {
       "playerLevel",
       "yearsExperience",
       "yearStartedTennis",
+      "yearStartedRacketSports",
       "preferredSchedule",
       "notes",
       "imageUrl",
@@ -108,6 +109,18 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     }
     if (d.phone !== undefined) {
       updateValues.phone = d.phone === "" ? null : d.phone;
+    }
+    if (
+      d.yearStartedRacketSports !== undefined &&
+      d.yearStartedTennis === undefined
+    ) {
+      updateValues.yearStartedTennis = d.yearStartedRacketSports;
+    }
+    if (
+      d.yearStartedTennis !== undefined &&
+      d.yearStartedRacketSports === undefined
+    ) {
+      updateValues.yearStartedRacketSports = d.yearStartedTennis;
     }
 
     const [updated] = await db

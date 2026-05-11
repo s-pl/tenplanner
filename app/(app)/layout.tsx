@@ -4,11 +4,29 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import AppShell from "@/components/app/app-shell";
-import {
-  getAppSettings,
-  getStringSetting,
-  isDrPlannerEnabled,
-} from "@/lib/app-settings";
+import { getAppSettings, type SettingKey } from "@/lib/app-settings";
+
+const APP_LAYOUT_SETTING_KEYS = [
+  "feature.dr_planner_enabled",
+  "feature.session_templates_enabled",
+  "feature.exercise_creation_enabled",
+  "feature.groups_enabled",
+  "feature.calendar_enabled",
+  "system.maintenance_banner",
+  "brand.app_name",
+] as const satisfies readonly SettingKey[];
+
+type SettingsMap = Awaited<ReturnType<typeof getAppSettings>>;
+
+function booleanSetting(settings: SettingsMap, key: SettingKey, fallback = false) {
+  const value = settings.get(key);
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function stringSetting(settings: SettingsMap, key: SettingKey, fallback = "") {
+  const value = settings.get(key);
+  return typeof value === "string" ? value : fallback;
+}
 
 export default async function AppLayout({
   children,
@@ -22,34 +40,31 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  const avatarUrl = user.user_metadata?.avatar_url ?? null;
-
-  const [
-    [row],
-    drPlannerEnabled,
-    featureSettings,
-    maintenanceBanner,
-    appName,
-    appTagline,
-  ] = await Promise.all([
+  const [[row], appSettings] = await Promise.all([
     db
-      .select({ isAdmin: users.isAdmin })
+      .select({ isAdmin: users.isAdmin, image: users.image })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
-    isDrPlannerEnabled(),
-    getAppSettings([
-      "feature.session_templates_enabled",
-      "feature.exercise_creation_enabled",
-      "feature.groups_enabled",
-      "feature.calendar_enabled",
-    ]),
-    getStringSetting("system.maintenance_banner", ""),
-    getStringSetting("brand.app_name", "TenPlanner"),
-    getStringSetting("brand.app_tagline", ""),
+    getAppSettings(APP_LAYOUT_SETTING_KEYS),
   ]);
 
   const isAdmin = row?.isAdmin ?? false;
+  const avatarUrl =
+    row?.image ??
+    (typeof user.user_metadata?.avatar_url === "string"
+      ? user.user_metadata.avatar_url
+      : null);
+  const drPlannerEnabled = booleanSetting(
+    appSettings,
+    "feature.dr_planner_enabled",
+    false
+  );
+  const maintenanceBanner = stringSetting(
+    appSettings,
+    "system.maintenance_banner"
+  );
+  const appName = stringSetting(appSettings, "brand.app_name", "TenPlanner");
 
   return (
     <AppShell
@@ -58,16 +73,21 @@ export default async function AppLayout({
       isAdmin={isAdmin}
       drPlannerEnabled={drPlannerEnabled}
       features={{
-        sessionTemplates:
-          featureSettings.get("feature.session_templates_enabled") !== false,
-        exerciseCreation:
-          featureSettings.get("feature.exercise_creation_enabled") !== false,
-        groups: featureSettings.get("feature.groups_enabled") !== false,
-        calendar: featureSettings.get("feature.calendar_enabled") !== false,
+        sessionTemplates: booleanSetting(
+          appSettings,
+          "feature.session_templates_enabled",
+          true
+        ),
+        exerciseCreation: booleanSetting(
+          appSettings,
+          "feature.exercise_creation_enabled",
+          true
+        ),
+        groups: booleanSetting(appSettings, "feature.groups_enabled", true),
+        calendar: booleanSetting(appSettings, "feature.calendar_enabled", true),
       }}
       maintenanceBanner={maintenanceBanner}
       appName={appName}
-      appTagline={appTagline}
     >
       {children}
     </AppShell>

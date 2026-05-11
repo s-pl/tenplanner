@@ -69,51 +69,55 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-labelledby="cookie-banner-title"
-      className="fixed inset-x-0 bottom-0 z-[60] px-4 pb-4 sm:px-6 sm:pb-6 pointer-events-none"
+      aria-describedby="cookie-banner-copy"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] px-3 pb-3 sm:px-6 sm:pb-6"
     >
-      <div className="pointer-events-auto mx-auto max-w-3xl rounded-2xl border border-foreground/15 bg-card/95 backdrop-blur shadow-[0_24px_70px_-30px_color-mix(in_oklab,var(--foreground)_40%,transparent)] p-4 sm:p-5">
+      <div className="pointer-events-auto mx-auto max-w-3xl rounded-lg border border-[#050505]/10 bg-white p-4 text-[#050505] shadow-[0_24px_70px_-30px_rgba(5,5,5,0.55)] backdrop-blur dark:border-white/12 dark:bg-[#101010] dark:text-white sm:p-5">
         <div className="flex items-start gap-3">
-          <div className="size-9 shrink-0 rounded-xl bg-brand/10 border border-brand/25 flex items-center justify-center text-brand">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#D6FF38]/60 bg-[#D6FF38] text-[#050505]">
             <Cookie className="size-4" strokeWidth={1.8} />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <p
               id="cookie-banner-title"
-              className="font-heading text-base text-foreground"
+              className="text-sm font-black uppercase tracking-[0.14em]"
             >
-              Solo cookies técnicas
+              Solo cookies tecnicas
             </p>
-            <p className="text-[13px] leading-relaxed text-foreground/70 mt-1">
+            <p
+              id="cookie-banner-copy"
+              className="mt-2 text-[13px] font-medium leading-relaxed text-[#050505]/68 dark:text-white/62"
+            >
               Usamos cookies y almacenamiento local estrictamente necesarios
-              (sesión y preferencias). No hay analíticas ni tracking. Más info
+              (sesion y preferencias). No hay analiticas ni tracking. Mas info
               en la{" "}
               <Link
                 href="/cookies"
-                className="underline underline-offset-4 decoration-foreground/30 hover:text-foreground"
+                className="font-bold underline decoration-[#050505]/24 underline-offset-4 hover:text-[#050505] dark:decoration-white/24 dark:hover:text-white"
               >
-                política de cookies
+                politica de cookies
               </Link>
               .
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 onClick={acknowledge}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground text-background text-[12px] font-semibold px-4 py-1.5 hover:bg-brand hover:text-brand-foreground transition-colors"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#050505] px-4 text-[12px] font-black text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
               >
                 Entendido
               </button>
               <Link
                 href="/privacidad"
-                className="text-[12px] text-foreground/60 hover:text-foreground underline underline-offset-4 decoration-foreground/30"
+                className="text-[12px] font-bold text-[#050505]/54 underline decoration-[#050505]/24 underline-offset-4 hover:text-[#050505] dark:text-white/52 dark:decoration-white/24 dark:hover:text-white"
               >
-                Ver política de privacidad
+                Ver politica de privacidad
               </Link>
             </div>
           </div>
           <button
             onClick={acknowledge}
             aria-label="Cerrar aviso"
-            className="shrink-0 size-7 rounded-md text-foreground/50 hover:text-foreground hover:bg-foreground/5 flex items-center justify-center"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[#050505]/46 transition-colors hover:bg-[#050505]/5 hover:text-[#050505] dark:text-white/46 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <X className="size-4" strokeWidth={1.6} />
           </button>

@@ -56,9 +56,7 @@ export default async function EditClassPage({ params }: PageProps) {
         })
         .from(classBlockExercises)
         .leftJoin(exercises, eq(exercises.id, classBlockExercises.exerciseId))
-        .where(
-          or(...blocks.map((b) => eq(classBlockExercises.blockId, b.id)))!
-        )
+        .where(or(...blocks.map((b) => eq(classBlockExercises.blockId, b.id)))!)
         .orderBy(
           asc(classBlockExercises.blockId),
           asc(classBlockExercises.orderIndex)
@@ -80,8 +78,10 @@ export default async function EditClassPage({ params }: PageProps) {
     name: cls.name,
     duracionMinutes: cls.duracionMinutes,
     alumnosTipo: cls.alumnosTipo as "individual" | "grupal" | null,
+    numAlumnos: cls.numAlumnos,
     nivel: cls.nivel,
     aspectoJuego: cls.aspectoJuego,
+    golpes: Array.isArray(cls.golpes) ? cls.golpes : null,
     objetivos: cls.objetivos,
     material: cls.material,
     videoUrl: cls.videoUrl,
@@ -111,19 +111,25 @@ export default async function EditClassPage({ params }: PageProps) {
   };
 
   return (
-    <div className="space-y-6 px-4 py-8 sm:px-6 md:px-10">
-      <Link
-        href={`/classes/${cls.id}`}
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="size-4" /> Volver a la clase
-      </Link>
+    <div className="px-4 py-8 sm:px-6 md:px-10">
+      <div className="mb-6 flex items-start gap-4 border-b border-foreground/10 pb-5">
+        <Link
+          href={`/classes/${cls.id}`}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-muted-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38] hover:text-[#050505]"
+          aria-label="Volver a la clase"
+        >
+          <ArrowLeft className="size-4" />
+        </Link>
 
-      <div>
-        <h1 className="font-heading text-3xl sm:text-4xl italic text-foreground leading-tight">
-          Editar clase
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5">{cls.name}</p>
+        <div>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#D6FF38]">
+            Plantilla de clase
+          </p>
+          <h1 className="font-heading text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+            Editar clase
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">{cls.name}</p>
+        </div>
       </div>
 
       <ClassForm

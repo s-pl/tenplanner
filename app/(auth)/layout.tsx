@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { NotebookPen } from "lucide-react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 
 export default function AuthLayout({
@@ -7,61 +9,83 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left panel — clean, no animation */}
-      <div className="relative hidden overflow-hidden md:flex md:w-[44%] lg:w-[40%] flex-col bg-sidebar border-r border-sidebar-border">
-        <div className="relative z-10 flex h-full flex-col p-10">
-          <Link
-            href="/"
-            className="font-heading text-2xl font-semibold text-foreground"
-          >
-            ten<em className="italic text-brand not-italic">planner</em>
-          </Link>
+    <div className="min-h-screen bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white">
+      <div className="grid min-h-screen lg:grid-cols-[minmax(360px,0.92fr)_minmax(0,1.08fr)]">
+        <aside className="relative hidden overflow-hidden border-r border-[#050505]/10 bg-[#050505] text-white dark:border-white/10 lg:block">
+          <Image
+            src="/landing/racket-motion.jpg"
+            alt="Entrenamiento de deportes de raqueta en pista"
+            fill
+            priority
+            sizes="42vw"
+            className="object-cover opacity-58 saturate-125"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.16),rgba(5,5,5,0.88))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(214,255,56,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:52px_52px] opacity-30" />
 
-          <div className="flex flex-1 items-end">
-            <div className="space-y-3">
-              <h2 className="font-heading text-3xl leading-tight text-foreground">
-                Planifica tus clases de tenis sin perder tiempo.
+          <div className="relative z-10 flex h-full flex-col justify-between p-8 xl:p-10">
+            <Link href="/" className="flex w-fit items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-lg bg-[#D6FF38] text-[#050505]">
+                <NotebookPen className="size-4" strokeWidth={2} />
+              </span>
+              <span className="text-lg font-black tracking-tight">
+                TenPlanner
+              </span>
+            </Link>
+
+            <div className="max-w-xl pb-4">
+              <span className="inline-flex rounded-lg bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#050505]">
+                Deportes de raqueta
+              </span>
+              <h2 className="mt-5 text-5xl font-black leading-[0.92] xl:text-6xl">
+                Planifica mejor. Entrena con método.
               </h2>
-              <p className="text-sm text-foreground/65 max-w-sm leading-relaxed">
-                Ejercicios, clases y sesiones organizados en un solo sitio.
+              <p className="mt-5 max-w-md text-sm font-semibold leading-7 text-white/66">
+                Ejercicios, clases, sesiones, alumnos y grupos organizados en
+                un sistema operativo para entrenadores.
               </p>
             </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* Right panel */}
-      <div className="flex flex-1 flex-col bg-background">
-        {/* Mobile top bar */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4 md:hidden">
-          <Link
-            href="/"
-            className="font-heading text-lg font-semibold"
+        <div className="flex min-w-0 flex-col">
+          <header className="flex items-center justify-between border-b border-[#050505]/10 bg-white/70 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] lg:justify-end lg:border-0 lg:bg-transparent lg:px-6 lg:pt-5">
+            <Link href="/" className="flex items-center gap-2 lg:hidden">
+              <span className="grid size-9 place-items-center rounded-lg bg-[#D6FF38] text-[#050505]">
+                <NotebookPen className="size-4" strokeWidth={2} />
+              </span>
+              <span className="text-sm font-black tracking-tight">
+                TenPlanner
+              </span>
+            </Link>
+            <ThemeToggle compact />
+          </header>
+
+          <main
+            id="main"
+            className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-10"
           >
-            ten<em className="italic text-brand not-italic">planner</em>
-          </Link>
-          <ThemeToggle compact />
-        </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(5,5,5,.45) 1px, transparent 1px), linear-gradient(90deg, rgba(5,5,5,.45) 1px, transparent 1px)",
+                backgroundSize: "44px 44px",
+              }}
+            />
+            <div className="relative w-full max-w-md">{children}</div>
+          </main>
 
-        {/* Desktop theme toggle */}
-        <div className="hidden md:flex justify-end px-6 pt-5 pb-0">
-          <ThemeToggle compact />
-        </div>
-
-        {/* Form */}
-        <div className="flex flex-1 flex-col items-center justify-center p-6">
-          <div className="w-full max-w-sm">{children}</div>
-
-          <p className="mt-8 text-xs text-muted-foreground">
+          <footer className="px-4 pb-6 text-center text-xs font-medium text-[#050505]/46 dark:text-white/40">
             Al continuar, aceptas nuestros{" "}
             <Link
-              href="/"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
+              href="/terminos"
+              className="font-bold underline decoration-[#050505]/20 underline-offset-4 transition-colors hover:text-[#050505] dark:decoration-white/20 dark:hover:text-white"
             >
               Términos de Servicio
             </Link>
-          </p>
+          </footer>
         </div>
       </div>
     </div>

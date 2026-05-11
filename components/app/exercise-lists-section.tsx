@@ -140,7 +140,7 @@ function CollectionCard({
   return (
     <article
       className={cn(
-        "group relative border border-foreground/10 rounded-2xl overflow-hidden transition-all duration-300",
+        "group relative overflow-hidden rounded-lg border border-foreground/10 bg-card shadow-sm shadow-black/5 transition-all duration-300",
         expanded
           ? "shadow-lg shadow-foreground/5"
           : "hover:border-foreground/20"
@@ -453,13 +453,14 @@ export function ExerciseListsSection() {
   }
 
   useEffect(() => {
-    void loadLists();
+    const initialLoad = window.setTimeout(() => void loadLists(), 0);
     const refresh = () => {
       if (document.visibilityState !== "hidden") void loadLists();
     };
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
+      window.clearTimeout(initialLoad);
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
@@ -580,7 +581,7 @@ export function ExerciseListsSection() {
 
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand text-background px-5 py-2.5 text-[13px] font-semibold hover:bg-brand/90 transition-colors"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-5 py-2.5 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e]"
             >
               <Plus className="size-4" /> Nueva colección
             </button>
@@ -608,10 +609,10 @@ export function ExerciseListsSection() {
         <button
           onClick={() => setShowCreate((v) => !v)}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-[12px] font-medium transition-all shrink-0",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[12px] font-semibold transition-all",
             showCreate
-              ? "border-brand/40 bg-brand/8 text-brand"
-              : "border-foreground/15 text-foreground/50 hover:border-brand/30 hover:text-brand hover:bg-brand/5"
+              ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+              : "border-foreground/15 text-foreground/50 hover:border-[#D6FF38]/40 hover:bg-[#D6FF38]/10 hover:text-foreground"
           )}
         >
           <Plus
@@ -626,7 +627,7 @@ export function ExerciseListsSection() {
 
       {/* ── Create new collection ── */}
       {showCreate && (
-        <div className="rounded-2xl border border-brand/20 bg-brand/[0.03] p-4">
+        <div className="rounded-lg border border-[#D6FF38]/30 bg-[#D6FF38]/10 p-4">
           <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-brand/60 mb-2.5">
             Nombre de la colección
           </p>
@@ -645,12 +646,12 @@ export function ExerciseListsSection() {
               }}
               placeholder="Ej: Técnica de volea, Calentamiento tipo A…"
               maxLength={100}
-              className="flex-1 h-10 rounded-xl border border-foreground/15 bg-background px-3.5 text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50 transition-colors"
+              className="h-10 flex-1 rounded-lg border border-foreground/15 bg-background/70 px-3.5 text-sm text-foreground transition-colors placeholder:text-foreground/30 focus:border-[#D6FF38]/70 focus:outline-none"
             />
             <button
               onClick={() => void createList()}
               disabled={!newListName.trim() || creating}
-              className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-brand text-background px-4 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors shrink-0"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e] disabled:opacity-50"
             >
               {creating ? (
                 <Loader2 className="size-3.5 animate-spin" />

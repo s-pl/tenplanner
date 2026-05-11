@@ -31,6 +31,7 @@ import { TimeGreeting } from "@/components/app/dashboard/time-greeting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { greetingForHour } from "@/lib/time-greeting";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { cn } from "@/lib/utils";
 
 function formatDayMonth(date: Date) {
@@ -69,8 +70,9 @@ function SectionTitle({
   return (
     <h2
       id={id}
-      className="font-heading text-[17px] font-semibold text-foreground"
+      className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.18em] text-foreground/60"
     >
+      <span className="size-2 rounded-full bg-[#D6FF38] shadow-[0_0_0_4px_rgba(214,255,56,0.16)]" />
       {title}
     </h2>
   );
@@ -78,43 +80,43 @@ function SectionTitle({
 
 function DashboardBodySkeleton() {
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex w-full flex-col gap-8">
       <section className="flex flex-col gap-4">
-        <Skeleton className="h-4 w-36 rounded-none" />
-        <div className="grid grid-cols-2 border border-foreground/12 lg:grid-cols-4">
+        <Skeleton className="h-4 w-36 rounded-full" />
+        <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-foreground/12 bg-card lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
               className="border-b border-r border-foreground/10 p-5 last:border-r-0 lg:border-b-0"
             >
-              <Skeleton className="h-3 w-24 rounded-none" />
-              <Skeleton className="mt-6 h-12 w-20 rounded-none" />
+              <Skeleton className="h-3 w-24 rounded-full" />
+              <Skeleton className="mt-6 h-12 w-20 rounded-lg" />
             </div>
           ))}
         </div>
       </section>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <div className="flex flex-col gap-4">
-          <Skeleton className="h-4 w-40 rounded-none" />
-          <div className="border border-foreground/12">
+          <Skeleton className="h-4 w-40 rounded-full" />
+          <div className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
                 className="grid grid-cols-[84px_1fr_auto] items-center gap-5 border-b border-foreground/10 p-5 last:border-b-0"
               >
-                <Skeleton className="h-14 w-20 rounded-none" />
+                <Skeleton className="h-14 w-20 rounded-lg" />
                 <div className="flex flex-col gap-2">
-                  <Skeleton className="h-3 w-48 rounded-none" />
-                  <Skeleton className="h-3 w-28 rounded-none" />
+                  <Skeleton className="h-3 w-48 rounded-full" />
+                  <Skeleton className="h-3 w-28 rounded-full" />
                 </div>
-                <Skeleton className="size-4 rounded-none" />
+                <Skeleton className="size-4 rounded-full" />
               </div>
             ))}
           </div>
         </div>
         <aside className="flex flex-col gap-4">
-          <Skeleton className="h-4 w-28 rounded-none" />
-          <div className="border border-foreground/12">
+          <Skeleton className="h-4 w-28 rounded-full" />
+          <div className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton
                 key={i}
@@ -174,7 +176,10 @@ async function DashboardBody({
         })
         .from(sessionsTable)
         .where(eq(sessionsTable.userId, userId)),
-      db.select({ count: count() }).from(exercisesTable),
+      db
+        .select({ count: count() })
+        .from(exercisesTable)
+        .where(exerciseVisibleToUserCondition(userId)),
       db
         .select({ count: count() })
         .from(studentsTable)
@@ -310,7 +315,7 @@ async function DashboardBody({
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex w-full flex-col gap-8">
       {/* Resumen */}
       <section
         aria-labelledby="insight-heading"
@@ -321,11 +326,15 @@ async function DashboardBody({
           {insightStats.map(({ label, value, unit, icon: Icon, isText }) => (
             <div
               key={label}
-              className="rounded-lg border border-border bg-card p-5"
+              className="rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_40px_rgba(5,5,5,0.05)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-[13px] text-foreground/65">{label}</p>
-                <Icon className="size-4 text-brand" strokeWidth={1.7} />
+                <p className="text-[13px] font-medium text-foreground/65">
+                  {label}
+                </p>
+                <span className="flex size-8 items-center justify-center rounded-full bg-[#D6FF38]/15 text-foreground">
+                  <Icon className="size-4 text-brand" strokeWidth={1.7} />
+                </span>
               </div>
               <div className="mt-4">
                 {isText ? (
@@ -357,11 +366,15 @@ async function DashboardBody({
           {stats.map(({ label, value, unit, icon: Icon }) => (
             <div
               key={label}
-              className="rounded-lg border border-border bg-card p-5"
+              className="rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_40px_rgba(5,5,5,0.04)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.04]"
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-[13px] text-foreground/65">{label}</p>
-                <Icon className="size-4 text-brand" strokeWidth={1.7} />
+                <p className="text-[13px] font-medium text-foreground/65">
+                  {label}
+                </p>
+                <span className="flex size-8 items-center justify-center rounded-full bg-foreground/[0.04] text-foreground dark:bg-white/[0.06]">
+                  <Icon className="size-4 text-brand" strokeWidth={1.7} />
+                </span>
               </div>
               <p className="mt-4 font-heading text-4xl text-foreground tabular-nums">
                 {value}
@@ -378,17 +391,22 @@ async function DashboardBody({
             <SectionTitle title="Próximas sesiones" />
             <Link
               href="/sessions?filter=upcoming"
-              className="text-[12px] text-foreground/60 hover:text-brand transition-colors inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1 rounded-full border border-foreground/10 bg-card px-3 py-1.5 text-[12px] font-semibold text-foreground/65 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground"
             >
               Ver todas
               <ArrowUpRight className="size-3" />
             </Link>
           </div>
 
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-[0_18px_50px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
             {upcomingSessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-                <Radio className="size-7 text-foreground/35" strokeWidth={1.6} />
+                <span className="flex size-12 items-center justify-center rounded-full border border-[#D6FF38]/35 bg-[#D6FF38]/10">
+                  <Radio
+                    className="size-6 text-foreground/70"
+                    strokeWidth={1.6}
+                  />
+                </span>
                 <div>
                   <p className="text-[15px] font-medium text-foreground">
                     No tienes sesiones próximas
@@ -399,7 +417,7 @@ async function DashboardBody({
                 </div>
                 <Link
                   href="/sessions/new"
-                  className="mt-1 inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+                  className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
                 >
                   <Plus className="size-3.5" />
                   Crear sesión
@@ -413,7 +431,7 @@ async function DashboardBody({
                     <li key={session.id}>
                       <Link
                         href={`/sessions/${session.id}`}
-                        className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-foreground/[0.025]"
+                        className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-[#D6FF38]/8"
                       >
                         <div className="w-16 shrink-0 border-r border-border pr-3">
                           <p className="font-heading text-xl leading-none text-foreground tabular-nums">
@@ -453,18 +471,18 @@ async function DashboardBody({
 
         <aside className="flex flex-col gap-4">
           <SectionTitle title="Accesos rápidos" />
-          <div className="rounded-lg border border-border bg-card divide-y divide-border">
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-[0_18px_50px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
             {actions.map(({ href, label, desc, icon: Icon, accent }) => (
               <Link
                 key={href}
                 href={href}
-                className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-foreground/[0.025]"
+                className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#D6FF38]/8"
               >
                 <span
                   className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-md border",
+                    "flex size-9 shrink-0 items-center justify-center rounded-full border",
                     accent
-                      ? "border-brand/40 bg-brand/10 text-brand"
+                      ? "border-[#D6FF38]/60 bg-[#D6FF38]/20 text-foreground"
                       : "border-border text-foreground/60"
                   )}
                 >
@@ -511,11 +529,16 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="relative min-h-full">
-      <div className="flex flex-col gap-8 px-4 py-6 sm:px-6 md:px-10 md:py-8">
-        <header className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-border">
+    <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
+      <div className="flex w-full flex-col gap-8 px-4 py-6 sm:px-6 md:px-10 md:py-8">
+        <header className="relative overflow-hidden rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_18px_60px_rgba(5,5,5,0.06)] dark:border-white/10 dark:bg-white/[0.045] sm:p-6">
+          <div
+            aria-hidden
+            className="court-grid pointer-events-none absolute inset-0 opacity-45 dark:opacity-25"
+          />
+          <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[12px] text-foreground/55 mb-1">
+            <p className="mb-2 inline-flex rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[12px] font-semibold text-foreground/60 dark:bg-[#050505]/70">
               {formatLongDate(now)}
             </p>
             <TimeGreeting
@@ -526,17 +549,18 @@ export default async function DashboardPage() {
           {sessionCreationEnabled ? (
             <Link
               href="/sessions/new"
-              className="inline-flex items-center gap-2 rounded-md bg-brand text-brand-foreground px-4 h-10 text-[13px] font-semibold transition-colors hover:bg-brand/90"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
             >
               <Plus className="size-4" />
               Nueva sesión
             </Link>
           ) : (
-            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/30 px-4 h-10 text-[13px] text-foreground/40">
+            <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
               <Lock className="size-4" />
               Sesiones bloqueadas
             </span>
           )}
+          </div>
         </header>
 
         <Suspense fallback={<DashboardBodySkeleton />}>

@@ -49,14 +49,18 @@ export default async function ProfilePage() {
   const upcomingSessions = Number(sessionStats?.upcomingSessions ?? 0);
 
   return (
-    <div className="relative">
-      <div className="px-4 sm:px-6 md:px-10 py-8 space-y-6">
-        <header className="pb-5 border-b border-border">
-          <h1 className="font-heading text-3xl font-semibold text-foreground">
+    <div className="tp-page">
+      <div className="tp-page-pad space-y-6">
+        <header className="tp-hero-panel p-6 text-white sm:p-8">
+          <div className="mb-5 inline-flex rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
+            Cuenta
+          </div>
+          <h1 className="text-4xl font-black leading-tight sm:text-5xl">
             Perfil
           </h1>
-          <p className="text-[14px] text-foreground/60 mt-1.5">
-            Ajusta tus datos, la apariencia de la app y consulta tu actividad.
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/62">
+            Ajusta tus datos, apariencia, exportación y actividad desde un solo
+            panel de trabajo.
           </p>
         </header>
 

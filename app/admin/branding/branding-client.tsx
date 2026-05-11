@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { AccentColor } from "@/lib/accent-colors";
+import { adminPanelClass } from "../_components/admin-ui";
 
 interface Props {
   appName: string;
@@ -54,7 +55,7 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-start gap-3 border-b border-foreground/10 px-5 py-4">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-brand/20 bg-brand/8 text-brand">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[#D6FF38]/35 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]">
         <Icon className="size-4" />
       </span>
       <div>
@@ -150,7 +151,7 @@ export function AdminBrandingClient({
       )}
 
       {/* Identity */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={Type}
           title="Identidad"
@@ -195,7 +196,7 @@ export function AdminBrandingClient({
                 value={appTagline}
                 maxLength={60}
                 onChange={(e) => setAppTagline(e.target.value)}
-                placeholder="Planificador de pádel"
+                placeholder="Planificador de deportes de raqueta"
                 className="flex-1"
               />
               <SaveButton
@@ -211,7 +212,7 @@ export function AdminBrandingClient({
       </section>
 
       {/* Color */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={Palette}
           title="Color de marca"
@@ -228,9 +229,9 @@ export function AdminBrandingClient({
                   onClick={() => saveAccent(color.id)}
                   disabled={saving["brand.default_accent"]}
                   className={cn(
-                    "group relative flex flex-col items-center gap-2 rounded-xl border-2 px-4 py-3 transition-all",
+                    "group relative flex flex-col items-center gap-2 rounded-lg border px-4 py-3 transition-all",
                     isSelected
-                      ? "border-brand bg-brand/8"
+                      ? "border-[#D6FF38] bg-[#D6FF38]/14"
                       : "border-foreground/12 hover:border-foreground/30"
                   )}
                 >
@@ -244,7 +245,7 @@ export function AdminBrandingClient({
                     {color.label}
                   </span>
                   {isSelected && (
-                    <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-brand text-background">
+                    <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505]">
                       <Check className="size-2.5" />
                     </span>
                   )}
@@ -262,7 +263,7 @@ export function AdminBrandingClient({
       </section>
 
       {/* Contact */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={Mail}
           title="Contacto"
@@ -298,7 +299,7 @@ export function AdminBrandingClient({
       </section>
 
       {/* Social / SEO */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={Globe}
           title="Social y SEO"
@@ -350,7 +351,7 @@ export function AdminBrandingClient({
       </section>
 
       {/* Maintenance */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={AlertTriangle}
           title="Aviso global"
@@ -385,27 +386,27 @@ export function AdminBrandingClient({
       </section>
 
       {/* Preview sidebar */}
-      <section className="overflow-hidden rounded-lg border border-foreground/12 bg-card">
+      <section className={adminPanelClass}>
         <SectionHeader
           icon={Image}
           title="Preview del sidebar"
           description="Así verán los usuarios el nombre en la navegación lateral."
         />
         <div className="px-5 py-5">
-          <div className="inline-flex w-48 flex-col rounded-xl border border-foreground/12 bg-background p-3 shadow-sm">
+          <div className="inline-flex w-48 flex-col rounded-lg border border-foreground/12 bg-background/80 p-3 shadow-sm">
             <div className="mb-3 border-b border-foreground/10 pb-3">
               <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40">
                 {appName || "TenPlanner"}
               </p>
               <p className="mt-0.5 font-heading text-sm font-semibold text-foreground">
-                {appTagline || "Planificador de pádel"}
+                {appTagline || "Planificador de deportes de raqueta"}
               </p>
             </div>
             <div className="flex flex-col gap-1">
               {["Inicio", "Sesiones", "Alumnos"].map((item) => (
                 <div
                   key={item}
-                  className="h-6 rounded-lg bg-foreground/5 px-2 flex items-center"
+                  className="flex h-6 items-center rounded-md bg-foreground/5 px-2"
                 >
                   <span className="text-[10px] text-foreground/40">{item}</span>
                 </div>

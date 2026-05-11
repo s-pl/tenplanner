@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 function siteUrl() {
   return (
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://tenplanner.app"
+    "https://tenplanner.com"
   );
 }
 

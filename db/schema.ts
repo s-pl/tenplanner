@@ -183,6 +183,11 @@ export const sessions = pgTable(
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     objective: text("objective"),
+    material: text("material"),
+    observations: text("observations"),
+    sourceClassId: uuid("source_class_id").references(() => classes.id, {
+      onDelete: "set null",
+    }),
     intensity: integer("intensity"), // 1-5, app-validated
     tags: json("tags").$type<string[]>(),
     location: varchar("location", { length: 50 }),
@@ -236,6 +241,51 @@ export const sessionExercises = pgTable(
   ]
 );
 
+// Session blocks are the stable PMV snapshot used when a class is scheduled.
+export const sessionBlocks = pgTable(
+  "session_blocks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .references(() => sessions.id, { onDelete: "cascade" })
+      .notNull(),
+    orderIndex: integer("order_index").notNull(),
+    title: varchar("title", { length: 120 }),
+    notes: text("notes"),
+  },
+  (t) => [
+    uniqueIndex("session_blocks_session_order_uniq").on(
+      t.sessionId,
+      t.orderIndex
+    ),
+    index("session_blocks_session_id_idx").on(t.sessionId),
+  ]
+);
+
+export const sessionBlockItems = pgTable(
+  "session_block_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    blockId: uuid("block_id")
+      .references(() => sessionBlocks.id, { onDelete: "cascade" })
+      .notNull(),
+    exerciseId: uuid("exercise_id").references(() => exercises.id, {
+      onDelete: "set null",
+    }),
+    exerciseName: varchar("exercise_name", { length: 255 }),
+    exerciseDescription: text("exercise_description"),
+    freeText: text("free_text"),
+    orderIndex: integer("order_index").notNull(),
+    durationMinutes: integer("duration_minutes"),
+    notes: text("notes"),
+  },
+  (t) => [
+    index("session_block_items_block_id_idx").on(t.blockId),
+    index("session_block_items_block_order_idx").on(t.blockId, t.orderIndex),
+    index("session_block_items_exercise_id_idx").on(t.exerciseId),
+  ]
+);
+
 // Students (managed by coaches)
 export const students = pgTable(
   "students",
@@ -254,6 +304,7 @@ export const students = pgTable(
     playerLevel: varchar("player_level", { length: 30 }), // ahora admite los 8 niveles PMV
     yearsExperience: integer("years_experience"),
     yearStartedTennis: integer("year_started_tennis"),
+    yearStartedRacketSports: integer("year_started_racket_sports"),
     phone: varchar("phone", { length: 32 }),
     preferredSchedule: text("preferred_schedule"),
     notes: text("notes"),
@@ -567,6 +618,7 @@ export const classes = pgTable(
     material: text("material"),
     videoUrl: text("video_url"),
     aspectosImportantes: text("aspectos_importantes"),
+    numAlumnos: integer("num_alumnos"),
     nivel: varchar("nivel", { length: 32 }),
     aspectoJuego: varchar("aspecto_juego", { length: 16 }),
     golpes: json("golpes").$type<string[]>(),
@@ -645,6 +697,44 @@ export const classFavorites = pgTable(
   ]
 );
 
+export const classLists = pgTable(
+  "class_lists",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    emoji: varchar("emoji", { length: 10 }).default("CL"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("class_lists_user_id_idx").on(t.userId)]
+);
+
+export const classListItems = pgTable(
+  "class_list_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    listId: uuid("list_id")
+      .references(() => classLists.id, { onDelete: "cascade" })
+      .notNull(),
+    classId: uuid("class_id")
+      .references(() => classes.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("class_list_items_list_class_uniq").on(t.listId, t.classId),
+    index("class_list_items_list_id_idx").on(t.listId),
+    index("class_list_items_class_id_idx").on(t.classId),
+  ]
+);
+
 export const classDrafts = pgTable(
   "class_drafts",
   {
@@ -716,6 +806,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   exercises: many(exercises),
   coachedStudents: many(students),
   groups: many(groups),
+  classLists: many(classLists),
 }));
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
@@ -731,8 +822,13 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
     fields: [sessions.userId],
     references: [users.id],
   }),
+  sourceClass: one(classes, {
+    fields: [sessions.sourceClassId],
+    references: [classes.id],
+  }),
   sessionExercises: many(sessionExercises),
   sessionStudents: many(sessionStudents),
+  blocks: many(sessionBlocks),
 }));
 
 export const sessionExercisesRelations = relations(
@@ -744,6 +840,31 @@ export const sessionExercisesRelations = relations(
     }),
     exercise: one(exercises, {
       fields: [sessionExercises.exerciseId],
+      references: [exercises.id],
+    }),
+  })
+);
+
+export const sessionBlocksRelations = relations(
+  sessionBlocks,
+  ({ one, many }) => ({
+    session: one(sessions, {
+      fields: [sessionBlocks.sessionId],
+      references: [sessions.id],
+    }),
+    items: many(sessionBlockItems),
+  })
+);
+
+export const sessionBlockItemsRelations = relations(
+  sessionBlockItems,
+  ({ one }) => ({
+    block: one(sessionBlocks, {
+      fields: [sessionBlockItems.blockId],
+      references: [sessionBlocks.id],
+    }),
+    exercise: one(exercises, {
+      fields: [sessionBlockItems.exerciseId],
       references: [exercises.id],
     }),
   })
@@ -909,6 +1030,28 @@ export const classFavoritesRelations = relations(classFavorites, ({ one }) => ({
     references: [classes.id],
   }),
 }));
+
+export const classListsRelations = relations(classLists, ({ one, many }) => ({
+  user: one(users, {
+    fields: [classLists.userId],
+    references: [users.id],
+  }),
+  items: many(classListItems),
+}));
+
+export const classListItemsRelations = relations(
+  classListItems,
+  ({ one }) => ({
+    list: one(classLists, {
+      fields: [classListItems.listId],
+      references: [classLists.id],
+    }),
+    class: one(classes, {
+      fields: [classListItems.classId],
+      references: [classes.id],
+    }),
+  })
+);
 
 export const classDraftsRelations = relations(classDrafts, ({ one }) => ({
   user: one(users, { fields: [classDrafts.userId], references: [users.id] }),

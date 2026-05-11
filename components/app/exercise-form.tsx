@@ -150,10 +150,7 @@ const formSchema = z.object({
     .int()
     .min(1, "Mínimo 1 minuto")
     .max(300, "Máximo 300 minutos"),
-  location: z
-    .enum(["pista", "pared", "playa", "casa"])
-    .optional()
-    .nullable(),
+  location: z.enum(["pista", "pared", "playa", "casa"]).optional().nullable(),
   nivel: z
     .enum([
       "descubrimiento",
@@ -175,10 +172,7 @@ const formSchema = z.object({
     .enum(["altura", "profundidad", "velocidad", "direccion"])
     .optional()
     .nullable(),
-  tipologia: z
-    .enum(["juego", "reto", "otros_deportes"])
-    .optional()
-    .nullable(),
+  tipologia: z.enum(["juego", "reto", "otros_deportes"]).optional().nullable(),
   duracionRango: z
     .enum(["1-5", "5-10", "10-15", "15-20", "+20"])
     .optional()
@@ -269,7 +263,7 @@ const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
 };
 
 const LOCATIONS: { id: Location; label: string; icon: string }[] = [
-  { id: "pista", label: "Pista de tenis", icon: "🎾" },
+  { id: "pista", label: "Pista/cancha", icon: "🎾" },
   { id: "pared", label: "Pared", icon: "🧱" },
   { id: "playa", label: "Playa", icon: "🏖️" },
   { id: "casa", label: "Casa", icon: "🏠" },
@@ -347,16 +341,16 @@ function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 pb-4 border-b border-border/50 mb-6">
-      <div className="size-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-        <Icon className="size-4 text-brand" />
+    <div className="mb-5 flex items-start gap-3 border-b border-foreground/10 pb-4">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/12 text-[#D6FF38]">
+        <Icon className="size-4" />
       </div>
       <div>
-        <p className="text-sm font-bold text-foreground uppercase tracking-wide">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
           {title}
         </p>
         {subtitle && (
-          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
         )}
       </div>
     </div>
@@ -422,8 +416,8 @@ function AccordionSection({
       open={open}
       onToggle={(event) => onToggle(event.currentTarget.open)}
       className={cn(
-        "rounded-2xl border bg-card overflow-hidden transition-colors",
-        open ? "border-brand/30" : "border-border"
+        "overflow-hidden rounded-lg border bg-card shadow-sm shadow-black/5 transition-colors",
+        open ? "border-[#D6FF38]/40" : "border-foreground/10"
       )}
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:content-none">
@@ -431,7 +425,7 @@ function AccordionSection({
           <div className="flex items-center gap-2 mb-1">
             <p className="text-sm font-bold text-foreground">{title}</p>
             {isComplete ? (
-              <span className="rounded-full bg-brand/10 border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand uppercase tracking-wide">
+              <span className="rounded-full border border-[#D6FF38]/30 bg-[#D6FF38]/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">
                 Completo
               </span>
             ) : (
@@ -441,11 +435,11 @@ function AccordionSection({
             )}
           </div>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
-          <div className="mt-2 h-0.5 rounded-full bg-border overflow-hidden">
+          <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-foreground/10">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500",
-                isComplete ? "bg-brand" : "bg-brand/50"
+                isComplete ? "bg-[#D6FF38]" : "bg-[#D6FF38]/50"
               )}
               style={{ width: `${fillPct}%` }}
             />
@@ -454,13 +448,13 @@ function AccordionSection({
         <div
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all",
-            open && "rotate-180 bg-muted text-foreground"
+            open && "rotate-180 bg-[#D6FF38] text-[#050505]"
           )}
         >
           <ChevronDown className="size-4" />
         </div>
       </summary>
-      <div className="border-t border-border/50 px-4 py-5">{children}</div>
+      <div className="border-t border-foreground/10 px-4 py-5">{children}</div>
     </details>
   );
 }
@@ -1007,9 +1001,7 @@ export function ExerciseForm({
                     <button
                       key={id}
                       type="button"
-                      onClick={() =>
-                        field.onChange(isSelected ? null : id)
-                      }
+                      onClick={() => field.onChange(isSelected ? null : id)}
                       className={cn(
                         "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-3 text-left transition-all duration-150",
                         isSelected
@@ -1487,9 +1479,7 @@ export function ExerciseForm({
                     <button
                       key={id}
                       type="button"
-                      onClick={() =>
-                        field.onChange(isSelected ? null : id)
-                      }
+                      onClick={() => field.onChange(isSelected ? null : id)}
                       className={cn(
                         "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
                         isSelected
@@ -1525,9 +1515,7 @@ export function ExerciseForm({
                     <button
                       key={id}
                       type="button"
-                      onClick={() =>
-                        field.onChange(isSelected ? null : id)
-                      }
+                      onClick={() => field.onChange(isSelected ? null : id)}
                       className={cn(
                         "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
                         isSelected
@@ -1563,9 +1551,7 @@ export function ExerciseForm({
                     <button
                       key={id}
                       type="button"
-                      onClick={() =>
-                        field.onChange(isSelected ? null : id)
-                      }
+                      onClick={() => field.onChange(isSelected ? null : id)}
                       className={cn(
                         "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
                         isSelected
@@ -1601,9 +1587,7 @@ export function ExerciseForm({
                     <button
                       key={id}
                       type="button"
-                      onClick={() =>
-                        field.onChange(isSelected ? null : id)
-                      }
+                      onClick={() => field.onChange(isSelected ? null : id)}
                       className={cn(
                         "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
                         isSelected
@@ -1941,7 +1925,7 @@ export function ExerciseForm({
                 storagePath={`exercises/${exerciseId ?? "new"}/image-${idx}`}
                 bucket="exercise-media"
                 label={idx === 0 ? "Portada" : `Imagen ${idx + 1}`}
-                searchSuggestion="padel entrenamiento"
+                searchSuggestion="deportes de raqueta entrenamiento"
               />
             </div>
           ))}
@@ -2023,13 +2007,15 @@ export function ExerciseForm({
       </div>
     </section>
   );
+  void stepsSection;
+  void resourcesSection;
 
   return (
-    <form onSubmit={handleFormSubmit} className="flex flex-col gap-8">
+    <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
       {/* Mode selector */}
-      <div className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-lg border border-foreground/10 bg-card p-3 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
+          <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
             Modo
           </p>
         </div>
@@ -2041,7 +2027,7 @@ export function ExerciseForm({
               variant="outline"
               onClick={() => void handleSaveDraft()}
               disabled={saveStatus === "saving" || isSubmitting}
-              className="h-8 rounded-lg px-3 text-[11px] font-bold"
+              className="h-8 rounded-full px-3 text-[11px] font-bold"
             >
               {saveStatus === "saving" ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -2052,13 +2038,13 @@ export function ExerciseForm({
           {enableDrafts && mode === "create" && (
             <DraftStatusPill status={saveStatus} savedAt={savedAt} />
           )}
-          <div className="flex items-center rounded-xl border border-border bg-muted/30 p-1 gap-1">
+          <div className="flex items-center gap-1 rounded-full border border-foreground/10 bg-muted/30 p-1">
             <Button
               type="button"
               size="sm"
               variant={formMode === "quick" ? "default" : "ghost"}
               onClick={() => updateFormMode("quick")}
-              className="rounded-lg text-xs font-bold h-8 px-3"
+              className="h-8 rounded-full px-3 text-xs font-bold"
             >
               Rápido
             </Button>
@@ -2067,7 +2053,7 @@ export function ExerciseForm({
               size="sm"
               variant={formMode === "full" ? "default" : "ghost"}
               onClick={() => updateFormMode("full")}
-              className="rounded-lg text-xs font-bold h-8 px-3"
+              className="h-8 rounded-full px-3 text-xs font-bold"
             >
               Completo
             </Button>
@@ -2076,7 +2062,7 @@ export function ExerciseForm({
       </div>
 
       {formMode === "quick" ? (
-        <section className="space-y-6">
+        <section className="space-y-6 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
           <SectionHeader
             icon={Dumbbell}
             title="Información básica"
@@ -2158,9 +2144,7 @@ export function ExerciseForm({
                       <button
                         key={id}
                         type="button"
-                        onClick={() =>
-                          field.onChange(active ? null : id)
-                        }
+                        onClick={() => field.onChange(active ? null : id)}
                         className={cn(
                           "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
                           active
@@ -2249,11 +2233,11 @@ export function ExerciseForm({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+      <div className="flex flex-wrap items-center gap-3 border-t border-foreground/10 pt-4">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-55"
+          className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8f52e] disabled:opacity-55"
         >
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
           {mode === "create" ? "Crear ejercicio" : "Guardar cambios"}
@@ -2262,14 +2246,14 @@ export function ExerciseForm({
           <button
             type="button"
             onClick={onCancel}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2.5"
+            className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Cancelar
           </button>
         ) : (
           <Link
             href="/exercises"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2.5"
+            className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Cancelar
           </Link>

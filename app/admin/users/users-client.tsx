@@ -30,6 +30,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  adminActionClass,
+  adminInputClass,
+  adminTableShellClass,
+} from "../_components/admin-ui";
 
 interface User {
   id: string;
@@ -201,7 +206,7 @@ export function AdminUsersClient({
           placeholder="Buscar por nombre o email…"
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-foreground/15 bg-foreground/[0.02] text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50"
+          className={cn(adminInputClass, "w-full pl-9 pr-4")}
         />
       </form>
 
@@ -214,8 +219,8 @@ export function AdminUsersClient({
             className={cn(
               "px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap",
               filter === f
-                ? "bg-brand text-brand-foreground"
-                : "bg-foreground/5 text-foreground/50 hover:text-foreground"
+                ? "bg-[#D6FF38] text-[#050505]"
+                : "bg-card text-foreground/55 ring-1 ring-foreground/10 hover:text-foreground"
             )}
           >
             {label}
@@ -227,7 +232,7 @@ export function AdminUsersClient({
         <button
           onClick={exportCsv}
           title="Exportar página actual a CSV"
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-foreground/12 bg-foreground/[0.02] px-2.5 py-1 text-[11px] text-foreground/50 transition-colors hover:bg-foreground/[0.05] hover:text-foreground"
+          className={cn(adminActionClass, "h-7 px-2.5 text-[11px]")}
         >
           <Download className="size-3" />
           CSV
@@ -237,14 +242,14 @@ export function AdminUsersClient({
       {/* Mobile cards */}
       <div className="grid gap-3 md:hidden">
         {users.length === 0 && (
-          <div className="rounded-2xl border border-foreground/10 px-4 py-10 text-center text-sm text-foreground/40">
+          <div className="rounded-lg border border-foreground/12 bg-card/80 px-4 py-10 text-center text-sm text-foreground/40">
             No hay usuarios
           </div>
         )}
         {users.map((u) => (
           <article
             key={u.id}
-            className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"
+            className="rounded-lg border border-foreground/12 bg-card/90 p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -335,7 +340,7 @@ export function AdminUsersClient({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden rounded-2xl border border-foreground/10 overflow-hidden md:block">
+      <div className={cn(adminTableShellClass, "hidden md:block")}>
         <Table>
           <TableHeader>
             <TableRow className="border-foreground/10 hover:bg-transparent">
