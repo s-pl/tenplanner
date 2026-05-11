@@ -27,6 +27,7 @@ const geistMono = Geist_Mono({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
   "https://tenplanner.app";
+const isProd = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -74,6 +75,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const scriptNonce = isProd ? nonce : undefined;
 
   return (
     <html
@@ -90,7 +92,7 @@ export default async function RootLayout({
         </a>
         <Script
           id="theme-init"
-          nonce={nonce}
+          nonce={scriptNonce}
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
