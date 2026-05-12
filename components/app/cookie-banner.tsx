@@ -82,20 +82,20 @@ export function CookieBanner() {
               id="cookie-banner-title"
               className="text-sm font-black uppercase tracking-[0.14em]"
             >
-              Solo cookies tecnicas
+              Solo cookies técnicas
             </p>
             <p
               id="cookie-banner-copy"
               className="mt-2 text-[13px] font-medium leading-relaxed text-[#050505]/68 dark:text-white/62"
             >
               Usamos cookies y almacenamiento local estrictamente necesarios
-              (sesion y preferencias). No hay analiticas ni tracking. Mas info
+              (sesión y preferencias). No hay analíticas ni tracking. Más info
               en la{" "}
               <Link
                 href="/cookies"
                 className="font-bold underline decoration-[#050505]/24 underline-offset-4 hover:text-[#050505] dark:decoration-white/24 dark:hover:text-white"
               >
-                politica de cookies
+                política de cookies
               </Link>
               .
             </p>
@@ -110,7 +110,7 @@ export function CookieBanner() {
                 href="/privacidad"
                 className="text-[12px] font-bold text-[#050505]/54 underline decoration-[#050505]/24 underline-offset-4 hover:text-[#050505] dark:text-white/52 dark:decoration-white/24 dark:hover:text-white"
               >
-                Ver politica de privacidad
+                Ver política de privacidad
               </Link>
             </div>
           </div>

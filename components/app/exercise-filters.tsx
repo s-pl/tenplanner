@@ -15,26 +15,26 @@ const FORMATOS = [
 const NIVELES = [
   { id: "descubrimiento", label: "Descubrimiento" },
   { id: "desarrollo", label: "Desarrollo" },
-  { id: "consolidacion", label: "Consolidacion" },
-  { id: "especializacion", label: "Especializacion" },
-  { id: "precompeticion", label: "Precompeticion" },
-  { id: "competicion", label: "Competicion" },
-  { id: "adultos_iniciacion", label: "Adultos iniciacion" },
+  { id: "consolidacion", label: "Consolidación" },
+  { id: "especializacion", label: "Especialización" },
+  { id: "precompeticion", label: "Precompetición" },
+  { id: "competicion", label: "Competición" },
+  { id: "adultos_iniciacion", label: "Adultos iniciación" },
   { id: "adultos_medio_alto", label: "Adultos medio-alto" },
 ] as const;
 
 const ASPECTOS = [
-  { id: "tecnica", label: "Tecnica" },
-  { id: "tactica", label: "Tactica" },
+  { id: "tecnica", label: "Técnica" },
+  { id: "tactica", label: "Táctica" },
   { id: "mental", label: "Mental" },
-  { id: "fisico", label: "Fisico" },
+  { id: "fisico", label: "Físico" },
 ] as const;
 
 const PARAMETROS = [
   { id: "altura", label: "Altura" },
   { id: "profundidad", label: "Profundidad" },
   { id: "velocidad", label: "Velocidad" },
-  { id: "direccion", label: "Direccion" },
+  { id: "direccion", label: "Dirección" },
 ] as const;
 
 const TIPOLOGIAS = [
@@ -52,17 +52,17 @@ const DURACION_RANGOS = [
 ] as const;
 
 const TIPOS_ACTIVIDAD = [
-  { id: "tecnico_tactico", label: "Tecnico-tactico" },
-  { id: "fisico", label: "Fisico" },
+  { id: "tecnico_tactico", label: "Técnico-táctico" },
+  { id: "fisico", label: "Físico" },
   { id: "cognitivo", label: "Cognitivo" },
   { id: "competitivo", label: "Competitivo" },
-  { id: "ludico", label: "Ludico" },
+  { id: "ludico", label: "Lúdico" },
 ] as const;
 
 const TIPOS_PELOTA = [
   { id: "normal", label: "Normal" },
   { id: "lenta", label: "Lenta" },
-  { id: "rapida", label: "Rapida" },
+  { id: "rapida", label: "Rápida" },
   { id: "sin_pelota", label: "Sin pelota" },
 ] as const;
 
@@ -467,7 +467,7 @@ export function ExerciseFilters({
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
               <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                Duracion (min)
+                Duración (min)
               </p>
               <div className="flex items-center gap-2">
                 <input

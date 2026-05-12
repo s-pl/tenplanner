@@ -166,7 +166,7 @@ function SessionLoad() {
     <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-brand">Sesion modelo</p>
+          <p className="text-sm font-semibold text-brand">Sesión modelo</p>
           <h3 className="mt-2 font-heading text-3xl font-semibold leading-none">
             75 min
           </h3>

@@ -23,7 +23,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
   async function loadLists() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/class-lists?classId=${classId}`, {
+      const res = await fetch(`/api/class-listsíclassId=${classId}`, {
         cache: "no-store",
       });
       const data = await res.json();
@@ -100,7 +100,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
                   Listas de clases
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Guarda esta clase en una coleccion propia.
+                  Guarda esta clase en una colección propia.
                 </p>
               </div>
               <button
@@ -121,7 +121,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
               ) : lists.length === 0 && !showNew ? (
                 <div className="rounded-xl border border-dashed border-border p-6 text-center">
                   <p className="text-sm font-medium text-foreground">
-                    Sin listas todavia
+                    Sin listas todavía
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Crea una para agrupar clases por metodologia o grupo.
@@ -154,7 +154,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
                         <Loader2 className="size-4 animate-spin text-brand" />
                       ) : (
                         <span className="text-xs font-semibold text-brand">
-                          {list.containsClass ? "Guardada" : "Anadir"}
+                          {list.containsClass ? "Guardada" : "Añadir"}
                         </span>
                       )}
                     </button>
@@ -171,7 +171,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
                     <input
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Ej: Adultos iniciacion"
+                      placeholder="Ej: Adultos iniciación"
                       className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/35"
                     />
                     <button

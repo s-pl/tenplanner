@@ -104,7 +104,7 @@ const navItems: NavItem[] = [
         icon: Store,
         feature: "sessionTemplates",
       },
-      { href: "/sessions/new", label: "Nueva sesion", icon: Plus },
+      { href: "/sessions/new", label: "Nueva sesión", icon: Plus },
     ],
   },
   {
@@ -432,7 +432,7 @@ function NavContent({
               )}
             >
               <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
-              Panel de administracion
+              Panel de administración
             </Link>
           </div>
         )}
@@ -479,7 +479,7 @@ function NavContent({
                 className="group flex items-center gap-2 rounded-lg py-2 text-left text-[12px] font-semibold text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
               >
                 <LogOut className="size-3.5" strokeWidth={1.6} />
-                Cerrar sesion
+                Cerrar sesión
               </button>
               <ThemeToggle compact />
             </div>
@@ -492,7 +492,7 @@ function NavContent({
               className="flex min-h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 text-[12px] font-bold text-sidebar-foreground transition-colors hover:border-sidebar-ring hover:bg-brand hover:text-brand-foreground"
             >
               <Lock className="size-3.5" strokeWidth={1.8} />
-              Iniciar sesion
+              Iniciar sesión
             </Link>
             <ThemeToggle compact />
           </div>
@@ -619,7 +619,7 @@ export function SidebarNav({
             type="button"
             onClick={() => setMobileOpen(true)}
             className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-            aria-label="Abrir menu"
+            aria-label="Abrir menú"
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav-drawer"
           >
@@ -634,14 +634,14 @@ export function SidebarNav({
           id="mobile-nav-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Menu de navegacion"
+          aria-label="Menú de navegación"
           className="fixed inset-0 z-50 flex md:hidden"
         >
           <button
             type="button"
             className="absolute inset-0 cursor-default bg-[#050505]/68 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            aria-label="Cerrar menu de navegacion"
+            aria-label="Cerrar menú de navegación"
             tabIndex={-1}
           />
           <aside className="relative flex h-full w-[min(20rem,calc(100vw-2rem))] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[24px_0_80px_rgba(0,0,0,0.32)]">
@@ -651,7 +651,7 @@ export function SidebarNav({
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/68 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                aria-label="Cerrar menu"
+                aria-label="Cerrar menú"
               >
                 <X className="size-4" strokeWidth={1.8} />
               </button>

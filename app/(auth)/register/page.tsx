@@ -14,8 +14,8 @@ import { Label } from "@/components/ui/label";
 const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Escribe tu nombre"),
-    email: z.string().trim().email("Email no valido"),
-    password: z.string().min(8, "Minimo 8 caracteres"),
+    email: z.string().trim().email("Email no válido"),
+    password: z.string().min(8, "Mínimo 8 caracteres"),
     confirmPassword: z.string(),
     accepted: z
       .boolean()
@@ -23,7 +23,7 @@ const registerSchema = z
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Las contrasenas no coinciden",
+    message: "Las contraseñas no coinciden",
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -67,9 +67,9 @@ export default function RegisterPage() {
     setFieldErrors((prev) => ({
       ...prev,
       email:
-        "Ya existe una cuenta con este correo. Entra o recupera la contrasena.",
+        "Ya existe una cuenta con este correo. Entra o recupera la contraseña.",
     }));
-    setError("Ese email ya esta registrado en TenPlanner.");
+    setError("Ese email ya está registrado en TenPlanner.");
   }
 
   async function resendConfirmation() {
@@ -194,11 +194,11 @@ export default function RegisterPage() {
                 Confirma tu correo
               </h1>
               <p className="mt-3 text-sm leading-6 text-foreground/62">
-                Hemos enviado un enlace de verificacion a{" "}
+                Hemos enviado un enlace de verificación a{" "}
                 <span className="break-all font-black text-foreground">
                   {confirmationEmail}
                 </span>
-                . Cuando lo confirmes podras iniciar sesion.
+                . Cuando lo confirmes podrás iniciar sesión.
               </p>
             </div>
           </div>
@@ -209,8 +209,8 @@ export default function RegisterPage() {
             </p>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
               <li>Revisa spam o promociones.</li>
-              <li>Comprueba que el email esta bien escrito.</li>
-              <li>Puedes reenviar el enlace desde aqui.</li>
+              <li>Comprueba que el email está bien escrito.</li>
+              <li>Puedes reenviar el enlace desde aquí.</li>
             </ul>
           </div>
 
@@ -259,7 +259,7 @@ export default function RegisterPage() {
           Crear cuenta de entrenador
         </h1>
         <p className="mt-2 text-sm leading-6 text-foreground/62">
-          Alta minima para empezar a ordenar sesiones, alumnos y biblioteca.
+          Alta mínima para empezar a ordenar sesiones, alumnos y biblioteca.
         </p>
       </div>
 
@@ -294,7 +294,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Contrasena</Label>
+          <Label htmlFor="password">Contraseña</Label>
           <div className="relative">
             <Input
               id="password"
@@ -309,7 +309,7 @@ export default function RegisterPage() {
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={showPassword ? "Ocultar contrasena" : "Ver contrasena"}
+              aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -324,7 +324,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirmar contrasena</Label>
+          <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
           <Input
             id="confirmPassword"
             type={showPassword ? "text" : "password"}
@@ -354,7 +354,7 @@ export default function RegisterPage() {
             </Link>{" "}
             y los{" "}
             <Link href="/terminos" className="font-semibold text-brand">
-              terminos
+              términos
             </Link>
             .
           </span>

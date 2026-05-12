@@ -333,7 +333,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           <div className="min-w-0">
             <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
               <Sparkles className="size-3.5 text-brand" />
-              Wizard de sesion
+              Wizard de sesión
             </p>
           <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
             {fromSession ? (

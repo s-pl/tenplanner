@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const sections = [
   { id: "hero", label: "Inicio", href: "#" },
-  { id: "sistema", label: "Como funciona", href: "#sistema" },
+  { id: "sistema", label: "Cómo funciona", href: "#sistema" },
   { id: "biblioteca", label: "Biblioteca", href: "#biblioteca" },
   { id: "planes", label: "Planes", href: "#planes" },
   { id: "crear-cuenta", label: "Crear cuenta", href: "#crear-cuenta" },

@@ -21,7 +21,7 @@ interface StepConfigurationProps {
   state: WizardState;
   update: (patch: Partial<WizardState>) => void;
   errors: Partial<Record<keyof WizardState, string>>;
-  places?: { id: string; name: string }[];
+  places: { id: string; name: string }[];
   monitorName?: string;
 }
 
@@ -58,7 +58,7 @@ function SessionPreview({ state }: { state: WizardState }) {
               hasTitle ? "text-foreground" : "text-muted-foreground/30 italic"
             )}
           >
-            {hasTitle ? state.title : "Titulo de la sesion"}
+            {hasTitle ? state.title : "Título de la sesión"}
           </p>
 
           <div className="space-y-1.5">
@@ -180,7 +180,7 @@ export function StepConfiguration({
           </label>
           {places.length === 0 ? (
             <p className="text-xs italic text-muted-foreground">
-              Aun no tienes lugares.{" "}
+              Aún no tienes lugares.{" "}
               <a
                 href="/places"
                 className="font-semibold text-brand hover:underline"
@@ -236,7 +236,7 @@ export function StepConfiguration({
               <p className="text-xs text-muted-foreground">
                 {state.studentIds.length > 0
                   ? `${state.studentIds.length} alumno${state.studentIds.length !== 1 ? "s" : ""} asignado${state.studentIds.length !== 1 ? "s" : ""}`
-                  : "Asigna alumnos a esta sesion (opcional)"}
+                  : "Asigna alumnos a esta sesión (opcional)"}
               </p>
             </div>
             <div
@@ -323,12 +323,12 @@ function RecurrenceBlock({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">
-            Repetir sesion
+            Repetir sesión
           </p>
           <p className="text-xs text-muted-foreground">
             {r.enabled
-              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " - varios dias" : ""}`
-              : "Crea esta misma sesion los proximos dias que indiques"}
+              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " - varios días" : ""}`
+              : "Crea esta misma sesión los próximos días que indiques"}
           </p>
         </div>
         <span
@@ -350,7 +350,7 @@ function RecurrenceBlock({
         <div className="space-y-4 border-t border-border px-4 py-4">
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Dias de la semana
+              Días de la semana
             </p>
             <div className="flex flex-wrap gap-1.5">
               {WEEKDAY_LABELS.map((label, i) => {
@@ -375,7 +375,7 @@ function RecurrenceBlock({
             </div>
             {r.weekdays.length === 0 && baseWeekday !== null && (
               <p className="mt-2 text-[11px] italic text-muted-foreground">
-                Si no eliges dias, se usara el mismo dia que la primera sesion.
+                Si no eliges días, se usará el mismo día que la primera sesión.
               </p>
             )}
           </div>
@@ -385,7 +385,7 @@ function RecurrenceBlock({
               htmlFor="recurrence-weeks"
               className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
             >
-              Durante cuantas semanas
+              Durante cuántas semanas
             </label>
             <input
               id="recurrence-weeks"
@@ -412,8 +412,8 @@ function RecurrenceBlock({
           </div>
 
           <p className="text-[12px] italic text-muted-foreground">
-            Se crearan automaticamente todas las sesiones para los dias
-            seleccionados. Despues podras editarlas o cancelarlas
+            Se crearán automáticamente todas las sesiones para los días
+            seleccionados. Después podrás editarlas o cancelarlas
             individualmente.
           </p>
         </div>

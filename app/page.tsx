@@ -5,14 +5,14 @@ import { db } from "@/db";
 import { classes, exercises } from "@/db/schema";
 
 export const metadata: Metadata = {
-  title: "TenPlanner - Planificacion para deportes de raqueta",
+  title: "TenPlanner - Planificación para deportes de raqueta",
   description:
     "Planifica sesiones de deportes de raqueta con biblioteca, alumnos, grupos y calendario en un sistema profesional para entrenadores.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "TenPlanner - Planificacion para deportes de raqueta",
+    title: "TenPlanner - Planificación para deportes de raqueta",
     description:
-      "Prepara sesiones, gestiona alumnos, organiza pistas o canchas y mantiene un metodo de entrenamiento.",
+      "Prepara sesiones, gestiona alumnos, organiza pistas o canchas y mantiene un método de entrenamiento.",
     url: "/",
     type: "website",
     locale: "es_ES",

@@ -47,13 +47,13 @@ const contextItems: Array<{
 const sessionBlocks = [
   {
     time: "12 min",
-    title: "Activacion con direccion",
+    title: "Activación con dirección",
     detail: "pies activos, lectura de bandeja y globo profundo",
     tone: "bg-brand/8",
   },
   {
     time: "18 min",
-    title: "Pared + primera decision",
+    title: "Pared + primera decisión",
     detail: "dos opciones: jugar cruzado o ganar red con margen",
     tone: "bg-brand/12",
   },
@@ -66,7 +66,7 @@ const sessionBlocks = [
   {
     time: "25 min",
     title: "Punto condicionado",
-    detail: "solo puntua si la subida llega despues de pared",
+    detail: "solo puntúa si la subida llega después de pared",
     tone: "bg-chart-2/12",
   },
 ];
@@ -74,7 +74,7 @@ const sessionBlocks = [
 const guardrails = [
   "Revisar carga si el grupo llega fatigado.",
   "Ajustar variantes por alumno antes de guardar.",
-  "Usar la propuesta como borrador, no como orden automatica.",
+  "Usar la propuesta como borrador, no como orden automática.",
 ];
 
 function Reveal({
@@ -193,8 +193,8 @@ function SessionProposalVisual() {
             <div className="flex items-start gap-3 rounded-lg border border-border bg-card/72 p-4 shadow-sm">
               <MessageSquareText className="mt-0.5 size-5 shrink-0 text-brand" />
               <p className="text-sm leading-6 text-foreground">
-                Prepara una sesion de 75 minutos para salida de pared. Quiero
-                trabajo tactico, carga controlada y cierre competitivo.
+                Prepara una sesión de 75 minutos para salida de pared. Quiero
+                trabajo táctico, carga controlada y cierre competitivo.
               </p>
             </div>
 
@@ -235,10 +235,10 @@ function SessionProposalVisual() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Propuesta de sesion
+                  Propuesta de sesión
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold leading-tight text-foreground">
-                  Pared, decision y subida con margen
+                  Pared, decisión y subida con margen
                 </h3>
               </div>
               <span className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-xs font-semibold text-background">
@@ -317,7 +317,7 @@ export function DrPlannerSection() {
           </h2>
           <p className="mt-7 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
             Dr. Planner lee objetivo, nivel, notas recientes y biblioteca antes
-            de proponer una sesion. Te devuelve fases, carga y razones para que
+            de proponer una sesión. Te devuelve fases, carga y razones para que
             revises, ajustes o descartes antes de llevarla a pista.
           </p>
 
@@ -336,12 +336,12 @@ export function DrPlannerSection() {
               {
                 icon: ShieldCheck,
                 title: "Promesa responsable",
-                text: "La IA asiste. La decision final es del entrenador.",
+                text: "La IA asiste. La decisión final es del entrenador.",
               },
               {
                 icon: PenLine,
-                title: "Metodo visible",
-                text: "Explica el por que de la carga y del orden de trabajo.",
+                title: "Método visible",
+                text: "Explica el por qué de la carga y del orden de trabajo.",
               },
             ].map((item, index) => {
               const Icon = item.icon;

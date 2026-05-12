@@ -35,7 +35,7 @@ const revealItem = {
 const proofPoints = [
   { value: "137+", label: "Ejercicios", detail: "listos para adaptar por nivel" },
   { value: "75 min", label: "Sesión", detail: "estructurada en bloques y fases" },
-  { value: "3 bloques", label: "Metodo", detail: "inicio, principal y cierre" },
+  { value: "3 bloques", label: "Método", detail: "inicio, principal y cierre" },
 ];
 
 const sessionBlocks = [
@@ -146,7 +146,7 @@ function HeroWorkbench() {
             <div className="relative h-40 overflow-hidden border-b border-border bg-muted sm:h-48">
               <Image
                 src="/landing/racket-player.jpg"
-                alt="Entrenador preparando una sesion en pista o cancha"
+                alt="Entrenador preparando una sesión en pista o cancha"
                 fill
                 priority
                 sizes="(min-width: 1024px) 38vw, 92vw"
@@ -226,7 +226,7 @@ function HeroWorkbench() {
                   TenPlanner avisa
                 </div>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Baja la carga fisica: el grupo viene de dos sesiones intensas.
+                  Baja la carga física: el grupo viene de dos sesiones intensas.
                   Cierra con punto condicionado y feedback individual.
                 </p>
               </div>
@@ -278,7 +278,7 @@ export function HeroSection() {
             variants={revealItem}
             className="mt-5 font-heading text-[clamp(3.2rem,7.5vw,6.8rem)] font-semibold leading-[0.88] tracking-tight text-foreground"
           >
-            Tu proxima sesion, lista antes de pisar pista o cancha.
+            Tu próxima sesión, lista antes de pisar pista o cancha.
           </motion.h1>
 
           <motion.p

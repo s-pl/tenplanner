@@ -121,7 +121,7 @@ export function AdminSidebar() {
           type="button"
           onClick={() => setOpen(true)}
           className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          aria-label="Abrir menu de administracion"
+          aria-label="Abrir menú de administración"
           aria-expanded={open}
           aria-controls="admin-mobile-nav"
         >
@@ -157,7 +157,7 @@ export function AdminSidebar() {
           id="admin-mobile-nav"
           role="dialog"
           aria-modal="true"
-          aria-label="Menu de administracion"
+          aria-label="Menú de administración"
           className="fixed inset-0 z-50 flex md:hidden"
         >
           <div
@@ -183,7 +183,7 @@ export function AdminSidebar() {
                   triggerRef.current?.focus();
                 }}
                 className="flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/64 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                aria-label="Cerrar menu de administracion"
+                aria-label="Cerrar menú de administración"
               >
                 <X className="size-4" />
               </button>

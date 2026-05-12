@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     siteName: "TenPlanner",
     title: "TenPlanner - Planificador para Deportes de Raqueta",
     description:
-      "Disena sesiones, gestiona alumnos y mide progreso en pista o cancha.",
+      "Diseña sesiones, gestiona alumnos y mide progreso en pista o cancha.",
     url: "/",
     locale: "es_ES",
   },
