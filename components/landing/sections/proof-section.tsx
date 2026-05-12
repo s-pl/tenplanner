@@ -32,27 +32,27 @@ const proofProfiles: Array<{
     role: "Coach independiente",
     objection: "No quiero otra app que me quite tiempo antes de pista.",
     proof:
-      "Planificacion por bloques, biblioteca reutilizable y notas de alumno en el mismo flujo.",
+      "Planificación por bloques, biblioteca reutilizable y notas de alumno en el mismo flujo.",
     metric: "10 min",
-    supporting: "para pasar de objetivo a sesion lista",
+    supporting: "para pasar de objetivo a sesión lista",
   },
   {
     icon: Users,
     role: "Coordinador de academia",
-    objection: "Necesito que todos los tecnicos sigan el mismo metodo.",
+    objection: "Necesito que todos los técnicos sigan el mismo método.",
     proof:
       "Plantillas compartidas, historial por grupo y seguimiento de asistencia sin hojas sueltas.",
-    metric: "1 metodo",
-    supporting: "visible para el equipo tecnico",
+    metric: "1 método",
+    supporting: "visible para el equipo técnico",
   },
   {
     icon: BarChart3,
-    role: "Direccion de club",
-    objection: "Si pago un SaaS, tiene que ordenar la operacion.",
+    role: "Dirección de club",
+    objection: "Si pago un SaaS, tiene que ordenar la operación.",
     proof:
       "Agenda, carga, alumnos y progreso conectados para revisar volumen y calidad semanal.",
-    metric: "4 senales",
-    supporting: "agenda, carga, asistencia, evolucion",
+    metric: "4 señales",
+    supporting: "agenda, carga, asistencia, evolución",
   },
 ];
 
@@ -63,27 +63,27 @@ const trustChecklist: Array<{
 }> = [
   {
     icon: ShieldCheck,
-    label: "Privacidad desde la evaluacion",
+    label: "Privacidad desde la evaluación",
     detail:
-      "Datos de alumnos, notas tecnicas y accesos tratados como criterio de compra, no como letra pequena.",
+      "Datos de alumnos, notas técnicas y accesos tratados como criterio de compra, no como letra pequeña.",
   },
   {
     icon: ClipboardCheck,
-    label: "Adopcion comprobable",
+    label: "Adopción comprobable",
     detail:
-      "El producto debe funcionar para quien esta en pista, no solo para quien mira el panel.",
+      "El producto debe funcionar para quien está en pista, no solo para quien mira el panel.",
   },
   {
     icon: Wallet,
     label: "Coste entendible",
     detail:
-      "Valor ligado a horas de preparacion, continuidad del metodo y menos trabajo administrativo.",
+      "Valor ligado a horas de preparación, continuidad del método y menos trabajo administrativo.",
   },
   {
     icon: Lock,
     label: "Control de acceso",
     detail:
-      "Separar responsabilidades entre direccion, coordinadores y entrenadores evita ruido operativo.",
+      "Separar responsabilidades entre dirección, coordinadores y entrenadores evita ruido operativo.",
   },
   {
     icon: CalendarDays,
@@ -93,9 +93,9 @@ const trustChecklist: Array<{
   },
   {
     icon: MessageSquare,
-    label: "Menos friccion de equipo",
+    label: "Menos fricción de equipo",
     detail:
-      "La informacion critica viaja con la sesion para que cada entrenador llegue preparado.",
+      "La información crítica viaja con la sesión para que cada entrenador llegue preparado.",
   },
 ];
 
@@ -234,8 +234,8 @@ export function ProofSection({ className }: { className?: string }) {
           <Reveal delay={0.1}>
             <p className="max-w-2xl text-base leading-8 text-muted-foreground">
               Los compradores de SaaS no solo validan funcionalidades: quieren
-              seguridad, adopcion sin friccion, precio claro y evidencia de que
-              el sistema encaja con su operacion. TenPlanner lo muestra con
+              seguridad, adopción sin fricción, precio claro y evidencia de que
+              el sistema encaja con su operación. TenPlanner lo muestra con
               escenarios de trabajo, no con testimonios inventados.
             </p>
           </Reveal>
@@ -253,7 +253,7 @@ export function ProofSection({ className }: { className?: string }) {
               <div aria-hidden className="court-plate absolute inset-4 opacity-[0.16]" />
               <div className="relative">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-background/72">
-                  Panel de validacion
+                  Panel de validación
                 </p>
                 <h3 className="landing-display mt-5 text-4xl font-semibold leading-none sm:text-5xl">
                   Lo que una academia mira antes de cambiar de herramienta.
@@ -279,9 +279,9 @@ export function ProofSection({ className }: { className?: string }) {
                   ))}
                 </div>
                 <p className="mt-8 text-sm leading-7 text-background/64">
-                  Ejemplo de operacion, no garantia de resultado. La prueba es
+                  Ejemplo de operación, no garantía de resultado. La prueba es
                   que el proceso sea visible: planificar, ejecutar, revisar y
-                  repetir con menos perdida de contexto.
+                  repetir con menos pérdida de contexto.
                 </p>
               </div>
             </div>

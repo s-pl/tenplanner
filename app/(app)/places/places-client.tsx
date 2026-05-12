@@ -208,7 +208,7 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
   async function handleDelete(place: Place) {
     if (
       !confirm(
-        `Borrar "${place.name}"? Las sesiones que lo usen quedaran sin lugar asignado.`
+        `Borrar "${place.name}"? Las sesiones que lo usen quedarán sin lugar asignado.`
       )
     ) {
       return;
@@ -254,7 +254,7 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
             {[
               { label: "Lugares", value: places.length, icon: MapPin },
               { label: "Con notas", value: totals.withNotes, icon: Info },
-              { label: "Proximas", value: totals.upcoming, icon: CalendarDays },
+              { label: "Próximas", value: totals.upcoming, icon: CalendarDays },
               {
                 label: "Uso total",
                 value: formatHours(totals.minutes),
@@ -316,14 +316,14 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase text-brand">
-                    {edit.mode === "create" ? "Alta de espacio" : "Edicion"}
+                    {edit.mode === "create" ? "Alta de espacio" : "Edición"}
                   </p>
                   <h2 className="mt-1 text-2xl font-black text-foreground">
                     {edit.mode === "create" ? "Nuevo lugar" : "Editar lugar"}
                   </h2>
                   <p className="mt-1 max-w-2xl text-sm font-medium text-foreground/58">
-                    Usa la descripcion como ficha operativa: superficie,
-                    material disponible, acceso, iluminacion o restricciones.
+                    Usa la descripción como ficha operativa: superficie,
+                    material disponible, acceso, iluminación o restricciones.
                   </p>
                 </div>
                 <button
@@ -417,11 +417,11 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
                 <MapPin className="size-6" />
               </div>
               <p className="mt-5 text-lg font-black text-foreground">
-                Aun no has creado ningun lugar
+                Aún no has creado ningún lugar
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm font-medium text-foreground/58">
                 Crea las pistas, canchas o salas que usas para que aparezcan en
-                la planificacion de sesiones.
+                la planificación de sesiones.
               </p>
               <button
                 type="button"
@@ -438,7 +438,7 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
                 No hay resultados
               </p>
               <p className="mt-1 text-sm text-foreground/55">
-                Prueba con otro nombre, material o palabra de la descripcion.
+                Prueba con otro nombre, material o palabra de la descripción.
               </p>
             </div>
           ) : (
@@ -502,7 +502,7 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
 
                       <p className="mt-4 line-clamp-3 min-h-[4.5rem] text-sm font-medium leading-6 text-foreground/60">
                         {place.description ||
-                          "Sin ficha operativa. Anade superficie, material, acceso o notas para que el equipo lo use con criterio."}
+                          "Sin ficha operativa. Añade superficie, material, acceso o notas para que el equipo lo use con criterio."}
                       </p>
 
                       <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-foreground/10 pt-4">
@@ -597,7 +597,7 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
                     icon: ClipboardList,
                   },
                   {
-                    label: "Proximas",
+                    label: "Próximas",
                     value: selected.upcomingSessions,
                     icon: CalendarDays,
                   },
@@ -635,14 +635,14 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
                 </h3>
                 <p className="mt-2 whitespace-pre-line rounded-[22px] border border-foreground/10 bg-background px-4 py-3 text-sm font-medium leading-6 text-foreground/68">
                   {selected.description ||
-                    "Sin notas. Puedes usar este campo para superficie, material, acceso, iluminacion, restricciones y contexto de uso."}
+                    "Sin notas. Puedes usar este campo para superficie, material, acceso, iluminación, restricciones y contexto de uso."}
                 </p>
               </div>
 
               <dl className="divide-y divide-foreground/10 rounded-[22px] border border-foreground/10 px-4">
                 {[
                   {
-                    label: "Ultima sesion",
+                    label: "Última sesión",
                     value: formatDate(selected.lastScheduledAt),
                   },
                   {

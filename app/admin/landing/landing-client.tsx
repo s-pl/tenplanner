@@ -369,7 +369,7 @@ export function AdminLandingClient({
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <Card className={adminPanelClass}>
           <CardHeader className="border-b">
-            <CardTitle>Vista rapida</CardTitle>
+            <CardTitle>Vista rápida</CardTitle>
             <CardDescription>Resumen del contenido principal.</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">

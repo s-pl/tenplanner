@@ -49,7 +49,7 @@ const plans: Plan[] = [
       "Planificación de sesiones por objetivo",
       "Biblioteca propia y bloques reutilizables",
       "Alumnos, grupos y seguimiento básico",
-      "Flujo guiado para preparar cada sesion",
+      "Flujo guiado para preparar cada sesión",
     ],
     bestFor: "Validar el método con tu propia agenda antes de crecer.",
   },
@@ -272,7 +272,7 @@ export function PricingSection() {
             Planes
           </p>
           <h2 className="mt-4 max-w-3xl text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Elige la ruta de TenPlanner según como trabaja tu equipo.
+            Elige la ruta de TenPlanner según cómo trabaja tu equipo.
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
             En acceso anticipado no publicamos precios cerrados. Separamos las

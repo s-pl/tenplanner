@@ -57,7 +57,7 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
           id="objective"
           value={state.objective}
           onChange={(e) => update({ objective: e.target.value })}
-          placeholder="Que debe mejorar el alumno o grupo en esta sesion."
+          placeholder="Qué debe mejorar el alumno o grupo en esta sesión."
           rows={3}
           maxLength={2000}
           className="w-full px-4 py-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground/50 resize-none leading-relaxed"
@@ -100,7 +100,7 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
             id="observations"
             value={state.observations}
             onChange={(e) => update({ observations: e.target.value })}
-            placeholder="Adaptaciones, notas de seguridad o foco tecnico."
+            placeholder="Adaptaciones, notas de seguridad o foco técnico."
             rows={4}
             maxLength={4000}
             className="w-full px-4 py-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground/50 resize-none leading-relaxed"
@@ -148,7 +148,7 @@ export function StepObjective({ state, update, errors }: StepObjectiveProps) {
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Pulsa Enter o coma para anadir - {state.tags.length}/10
+          Pulsa Enter o coma para añadir - {state.tags.length}/10
         </p>
         {errors.tags && (
           <p className="text-xs text-destructive font-medium">{errors.tags}</p>

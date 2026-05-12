@@ -34,24 +34,24 @@ const systemPillars = [
   {
     icon: LibraryBig,
     label: "Biblioteca viva",
-    text: "Cada ejercicio se guarda con nivel, foco, duracion y variantes.",
+    text: "Cada ejercicio se guarda con nivel, foco, duración y variantes.",
   },
   {
     icon: ClipboardList,
-    label: "Sesion cerrada",
-    text: "El feedback alimenta la siguiente planificacion sin hojas sueltas.",
+    label: "Sesión cerrada",
+    text: "El feedback alimenta la siguiente planificación sin hojas sueltas.",
   },
 ];
 
 const sessionBlocks = [
-  { time: "12'", title: "Activacion", detail: "split-step + movilidad" },
+  { time: "12'", title: "Activación", detail: "split-step + movilidad" },
   { time: "18'", title: "Pared lateral", detail: "control de profundidad" },
-  { time: "20'", title: "Transicion", detail: "subida tras globo" },
+  { time: "20'", title: "Transición", detail: "subida tras globo" },
   { time: "15'", title: "Punto condicionado", detail: "cierre en red" },
 ];
 
 const schedule = [
-  ["17:00", "Sub-14 competicion", "Pista 2"],
+  ["17:00", "Sub-14 competición", "Pista 2"],
   ["18:15", "Grupo adultos B", "Pista 4"],
   ["19:30", "Laura + Nico", "Pista 1"],
 ];
@@ -205,7 +205,7 @@ function SessionPlanPanel() {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">Bloques de sesion</p>
+        <p className="text-sm font-semibold text-foreground">Bloques de sesión</p>
         <Goal className="size-4 text-brand" aria-hidden />
       </div>
       <div className="space-y-2">
@@ -238,7 +238,7 @@ function PlayerPanel() {
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">Laura M.</p>
-          <p className="truncate text-xs text-muted-foreground">Perfil: tactica + pared</p>
+          <p className="truncate text-xs text-muted-foreground">Perfil: táctica + pared</p>
         </div>
         <span className="grid size-9 shrink-0 place-items-center rounded-md bg-chart-2 text-xs font-bold text-foreground">
           82
@@ -279,7 +279,7 @@ function NotebookPanel() {
         {[
           "Nico sube tarde tras globo profundo.",
           "Laura gana punto cuando frena antes de pared.",
-          "Repetir variante con red mas alta el jueves.",
+          "Repetir variante con red más alta el jueves.",
         ].map((note) => (
           <div key={note} className="flex gap-2 text-sm text-foreground/76">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
@@ -315,7 +315,7 @@ function ProductDashboard() {
             <CourtDiagram />
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["Metodo", "4 bloques"],
+                ["Método", "4 bloques"],
                 ["Carga", "media-alta"],
                 ["Equipo", "2 coaches"],
               ].map(([label, value]) => (
@@ -366,7 +366,7 @@ export function ProductSystemSection({ className }: { className?: string }) {
           </h2>
           <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
             TenPlanner une lo que una academia suele tener separado: calendario,
-            pistas, grupos, biblioteca, historial del alumno y cierre de sesion.
+            pistas, grupos, biblioteca, historial del alumno y cierre de sesión.
             Cada entrenamiento queda preparado con contexto y vuelve al sistema
             con aprendizaje.
           </p>

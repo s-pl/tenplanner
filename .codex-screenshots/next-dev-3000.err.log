@@ -1,0 +1,123 @@
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (components\landing\tenplanner-landing.tsx:1014:35)
+  1012 |       )}
+  1013 |     >
+> 1014 |       <TopNav primaryCta={content.hero.primaryCta} />
+       |                                   ^
+  1015 |       <main id="main">
+  1016 |         {content.sections
+  1017 |           .filter((section) => section.enabled) {
+  digest: '573384901'
+}
+[browser] TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (db\schema.ts:116:20)
+  114 |     numJugadores: integer("num_jugadores"),
+  115 |     tipoPelota: tipoPelotaEnum("tipo_pelota"),
+> 116 |     tipoActividad: tipoActividadEnum("tipo_actividad"),
+      |                    ^
+  117 |     golpes: json("golpes").$type<string[]>(),
+  118 |     efecto: json("efecto").$type<string[]>(),
+  119 |     variantes: text("variantes"), (app/error.tsx:15:13)
+[browser] TypeError: Cannot read properties of undefined (reading 'hero')
+    at TenPlannerLanding (db\schema.ts:116:20)
+  114 |     numJugadores: integer("num_jugadores"),
+  115 |     tipoPelota: tipoPelotaEnum("tipo_pelota"),
+> 116 |     tipoActividad: tipoActividadEnum("tipo_actividad"),
+      |                    ^
+  117 |     golpes: json("golpes").$type<string[]>(),
+  118 |     efecto: json("efecto").$type<string[]>(),
+  119 |     variantes: text("variantes"), (app/error.tsx:15:13)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="es" className="plus_jakar..." suppressHydrationWarning={true}>
+                          <body
+                            className="min-h-full flex flex-col"
+-                           cz-shortcut-listen="true"
+                          >
+                  ...
+ 
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+⚠ The requested resource "https://pitsasnwfilyyipkhhim.supabase.co/storage/v1/object/public/avatars/40f26f42-5f1e-473c-9153-1934a10c83ac.gif" is an animated image so it will not be optimized. Consider adding the "unoptimized" property to the <Image>.

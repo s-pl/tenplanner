@@ -507,14 +507,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
             <div>
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
-                Biblioteca publica
+                Biblioteca pública
               </p>
               <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
                 Ejercicios
               </h1>
               <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
                 Biblioteca de ejercicios sueltos, etiquetados por nivel,
-                categoria y duracion para entrenadores de deportes de raqueta.
+                categoría y duración para entrenadores de deportes de raqueta.
               </p>
             </div>
             <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
@@ -564,7 +564,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/18 px-5 text-[13px] font-semibold text-white/72 transition hover:border-[#D6FF38] hover:text-[#D6FF38]"
                   >
                     <Lock className="size-3.5" />
-                    Inicia sesion para anadir
+                    Inicia sesión para añadir
                   </Link>
                 )}
               </div>

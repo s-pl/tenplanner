@@ -43,7 +43,7 @@ export function LibraryPreviewSection({
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">
-              Biblioteca publica
+              Biblioteca pública
             </p>
             <h2 className="mt-3 max-w-2xl font-heading text-4xl font-semibold leading-tight text-foreground">
               Ejercicios y clases para deportes de raqueta.

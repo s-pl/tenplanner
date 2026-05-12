@@ -939,7 +939,7 @@ export function SessionDetailClient({
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
             <h2 className="font-semibold text-sm text-foreground">
-              Bloques de la sesion
+              Bloques de la sesión
             </h2>
             <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
               Snapshot

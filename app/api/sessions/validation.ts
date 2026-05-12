@@ -30,7 +30,7 @@ const exerciseItemSchema = z.object({
 
 const sessionBlockItemSchema = z
   .object({
-    exerciseId: z.string().uuid("ID de ejercicio invalido").optional().nullable(),
+    exerciseId: z.string().uuid("ID de ejercicio inválido").optional().nullable(),
     freeText: z.string().trim().max(2000).optional().nullable(),
     durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
     notes: z.string().trim().max(1000).optional().nullable(),
@@ -114,7 +114,7 @@ export const createSessionSchema = z.object({
     .nullable(),
   material: z.string().trim().max(2000).optional().nullable(),
   observations: z.string().trim().max(4000).optional().nullable(),
-  sourceClassId: z.string().uuid("ID de clase invalido").optional().nullable(),
+  sourceClassId: z.string().uuid("ID de clase inválido").optional().nullable(),
   intensity: intensitySchema,
   tags: tagsSchema,
   location: locationSchema,
@@ -156,7 +156,7 @@ export const updateSessionSchema = z
       .nullable(),
     material: z.string().trim().max(2000).optional().nullable(),
     observations: z.string().trim().max(4000).optional().nullable(),
-    sourceClassId: z.string().uuid("ID de clase invalido").optional().nullable(),
+    sourceClassId: z.string().uuid("ID de clase inválido").optional().nullable(),
     intensity: intensitySchema,
     tags: tagsSchema,
     location: locationSchema,

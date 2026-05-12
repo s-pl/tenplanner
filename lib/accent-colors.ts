@@ -57,7 +57,7 @@ export const ACCENT_COLORS: AccentColor[] = [
   },
   {
     id: "rose",
-    label: "Rojo Linea",
+    label: "Rojo Línea",
     dark: "#ff7a66",
     light: "#ff7a66",
     preview: "#ff7a66",

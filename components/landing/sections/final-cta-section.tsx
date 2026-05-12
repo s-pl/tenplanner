@@ -24,20 +24,20 @@ const valueCards: Array<{
   {
     icon: ClipboardList,
     label: "Plan",
-    title: "Sesion cerrada antes de pista",
-    text: "Objetivo, bloques, carga y variantes quedan listos en un flujo unico.",
+    title: "Sesión cerrada antes de pista",
+    text: "Objetivo, bloques, carga y variantes quedan listos en un flujo único.",
   },
   {
     icon: UsersRound,
     label: "Equipo",
-    title: "Metodo compartido",
+    title: "Método compartido",
     text: "Cada coach trabaja con el mismo contexto de alumnos, grupos y biblioteca.",
   },
   {
     icon: Gauge,
     label: "Carga",
     title: "Lectura semanal",
-    text: "La intensidad, asistencia y notas vuelven al sistema para ajustar la proxima sesion.",
+    text: "La intensidad, asistencia y notas vuelven al sistema para ajustar la próxima sesión.",
   },
 ];
 
@@ -48,7 +48,7 @@ const footerLinks = [
   { href: "/classes", label: "Clases" },
   { href: "#planes", label: "Planes" },
   { href: "/privacidad", label: "Privacidad" },
-  { href: "/terminos", label: "Terminos" },
+  { href: "/terminos", label: "Términos" },
 ];
 
 function Reveal({
@@ -162,7 +162,7 @@ export function FinalCtaSection() {
               id="final-cta-title"
               className="mx-auto mt-6 max-w-4xl text-balance font-heading text-[clamp(3rem,7vw,6.5rem)] font-semibold leading-[0.92] text-foreground"
             >
-              Que la proxima sesion empiece con metodo, no con improvisacion.
+              Que la próxima sesión empiece con método, no con improvisación.
             </h2>
             <p className="mx-auto mt-7 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
               Crea tu cuenta y convierte agenda, alumnos, ejercicios y carga
@@ -181,7 +181,7 @@ export function FinalCtaSection() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <LibraryBig className="size-4 text-brand" />
-                Biblioteca y sesiones desde el primer dia
+                Biblioteca y sesiones desde el primer día
               </span>
             </div>
           </Reveal>
@@ -208,8 +208,8 @@ export function FinalCtaSection() {
                   TenPlanner
                 </Link>
                 <p className="mt-4 max-w-md text-sm leading-7 text-background/62">
-                  Planificacion profesional para entrenadores de deportes de
-                  raqueta que quieren sostener un metodo semanal.
+                  Planificación profesional para entrenadores de deportes de
+                  raqueta que quieren sostener un método semanal.
                 </p>
               </div>
               <nav className="flex flex-wrap gap-x-5 gap-y-3 md:justify-end">

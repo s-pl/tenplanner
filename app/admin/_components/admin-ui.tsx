@@ -22,7 +22,7 @@ export const adminPrimaryActionClass =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-brand bg-brand px-3.5 text-xs font-black text-brand-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand/35";
 
 export function AdminPageHeader({
-  eyebrow = "Administracion",
+  eyebrow = "Administración",
   title,
   description,
   actions,

@@ -43,7 +43,7 @@ export function SessionExerciseLists({
     async function loadLists() {
       setLoading(true);
       try {
-        const res = await fetch("/api/exercise-lists?includeExercises=true", {
+        const res = await fetch("/api/exercise-listsíincludeExercises=true", {
           cache: "no-store",
         });
         const payload = (await res.json().catch(() => ({}))) as {
@@ -67,10 +67,10 @@ export function SessionExerciseLists({
       ) : lists.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
           <p className="text-sm font-medium text-foreground">
-            No tienes listas guardadas todavia.
+            No tienes listas guardadas todavía.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Guarda ejercicios en una lista y podras reutilizarlos aqui.
+            Guarda ejercicios en una lista y podrás reutilizarlos aquí.
           </p>
         </div>
       ) : (
@@ -98,7 +98,7 @@ export function SessionExerciseLists({
                       {list.itemsCount} ejercicio
                       {list.itemsCount !== 1 ? "s" : ""}
                       {alreadyAdded > 0
-                        ? ` · ${alreadyAdded} ya en la sesion`
+                        ? ` · ${alreadyAdded} ya en la sesión`
                         : ""}
                     </p>
                   </div>
@@ -114,7 +114,7 @@ export function SessionExerciseLists({
                     )}
                   >
                     <Plus className="size-3" />
-                    Anadir
+                    Añadir
                   </button>
                 </div>
 
@@ -130,7 +130,7 @@ export function SessionExerciseLists({
                     ))}
                     {list.items.length > 3 ? (
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                        +{list.items.length - 3} mas
+                        +{list.items.length - 3} más
                       </span>
                     ) : null}
                   </div>

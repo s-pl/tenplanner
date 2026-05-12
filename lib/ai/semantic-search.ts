@@ -36,12 +36,12 @@ export function buildExerciseEmbeddingText(exercise: {
 }) {
   return [
     `Ejercicio: ${exercise.name}`,
-    `Categoria: ${exercise.category}`,
+    `Categoría: ${exercise.category}`,
     `Dificultad: ${exercise.difficulty}`,
-    `Duracion: ${exercise.durationMinutes} minutos`,
-    exercise.location ? `Ubicacion: ${exercise.location}` : null,
+    `Duración: ${exercise.durationMinutes} minutos`,
+    exercise.location ? `Ubicación: ${exercise.location}` : null,
     exercise.objectives ? `Objetivos: ${exercise.objectives}` : null,
-    exercise.description ? `Descripcion: ${exercise.description}` : null,
+    exercise.description ? `Descripción: ${exercise.description}` : null,
     exercise.tips ? `Claves: ${exercise.tips}` : null,
     exercise.materials?.length
       ? `Materiales: ${exercise.materials.join(", ")}`
@@ -75,15 +75,15 @@ export function buildSessionEmbeddingText(session: {
     : null;
 
   return [
-    `Sesion: ${session.title}`,
-    `Duracion: ${session.durationMinutes} minutos`,
+    `Sesión: ${session.title}`,
+    `Duración: ${session.durationMinutes} minutos`,
     session.objective ? `Objetivo: ${session.objective}` : null,
     typeof session.intensity === "number"
       ? `Intensidad: ${session.intensity}/5`
       : null,
-    session.location ? `Ubicacion: ${session.location}` : null,
+    session.location ? `Ubicación: ${session.location}` : null,
     session.tags?.length ? `Etiquetas: ${session.tags.join(", ")}` : null,
-    session.description ? `Descripcion: ${session.description}` : null,
+    session.description ? `Descripción: ${session.description}` : null,
     exerciseText ? `Ejercicios:\n${exerciseText}` : null,
   ]
     .filter(Boolean)

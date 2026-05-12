@@ -191,8 +191,8 @@ async function QuickStatsSection() {
       value: m.totalUsers,
       color: "text-foreground",
     },
-    { label: "Nuevos (7 dias)", value: m.newUsers7, color: "text-brand" },
-    { label: "Nuevos (30 dias)", value: m.newUsers30, color: "text-brand" },
+    { label: "Nuevos (7 días)", value: m.newUsers7, color: "text-brand" },
+    { label: "Nuevos (30 días)", value: m.newUsers30, color: "text-brand" },
   ];
 
   const contentStats = [
@@ -284,7 +284,7 @@ async function QuickStatsSection() {
             className={`${metricCardClass} transition-colors hover:border-brand/70 hover:bg-brand/8`}
           >
             <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
-              Configuracion IA
+              Configuración IA
             </p>
             <p className="font-heading text-base font-semibold text-foreground/60">
               Ver ajustes -&gt;
@@ -458,7 +458,7 @@ async function AiUsageSection() {
   return (
     <section>
       <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-foreground/40 mb-3">
-        Uso de IA - ultimos 30 dias
+        Uso de IA - últimos 30 días
       </p>
       <div className={sectionCardClass}>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 mb-6">
@@ -542,7 +542,7 @@ async function RecentActivitySection() {
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">
-                  {session.title || "Sin titulo"}
+                  {session.title || "Sin título"}
                 </p>
                 <p className="text-xs text-foreground/45 truncate">
                   {session.userName ??
@@ -622,7 +622,7 @@ async function SystemHealthSection() {
                 Base de datos
               </p>
               <p className="font-mono text-[10px] text-foreground/40">
-                {dbOk ? "Conectada" : "Sin conexion"}
+                {dbOk ? "Conectada" : "Sin conexión"}
               </p>
             </div>
           </div>

@@ -47,7 +47,7 @@ type LibraryPreview = {
 };
 
 const navItems = [
-  { label: "Como funciona", href: "#como-funciona" },
+  { label: "Cómo funciona", href: "#como-funciona" },
   { label: "Ejercicios", href: "/exercises" },
   { label: "Clases", href: "/classes" },
 ];
@@ -55,8 +55,8 @@ const navItems = [
 const painCards = [
   {
     icon: ClipboardList,
-    quote: '"Llego a la pista sin tener claro que voy a dar hoy."',
-    text: "Improvisar no esta mal, pero repetir siempre lo mismo si. Tus alumnos lo notan.",
+    quote: '"Llego a la pista sin tener claro qué voy a dar hoy."',
+    text: "Improvisar no está mal, pero repetir siempre lo mismo sí. Tus alumnos lo notan.",
   },
   {
     icon: Repeat2,
@@ -65,23 +65,23 @@ const painCards = [
   },
   {
     icon: Clock3,
-    quote: '"Pierdo mas tiempo planificando que dando clase."',
-    text: "Una sesion bien planificada no deberia llevarte mas de 2 minutos. En serio.",
+    quote: '"Pierdo más tiempo planificando que dando clase."',
+    text: "Una sesión bien planificada no debería llevarte más de 2 minutos. En serio.",
   },
 ];
 
 const steps = [
   {
     title: "Piensa la clase",
-    text: "Tu tienes el criterio. Decide si explorar la biblioteca, construir tu clase desde cero o recuperar una sesion anterior que ya funciono.",
+    text: "Tú tienes el criterio. Decide si explorar la biblioteca, construir tu clase desde cero o recuperar una sesión anterior que ya funcionó.",
   },
   {
     title: "Construye o ajusta",
-    text: "Elige ejercicios, ordenalos, mezcla con tus favoritos o ajusta la propuesta. Siempre tienes el control total de la sesion.",
+    text: "Elige ejercicios, ordénalos, mezcla con tus favoritos o ajusta la propuesta. Siempre tienes el control total de la sesión.",
   },
   {
-    title: "Da la clase y evalua",
-    text: "Pasa lista, ejecuta la sesion en modo pista y registra como fue. Todo queda guardado en tu historial.",
+    title: "Da la clase y evalúa",
+    text: "Pasa lista, ejecuta la sesión en modo pista y registra cómo fue. Todo queda guardado en tu historial.",
   },
 ];
 
@@ -89,21 +89,21 @@ const preparationCards = [
   {
     icon: Search,
     title: "Explorar y elegir",
-    text: "Navega el explorador: ejercicios sueltos o clases completas ya preparadas, todo etiquetado por nivel, duracion, objetivo y categoria.",
+    text: "Navega el explorador: ejercicios sueltos o clases completas ya preparadas, todo etiquetado por nivel, duración, objetivo y categoría.",
     chips: ["Ejercicios sueltos", "Clases completas", "Todo etiquetado"],
     color: "bg-[#efffba] text-[#5f7000]",
   },
   {
     icon: Pencil,
     title: "Crear desde cero",
-    text: "Disena la clase ejercicio a ejercicio usando la biblioteca de Ten Planner, tus propios ejercicios creados por ti o una mezcla de ambos.",
+    text: "Diseña la clase ejercicio a ejercicio usando la biblioteca de Ten Planner, tus propios ejercicios creados por ti o una mezcla de ambos.",
     chips: ["Biblioteca Ten Planner", "Mis ejercicios"],
     color: "bg-[#ecece6] text-[#050505]",
   },
   {
     icon: Repeat2,
     title: "Reutilizar una clase anterior",
-    text: "Recuperala del historial o de tus favoritos, ajusta lo que necesites y vuelve a impartirla. Lo que ya funciona no hay que reinventarlo.",
+    text: "Recupérala del historial o de tus favoritos, ajusta lo que necesites y vuelve a impartirla. Lo que ya funciona no hay que reinventarlo.",
     chips: ["Mis clases", "Mis favoritos"],
     color: "bg-[#e8e8e1] text-[#5f7000]",
   },
@@ -113,17 +113,17 @@ const featureCards = [
   {
     icon: Search,
     title: "Explorador de contenido",
-    text: "Ejercicios sueltos y clases completas etiquetados por nivel, objetivo, duracion y categoria.",
+    text: "Ejercicios sueltos y clases completas etiquetados por nivel, objetivo, duración y categoría.",
   },
   {
     icon: Layers3,
     title: "Biblioteca validada",
-    text: "Ejercicios especificos de tenis creados por entrenadores expertos, listos para usar o personalizar.",
+    text: "Ejercicios específicos de tenis creados por entrenadores expertos, listos para usar o personalizar.",
   },
   {
     icon: Star,
     title: "Favoritos organizados",
-    text: "Guarda ejercicios y clases en listas con nombre. Encuentra rapido lo que mejor te funciona.",
+    text: "Guarda ejercicios y clases en listas con nombre. Encuentra rápido lo que mejor te funciona.",
   },
   {
     icon: CalendarDays,
@@ -160,7 +160,7 @@ function buildExerciseCards(cards: LandingExerciseCard[]): LibraryPreview[] {
       href: "/exercises",
       title: "Drive cruzado en paralelo",
       top: "bg-[#20201c]",
-      tag: "Tecnica",
+      tag: "Técnica",
       level: "Intermedio",
       time: "15 min",
       tone: "text-[#d6ff38]",
@@ -168,7 +168,7 @@ function buildExerciseCards(cards: LandingExerciseCard[]): LibraryPreview[] {
     },
     {
       href: "/exercises",
-      title: "Calentamiento dinamico con raqueta",
+      title: "Calentamiento dinámico con raqueta",
       top: "bg-[#2b3613]",
       tag: "Calentamiento",
       level: "Todos",
@@ -180,7 +180,7 @@ function buildExerciseCards(cards: LandingExerciseCard[]): LibraryPreview[] {
       href: "/exercises",
       title: "Juego de puntos desde servicio",
       top: "bg-[#3a3a34]",
-      tag: "Competicion",
+      tag: "Competición",
       level: "Avanzado",
       time: "20 min",
       tone: "text-[#d6ff38]",
@@ -206,7 +206,7 @@ function buildClassCards(cards: LandingClassCard[]): LibraryPreview[] {
   const fallback: LibraryPreview[] = [
     {
       href: "/classes",
-      title: "Clase completa de iniciacion",
+      title: "Clase completa de iniciación",
       top: "bg-[#20201c]",
       tag: "Clase",
       level: "Descubrimiento",
@@ -216,7 +216,7 @@ function buildClassCards(cards: LandingClassCard[]): LibraryPreview[] {
     },
     {
       href: "/classes",
-      title: "Control y direccion por bloques",
+      title: "Control y dirección por bloques",
       top: "bg-[#2b3613]",
       tag: "Clase",
       level: "Desarrollo",
@@ -226,10 +226,10 @@ function buildClassCards(cards: LandingClassCard[]): LibraryPreview[] {
     },
     {
       href: "/classes",
-      title: "Competicion con punto condicionado",
+      title: "Competición con punto condicionado",
       top: "bg-[#3a3a34]",
       tag: "Clase",
-      level: "Competicion",
+      level: "Competición",
       time: "75 min",
       tone: "text-[#d6ff38]",
       icon: Trophy,
@@ -349,14 +349,14 @@ function PhoneMock() {
         <span className="text-white/55">▲ ◆ ▪▪</span>
       </div>
       <div className="mt-7 border-b border-white/8 px-4 pb-5">
-        <p className="text-[11px] font-semibold text-white/45">Buenos dias,</p>
-        <p className="mt-1 font-heading text-xl font-bold">Carlos Martinez</p>
+        <p className="text-[11px] font-semibold text-white/45">Buenos días,</p>
+        <p className="mt-1 font-heading text-xl font-bold">Carlos Martínez</p>
       </div>
       <div className="mx-3 mt-4 rounded-2xl border border-[#d6ff38]/30 bg-[#2b3613] p-4">
         <p className="text-[10px] font-bold uppercase text-white/45">
-          Proxima clase
+          Próxima clase
         </p>
-        <p className="mt-3 text-sm font-bold">Grupo Iniciacion · 10:00h</p>
+        <p className="mt-3 text-sm font-bold">Grupo Iniciación · 10:00h</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           {[
             ["6", "ejercicios"],
@@ -388,10 +388,10 @@ function PhoneMock() {
       </div>
       <div className="mx-3 mt-4">
         <p className="text-[10px] font-bold uppercase text-white/35">
-          Sesion de hoy
+          Sesión de hoy
         </p>
         {[
-          ["Calentamiento dinamico", "10'"],
+          ["Calentamiento dinámico", "10'"],
           ["Drive cruzado en paralelo", "15'"],
         ].map(([title, time], index) => (
           <div
@@ -423,17 +423,17 @@ function HeroSection() {
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-3 rounded-full bg-[#efffba] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5f7000]">
             <span className="size-1.5 rounded-full bg-[#5f7000]" />
-            Planificacion inteligente para monitores de tenis
+            Planificación inteligente para monitores de tenis
           </div>
           <h1 className="mt-8 font-heading text-[clamp(3.1rem,5.1vw,5.5rem)] font-bold leading-[0.96] text-[#050505]">
-            La clase la piensas tu.
+            La clase la piensas tú.
             <span className="block font-heading font-light italic text-[#5f7000]">
               Ten Planner te ayuda.
             </span>
           </h1>
           <p className="mt-7 max-w-[560px] text-lg leading-8 text-[#66665d]">
             Explora ejercicios y clases etiquetados, construye desde cero con la
-            biblioteca o recupera lo que ya funciono. Tres caminos, siempre tu
+            biblioteca o recupera lo que ya funcionó. Tres caminos, siempre tu
             criterio.
           </p>
           <div className="mt-10 flex flex-col gap-4 min-[440px]:flex-row min-[440px]:items-center">
@@ -442,7 +442,7 @@ function HeroSection() {
               href="#como-funciona"
               className="inline-flex items-center gap-2 text-base font-semibold text-[#5f7000]"
             >
-              Ver como funciona <ArrowDown className="size-4" />
+              Ver cómo funciona <ArrowDown className="size-4" />
             </Link>
           </div>
           <div className="mt-14 flex items-center gap-3 text-sm text-[#66665d]">
@@ -461,13 +461,13 @@ function HeroSection() {
                 </span>
               ))}
             </div>
-            Mas de 200 monitores ya planifican con Ten Planner
+            Más de 200 monitores ya planifican con Ten Planner
           </div>
         </div>
 
         <div className="relative min-h-[560px]">
           <div className="absolute left-[4%] top-[76%] hidden rounded-2xl bg-[#050505] px-5 py-3 text-sm font-bold text-white shadow-[0_24px_55px_rgba(5,5,5,0.18)] lg:block">
-            ✓ Sesion guardada ✓
+            ✓ Sesión guardada ✓
           </div>
           <div className="absolute right-[2%] top-[20%] hidden rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#050505] shadow-[0_20px_55px_rgba(5,5,5,0.12)] lg:block">
             ⚡ Clase lista en 90 seg
@@ -519,8 +519,8 @@ function HowSection() {
   return (
     <section id="como-funciona" className="bg-[#f4f4f1] px-5 py-24 lg:py-32">
       <SectionTitle
-        eyebrow="Como funciona"
-        title="Tu decides."
+        eyebrow="Cómo funciona"
+        title="Tú decides."
         accent="En minutos."
       />
       <div className="mx-auto mt-20 grid max-w-[1100px] gap-10 md:grid-cols-3">
@@ -550,12 +550,12 @@ function PreparationSection() {
     <section className="bg-[#f4f4f1] px-5 py-20 lg:py-28">
       <SectionTitle
         eyebrow="El monitor decide"
-        title="Tu piensas la clase."
+        title="Tú piensas la clase."
         accent="Tres formas de prepararla."
       />
       <p className="mx-auto mt-7 max-w-[660px] text-center text-lg leading-8 text-[#66665d]">
-        No hay una unica forma de planificar. Cada monitor trabaja diferente.
-        Ten Planner se adapta a como quieres preparar cada sesion.
+        No hay una única forma de planificar. Cada monitor trabaja diferente.
+        Ten Planner se adapta a cómo quieres preparar cada sesión.
       </p>
       <div className="mx-auto mt-16 grid max-w-[1110px] gap-4 md:grid-cols-2">
         {preparationCards.map((card, index) => (
@@ -735,20 +735,20 @@ function FinalCtaSection() {
       <div className="mx-auto grid max-w-[1710px] gap-8 rounded-[32px] bg-[#050505] px-8 py-16 text-white md:grid-cols-[1fr_auto] md:items-center lg:px-16">
         <div>
           <h2 className="font-heading text-[clamp(2.4rem,4.3vw,4.3rem)] font-bold leading-[0.95]">
-            La proxima clase,
+            La próxima clase,
             <span className="block font-heading font-light italic text-white/45">
               lista en minutos.
             </span>
           </h2>
           <p className="mt-5 text-base text-white/65">
-            Unete a mas de 200 monitores que ya planifican mejor con Ten
+            Únete a más de 200 monitores que ya planifican mejor con Ten
             Planner.
           </p>
         </div>
         <div className="md:text-center">
           <PrimaryButton href="/register">Empieza gratis →</PrimaryButton>
           <p className="mt-4 text-xs text-white/42">
-            14 dias gratis · Sin tarjeta
+            14 días gratis · Sin tarjeta
           </p>
         </div>
       </div>
@@ -770,7 +770,7 @@ function Footer() {
             Ten<span className="text-[#d6ff38]">·</span>Planner
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/58">
-            Planificacion profesional para entrenadores de deportes de raqueta.
+            Planificación profesional para entrenadores de deportes de raqueta.
           </p>
         </div>
 
@@ -778,7 +778,7 @@ function Footer() {
           <div>
             <p className="text-sm font-black uppercase text-white">Producto</p>
             <div className="mt-3 grid gap-2 text-sm text-white/58">
-              <Link href="#como-funciona">Como funciona</Link>
+              <Link href="#como-funciona">Cómo funciona</Link>
               <Link href="/exercises">Biblioteca de ejercicios</Link>
               <Link href="/classes">Biblioteca de clases</Link>
             </div>

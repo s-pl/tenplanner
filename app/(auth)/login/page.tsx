@@ -14,20 +14,20 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Introduce un email valido"),
-  password: z.string().min(1, "La contrasena es obligatoria"),
+  email: z.string().trim().email("Introduce un email válido"),
+  password: z.string().min(1, "La contraseña es obligatoria"),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
 
 const GENERIC_LOGIN_ERROR =
-  "No hay una cuenta confirmada con ese correo o la contrasena no es correcta.";
+  "No hay una cuenta confirmada con ese correo o la contraseña no es correcta.";
 
 const CALLBACK_ERRORS: Record<string, string> = {
   missing_email:
-    "No hemos podido leer el email de tu proveedor. Prueba con otro metodo de acceso.",
+    "No hemos podido leer el email de tu proveedor. Prueba con otro método de acceso.",
   auth_callback_failed:
-    "No hemos podido completar la verificacion. Vuelve a intentarlo desde el correo recibido.",
+    "No hemos podido completar la verificación. Vuelve a intentarlo desde el correo recibido.",
 };
 
 function LoginForm() {
@@ -131,7 +131,7 @@ function LoginForm() {
             Bienvenido de nuevo
           </h1>
           <p className="mt-2 text-sm leading-6 text-foreground/62">
-            Inicia sesion en tu cuenta de entrenamiento.
+            Inicia sesión en tu cuenta de entrenamiento.
           </p>
         </div>
 
@@ -143,10 +143,10 @@ function LoginForm() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-black text-foreground">
-                  Correo de confirmacion enviado
+                  Correo de confirmación enviado
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  Hemos enviado un enlace de verificacion
+                  Hemos enviado un enlace de verificación
                   {registeredEmail && (
                     <>
                       {" "}
@@ -156,7 +156,7 @@ function LoginForm() {
                       </span>
                     </>
                   )}
-                  . Confirma tu cuenta para poder iniciar sesion.
+                  . Confirma tu cuenta para poder iniciar sesión.
                 </p>
               </div>
             </div>
@@ -206,7 +206,7 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Correo electronico</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -229,12 +229,12 @@ function LoginForm() {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Contrasena</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-muted-foreground transition-colors hover:text-brand"
               >
-                Olvidaste la contrasena?
+                Olvidaste la contraseña?
               </Link>
             </div>
             <div className="relative">
@@ -257,7 +257,7 @@ function LoginForm() {
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 tabIndex={-1}
-                aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {showPassword ? (
                   <EyeOff className="size-4" />
@@ -287,11 +287,11 @@ function LoginForm() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-foreground">
-                    Tu email aun no esta confirmado
+                    Tu email aún no está confirmado
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     Revisa tu bandeja de entrada o pide otro enlace de
-                    confirmacion para{" "}
+                    confirmación para{" "}
                     <span className="break-all font-semibold text-foreground">
                       {lastLoginEmail}
                     </span>
@@ -336,10 +336,10 @@ function LoginForm() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                Iniciando sesion...
+                Iniciando sesión...
               </>
             ) : (
-              "Iniciar sesion"
+              "Iniciar sesión"
             )}
           </Button>
         </form>
