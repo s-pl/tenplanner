@@ -304,7 +304,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
                 title="Cambiar foto"
-                className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full border border-foreground/10 bg-card text-foreground/65 transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground disabled:opacity-60"
+                className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full border border-foreground/15 bg-card text-foreground/80 transition-colors hover:border-brand hover:bg-brand hover:text-brand-foreground disabled:opacity-60"
               >
                 {avatarUploading ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -329,11 +329,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <h2 className="truncate text-2xl font-black leading-tight text-foreground sm:text-3xl">
                 {name || "Tu nombre"}
               </h2>
-              <p className="text-[13px] text-foreground/55 truncate mt-1">
+              <p className="text-[13px] text-muted-foreground truncate mt-1">
                 {user.email}
               </p>
               <div className="flex flex-wrap gap-2 mt-2.5">
-                <span className="inline-flex items-center rounded-full border border-foreground/10 px-2.5 py-1 text-[11px] font-bold capitalize text-foreground/55">
+                <span className="inline-flex items-center rounded-full border border-foreground/15 px-2.5 py-1 text-[11px] font-bold capitalize text-foreground/80">
                   {user.provider === "google" ? "Google" : "Correo"}
                 </span>
               </div>
@@ -367,9 +367,9 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   key={label}
                   className="min-w-[76px] rounded-[18px] border border-foreground/10 bg-background px-3 py-2.5 text-right"
                 >
-                  <div className="flex items-center justify-end gap-1 text-foreground/45">
+                  <div className="flex items-center justify-end gap-1 text-muted-foreground">
                     <Icon className="size-3" strokeWidth={1.6} />
-                    <dt className="text-[11px] font-medium text-foreground/55">
+                    <dt className="text-[11px] font-medium text-muted-foreground">
                       {label}
                     </dt>
                   </div>
@@ -411,7 +411,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             <div>
               <label
                 htmlFor="name"
-                className="mb-2 block text-[12px] font-black uppercase text-foreground/52"
+                className="mb-2 block text-[12px] font-black uppercase text-foreground/75"
               >
                 Nombre para mostrar
               </label>
@@ -421,11 +421,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre completo"
-                className="tp-field h-11 w-full px-4 text-[15px] font-medium placeholder:text-foreground/35"
+                className="tp-field h-11 w-full px-4 text-[15px] font-medium placeholder:text-muted-foreground"
               />
             </div>
             <div>
-              <label className="mb-2 block text-[12px] font-black uppercase text-foreground/52">
+              <label className="mb-2 block text-[12px] font-black uppercase text-foreground/75">
                 <Mail
                   className="inline size-3 mr-1 -mt-0.5"
                   strokeWidth={1.6}
@@ -436,7 +436,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 type="email"
                 value={user.email ?? ""}
                 disabled
-                className="tp-field h-11 w-full cursor-not-allowed px-4 text-[15px] font-medium tabular-nums text-foreground/50"
+                className="tp-field h-11 w-full cursor-not-allowed px-4 text-[15px] font-medium tabular-nums text-muted-foreground"
               />
             </div>
           </div>
@@ -488,7 +488,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     "flex items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[12px] font-bold transition-colors",
                     accent === c.id
                       ? "bg-card text-foreground shadow-sm"
-                      : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.02]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.02]"
                   )}
                 >
                   <span
@@ -514,11 +514,11 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     "flex min-w-[88px] flex-col items-center rounded-full px-6 py-3 transition-colors",
                     fontSize === f.id
                       ? "bg-brand text-brand-foreground"
-                      : "text-foreground/60 hover:text-foreground hover:bg-foreground/[0.03]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.03]"
                   )}
                 >
                   <span className={cn("font-bold", f.size)}>{f.label}</span>
-                  <span className="text-[11px] font-medium text-foreground/55 mt-0.5">
+                  <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
                     {f.desc}
                   </span>
                 </button>
@@ -539,7 +539,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   "inline-flex h-10 w-fit items-center gap-2 rounded-full border px-4 text-[12px] font-black transition-colors",
                   autoTheme
                     ? "border-brand/45 bg-brand/10 text-brand"
-                    : "border-foreground/15 text-foreground/60 hover:border-brand/45 hover:text-brand"
+                    : "border-foreground/15 text-muted-foreground hover:border-brand/45 hover:text-brand"
                 )}
               >
                 <Clock className="size-3.5" strokeWidth={1.6} />
@@ -596,15 +596,15 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                     className="absolute -top-8 -right-8 size-24 rounded-full bg-brand/15 blur-2xl"
                   />
                 )}
-                <div className="relative flex items-center gap-1.5 text-foreground/55 mb-3">
+                <div className="relative flex items-center gap-1.5 text-muted-foreground mb-3">
                   <Icon
                     className={cn(
                       "size-3.5",
-                      isAccent ? "text-brand" : "text-foreground/55"
+                      isAccent ? "text-brand" : "text-muted-foreground"
                     )}
                     strokeWidth={1.6}
                   />
-                  <p className="text-[11px] font-bold text-foreground/55">
+                  <p className="text-[11px] font-bold text-muted-foreground">
                     {label}
                   </p>
                 </div>
@@ -649,7 +649,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   key={label}
                   className="grid gap-1 py-3.5 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4"
                 >
-                  <dt className="text-[12px] font-bold text-foreground/65">
+                  <dt className="text-[12px] font-bold text-foreground/85">
                     {label}
                   </dt>
                   <dd className="text-[13px] text-foreground tabular-nums">
@@ -669,7 +669,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             <h3 className="border-b border-foreground/10 pb-2 text-[14px] font-black text-foreground">
               Exportar tus datos
             </h3>
-            <p className="text-[13px] text-foreground/60 mt-4 mb-5 max-w-xl">
+            <p className="text-[13px] text-muted-foreground mt-4 mb-5 max-w-xl">
               Descarga una copia completa de sesiones, ejercicios y metadatos.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -694,14 +694,14 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <FileText
-                    className="size-4 text-foreground/60"
+                    className="size-4 text-muted-foreground"
                     strokeWidth={1.6}
                   />
                 )}
                 CSV sesiones
               </button>
             </div>
-            <ul className="mt-5 grid max-w-xl grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-foreground/60 sm:grid-cols-2">
+            <ul className="mt-5 grid max-w-xl grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-muted-foreground sm:grid-cols-2">
               {[
                 "Todas las sesiones con fechas y duraciones",
                 "Biblioteca completa de ejercicios",
@@ -725,7 +725,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
                 <p className="text-[15px] font-black text-foreground">
                   Eliminar cuenta
                 </p>
-                <p className="text-[12px] text-foreground/55 mt-1 max-w-md">
+                <p className="text-[12px] text-muted-foreground mt-1 max-w-md">
                   Elimina permanentemente tu cuenta y todos los datos de
                   entrenamiento. Esta acción no se puede deshacer.
                 </p>
@@ -776,7 +776,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-[12px] font-black text-foreground/65">
+              <label className="mb-2 block text-[12px] font-black text-foreground/85">
                 Escribe <span className="text-destructive">ELIMINAR</span> para
                 confirmar
               </label>

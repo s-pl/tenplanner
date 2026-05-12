@@ -40,7 +40,7 @@ function buildCsp(nonce: string): string {
     "media-src 'self' blob: https://*.supabase.co",
     "object-src 'none'",
     "worker-src 'self' blob:",
-    "upgrade-insecure-requests",
+    ...(isProd ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }
 

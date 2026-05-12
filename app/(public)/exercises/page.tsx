@@ -12,12 +12,11 @@ import {
   asc,
   count,
   eq,
-  gte,
   ilike,
   inArray,
-  lte,
   or,
   sql,
+  type AnyColumn,
   type SQL,
 } from "drizzle-orm";
 import { FavoriteToggle } from "@/components/app/favorite-toggle";
@@ -26,6 +25,7 @@ import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
 import {
   Plus,
   ArrowLeft,
@@ -104,10 +104,23 @@ function getStrings(v: string | string[] | undefined): string[] {
   return Array.isArray(v) ? v : [v];
 }
 
-function getNumber(v: string | string[] | undefined): number | undefined {
-  const s = getString(v);
-  const n = Number(s);
-  return s && Number.isFinite(n) ? n : undefined;
+function getNumbers(v: string | string[] | undefined): number[] {
+  return getStrings(v)
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+}
+
+function uniqueStrings(...groups: string[][]): string[] {
+  return Array.from(new Set(groups.flat().filter(Boolean)));
+}
+
+function jsonbArrayHasAny(column: AnyColumn, values: string[]) {
+  return or(
+    ...values.map(
+      (value) =>
+        sql`coalesce(${column}::jsonb, '[]'::jsonb) @> ${JSON.stringify([value])}::jsonb`
+    )
+  );
 }
 
 export default async function ExercisesPage({ searchParams }: PageProps) {
@@ -163,36 +176,33 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
   // Advanced filters
-  const activeFormato = getString(params.formato) || undefined;
-  const activeNivel = getString(params.nivel) || undefined;
-  const activeAspectoJuego = getString(params.aspectoJuego) || undefined;
-  const activeParametro = getString(params.parametro) || undefined;
-  const activeTipologia = getString(params.tipologia) || undefined;
-  const activeDuracionRango = getString(params.duracionRango) || undefined;
-  const activeNumJugadores = getNumber(params.numJugadores);
-  const activeTipoPelota = getString(params.tipoPelota) || undefined;
-  const activeTipoActividad = getString(params.tipoActividad) || undefined;
+  const activeFormato = getStrings(params.formato);
+  const activeNivel = getStrings(params.nivel);
+  const activeAspectoJuego = getStrings(params.aspectoJuego);
+  const activeParametro = getStrings(params.parametro);
+  const activeDuracionRango = getStrings(params.duracionRango);
+  const activeNumJugadores = getNumbers(params.numJugadores);
+  const activeTipoPelota = getStrings(params.tipoPelota);
+  const activeTipoActividad = uniqueStrings(
+    getStrings(params.tipoActividad),
+    getStrings(params.tipologia)
+  );
   const activeGolpes = getStrings(params.golpe);
   const activeEfecto = getStrings(params.efecto);
-  const activeMinDuracion = getNumber(params.minDuracion);
-  const activeMaxDuracion = getNumber(params.maxDuracion);
-  const activeLocation = getString(params.location) || undefined;
+  const activeLocation = getStrings(params.location);
 
   const advancedActive =
-    activeFormato ||
-    activeNivel ||
-    activeAspectoJuego ||
-    activeParametro ||
-    activeTipologia ||
-    activeDuracionRango ||
-    activeNumJugadores != null ||
-    activeTipoPelota ||
-    activeTipoActividad ||
+    activeFormato.length > 0 ||
+    activeNivel.length > 0 ||
+    activeAspectoJuego.length > 0 ||
+    activeParametro.length > 0 ||
+    activeDuracionRango.length > 0 ||
+    activeNumJugadores.length > 0 ||
+    activeTipoPelota.length > 0 ||
+    activeTipoActividad.length > 0 ||
     activeGolpes.length > 0 ||
     activeEfecto.length > 0 ||
-    activeMinDuracion != null ||
-    activeMaxDuracion != null ||
-    activeLocation;
+    activeLocation.length > 0;
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
@@ -253,45 +263,72 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       if (searchWhere) listConditions.push(searchWhere);
     }
 
-    if (activeFormato)
+    if (activeFormato.length > 0)
       listConditions.push(
-        eq(
+        inArray(
           exercisesTable.formato,
-          activeFormato as "individual" | "parejas" | "grupal" | "multigrupo"
+          activeFormato as Array<
+            "individual" | "parejas" | "grupal" | "multigrupo"
+          >
         )
       );
-    if (activeNivel) listConditions.push(eq(exercisesTable.nivel, activeNivel));
-    if (activeAspectoJuego)
-      listConditions.push(eq(exercisesTable.aspectoJuego, activeAspectoJuego));
-    if (activeParametro)
-      listConditions.push(eq(exercisesTable.parametro, activeParametro));
-    if (activeTipologia)
-      listConditions.push(eq(exercisesTable.tipologia, activeTipologia));
-    if (activeDuracionRango)
-      listConditions.push(
-        eq(exercisesTable.duracionRango, activeDuracionRango)
+    if (activeNivel.length > 0) {
+      const nivelWhere = or(
+        jsonbArrayHasAny(exercisesTable.niveles, activeNivel)!,
+        inArray(exercisesTable.nivel, activeNivel)
       );
-    if (activeNumJugadores != null)
-      listConditions.push(eq(exercisesTable.numJugadores, activeNumJugadores));
-    if (activeTipoPelota)
+      if (nivelWhere) listConditions.push(nivelWhere);
+    }
+    if (activeAspectoJuego.length > 0) {
+      const aspectoWhere = or(
+        jsonbArrayHasAny(exercisesTable.aspectosJuego, activeAspectoJuego)!,
+        inArray(exercisesTable.aspectoJuego, activeAspectoJuego)
+      );
+      if (aspectoWhere) listConditions.push(aspectoWhere);
+    }
+    if (activeParametro.length > 0) {
+      const parametroWhere = or(
+        jsonbArrayHasAny(exercisesTable.parametros, activeParametro)!,
+        inArray(exercisesTable.parametro, activeParametro)
+      );
+      if (parametroWhere) listConditions.push(parametroWhere);
+    }
+    if (activeDuracionRango.length > 0) {
       listConditions.push(
-        eq(
+        inArray(exercisesTable.duracionRango, activeDuracionRango)
+      );
+    }
+    if (activeNumJugadores.length > 0)
+      listConditions.push(
+        inArray(exercisesTable.numJugadores, activeNumJugadores)
+      );
+    if (activeTipoPelota.length > 0)
+      listConditions.push(
+        inArray(
           exercisesTable.tipoPelota,
-          activeTipoPelota as "normal" | "lenta" | "rapida" | "sin_pelota"
+          activeTipoPelota as Array<
+            "normal" | "lenta" | "rapida" | "sin_pelota"
+          >
         )
       );
-    if (activeTipoActividad)
-      listConditions.push(
-        eq(
-          exercisesTable.tipoActividad,
-          activeTipoActividad as
-            | "tecnico_tactico"
-            | "fisico"
-            | "cognitivo"
-            | "competitivo"
-            | "ludico"
-        )
+    if (activeTipoActividad.length > 0) {
+      const legacyTipologiaValues = activeTipoActividad.filter(
+        (value) => value !== "cognitivo"
       );
+      const activityConditions: SQL[] = [
+        jsonbArrayHasAny(exercisesTable.tiposActividad, activeTipoActividad)!,
+      ];
+      if (legacyTipologiaValues.length > 0) {
+        activityConditions.push(
+          inArray(exercisesTable.tipologia, legacyTipologiaValues)
+        );
+      }
+      if (activeTipoActividad.includes("cognitivo")) {
+        activityConditions.push(eq(exercisesTable.tipoActividad, "cognitivo"));
+      }
+      const activityWhere = or(...activityConditions);
+      if (activityWhere) listConditions.push(activityWhere);
+    }
     if (activeGolpes.length > 0) {
       const golpeConds = activeGolpes.map(
         (g) =>
@@ -308,16 +345,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       const combined = or(...efectoConds);
       if (combined) listConditions.push(combined);
     }
-    if (activeMinDuracion != null)
-      listConditions.push(
-        gte(exercisesTable.durationMinutes, activeMinDuracion)
-      );
-    if (activeMaxDuracion != null)
-      listConditions.push(
-        lte(exercisesTable.durationMinutes, activeMaxDuracion)
-      );
-    if (activeLocation)
-      listConditions.push(eq(exercisesTable.location, activeLocation));
+    if (activeLocation.length > 0)
+      listConditions.push(inArray(exercisesTable.location, activeLocation));
   }
 
   const listWhere = and(...listConditions);
@@ -348,6 +377,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           formato: exercisesTable.formato,
           numJugadores: exercisesTable.numJugadores,
           tipoActividad: exercisesTable.tipoActividad,
+          tiposActividad: exercisesTable.tiposActividad,
           stepsCount: sql<number>`COALESCE(json_array_length(${exercisesTable.steps}), 0)`,
           materialsCount: sql<number>`COALESCE(json_array_length(${exercisesTable.materials}), 0)`,
         })
@@ -422,23 +452,23 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   };
 
   const advancedParams: Record<string, string | string[] | undefined> = {
-    formato: activeFormato,
-    nivel: activeNivel,
-    aspectoJuego: activeAspectoJuego,
-    parametro: activeParametro,
-    tipologia: activeTipologia,
-    duracionRango: activeDuracionRango,
+    formato: activeFormato.length > 0 ? activeFormato : undefined,
+    nivel: activeNivel.length > 0 ? activeNivel : undefined,
+    aspectoJuego:
+      activeAspectoJuego.length > 0 ? activeAspectoJuego : undefined,
+    parametro: activeParametro.length > 0 ? activeParametro : undefined,
+    duracionRango:
+      activeDuracionRango.length > 0 ? activeDuracionRango : undefined,
     numJugadores:
-      activeNumJugadores != null ? String(activeNumJugadores) : undefined,
-    tipoPelota: activeTipoPelota,
-    tipoActividad: activeTipoActividad,
+      activeNumJugadores.length > 0
+        ? activeNumJugadores.map(String)
+        : undefined,
+    tipoPelota: activeTipoPelota.length > 0 ? activeTipoPelota : undefined,
+    tipoActividad:
+      activeTipoActividad.length > 0 ? activeTipoActividad : undefined,
     golpe: activeGolpes.length > 0 ? activeGolpes : undefined,
     efecto: activeEfecto.length > 0 ? activeEfecto : undefined,
-    minDuracion:
-      activeMinDuracion != null ? String(activeMinDuracion) : undefined,
-    maxDuracion:
-      activeMaxDuracion != null ? String(activeMaxDuracion) : undefined,
-    location: activeLocation,
+    location: activeLocation.length > 0 ? activeLocation : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -452,34 +482,23 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     if (merged.tab && merged.tab !== "all") p.set("tab", merged.tab as string);
     if (merged.page && merged.page !== "1")
       p.set("page", merged.page as string);
-    if (merged.formato) p.set("formato", merged.formato as string);
-    if (merged.nivel) p.set("nivel", merged.nivel as string);
-    if (merged.aspectoJuego)
-      p.set("aspectoJuego", merged.aspectoJuego as string);
-    if (merged.parametro) p.set("parametro", merged.parametro as string);
-    if (merged.tipologia) p.set("tipologia", merged.tipologia as string);
-    if (merged.duracionRango)
-      p.set("duracionRango", merged.duracionRango as string);
-    if (merged.numJugadores)
-      p.set("numJugadores", merged.numJugadores as string);
-    if (merged.tipoPelota) p.set("tipoPelota", merged.tipoPelota as string);
-    if (merged.tipoActividad)
-      p.set("tipoActividad", merged.tipoActividad as string);
-    const gArr = Array.isArray(merged.golpe)
-      ? merged.golpe
-      : merged.golpe
-        ? [merged.golpe]
-        : [];
-    for (const g of gArr) p.append("golpe", g);
-    const eArr = Array.isArray(merged.efecto)
-      ? merged.efecto
-      : merged.efecto
-        ? [merged.efecto]
-        : [];
-    for (const e of eArr) p.append("efecto", e);
-    if (merged.minDuracion) p.set("minDuracion", merged.minDuracion as string);
-    if (merged.maxDuracion) p.set("maxDuracion", merged.maxDuracion as string);
-    if (merged.location) p.set("location", merged.location as string);
+    for (const key of [
+      "formato",
+      "nivel",
+      "aspectoJuego",
+      "parametro",
+      "duracionRango",
+      "numJugadores",
+      "tipoPelota",
+      "tipoActividad",
+      "golpe",
+      "efecto",
+      "location",
+    ]) {
+      const value = merged[key];
+      const values = Array.isArray(value) ? value : value ? [value] : [];
+      for (const item of values) p.append(key, item);
+    }
     const s = p.toString();
     return `/exercises${s ? `?${s}` : ""}`;
   }
@@ -491,13 +510,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     multigrupo: "Multigrupo",
   };
 
-  const TIPO_ACTIVIDAD_LABEL: Record<string, string> = {
-    tecnico_tactico: "Téc-Tác",
-    fisico: "Físico",
-    cognitivo: "Cognitivo",
-    competitivo: "Competitivo",
-    ludico: "Lúdico",
-  };
+  function getTipoActividadLabel(value: string) {
+    return (
+      TIPO_ACTIVIDAD_LABELS[value as keyof typeof TIPO_ACTIVIDAD_LABELS] ??
+      value.replace(/_/g, " ")
+    );
+  }
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1]">
@@ -709,92 +727,84 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       {activeTab !== "all" && (
                         <input type="hidden" name="tab" value={activeTab} />
                       )}
-                      {activeFormato && (
+                      {activeFormato.map((value) => (
                         <input
+                          key={`formato-${value}`}
                           type="hidden"
                           name="formato"
-                          value={activeFormato}
+                          value={value}
                         />
-                      )}
-                      {activeNivel && (
-                        <input type="hidden" name="nivel" value={activeNivel} />
-                      )}
-                      {activeAspectoJuego && (
+                      ))}
+                      {activeNivel.map((value) => (
                         <input
+                          key={`nivel-${value}`}
+                          type="hidden"
+                          name="nivel"
+                          value={value}
+                        />
+                      ))}
+                      {activeAspectoJuego.map((value) => (
+                        <input
+                          key={`aspecto-${value}`}
                           type="hidden"
                           name="aspectoJuego"
-                          value={activeAspectoJuego}
+                          value={value}
                         />
-                      )}
-                      {activeParametro && (
+                      ))}
+                      {activeParametro.map((value) => (
                         <input
+                          key={`parametro-${value}`}
                           type="hidden"
                           name="parametro"
-                          value={activeParametro}
+                          value={value}
                         />
-                      )}
-                      {activeTipologia && (
+                      ))}
+                      {activeDuracionRango.map((value) => (
                         <input
-                          type="hidden"
-                          name="tipologia"
-                          value={activeTipologia}
-                        />
-                      )}
-                      {activeDuracionRango && (
-                        <input
+                          key={`duracion-${value}`}
                           type="hidden"
                           name="duracionRango"
-                          value={activeDuracionRango}
+                          value={value}
                         />
-                      )}
-                      {activeNumJugadores != null && (
+                      ))}
+                      {activeNumJugadores.map((value) => (
                         <input
+                          key={`jugadores-${value}`}
                           type="hidden"
                           name="numJugadores"
-                          value={activeNumJugadores}
+                          value={value}
                         />
-                      )}
-                      {activeTipoPelota && (
+                      ))}
+                      {activeTipoPelota.map((value) => (
                         <input
+                          key={`pelota-${value}`}
                           type="hidden"
                           name="tipoPelota"
-                          value={activeTipoPelota}
+                          value={value}
                         />
-                      )}
-                      {activeTipoActividad && (
+                      ))}
+                      {activeTipoActividad.map((value) => (
                         <input
+                          key={`actividad-${value}`}
                           type="hidden"
                           name="tipoActividad"
-                          value={activeTipoActividad}
+                          value={value}
                         />
-                      )}
+                      ))}
                       {activeGolpes.map((g) => (
                         <input key={g} type="hidden" name="golpe" value={g} />
                       ))}
                       {activeEfecto.map((e) => (
                         <input key={e} type="hidden" name="efecto" value={e} />
                       ))}
-                      {activeMinDuracion != null && (
+                      {activeLocation.map((value) => (
                         <input
-                          type="hidden"
-                          name="minDuracion"
-                          value={activeMinDuracion}
-                        />
-                      )}
-                      {activeMaxDuracion != null && (
-                        <input
-                          type="hidden"
-                          name="maxDuracion"
-                          value={activeMaxDuracion}
-                        />
-                      )}
-                      {activeLocation && (
-                        <input
+                          key={`location-${value}`}
                           type="hidden"
                           name="location"
-                          value={activeLocation}
+                          value={value}
                         />
-                      )}
+                      ))}
                     </form>
 
                     <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -836,15 +846,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       nivel: activeNivel,
                       aspectoJuego: activeAspectoJuego,
                       parametro: activeParametro,
-                      tipologia: activeTipologia,
                       duracionRango: activeDuracionRango,
                       numJugadores: activeNumJugadores,
                       tipoPelota: activeTipoPelota,
                       tipoActividad: activeTipoActividad,
                       golpes: activeGolpes,
                       efecto: activeEfecto,
-                      minDuracion: activeMinDuracion,
-                      maxDuracion: activeMaxDuracion,
                       location: activeLocation,
                     }}
                     preserved={{
@@ -862,53 +869,70 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   {/* Active filter summary */}
                   {advancedActive && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {activeFormato && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Formato: {FORMATO_LABEL[activeFormato]}
+                      {activeFormato.map((value) => (
+                        <span
+                          key={`formato-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Formato: {FORMATO_LABEL[value] ?? value}
                         </span>
-                      )}
-                      {activeNivel && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Nivel: {activeNivel.replace(/_/g, " ")}
+                      ))}
+                      {activeNivel.map((value) => (
+                        <span
+                          key={`nivel-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Nivel: {value.replace(/_/g, " ")}
                         </span>
-                      )}
-                      {activeAspectoJuego && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Aspecto: {activeAspectoJuego}
+                      ))}
+                      {activeAspectoJuego.map((value) => (
+                        <span
+                          key={`aspecto-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Aspecto: {value}
                         </span>
-                      )}
-                      {activeParametro && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Parametro: {activeParametro}
+                      ))}
+                      {activeParametro.map((value) => (
+                        <span
+                          key={`parametro-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Parámetro: {value}
                         </span>
-                      )}
-                      {activeTipologia && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Tipologia: {activeTipologia.replace(/_/g, " ")}
+                      ))}
+                      {activeDuracionRango.map((value) => (
+                        <span
+                          key={`duracion-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Rango: {value}
                         </span>
-                      )}
-                      {activeDuracionRango && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Rango: {activeDuracionRango}
+                      ))}
+                      {activeNumJugadores.map((value) => (
+                        <span
+                          key={`jugadores-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          {value} jugador{value !== 1 ? "es" : ""}
                         </span>
-                      )}
-                      {activeNumJugadores != null && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          {activeNumJugadores} jugador
-                          {activeNumJugadores !== 1 ? "es" : ""}
+                      ))}
+                      {activeTipoPelota.map((value) => (
+                        <span
+                          key={`pelota-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Pelota: {value.replace("_", " ")}
                         </span>
-                      )}
-                      {activeTipoPelota && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          Pelota: {activeTipoPelota.replace("_", " ")}
+                      ))}
+                      {activeTipoActividad.map((value) => (
+                        <span
+                          key={`actividad-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          {getTipoActividadLabel(value)}
                         </span>
-                      )}
-                      {activeTipoActividad && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          {TIPO_ACTIVIDAD_LABEL[activeTipoActividad] ??
-                            activeTipoActividad}
-                        </span>
-                      )}
+                      ))}
                       {activeGolpes.map((g) => (
                         <span
                           key={g}
@@ -925,18 +949,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           Efecto: {e.replace(/_/g, " ")}
                         </span>
                       ))}
-                      {(activeMinDuracion != null ||
-                        activeMaxDuracion != null) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          {activeMinDuracion ?? ""}–{activeMaxDuracion ?? "∞"}{" "}
-                          min
+                      {activeLocation.map((value) => (
+                        <span
+                          key={`location-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          {value}
                         </span>
-                      )}
-                      {activeLocation && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded">
-                          {activeLocation}
-                        </span>
-                      )}
+                      ))}
                       <Link
                         href={buildHref({
                           category: activeCategory,
@@ -947,15 +967,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           nivel: undefined,
                           aspectoJuego: undefined,
                           parametro: undefined,
-                          tipologia: undefined,
                           duracionRango: undefined,
                           numJugadores: undefined,
                           tipoPelota: undefined,
                           tipoActividad: undefined,
                           golpe: undefined,
                           efecto: undefined,
-                          minDuracion: undefined,
-                          maxDuracion: undefined,
                           location: undefined,
                         })}
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 hover:text-foreground border border-foreground/15 rounded transition-colors"
@@ -1010,9 +1027,10 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       const formatoLabel = exercise.formato
                         ? FORMATO_LABEL[exercise.formato]
                         : null;
-                      const actividadLabel = exercise.tipoActividad
-                        ? TIPO_ACTIVIDAD_LABEL[exercise.tipoActividad]
-                        : null;
+                      const actividadLabels = (
+                        (exercise.tiposActividad as string[] | null) ??
+                        (exercise.tipoActividad ? [exercise.tipoActividad] : [])
+                      ).map(getTipoActividadLabel);
                       const savedInLists =
                         exerciseListCountMap.get(exercise.id) ?? 0;
 
@@ -1069,7 +1087,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             )}
 
                             {(formatoLabel ||
-                              actividadLabel ||
+                              actividadLabels.length > 0 ||
                               exercise.numJugadores) && (
                               <div className="flex flex-wrap gap-1 mb-3">
                                 {formatoLabel && (
@@ -1082,11 +1100,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                                     {exercise.numJugadores}P
                                   </span>
                                 )}
-                                {actividadLabel && (
-                                  <span className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded">
-                                    {actividadLabel}
+                                {actividadLabels.map((label) => (
+                                  <span
+                                    key={label}
+                                    className="px-1.5 py-0.5 text-[9px] font-sans uppercase tracking-[0.12em] bg-muted text-foreground/50 rounded"
+                                  >
+                                    {label}
                                   </span>
-                                )}
+                                ))}
                               </div>
                             )}
 

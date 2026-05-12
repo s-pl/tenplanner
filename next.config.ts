@@ -1,10 +1,18 @@
 import type { NextConfig } from "next";
 
-const devOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
 const isProd = process.env.NODE_ENV === "production";
+
+const configuredDevOrigins =
+  process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
+
+const devOrigins = Array.from(
+  new Set([
+    ...(isProd ? [] : ["localhost", "127.0.0.1"]),
+    ...configuredDevOrigins,
+  ])
+);
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },

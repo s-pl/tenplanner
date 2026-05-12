@@ -204,7 +204,11 @@ function LoginForm() {
           <Separator className="flex-1" />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          method="post"
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
           <div className="space-y-1.5">
             <Label htmlFor="email">Correo electrónico</Label>
             <Input
@@ -257,7 +261,9 @@ function LoginForm() {
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 tabIndex={-1}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
               >
                 {showPassword ? (
                   <EyeOff className="size-4" />

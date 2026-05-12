@@ -20,6 +20,14 @@ export interface ExerciseDraftPayload {
   numJugadores?: number | null;
   tipoPelota?: string | null;
   tipoActividad?: string | null;
+  nivel?: string | null;
+  niveles?: string[];
+  aspectoJuego?: string | null;
+  aspectosJuego?: string[];
+  parametro?: string | null;
+  parametros?: string[];
+  tiposActividad?: string[];
+  duracionRango?: string | null;
   isGlobal?: boolean;
   steps: Array<{ id: string; title: string; description: string }>;
   materials: string[];
@@ -260,6 +268,14 @@ export function hasMeaningfulExerciseDraft(payload: ExerciseDraftPayload) {
     payload.numJugadores != null ||
     payload.tipoPelota ||
     payload.tipoActividad ||
+    payload.nivel ||
+    (payload.niveles?.length ?? 0) > 0 ||
+    payload.aspectoJuego ||
+    (payload.aspectosJuego?.length ?? 0) > 0 ||
+    payload.parametro ||
+    (payload.parametros?.length ?? 0) > 0 ||
+    (payload.tiposActividad?.length ?? 0) > 0 ||
+    payload.duracionRango ||
     payload.isGlobal ||
     payload.steps.some(
       (step) => step.title.trim() || step.description.trim()

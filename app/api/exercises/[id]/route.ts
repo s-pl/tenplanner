@@ -6,6 +6,10 @@ import { exercises, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { embedExercise } from "@/lib/ai/semantic-search";
 import {
+  deriveDurationMinutesFromRange,
+  normalizeMultiValue,
+} from "@/lib/exercise-taxonomy";
+import {
   exerciseIdParamsSchema,
   updateExerciseSchema,
   zodValidationErrorResponse,
@@ -57,10 +61,19 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         numJugadores: exercises.numJugadores,
         tipoPelota: exercises.tipoPelota,
         tipoActividad: exercises.tipoActividad,
+        tiposActividad: exercises.tiposActividad,
         golpes: exercises.golpes,
         efecto: exercises.efecto,
         variantes: exercises.variantes,
         imageUrls: exercises.imageUrls,
+        nivel: exercises.nivel,
+        niveles: exercises.niveles,
+        aspectoJuego: exercises.aspectoJuego,
+        aspectosJuego: exercises.aspectosJuego,
+        parametro: exercises.parametro,
+        parametros: exercises.parametros,
+        tipologia: exercises.tipologia,
+        duracionRango: exercises.duracionRango,
         phase: exercises.phase,
         intensity: exercises.intensity,
         createdAt: exercises.createdAt,
@@ -189,7 +202,6 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "description",
       "category",
       "difficulty",
-      "durationMinutes",
       "objectives",
       "imageUrl",
       "tips",
@@ -202,15 +214,10 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "formato",
       "numJugadores",
       "tipoPelota",
-      "tipoActividad",
       "golpes",
       "efecto",
       "variantes",
       "imageUrls",
-      "nivel",
-      "aspectoJuego",
-      "parametro",
-      "tipologia",
       "duracionRango",
     ] as const;
 
@@ -218,6 +225,64 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       if (d[field] !== undefined) {
         updateValues[field] = d[field];
       }
+    }
+
+    if (d.durationMinutes !== undefined && d.durationMinutes !== null) {
+      updateValues.durationMinutes = d.durationMinutes;
+    } else if (d.duracionRango !== undefined && d.duracionRango !== null) {
+      const derivedDuration = deriveDurationMinutesFromRange(d.duracionRango);
+      if (derivedDuration == null) {
+        return NextResponse.json(
+          { error: "El rango de duración es inválido." },
+          { status: 400 }
+        );
+      }
+      updateValues.durationMinutes = derivedDuration;
+    }
+
+    if (d.niveles !== undefined || d.nivel !== undefined) {
+      const niveles = normalizeMultiValue(
+        d.niveles ?? (d.nivel ? [d.nivel] : null)
+      );
+      updateValues.niveles = niveles;
+      updateValues.nivel = niveles?.[0] ?? null;
+    }
+
+    if (d.aspectosJuego !== undefined || d.aspectoJuego !== undefined) {
+      const aspectosJuego = normalizeMultiValue(
+        d.aspectosJuego ?? (d.aspectoJuego ? [d.aspectoJuego] : null)
+      );
+      updateValues.aspectosJuego = aspectosJuego;
+      updateValues.aspectoJuego = aspectosJuego?.[0] ?? null;
+    }
+
+    if (d.parametros !== undefined || d.parametro !== undefined) {
+      const parametros = normalizeMultiValue(
+        d.parametros ?? (d.parametro ? [d.parametro] : null)
+      );
+      updateValues.parametros = parametros;
+      updateValues.parametro = parametros?.[0] ?? null;
+    }
+
+    if (
+      d.tiposActividad !== undefined ||
+      d.tipologia !== undefined ||
+      d.tipoActividad !== undefined
+    ) {
+      const tiposActividad = normalizeMultiValue(
+        d.tiposActividad ??
+          (d.tipologia
+            ? [d.tipologia]
+            : d.tipoActividad === "cognitivo"
+              ? ["cognitivo"]
+              : null)
+      );
+      updateValues.tiposActividad = tiposActividad;
+      updateValues.tipoActividad = tiposActividad?.includes("cognitivo")
+        ? "cognitivo"
+        : null;
+      updateValues.tipologia =
+        tiposActividad?.find((value) => value !== "cognitivo") ?? null;
     }
 
     if (isAdmin && d.isGlobal !== undefined) {

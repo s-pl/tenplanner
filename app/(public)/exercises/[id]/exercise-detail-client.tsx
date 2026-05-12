@@ -29,6 +29,7 @@ import Image from "next/image";
 import { ExerciseForm } from "@/components/app/exercise-form";
 import { ExerciseRating } from "@/components/app/exercise-rating";
 import { ExerciseListPicker } from "@/components/app/exercise-list-picker";
+import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -64,8 +65,17 @@ export interface ExerciseData {
   numJugadores: number | null;
   tipoPelota: TipoPelota | null;
   tipoActividad: TipoActividad | null;
+  tiposActividad: string[] | null;
   golpes: string[] | null;
   efecto: string[] | null;
+  nivel: string | null;
+  niveles: string[] | null;
+  aspectoJuego: string | null;
+  aspectosJuego: string[] | null;
+  parametro: string | null;
+  parametros: string[] | null;
+  tipologia: string | null;
+  duracionRango: string | null;
   phase: Phase | null;
   intensity: number | null;
   isGlobal: boolean;
@@ -128,7 +138,7 @@ const FORMATO_LABELS: Record<Formato, string> = {
   multigrupo: "Multigrupo",
 };
 
-const TIPO_ACTIVIDAD_LABELS: Record<TipoActividad, string> = {
+const LEGACY_TIPO_ACTIVIDAD_LABELS: Record<TipoActividad, string> = {
   tecnico_tactico: "Técnico-táctico",
   fisico: "Físico",
   cognitivo: "Cognitivo",
@@ -294,8 +304,17 @@ export function ExerciseDetailClient({
               numJugadores: exercise.numJugadores,
               tipoPelota: exercise.tipoPelota,
               tipoActividad: exercise.tipoActividad,
+              tiposActividad: exercise.tiposActividad as never,
               golpes: exercise.golpes,
               efecto: exercise.efecto,
+              nivel: exercise.nivel as never,
+              niveles: exercise.niveles as never,
+              aspectoJuego: exercise.aspectoJuego as never,
+              aspectosJuego: exercise.aspectosJuego as never,
+              parametro: exercise.parametro as never,
+              parametros: exercise.parametros as never,
+              tipologia: exercise.tipologia as never,
+              duracionRango: exercise.duracionRango as never,
               phase: exercise.phase,
               intensity: exercise.intensity,
               isGlobal: exercise.isGlobal,
@@ -311,11 +330,38 @@ export function ExerciseDetailClient({
     );
   }
 
+  const niveles = exercise.niveles?.length
+    ? exercise.niveles
+    : exercise.nivel
+      ? [exercise.nivel]
+      : [];
+  const aspectosJuego = exercise.aspectosJuego?.length
+    ? exercise.aspectosJuego
+    : exercise.aspectoJuego
+      ? [exercise.aspectoJuego]
+      : [];
+  const parametros = exercise.parametros?.length
+    ? exercise.parametros
+    : exercise.parametro
+      ? [exercise.parametro]
+      : [];
+  const tiposActividad = exercise.tiposActividad?.length
+    ? exercise.tiposActividad
+    : exercise.tipologia
+      ? [exercise.tipologia]
+      : exercise.tipoActividad
+        ? [exercise.tipoActividad]
+        : [];
+
   const hasParams =
     exercise.formato ||
     exercise.numJugadores ||
     exercise.tipoPelota ||
-    exercise.tipoActividad ||
+    niveles.length > 0 ||
+    aspectosJuego.length > 0 ||
+    parametros.length > 0 ||
+    tiposActividad.length > 0 ||
+    exercise.duracionRango ||
     (exercise.golpes && exercise.golpes.length > 0) ||
     (exercise.efecto && exercise.efecto.length > 0);
 
@@ -532,9 +578,45 @@ export function ExerciseDetailClient({
                   {exercise.numJugadores} jugadores
                 </span>
               )}
-              {exercise.tipoActividad && (
+              {tiposActividad.map((tipo) => (
+                <span
+                  key={tipo}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  {TIPO_ACTIVIDAD_LABELS[
+                    tipo as keyof typeof TIPO_ACTIVIDAD_LABELS
+                  ] ??
+                    LEGACY_TIPO_ACTIVIDAD_LABELS[tipo as TipoActividad] ??
+                    tipo.replace(/_/g, " ")}
+                </span>
+              ))}
+              {niveles.map((nivel) => (
+                <span
+                  key={nivel}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  Nivel: {nivel.replace(/_/g, " ")}
+                </span>
+              ))}
+              {aspectosJuego.map((aspecto) => (
+                <span
+                  key={aspecto}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  {aspecto.replace(/_/g, " ")}
+                </span>
+              ))}
+              {parametros.map((parametro) => (
+                <span
+                  key={parametro}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  Parámetro: {parametro.replace(/_/g, " ")}
+                </span>
+              ))}
+              {exercise.duracionRango && (
                 <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
-                  {TIPO_ACTIVIDAD_LABELS[exercise.tipoActividad]}
+                  {exercise.duracionRango} min
                 </span>
               )}
               {exercise.tipoPelota && (

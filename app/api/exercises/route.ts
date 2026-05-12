@@ -1,4 +1,17 @@
-import { and, count, desc, eq, ilike, type SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lte,
+  or,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from "drizzle-orm";
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -7,6 +20,10 @@ import { createClient } from "@/lib/supabase/server";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedExercise } from "@/lib/ai/semantic-search";
 import { getBooleanSetting } from "@/lib/app-settings";
+import {
+  deriveDurationMinutesFromRange,
+  normalizeMultiValue,
+} from "@/lib/exercise-taxonomy";
 import {
   createExerciseSchema,
   exercisesListQuerySchema,
@@ -17,24 +34,79 @@ function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
+function getAllParam(params: URLSearchParams, key: string) {
+  const values = params.getAll(key).filter(Boolean);
+  return values.length > 0 ? values : undefined;
+}
+
+function jsonbArrayHasAny(column: AnyColumn, values: string[]) {
+  return or(
+    ...values.map(
+      (value) =>
+        sql`coalesce(${column}::jsonb, '[]'::jsonb) @> ${JSON.stringify([value])}::jsonb`
+    )
+  );
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const searchParams = request.nextUrl.searchParams;
   const parsedQuery = exercisesListQuerySchema.safeParse({
-    category: request.nextUrl.searchParams.get("category") ?? undefined,
-    search: request.nextUrl.searchParams.get("search") ?? undefined,
-    page: request.nextUrl.searchParams.get("page") ?? undefined,
-    limit: request.nextUrl.searchParams.get("limit") ?? undefined,
+    category: searchParams.get("category") ?? undefined,
+    search: searchParams.get("search") ?? undefined,
+    page: searchParams.get("page") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+    formato: getAllParam(searchParams, "formato"),
+    numJugadores: getAllParam(searchParams, "numJugadores"),
+    tipoPelota: getAllParam(searchParams, "tipoPelota"),
+    tipoActividad: getAllParam(searchParams, "tipoActividad"),
+    golpe: getAllParam(searchParams, "golpe"),
+    efecto: getAllParam(searchParams, "efecto"),
+    minDuracion: searchParams.get("minDuracion") ?? undefined,
+    maxDuracion: searchParams.get("maxDuracion") ?? undefined,
+    location: getAllParam(searchParams, "location"),
+    phase: searchParams.get("phase") ?? undefined,
+    intensity: searchParams.get("intensity") ?? undefined,
+    nivel: getAllParam(searchParams, "nivel"),
+    aspectoJuego: getAllParam(searchParams, "aspectoJuego"),
+    parametro: getAllParam(searchParams, "parametro"),
+    tipologia: getAllParam(searchParams, "tipologia"),
+    duracionRango: getAllParam(searchParams, "duracionRango"),
   });
 
   if (!parsedQuery.success) {
     return zodValidationErrorResponse(parsedQuery.error);
   }
 
-  const { category, search, page, limit } = parsedQuery.data;
+  const {
+    category,
+    search,
+    page,
+    limit,
+    formato,
+    numJugadores,
+    tipoPelota,
+    tipoActividad,
+    golpe,
+    efecto,
+    minDuracion,
+    maxDuracion,
+    location,
+    phase,
+    intensity,
+    nivel,
+    aspectoJuego,
+    parametro,
+    tipologia,
+    duracionRango,
+  } = parsedQuery.data;
+  const activeTipoActividad = Array.from(
+    new Set([...(tipoActividad ?? []), ...(tipologia ?? [])])
+  );
   const offset = (page - 1) * limit;
   const publicExercisesEnabled = await getBooleanSetting(
     "feature.public_exercises_enabled"
@@ -62,6 +134,76 @@ export async function GET(request: NextRequest) {
     whereConditions.push(ilike(exercises.name, `%${search}%`));
   }
 
+  if (formato?.length)
+    whereConditions.push(inArray(exercises.formato, formato));
+  if (numJugadores?.length) {
+    whereConditions.push(inArray(exercises.numJugadores, numJugadores));
+  }
+  if (tipoPelota?.length) {
+    whereConditions.push(inArray(exercises.tipoPelota, tipoPelota));
+  }
+  if (activeTipoActividad.length > 0) {
+    const legacyTipologiaValues = activeTipoActividad.filter(
+      (v) => v !== "cognitivo"
+    );
+    const activityConditions = [
+      jsonbArrayHasAny(exercises.tiposActividad, activeTipoActividad),
+    ].filter(Boolean) as SQL[];
+    if (legacyTipologiaValues.length > 0) {
+      activityConditions.push(
+        inArray(exercises.tipologia, legacyTipologiaValues)
+      );
+    }
+    if (activeTipoActividad.includes("cognitivo")) {
+      activityConditions.push(eq(exercises.tipoActividad, "cognitivo"));
+    }
+    const activityWhere = or(...activityConditions);
+    if (activityWhere) whereConditions.push(activityWhere);
+  }
+  if (golpe?.length) {
+    const golpeWhere = jsonbArrayHasAny(exercises.golpes, golpe);
+    if (golpeWhere) whereConditions.push(golpeWhere);
+  }
+  if (efecto?.length) {
+    const efectoWhere = jsonbArrayHasAny(exercises.efecto, efecto);
+    if (efectoWhere) whereConditions.push(efectoWhere);
+  }
+  if (minDuracion != null) {
+    whereConditions.push(gte(exercises.durationMinutes, minDuracion));
+  }
+  if (maxDuracion != null) {
+    whereConditions.push(lte(exercises.durationMinutes, maxDuracion));
+  }
+  if (location?.length)
+    whereConditions.push(inArray(exercises.location, location));
+  if (phase) whereConditions.push(eq(exercises.phase, phase));
+  if (intensity != null)
+    whereConditions.push(eq(exercises.intensity, intensity));
+  if (nivel?.length) {
+    const nivelWhere = or(
+      jsonbArrayHasAny(exercises.niveles, nivel)!,
+      inArray(exercises.nivel, nivel)
+    );
+    if (nivelWhere) whereConditions.push(nivelWhere);
+  }
+  if (aspectoJuego?.length) {
+    const aspectoWhere = or(
+      jsonbArrayHasAny(exercises.aspectosJuego, aspectoJuego)!,
+      inArray(exercises.aspectoJuego, aspectoJuego)
+    );
+    if (aspectoWhere) whereConditions.push(aspectoWhere);
+  }
+  if (parametro?.length) {
+    const parametroWhere = or(
+      jsonbArrayHasAny(exercises.parametros, parametro)!,
+      inArray(exercises.parametro, parametro)
+    );
+    if (parametroWhere) whereConditions.push(parametroWhere);
+  }
+  if (duracionRango?.length) {
+    whereConditions.push(inArray(exercises.duracionRango, duracionRango));
+  }
+
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
@@ -85,10 +227,18 @@ export async function GET(request: NextRequest) {
         numJugadores: exercises.numJugadores,
         tipoPelota: exercises.tipoPelota,
         tipoActividad: exercises.tipoActividad,
+        tiposActividad: exercises.tiposActividad,
         golpes: exercises.golpes,
         efecto: exercises.efecto,
         variantes: exercises.variantes,
         imageUrls: exercises.imageUrls,
+        nivel: exercises.nivel,
+        niveles: exercises.niveles,
+        aspectoJuego: exercises.aspectoJuego,
+        aspectosJuego: exercises.aspectosJuego,
+        parametro: exercises.parametro,
+        parametros: exercises.parametros,
+        duracionRango: exercises.duracionRango,
         createdBy: exercises.createdBy,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
@@ -204,11 +354,46 @@ export async function POST(request: Request) {
     const isAdmin = !!dbUser?.isAdmin;
 
     const { isGlobal: requestedIsGlobal, ...rest } = parsedBody.data;
+    const niveles = normalizeMultiValue(
+      rest.niveles ?? (rest.nivel ? [rest.nivel] : null)
+    );
+    const aspectosJuego = normalizeMultiValue(
+      rest.aspectosJuego ?? (rest.aspectoJuego ? [rest.aspectoJuego] : null)
+    );
+    const parametros = normalizeMultiValue(
+      rest.parametros ?? (rest.parametro ? [rest.parametro] : null)
+    );
+    const tiposActividad = normalizeMultiValue(
+      rest.tiposActividad ??
+        (rest.tipologia
+          ? [rest.tipologia]
+          : rest.tipoActividad === "cognitivo"
+            ? ["cognitivo"]
+            : null)
+    );
+    const durationMinutes =
+      rest.durationMinutes ??
+      deriveDurationMinutesFromRange(rest.duracionRango) ??
+      null;
+
+    if (durationMinutes == null) {
+      return NextResponse.json(
+        { error: "El rango de duración es obligatorio." },
+        { status: 400 }
+      );
+    }
+
+    const legacyTipoActividad = tiposActividad?.includes("cognitivo")
+      ? "cognitivo"
+      : null;
+    const legacyTipologia =
+      tiposActividad?.find((value) => value !== "cognitivo") ?? null;
 
     const [createdExercise] = await db
       .insert(exercises)
       .values({
         ...rest,
+        durationMinutes,
         description: rest.description ?? null,
         objectives: rest.objectives ?? null,
         imageUrl: rest.imageUrl ?? null,
@@ -220,17 +405,21 @@ export async function POST(request: Request) {
         formato: rest.formato ?? null,
         numJugadores: rest.numJugadores ?? null,
         tipoPelota: rest.tipoPelota ?? null,
-        tipoActividad: rest.tipoActividad ?? null,
+        tipoActividad: legacyTipoActividad,
         golpes: rest.golpes ?? null,
         efecto: rest.efecto ?? null,
         variantes: rest.variantes ?? null,
         imageUrls: rest.imageUrls ?? null,
         steps: rest.steps ?? null,
         materials: rest.materials ?? null,
-        nivel: rest.nivel ?? null,
-        aspectoJuego: rest.aspectoJuego ?? null,
-        parametro: rest.parametro ?? null,
-        tipologia: rest.tipologia ?? null,
+        nivel: niveles?.[0] ?? null,
+        niveles,
+        aspectoJuego: aspectosJuego?.[0] ?? null,
+        aspectosJuego,
+        parametro: parametros?.[0] ?? null,
+        parametros,
+        tipologia: legacyTipologia,
+        tiposActividad,
         duracionRango: rest.duracionRango ?? null,
         isGlobal: isAdmin && requestedIsGlobal === true,
         createdBy: user.id,
@@ -244,7 +433,7 @@ export async function POST(request: Request) {
         name: createdExercise.name,
         category: createdExercise.category,
         difficulty: createdExercise.difficulty,
-        durationMinutes: createdExercise.durationMinutes,
+        durationMinutes,
         description: createdExercise.description,
         objectives: createdExercise.objectives,
         tips: createdExercise.tips,
