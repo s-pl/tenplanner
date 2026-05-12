@@ -5,17 +5,16 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock3,
-  Dumbbell,
   Folder,
   Layers3,
   Pencil,
   Repeat2,
   Search,
   Star,
-  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
+import { LibraryTabs } from "@/components/landing/library-tabs";
 import { cn } from "@/lib/utils";
 
 type LandingExerciseCard = {
@@ -33,17 +32,6 @@ type LandingClassCard = {
   nivel: string | null;
   objetivos: string | null;
   numAlumnos: number | null;
-};
-
-type LibraryPreview = {
-  href: string;
-  title: string;
-  top: string;
-  tag: string;
-  level: string;
-  time: string;
-  tone: string;
-  icon: LucideIcon;
 };
 
 const navItems = [
@@ -148,107 +136,6 @@ const phoneActions: Array<{ icon: LucideIcon; label: string }> = [
   { icon: Repeat2, label: "Reutilizar clase" },
   { icon: Star, label: "Mis favoritos" },
 ];
-
-function cleanLabel(value: string | null, fallback: string) {
-  if (!value) return fallback;
-  return value.replace(/_/g, " ");
-}
-
-function buildExerciseCards(cards: LandingExerciseCard[]): LibraryPreview[] {
-  const fallback: LibraryPreview[] = [
-    {
-      href: "/exercises",
-      title: "Drive cruzado en paralelo",
-      top: "bg-[#20201c]",
-      tag: "Técnica",
-      level: "Intermedio",
-      time: "15 min",
-      tone: "text-[#d6ff38]",
-      icon: Dumbbell,
-    },
-    {
-      href: "/exercises",
-      title: "Calentamiento dinámico con raqueta",
-      top: "bg-[#2b3613]",
-      tag: "Calentamiento",
-      level: "Todos",
-      time: "10 min",
-      tone: "text-[#d6ff38]",
-      icon: Clock3,
-    },
-    {
-      href: "/exercises",
-      title: "Juego de puntos desde servicio",
-      top: "bg-[#3a3a34]",
-      tag: "Competición",
-      level: "Avanzado",
-      time: "20 min",
-      tone: "text-[#d6ff38]",
-      icon: Trophy,
-    },
-  ];
-
-  if (cards.length === 0) return fallback;
-
-  return cards.slice(0, 3).map((card, index) => ({
-    href: `/exercises/${card.id}`,
-    title: card.name,
-    top: fallback[index]?.top ?? "bg-[#20201c]",
-    tag: cleanLabel(card.aspectoJuego, "Biblioteca"),
-    level: cleanLabel(card.nivel, "Todos"),
-    time: `${card.durationMinutes} min`,
-    tone: fallback[index]?.tone ?? "text-[#d6ff38]",
-    icon: fallback[index]?.icon ?? Dumbbell,
-  }));
-}
-
-function buildClassCards(cards: LandingClassCard[]): LibraryPreview[] {
-  const fallback: LibraryPreview[] = [
-    {
-      href: "/classes",
-      title: "Clase completa de iniciación",
-      top: "bg-[#20201c]",
-      tag: "Clase",
-      level: "Descubrimiento",
-      time: "45 min",
-      tone: "text-[#d6ff38]",
-      icon: Layers3,
-    },
-    {
-      href: "/classes",
-      title: "Control y dirección por bloques",
-      top: "bg-[#2b3613]",
-      tag: "Clase",
-      level: "Desarrollo",
-      time: "60 min",
-      tone: "text-[#d6ff38]",
-      icon: ClipboardList,
-    },
-    {
-      href: "/classes",
-      title: "Competición con punto condicionado",
-      top: "bg-[#3a3a34]",
-      tag: "Clase",
-      level: "Competición",
-      time: "75 min",
-      tone: "text-[#d6ff38]",
-      icon: Trophy,
-    },
-  ];
-
-  if (cards.length === 0) return fallback;
-
-  return cards.slice(0, 3).map((card, index) => ({
-    href: `/classes/${card.id}`,
-    title: card.name,
-    top: fallback[index]?.top ?? "bg-[#20201c]",
-    tag: "Clase",
-    level: cleanLabel(card.nivel, `${card.numAlumnos ?? "Grupo"} alumnos`),
-    time: `${card.duracionMinutes} min`,
-    tone: fallback[index]?.tone ?? "text-[#d6ff38]",
-    icon: fallback[index]?.icon ?? Layers3,
-  }));
-}
 
 function Brand() {
   return (
@@ -634,42 +521,6 @@ function FeaturesSection() {
   );
 }
 
-function PreviewCard({ item }: { item: LibraryPreview }) {
-  const Icon = item.icon;
-
-  return (
-    <Link
-      href={item.href}
-      className="block overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] transition hover:-translate-y-1 hover:border-white/18"
-    >
-      <div className={cn("grid h-[120px] place-items-center", item.top)}>
-        <Icon className="size-10 text-[#d6ff38]" strokeWidth={1.7} />
-      </div>
-      <div className="p-4">
-        <h3 className="min-h-10 text-base font-bold leading-5 text-white">
-          {item.title}
-        </h3>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span
-            className={cn(
-              "rounded-full bg-white/8 px-3 py-1 text-xs font-semibold",
-              item.tone
-            )}
-          >
-            {item.tag}
-          </span>
-          <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-white/55">
-            {item.level}
-          </span>
-          <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-white/55">
-            {item.time}
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 function LibrarySection({
   exerciseCards,
   classCards,
@@ -677,9 +528,6 @@ function LibrarySection({
   exerciseCards: LandingExerciseCard[];
   classCards: LandingClassCard[];
 }) {
-  const exercises = buildExerciseCards(exerciseCards);
-  const classes = buildClassCards(classCards);
-
   return (
     <section className="bg-[#050505] px-5 py-24 text-white lg:py-32">
       <div className="mx-auto max-w-[1100px]">
@@ -692,38 +540,7 @@ function LibrarySection({
             creados por expertos
           </span>
         </h2>
-        <div className="mt-12 inline-flex rounded-full bg-white/8 p-1">
-          <span className="rounded-full bg-[#d6ff38] px-6 py-2 text-sm font-bold text-[#050505]">
-            Ejercicios
-          </span>
-          <span className="px-6 py-2 text-sm text-white/62">
-            Clases completas
-          </span>
-        </div>
-        <div className="mt-9 grid gap-4 md:grid-cols-3">
-          {exercises.map((item) => (
-            <PreviewCard key={item.title} item={item} />
-          ))}
-        </div>
-        <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
-            href="/exercises"
-            className="rounded-full border border-white/18 bg-white/8 px-7 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-[#050505]"
-          >
-            Ver todos los ejercicios →
-          </Link>
-          <Link
-            href="/classes"
-            className="rounded-full border border-white/18 bg-white/8 px-7 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-[#050505]"
-          >
-            Ver todas las clases →
-          </Link>
-        </div>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {classes.map((item) => (
-            <PreviewCard key={item.title} item={item} />
-          ))}
-        </div>
+        <LibraryTabs exerciseCards={exerciseCards} classCards={classCards} />
       </div>
     </section>
   );
