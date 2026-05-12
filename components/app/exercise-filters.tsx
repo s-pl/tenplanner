@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
 
 const FORMATOS = [
@@ -37,12 +38,6 @@ const PARAMETROS = [
   { id: "direccion", label: "Dirección" },
 ] as const;
 
-const TIPOLOGIAS = [
-  { id: "juego", label: "Juego" },
-  { id: "reto", label: "Reto" },
-  { id: "otros_deportes", label: "Otros deportes" },
-] as const;
-
 const DURACION_RANGOS = [
   { id: "1-5", label: "1-5 min" },
   { id: "5-10", label: "5-10 min" },
@@ -52,11 +47,10 @@ const DURACION_RANGOS = [
 ] as const;
 
 const TIPOS_ACTIVIDAD = [
-  { id: "tecnico_tactico", label: "Técnico-táctico" },
-  { id: "fisico", label: "Físico" },
-  { id: "cognitivo", label: "Cognitivo" },
-  { id: "competitivo", label: "Competitivo" },
-  { id: "ludico", label: "Lúdico" },
+  { id: "juego", label: TIPO_ACTIVIDAD_LABELS.juego },
+  { id: "reto", label: TIPO_ACTIVIDAD_LABELS.reto },
+  { id: "cognitivo", label: TIPO_ACTIVIDAD_LABELS.cognitivo },
+  { id: "otros_deportes", label: TIPO_ACTIVIDAD_LABELS.otros_deportes },
 ] as const;
 
 const TIPOS_PELOTA = [
@@ -68,7 +62,7 @@ const TIPOS_PELOTA = [
 
 const GOLPES = [
   { id: "derecha", label: "Derecha" },
-  { id: "reves", label: "Reves" },
+  { id: "reves", label: "Revés" },
   { id: "saque", label: "Saque" },
   { id: "volea", label: "Volea" },
   { id: "remate", label: "Remate" },
@@ -84,27 +78,25 @@ const EFECTOS = [
 ] as const;
 
 const UBICACIONES = [
-  { id: "indoor", label: "Cubierta" },
-  { id: "outdoor", label: "Exterior" },
-  { id: "any", label: "Cualquiera" },
+  { id: "pista", label: "Pista" },
+  { id: "pared", label: "Pared" },
+  { id: "playa", label: "Playa" },
+  { id: "casa", label: "Casa" },
 ] as const;
 
 export interface ExerciseFiltersProps {
   currentFilters: {
-    formato?: string;
-    nivel?: string;
-    aspectoJuego?: string;
-    parametro?: string;
-    tipologia?: string;
-    duracionRango?: string;
-    numJugadores?: number;
-    tipoPelota?: string;
-    tipoActividad?: string;
+    formato: string[];
+    nivel: string[];
+    aspectoJuego: string[];
+    parametro: string[];
+    duracionRango: string[];
+    numJugadores: number[];
+    tipoPelota: string[];
+    tipoActividad: string[];
     golpes: string[];
     efecto: string[];
-    minDuracion?: number;
-    maxDuracion?: number;
-    location?: string;
+    location: string[];
   };
   preserved: {
     q?: string;
@@ -156,70 +148,76 @@ function FilterGroup({
   );
 }
 
+function toggleString(
+  set: Set<string>,
+  setter: (next: Set<string>) => void,
+  value: string
+) {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  setter(next);
+}
+
+function toggleNumber(
+  set: Set<number>,
+  setter: (next: Set<number>) => void,
+  value: number
+) {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  setter(next);
+}
+
+function appendAll(
+  params: URLSearchParams,
+  key: string,
+  values: Iterable<string | number>
+) {
+  for (const value of values) params.append(key, String(value));
+}
+
 export function ExerciseFilters({
   currentFilters,
   preserved,
 }: ExerciseFiltersProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [formato, setFormato] = useState(currentFilters.formato ?? "");
-  const [nivel, setNivel] = useState(currentFilters.nivel ?? "");
+  const [formato, setFormato] = useState(new Set(currentFilters.formato));
+  const [nivel, setNivel] = useState(new Set(currentFilters.nivel));
   const [aspectoJuego, setAspectoJuego] = useState(
-    currentFilters.aspectoJuego ?? ""
+    new Set(currentFilters.aspectoJuego)
   );
-  const [parametro, setParametro] = useState(currentFilters.parametro ?? "");
-  const [tipologia, setTipologia] = useState(currentFilters.tipologia ?? "");
+  const [parametro, setParametro] = useState(new Set(currentFilters.parametro));
   const [duracionRango, setDuracionRango] = useState(
-    currentFilters.duracionRango ?? ""
+    new Set(currentFilters.duracionRango)
   );
-  const [numJugadores, setNumJugadores] = useState<number | null>(
-    currentFilters.numJugadores ?? null
+  const [numJugadores, setNumJugadores] = useState(
+    new Set(currentFilters.numJugadores)
   );
-  const [tipoPelota, setTipoPelota] = useState(currentFilters.tipoPelota ?? "");
+  const [tipoPelota, setTipoPelota] = useState(
+    new Set(currentFilters.tipoPelota)
+  );
   const [tipoActividad, setTipoActividad] = useState(
-    currentFilters.tipoActividad ?? ""
+    new Set(currentFilters.tipoActividad)
   );
-  const [golpes, setGolpes] = useState<Set<string>>(
-    new Set(currentFilters.golpes)
-  );
-  const [efecto, setEfecto] = useState<Set<string>>(
-    new Set(currentFilters.efecto)
-  );
-  const [minDuracion, setMinDuracion] = useState(
-    currentFilters.minDuracion ? String(currentFilters.minDuracion) : ""
-  );
-  const [maxDuracion, setMaxDuracion] = useState(
-    currentFilters.maxDuracion ? String(currentFilters.maxDuracion) : ""
-  );
-  const [location, setLocation] = useState(currentFilters.location ?? "");
+  const [golpes, setGolpes] = useState(new Set(currentFilters.golpes));
+  const [efecto, setEfecto] = useState(new Set(currentFilters.efecto));
+  const [location, setLocation] = useState(new Set(currentFilters.location));
 
-  const activeCount = [
-    formato,
-    nivel,
-    aspectoJuego,
-    parametro,
-    tipologia,
-    duracionRango,
-    numJugadores != null ? "x" : "",
-    tipoPelota,
-    tipoActividad,
-    golpes.size > 0 ? "x" : "",
-    efecto.size > 0 ? "x" : "",
-    minDuracion,
-    maxDuracion,
-    location,
-  ].filter(Boolean).length;
-
-  function toggleSet(
-    set: Set<string>,
-    setter: (s: Set<string>) => void,
-    value: string
-  ) {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    setter(next);
-  }
+  const activeCount =
+    formato.size +
+    nivel.size +
+    aspectoJuego.size +
+    parametro.size +
+    duracionRango.size +
+    numJugadores.size +
+    tipoPelota.size +
+    tipoActividad.size +
+    golpes.size +
+    efecto.size +
+    location.size;
 
   function buildParams() {
     const p = new URLSearchParams();
@@ -231,20 +229,17 @@ export function ExerciseFilters({
     if (preserved.difficulty && preserved.difficulty !== "all") {
       p.set("difficulty", preserved.difficulty);
     }
-    if (formato) p.set("formato", formato);
-    if (nivel) p.set("nivel", nivel);
-    if (aspectoJuego) p.set("aspectoJuego", aspectoJuego);
-    if (parametro) p.set("parametro", parametro);
-    if (tipologia) p.set("tipologia", tipologia);
-    if (duracionRango) p.set("duracionRango", duracionRango);
-    if (numJugadores != null) p.set("numJugadores", String(numJugadores));
-    if (tipoPelota) p.set("tipoPelota", tipoPelota);
-    if (tipoActividad) p.set("tipoActividad", tipoActividad);
-    for (const g of golpes) p.append("golpe", g);
-    for (const e of efecto) p.append("efecto", e);
-    if (minDuracion) p.set("minDuracion", minDuracion);
-    if (maxDuracion) p.set("maxDuracion", maxDuracion);
-    if (location) p.set("location", location);
+    appendAll(p, "formato", formato);
+    appendAll(p, "nivel", nivel);
+    appendAll(p, "aspectoJuego", aspectoJuego);
+    appendAll(p, "parametro", parametro);
+    appendAll(p, "duracionRango", duracionRango);
+    appendAll(p, "numJugadores", numJugadores);
+    appendAll(p, "tipoPelota", tipoPelota);
+    appendAll(p, "tipoActividad", tipoActividad);
+    appendAll(p, "golpe", golpes);
+    appendAll(p, "efecto", efecto);
+    appendAll(p, "location", location);
     return p;
   }
 
@@ -255,20 +250,17 @@ export function ExerciseFilters({
   }
 
   function clearFilters() {
-    setFormato("");
-    setNivel("");
-    setAspectoJuego("");
-    setParametro("");
-    setTipologia("");
-    setDuracionRango("");
-    setNumJugadores(null);
-    setTipoPelota("");
-    setTipoActividad("");
-    setGolpes(new Set());
-    setEfecto(new Set());
-    setMinDuracion("");
-    setMaxDuracion("");
-    setLocation("");
+    setFormato(new Set<string>());
+    setNivel(new Set<string>());
+    setAspectoJuego(new Set<string>());
+    setParametro(new Set<string>());
+    setDuracionRango(new Set<string>());
+    setNumJugadores(new Set<number>());
+    setTipoPelota(new Set<string>());
+    setTipoActividad(new Set<string>());
+    setGolpes(new Set<string>());
+    setEfecto(new Set<string>());
+    setLocation(new Set<string>());
 
     const p = new URLSearchParams();
     if (preserved.q) p.set("q", preserved.q);
@@ -315,20 +307,22 @@ export function ExerciseFilters({
               {NIVELES.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={nivel === id}
-                  onClick={() => setNivel(nivel === id ? "" : id)}
+                  active={nivel.has(id)}
+                  onClick={() => toggleString(nivel, setNivel, id)}
                 >
                   {label}
                 </ChipButton>
               ))}
             </FilterGroup>
 
-            <FilterGroup label="Aspecto de juego">
+            <FilterGroup label="Aspectos del juego">
               {ASPECTOS.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={aspectoJuego === id}
-                  onClick={() => setAspectoJuego(aspectoJuego === id ? "" : id)}
+                  active={aspectoJuego.has(id)}
+                  onClick={() =>
+                    toggleString(aspectoJuego, setAspectoJuego, id)
+                  }
                 >
                   {label}
                 </ChipButton>
@@ -337,37 +331,39 @@ export function ExerciseFilters({
           </div>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            <FilterGroup label="Parametro">
+            <FilterGroup label="Parámetros">
               {PARAMETROS.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={parametro === id}
-                  onClick={() => setParametro(parametro === id ? "" : id)}
+                  active={parametro.has(id)}
+                  onClick={() => toggleString(parametro, setParametro, id)}
                 >
                   {label}
                 </ChipButton>
               ))}
             </FilterGroup>
 
-            <FilterGroup label="Tipologia">
-              {TIPOLOGIAS.map(({ id, label }) => (
+            <FilterGroup label="Tipo de actividad">
+              {TIPOS_ACTIVIDAD.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={tipologia === id}
-                  onClick={() => setTipologia(tipologia === id ? "" : id)}
+                  active={tipoActividad.has(id)}
+                  onClick={() =>
+                    toggleString(tipoActividad, setTipoActividad, id)
+                  }
                 >
                   {label}
                 </ChipButton>
               ))}
             </FilterGroup>
 
-            <FilterGroup label="Rango">
+            <FilterGroup label="Rango de duración">
               {DURACION_RANGOS.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={duracionRango === id}
+                  active={duracionRango.has(id)}
                   onClick={() =>
-                    setDuracionRango(duracionRango === id ? "" : id)
+                    toggleString(duracionRango, setDuracionRango, id)
                   }
                 >
                   {label}
@@ -381,8 +377,8 @@ export function ExerciseFilters({
               {FORMATOS.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={formato === id}
-                  onClick={() => setFormato(formato === id ? "" : id)}
+                  active={formato.has(id)}
+                  onClick={() => toggleString(formato, setFormato, id)}
                 >
                   {label}
                 </ChipButton>
@@ -393,19 +389,15 @@ export function ExerciseFilters({
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <ChipButton
                   key={n}
-                  active={numJugadores === n}
-                  onClick={() => setNumJugadores(numJugadores === n ? null : n)}
+                  active={numJugadores.has(n)}
+                  onClick={() => toggleNumber(numJugadores, setNumJugadores, n)}
                 >
                   {n}
                 </ChipButton>
               ))}
               <ChipButton
-                active={numJugadores != null && numJugadores > 6}
-                onClick={() =>
-                  setNumJugadores(
-                    numJugadores != null && numJugadores > 6 ? null : 7
-                  )
-                }
+                active={numJugadores.has(7)}
+                onClick={() => toggleNumber(numJugadores, setNumJugadores, 7)}
               >
                 +6
               </ChipButton>
@@ -413,26 +405,24 @@ export function ExerciseFilters({
           </div>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FilterGroup label="Aspecto">
-              {TIPOS_ACTIVIDAD.map(({ id, label }) => (
+            <FilterGroup label="Pelota">
+              {TIPOS_PELOTA.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={tipoActividad === id}
-                  onClick={() =>
-                    setTipoActividad(tipoActividad === id ? "" : id)
-                  }
+                  active={tipoPelota.has(id)}
+                  onClick={() => toggleString(tipoPelota, setTipoPelota, id)}
                 >
                   {label}
                 </ChipButton>
               ))}
             </FilterGroup>
 
-            <FilterGroup label="Pelota">
-              {TIPOS_PELOTA.map(({ id, label }) => (
+            <FilterGroup label="Lugar">
+              {UBICACIONES.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={tipoPelota === id}
-                  onClick={() => setTipoPelota(tipoPelota === id ? "" : id)}
+                  active={location.has(id)}
+                  onClick={() => toggleString(location, setLocation, id)}
                 >
                   {label}
                 </ChipButton>
@@ -445,7 +435,7 @@ export function ExerciseFilters({
               <ChipButton
                 key={id}
                 active={golpes.has(id)}
-                onClick={() => toggleSet(golpes, setGolpes, id)}
+                onClick={() => toggleString(golpes, setGolpes, id)}
               >
                 {label}
               </ChipButton>
@@ -457,53 +447,12 @@ export function ExerciseFilters({
               <ChipButton
                 key={id}
                 active={efecto.has(id)}
-                onClick={() => toggleSet(efecto, setEfecto, id)}
+                onClick={() => toggleString(efecto, setEfecto, id)}
               >
                 {label}
               </ChipButton>
             ))}
           </FilterGroup>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <div className="space-y-2">
-              <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                Duración (min)
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={300}
-                  placeholder="Min"
-                  value={minDuracion}
-                  onChange={(e) => setMinDuracion(e.target.value)}
-                  className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-[12px] text-foreground transition-colors placeholder:text-foreground/30 focus:border-[#D6FF38]/70 focus:outline-none"
-                />
-                <span className="text-[11px] text-foreground/30">-</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={300}
-                  placeholder="Max"
-                  value={maxDuracion}
-                  onChange={(e) => setMaxDuracion(e.target.value)}
-                  className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-[12px] text-foreground transition-colors placeholder:text-foreground/30 focus:border-[#D6FF38]/70 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <FilterGroup label="Lugar">
-              {UBICACIONES.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={location === id}
-                  onClick={() => setLocation(location === id ? "" : id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-          </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-foreground/10 pt-3">
             <button

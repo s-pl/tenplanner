@@ -101,12 +101,8 @@ export default async function ExercisePage({ params }: PageProps) {
           }> | null) ?? null,
         materials: (exercise.materials as string[] | null) ?? null,
         location:
-          (exercise.location as
-            | "pista"
-            | "pared"
-            | "playa"
-            | "casa"
-            | null) ?? null,
+          (exercise.location as "pista" | "pared" | "playa" | "casa" | null) ??
+          null,
         videoUrl: exercise.videoUrl ?? null,
         tips: exercise.tips ?? null,
         imageUrl: exercise.imageUrl ?? null,
@@ -135,8 +131,17 @@ export default async function ExercisePage({ params }: PageProps) {
             | "competitivo"
             | "ludico"
             | null) ?? null,
+        tiposActividad: (exercise.tiposActividad as string[] | null) ?? null,
         golpes: (exercise.golpes as string[] | null) ?? null,
         efecto: (exercise.efecto as string[] | null) ?? null,
+        nivel: exercise.nivel ?? null,
+        niveles: (exercise.niveles as string[] | null) ?? null,
+        aspectoJuego: exercise.aspectoJuego ?? null,
+        aspectosJuego: (exercise.aspectosJuego as string[] | null) ?? null,
+        parametro: exercise.parametro ?? null,
+        parametros: (exercise.parametros as string[] | null) ?? null,
+        tipologia: exercise.tipologia ?? null,
+        duracionRango: exercise.duracionRango ?? null,
         phase: exercise.phase ?? null,
         intensity: exercise.intensity ?? null,
         isGlobal: exercise.isGlobal,

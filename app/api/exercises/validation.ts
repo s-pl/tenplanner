@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedImageUrl, isPublicHttpUrl } from "@/lib/url-safety";
+import { NUEVOS_TIPOS_ACTIVIDAD } from "@/lib/exercise-taxonomy";
 
 export const exerciseCategorySchema = z.enum([
   "technique",
@@ -31,6 +32,8 @@ export const tipoActividadSchema = z.enum([
   "competitivo",
   "ludico",
 ]);
+
+export const nuevoTipoActividadSchema = z.enum(NUEVOS_TIPOS_ACTIVIDAD);
 
 export const tipoPelotaSchema = z.enum([
   "normal",
@@ -97,6 +100,7 @@ export const aspectoJuegoSchema = z.enum(ASPECTO_JUEGO_VALUES);
 export const parametroSchema = z.enum(PARAMETRO_VALUES);
 export const tipologiaSchema = z.enum(TIPOLOGIA_VALUES);
 export const duracionRangoSchema = z.enum(DURACION_RANGO_VALUES);
+export const nuevoTipoActividadValueSchema = z.enum(NUEVOS_TIPOS_ACTIVIDAD);
 
 export const LOCATION_VALUES = [
   "pista",
@@ -121,6 +125,18 @@ export const EFECTO_VALUES = [
 export const golpeSchema = z.enum(GOLPES_VALUES);
 export const efectoSchema = z.enum(EFECTO_VALUES);
 
+function repeated<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((value) => {
+    if (value === undefined) return undefined;
+    return Array.isArray(value) ? value : [value];
+  }, z.array(schema).optional());
+}
+
+const multiNivelSchema = z.array(nivelPmvSchema).max(12);
+const multiAspectoJuegoSchema = z.array(aspectoJuegoSchema).max(8);
+const multiParametroSchema = z.array(parametroSchema).max(8);
+const multiTipoActividadSchema = z.array(nuevoTipoActividadValueSchema).max(8);
+
 const nameSchema = z
   .string()
   .trim()
@@ -132,14 +148,10 @@ const descriptionSchema = z
   .trim()
   .max(2000, "Description must be 2000 characters or fewer");
 
-const imageUrlSchema = z
-  .string()
-  .trim()
-  .max(1000)
-  .refine(isAllowedImageUrl, {
-    message:
-      "La URL de imagen debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
-  });
+const imageUrlSchema = z.string().trim().max(1000).refine(isAllowedImageUrl, {
+  message:
+    "La URL de imagen debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
+});
 
 const optionalImageUrlSchema = z
   .string()
@@ -177,28 +189,22 @@ export const exercisesListQuerySchema = z.object({
     .min(1, "Limit must be at least 1")
     .max(100, "Limit must be 100 or fewer")
     .default(10),
-  formato: ejercicioFormatoSchema.optional(),
-  numJugadores: z.coerce.number().int().min(1).max(20).optional(),
-  tipoPelota: tipoPelotaSchema.optional(),
-  tipoActividad: tipoActividadSchema.optional(),
-  golpe: z
-    .union([golpeSchema, z.array(golpeSchema)])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .optional(),
-  efecto: z
-    .union([efectoSchema, z.array(efectoSchema)])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .optional(),
+  formato: repeated(ejercicioFormatoSchema),
+  numJugadores: repeated(z.coerce.number().int().min(1).max(20)),
+  tipoPelota: repeated(tipoPelotaSchema),
+  tipoActividad: repeated(nuevoTipoActividadValueSchema),
+  golpe: repeated(golpeSchema),
+  efecto: repeated(efectoSchema),
   minDuracion: z.coerce.number().int().min(1).optional(),
   maxDuracion: z.coerce.number().int().min(1).optional(),
-  location: locationSchema.optional(),
+  location: repeated(locationSchema),
   phase: trainingPhaseSchema.optional(),
   intensity: z.coerce.number().int().min(1).max(5).optional(),
-  nivel: nivelPmvSchema.optional(),
-  aspectoJuego: aspectoJuegoSchema.optional(),
-  parametro: parametroSchema.optional(),
-  tipologia: tipologiaSchema.optional(),
-  duracionRango: duracionRangoSchema.optional(),
+  nivel: repeated(nivelPmvSchema),
+  aspectoJuego: repeated(aspectoJuegoSchema),
+  parametro: repeated(parametroSchema),
+  tipologia: repeated(tipologiaSchema),
+  duracionRango: repeated(duracionRangoSchema),
 });
 
 export const createExerciseSchema = z.object({
@@ -210,7 +216,9 @@ export const createExerciseSchema = z.object({
     .number()
     .int()
     .min(1, "Duration must be at least 1 minute")
-    .max(300, "Duration must be 300 minutes or fewer"),
+    .max(300, "Duration must be 300 minutes or fewer")
+    .optional()
+    .nullable(),
   objectives: descriptionSchema.optional().nullable(),
   tips: descriptionSchema.optional().nullable(),
   imageUrl: optionalImageUrlSchema.optional().nullable(),
@@ -238,6 +246,10 @@ export const createExerciseSchema = z.object({
   parametro: parametroSchema.optional().nullable(),
   tipologia: tipologiaSchema.optional().nullable(),
   duracionRango: duracionRangoSchema.optional().nullable(),
+  niveles: multiNivelSchema.optional().nullable(),
+  aspectosJuego: multiAspectoJuegoSchema.optional().nullable(),
+  parametros: multiParametroSchema.optional().nullable(),
+  tiposActividad: multiTipoActividadSchema.optional().nullable(),
   steps: z
     .array(
       z.object({

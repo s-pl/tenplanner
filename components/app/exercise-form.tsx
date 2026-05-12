@@ -11,7 +11,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { DraftStatusPill } from "@/components/app/draft-status-pill";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  useWatch,
+  type SubmitHandler,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -44,6 +49,10 @@ import {
 } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
 import { MediaUploader } from "@/components/app/media-uploader";
+import {
+  deriveDurationMinutesFromRange,
+  TIPO_ACTIVIDAD_LABELS,
+} from "@/lib/exercise-taxonomy";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -52,7 +61,8 @@ type Phase = "activation" | "main" | "cooldown";
 type ExerciseFormMode = "quick" | "full";
 type AccordionSectionId = "essential" | "pedagogical" | "params" | "media";
 type Formato = "individual" | "parejas" | "grupal" | "multigrupo";
-type TipoActividad =
+type TipoActividad = "juego" | "reto" | "cognitivo" | "otros_deportes";
+type LegacyTipoActividad =
   | "tecnico_tactico"
   | "fisico"
   | "cognitivo"
@@ -100,9 +110,10 @@ const PARAMETROS = [
   { id: "direccion", label: "Dirección" },
 ] as const;
 
-const TIPOLOGIAS = [
+const TIPOS_ACTIVIDAD = [
   { id: "juego", label: "Juego" },
   { id: "reto", label: "Reto" },
+  { id: "cognitivo", label: TIPO_ACTIVIDAD_LABELS.cognitivo },
   { id: "otros_deportes", label: "Otros deportes" },
 ] as const;
 
@@ -117,7 +128,7 @@ const DURACION_RANGOS = [
 type NivelPmv = (typeof NIVELES_PMV)[number]["id"];
 type AspectoJuego = (typeof ASPECTOS_JUEGO)[number]["id"];
 type Parametro = (typeof PARAMETROS)[number]["id"];
-type Tipologia = (typeof TIPOLOGIAS)[number]["id"];
+type Tipologia = "juego" | "reto" | "otros_deportes";
 type DuracionRango = (typeof DURACION_RANGOS)[number]["id"];
 
 const EFECTO_PRESET = [
@@ -142,14 +153,19 @@ const formSchema = z.object({
   category: z.enum(["technique", "tactics", "fitness", "warm-up"] as const, {
     required_error: "Selecciona una categoría",
   }),
-  difficulty: z.enum(["beginner", "intermediate", "advanced"] as const, {
-    required_error: "Selecciona una dificultad",
-  }),
+  difficulty: z
+    .enum(["beginner", "intermediate", "advanced"] as const, {
+      required_error: "Selecciona una dificultad",
+    })
+    .optional()
+    .nullable(),
   durationMinutes: z.coerce
     .number({ invalid_type_error: "Introduce un número válido" })
     .int()
     .min(1, "Mínimo 1 minuto")
-    .max(300, "Máximo 300 minutos"),
+    .max(300, "Máximo 300 minutos")
+    .optional()
+    .nullable(),
   location: z.enum(["pista", "pared", "playa", "casa"]).optional().nullable(),
   nivel: z
     .enum([
@@ -175,8 +191,15 @@ const formSchema = z.object({
   tipologia: z.enum(["juego", "reto", "otros_deportes"]).optional().nullable(),
   duracionRango: z
     .enum(["1-5", "5-10", "10-15", "15-20", "+20"])
-    .optional()
-    .nullable(),
+    .nullable()
+    .superRefine((value, ctx) => {
+      if (value === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Selecciona un rango de duración",
+        });
+      }
+    }),
   videoUrl: z.string().max(500).optional().nullable(),
   phase: z.enum(["activation", "main", "cooldown"]).optional().nullable(),
   intensity: z.coerce.number().int().min(1).max(5).optional().nullable(),
@@ -190,7 +213,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
   tipoActividad: z
-    .enum(["tecnico_tactico", "fisico", "cognitivo", "competitivo", "ludico"])
+    .enum(["juego", "reto", "cognitivo", "otros_deportes"])
     .optional()
     .nullable(),
   isGlobal: z.boolean().optional(),
@@ -307,15 +330,19 @@ export interface ExerciseFormProps {
     formato?: Formato | null;
     numJugadores?: number | null;
     tipoPelota?: TipoPelota | null;
-    tipoActividad?: TipoActividad | null;
+    tipoActividad?: LegacyTipoActividad | TipoActividad | null;
+    tiposActividad?: TipoActividad[] | null;
     golpes?: string[] | null;
     efecto?: string[] | null;
     variantes?: string | null;
     imageUrls?: string[] | null;
     isGlobal?: boolean;
     nivel?: NivelPmv | null;
+    niveles?: NivelPmv[] | null;
     aspectoJuego?: AspectoJuego | null;
+    aspectosJuego?: AspectoJuego[] | null;
     parametro?: Parametro | null;
+    parametros?: Parametro[] | null;
     tipologia?: Tipologia | null;
     duracionRango?: DuracionRango | null;
   };
@@ -389,6 +416,15 @@ function buildImageSlots(initialData?: ExerciseFormProps["initialData"]) {
 
 function countFilled(values: boolean[]) {
   return values.filter(Boolean).length;
+}
+
+function resolveInitialTiposActividad(
+  initialData?: ExerciseFormProps["initialData"]
+) {
+  if (initialData?.tiposActividad?.length) return initialData.tiposActividad;
+  if (initialData?.tipologia) return [initialData.tipologia];
+  if (initialData?.tipoActividad === "cognitivo") return ["cognitivo" as const];
+  return [];
 }
 
 function AccordionSection({
@@ -505,6 +541,26 @@ export function ExerciseForm({
     initialData?.materials ?? []
   );
   const [materialInput, setMaterialInput] = useState("");
+  const [niveles, setNiveles] = useState<Set<NivelPmv>>(
+    new Set(
+      initialData?.niveles ?? (initialData?.nivel ? [initialData.nivel] : [])
+    )
+  );
+  const [aspectosJuego, setAspectosJuego] = useState<Set<AspectoJuego>>(
+    new Set(
+      initialData?.aspectosJuego ??
+        (initialData?.aspectoJuego ? [initialData.aspectoJuego] : [])
+    )
+  );
+  const [parametros, setParametros] = useState<Set<Parametro>>(
+    new Set(
+      initialData?.parametros ??
+        (initialData?.parametro ? [initialData.parametro] : [])
+    )
+  );
+  const [tiposActividad, setTiposActividad] = useState<Set<TipoActividad>>(
+    new Set(resolveInitialTiposActividad(initialData))
+  );
   const [golpes, setGolpes] = useState<Set<string>>(
     new Set(initialData?.golpes ?? [])
   );
@@ -537,11 +593,12 @@ export function ExerciseForm({
       formato: initialData?.formato ?? null,
       numJugadores: initialData?.numJugadores ?? null,
       tipoPelota: initialData?.tipoPelota ?? null,
-      tipoActividad: initialData?.tipoActividad ?? null,
+      tipoActividad: null,
       isGlobal: initialData?.isGlobal ?? false,
-      nivel: initialData?.nivel ?? null,
-      aspectoJuegoPmv: initialData?.aspectoJuego ?? null,
-      parametro: initialData?.parametro ?? null,
+      nivel: initialData?.niveles?.[0] ?? initialData?.nivel ?? null,
+      aspectoJuegoPmv:
+        initialData?.aspectosJuego?.[0] ?? initialData?.aspectoJuego ?? null,
+      parametro: initialData?.parametros?.[0] ?? initialData?.parametro ?? null,
       tipologia: initialData?.tipologia ?? null,
       duracionRango: initialData?.duracionRango ?? null,
     },
@@ -602,13 +659,53 @@ export function ExerciseForm({
         formato: (draft.payload.formato ?? null) as Formato | null,
         numJugadores: draft.payload.numJugadores ?? null,
         tipoPelota: (draft.payload.tipoPelota ?? null) as TipoPelota | null,
-        tipoActividad: (draft.payload.tipoActividad ??
-          null) as TipoActividad | null,
+        tipoActividad: null,
         isGlobal: draft.payload.isGlobal ?? false,
+        nivel: (draft.payload.niveles?.[0] ??
+          draft.payload.nivel ??
+          null) as NivelPmv | null,
+        aspectoJuegoPmv: (draft.payload.aspectosJuego?.[0] ??
+          draft.payload.aspectoJuego ??
+          null) as AspectoJuego | null,
+        parametro: (draft.payload.parametros?.[0] ??
+          draft.payload.parametro ??
+          null) as Parametro | null,
+        duracionRango: (draft.payload.duracionRango ??
+          null) as DuracionRango | null,
       });
       setFormMode(draft.payload.formMode);
       setSteps(draft.payload.steps);
       setMaterials(draft.payload.materials);
+      setNiveles(
+        new Set(
+          (draft.payload.niveles ??
+            (draft.payload.nivel ? [draft.payload.nivel] : [])) as NivelPmv[]
+        )
+      );
+      setAspectosJuego(
+        new Set(
+          (draft.payload.aspectosJuego ??
+            (draft.payload.aspectoJuego
+              ? [draft.payload.aspectoJuego]
+              : [])) as AspectoJuego[]
+        )
+      );
+      setParametros(
+        new Set(
+          (draft.payload.parametros ??
+            (draft.payload.parametro
+              ? [draft.payload.parametro]
+              : [])) as Parametro[]
+        )
+      );
+      setTiposActividad(
+        new Set(
+          (draft.payload.tiposActividad ??
+            (draft.payload.tipoActividad
+              ? [draft.payload.tipoActividad]
+              : [])) as TipoActividad[]
+        )
+      );
       setGolpes(new Set(draft.payload.golpes));
       setEfecto(new Set(draft.payload.efecto));
       setImageSlots(
@@ -695,6 +792,17 @@ export function ExerciseForm({
     setMaterials((prev) => prev.filter((x) => x !== m));
   }
 
+  function toggleSetValue<T extends string>(
+    setter: (next: Set<T>) => void,
+    current: Set<T>,
+    value: T
+  ) {
+    const next = new Set(current);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    setter(next);
+  }
+
   const draftPayload: ExerciseDraftPayload = {
     name: watchedValues.name ?? "",
     description: watchedValues.description ?? "",
@@ -702,8 +810,8 @@ export function ExerciseForm({
     tips: watchedValues.tips ?? "",
     variantes: watchedValues.variantes ?? "",
     category: watchedValues.category,
-    difficulty: watchedValues.difficulty,
-    durationMinutes: watchedValues.durationMinutes,
+    difficulty: watchedValues.difficulty ?? undefined,
+    durationMinutes: watchedValues.durationMinutes ?? undefined,
     location: watchedValues.location ?? null,
     videoUrl: watchedValues.videoUrl ?? "",
     phase: watchedValues.phase ?? null,
@@ -711,7 +819,15 @@ export function ExerciseForm({
     formato: watchedValues.formato ?? null,
     numJugadores: watchedValues.numJugadores ?? null,
     tipoPelota: watchedValues.tipoPelota ?? null,
-    tipoActividad: watchedValues.tipoActividad ?? null,
+    tipoActividad: null,
+    nivel: Array.from(niveles)[0] ?? null,
+    niveles: Array.from(niveles),
+    aspectoJuego: Array.from(aspectosJuego)[0] ?? null,
+    aspectosJuego: Array.from(aspectosJuego),
+    parametro: Array.from(parametros)[0] ?? null,
+    parametros: Array.from(parametros),
+    tiposActividad: Array.from(tiposActividad),
+    duracionRango: watchedValues.duracionRango ?? null,
     isGlobal: watchedValues.isGlobal ?? false,
     steps,
     materials,
@@ -777,13 +893,11 @@ export function ExerciseForm({
   const essentialFilled = countFilled([
     !!watchedValues.name?.trim(),
     !!watchedValues.category,
-    !!watchedValues.difficulty,
-    watchedValues.durationMinutes != null,
-    !!watchedValues.phase,
-    watchedValues.intensity != null,
+    niveles.size > 0,
+    !!watchedValues.duracionRango,
     isAdmin ? !!watchedValues.isGlobal : false,
   ]);
-  const essentialTotal = isAdmin ? 7 : 6;
+  const essentialTotal = isAdmin ? 5 : 4;
 
   const pedagogicalFilled = countFilled([
     !!watchedValues.objectives?.trim(),
@@ -797,10 +911,12 @@ export function ExerciseForm({
   const paramsFilled = countFilled([
     !!watchedValues.formato,
     watchedValues.numJugadores != null,
-    !!watchedValues.tipoActividad,
+    tiposActividad.size > 0,
     !!watchedValues.tipoPelota,
     golpes.size > 0,
     efecto.size > 0,
+    aspectosJuego.size > 0,
+    parametros.size > 0,
   ]);
 
   const mediaFilled = countFilled([
@@ -810,20 +926,30 @@ export function ExerciseForm({
     normalizedImages.length >= 3,
   ]);
 
-  async function onSubmit(values: FormValues) {
+  const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setServerError(null);
     const url =
       mode === "create" ? "/api/exercises" : `/api/exercises/${exerciseId}`;
     const method = mode === "create" ? "POST" : "PUT";
 
-    // Derive legacy difficulty from PMV nivel for backwards compatibility.
-    const derivedDifficulty: Difficulty | undefined = values.nivel
-      ? NIVEL_TO_DIFFICULTY[values.nivel]
-      : values.difficulty;
+    const selectedNiveles = Array.from(niveles);
+    const selectedAspectosJuego = Array.from(aspectosJuego);
+    const selectedParametros = Array.from(parametros);
+    const selectedTiposActividad = Array.from(tiposActividad);
+    const primaryNivel = selectedNiveles[0] ?? values.nivel ?? null;
+    const derivedDifficulty: Difficulty =
+      primaryNivel != null
+        ? NIVEL_TO_DIFFICULTY[primaryNivel]
+        : (values.difficulty ?? "beginner");
+    const derivedDurationMinutes =
+      deriveDurationMinutesFromRange(values.duracionRango) ??
+      values.durationMinutes ??
+      null;
 
     const payload = {
       ...values,
       difficulty: derivedDifficulty,
+      durationMinutes: derivedDurationMinutes,
       description: values.description?.trim() || null,
       objectives: values.objectives?.trim() || null,
       tips: values.tips?.trim() || null,
@@ -835,7 +961,9 @@ export function ExerciseForm({
       formato: values.formato ?? null,
       numJugadores: values.numJugadores ?? null,
       tipoPelota: values.tipoPelota ?? null,
-      tipoActividad: values.tipoActividad ?? null,
+      tipoActividad: null,
+      tiposActividad:
+        selectedTiposActividad.length > 0 ? selectedTiposActividad : null,
       golpes: golpes.size > 0 ? Array.from(golpes) : null,
       efecto: efecto.size > 0 ? Array.from(efecto) : null,
       variantes: values.variantes?.trim() || null,
@@ -848,10 +976,14 @@ export function ExerciseForm({
         })),
       materials: materials.filter(Boolean),
       // PMV taxonomy fields
-      nivel: values.nivel ?? null,
-      aspectoJuego: values.aspectoJuegoPmv ?? null,
-      parametro: values.parametro ?? null,
-      tipologia: values.tipologia ?? null,
+      nivel: primaryNivel,
+      niveles: selectedNiveles.length > 0 ? selectedNiveles : null,
+      aspectoJuego: selectedAspectosJuego[0] ?? values.aspectoJuegoPmv ?? null,
+      aspectosJuego:
+        selectedAspectosJuego.length > 0 ? selectedAspectosJuego : null,
+      parametro: selectedParametros[0] ?? values.parametro ?? null,
+      parametros: selectedParametros.length > 0 ? selectedParametros : null,
+      tipologia: null,
       duracionRango: values.duracionRango ?? null,
     };
 
@@ -902,18 +1034,86 @@ export function ExerciseForm({
     } else {
       onSuccess?.(responseData.data);
     }
-  }
+  };
 
   function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
     void handleSubmit(onSubmit)(event);
   }
+
+  const nivelesField = (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-foreground">
+        Nivel
+      </label>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {NIVELES_PMV.map(({ id, label, desc }) => {
+          const isSelected = niveles.has(id);
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggleSetValue(setNiveles, niveles, id)}
+              className={cn(
+                "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-3 text-left transition-all duration-150",
+                isSelected
+                  ? "bg-brand/10 border-brand text-brand"
+                  : "border-border hover:bg-muted"
+              )}
+            >
+              <span className="text-sm font-semibold">{label}</span>
+              <span className="text-xs text-muted-foreground">{desc}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const durationRangeField = (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-foreground">
+        Rango de duración
+      </label>
+      <Controller
+        name="duracionRango"
+        control={control}
+        render={({ field }) => (
+          <div className="flex flex-wrap gap-2">
+            {DURACION_RANGOS.map(({ id, label }) => {
+              const isSelected = field.value === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => field.onChange(isSelected ? null : id)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                    isSelected
+                      ? "bg-brand/10 border-brand text-brand"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      />
+      {errors.duracionRango && (
+        <p className="text-xs text-destructive">
+          {errors.duracionRango.message}
+        </p>
+      )}
+    </div>
+  );
 
   const basicSection = (
     <section>
       <SectionHeader
         icon={Dumbbell}
         title="Información básica"
-        subtitle="Nombre, categoría, dificultad y duración"
+        subtitle="Nombre, categoría, nivel y duración"
       />
       <div className="space-y-6">
         <div className="space-y-1.5">
@@ -986,70 +1186,9 @@ export function ExerciseForm({
           ) : null}
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-foreground">
-            Nivel
-          </label>
-          <Controller
-            name="nivel"
-            control={control}
-            render={({ field }) => (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {NIVELES_PMV.map(({ id, label, desc }) => {
-                  const isSelected = field.value === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => field.onChange(isSelected ? null : id)}
-                      className={cn(
-                        "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-3 text-left transition-all duration-150",
-                        isSelected
-                          ? "bg-brand/10 border-brand text-brand"
-                          : "border-border hover:bg-muted"
-                      )}
-                    >
-                      <span className="text-sm font-semibold">{label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {desc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          />
-        </div>
+        {nivelesField}
 
-        <div className="space-y-1.5">
-          <label
-            htmlFor="durationMinutes"
-            className="block text-sm font-semibold text-foreground"
-          >
-            Duración{" "}
-            <span className="font-normal text-muted-foreground">(minutos)</span>
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              id="durationMinutes"
-              type="number"
-              min={1}
-              max={300}
-              placeholder="15"
-              aria-invalid={!!errors.durationMinutes}
-              {...register("durationMinutes")}
-              className="w-28 h-10 px-3 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
-            />
-            <span className="text-sm text-muted-foreground">
-              minutos por ejercicio
-            </span>
-          </div>
-          {errors.durationMinutes ? (
-            <p className="text-xs text-destructive">
-              {errors.durationMinutes.message}
-            </p>
-          ) : null}
-        </div>
+        {durationRangeField}
 
         {/* Materials — always visible regardless of mode */}
         <div className="space-y-2">
@@ -1193,8 +1332,8 @@ export function ExerciseForm({
     <section>
       <SectionHeader
         icon={SlidersHorizontal}
-        title="Parametrización"
-        subtitle="Formato, jugadores, pelota, actividad, golpes y efecto"
+        title="Aspectos del juego"
+        subtitle="Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros"
       />
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -1298,43 +1437,28 @@ export function ExerciseForm({
                 (opcional)
               </span>
             </label>
-            <Controller
-              name="tipoActividad"
-              control={control}
-              render={({ field }) => {
-                const TIPOS: { id: TipoActividad; label: string }[] = [
-                  { id: "tecnico_tactico", label: "Técnico-táctico" },
-                  { id: "fisico", label: "Físico" },
-                  { id: "cognitivo", label: "Cognitivo" },
-                  { id: "competitivo", label: "Competitivo" },
-                  { id: "ludico", label: "Lúdico" },
-                ];
+            <div className="flex flex-wrap gap-2">
+              {TIPOS_ACTIVIDAD.map(({ id, label }) => {
+                const isSelected = tiposActividad.has(id);
                 return (
-                  <div className="flex flex-wrap gap-2">
-                    {TIPOS.map(({ id, label }) => {
-                      const isSelected = field.value === id;
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() =>
-                            field.onChange(field.value === id ? null : id)
-                          }
-                          className={cn(
-                            "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                            isSelected
-                              ? "bg-brand/10 border-brand text-brand"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() =>
+                      toggleSetValue(setTiposActividad, tiposActividad, id)
+                    }
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                      isSelected
+                        ? "bg-brand/10 border-brand text-brand"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
                 );
-              }}
-            />
+              })}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -1418,7 +1542,7 @@ export function ExerciseForm({
           {golpes.size > 0 ? (
             <button
               type="button"
-              onClick={() => setGolpes(new Set())}
+              onClick={() => setGolpes(new Set<string>())}
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
               Limpiar golpes
@@ -1463,145 +1587,63 @@ export function ExerciseForm({
         {/* PMV: Aspecto del juego */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Aspecto del juego{" "}
+            Aspectos del juego{" "}
             <span className="font-normal text-muted-foreground">
               (opcional)
             </span>
           </label>
-          <Controller
-            name="aspectoJuegoPmv"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-wrap gap-2">
-                {ASPECTOS_JUEGO.map(({ id, label }) => {
-                  const isSelected = field.value === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => field.onChange(isSelected ? null : id)}
-                      className={cn(
-                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                        isSelected
-                          ? "bg-brand/10 border-brand text-brand"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          />
+          <div className="flex flex-wrap gap-2">
+            {ASPECTOS_JUEGO.map(({ id, label }) => {
+              const isSelected = aspectosJuego.has(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() =>
+                    toggleSetValue(setAspectosJuego, aspectosJuego, id)
+                  }
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                    isSelected
+                      ? "bg-brand/10 border-brand text-brand"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* PMV: Parámetro */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Parámetro{" "}
+            Parámetros{" "}
             <span className="font-normal text-muted-foreground">
               (opcional)
             </span>
           </label>
-          <Controller
-            name="parametro"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-wrap gap-2">
-                {PARAMETROS.map(({ id, label }) => {
-                  const isSelected = field.value === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => field.onChange(isSelected ? null : id)}
-                      className={cn(
-                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                        isSelected
-                          ? "bg-brand/10 border-brand text-brand"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          />
-        </div>
-
-        {/* PMV: Tipología */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-foreground">
-            Tipología{" "}
-            <span className="font-normal text-muted-foreground">
-              (opcional)
-            </span>
-          </label>
-          <Controller
-            name="tipologia"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-wrap gap-2">
-                {TIPOLOGIAS.map(({ id, label }) => {
-                  const isSelected = field.value === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => field.onChange(isSelected ? null : id)}
-                      className={cn(
-                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                        isSelected
-                          ? "bg-brand/10 border-brand text-brand"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          />
-        </div>
-
-        {/* PMV: Duración por rangos */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-foreground">
-            Rango de duración{" "}
-            <span className="font-normal text-muted-foreground">
-              (opcional)
-            </span>
-          </label>
-          <Controller
-            name="duracionRango"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-wrap gap-2">
-                {DURACION_RANGOS.map(({ id, label }) => {
-                  const isSelected = field.value === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => field.onChange(isSelected ? null : id)}
-                      className={cn(
-                        "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                        isSelected
-                          ? "bg-brand/10 border-brand text-brand"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          />
+          <div className="flex flex-wrap gap-2">
+            {PARAMETROS.map(({ id, label }) => {
+              const isSelected = parametros.has(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleSetValue(setParametros, parametros, id)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                    isSelected
+                      ? "bg-brand/10 border-brand text-brand"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
@@ -2066,7 +2108,7 @@ export function ExerciseForm({
           <SectionHeader
             icon={Dumbbell}
             title="Información básica"
-            subtitle="Solo lo imprescindible: nombre, categoría y nivel"
+            subtitle="Solo lo imprescindible: nombre, categoría, nivel y rango"
           />
           {/* Nombre */}
           <div className="space-y-1.5">
@@ -2128,41 +2170,9 @@ export function ExerciseForm({
             ) : null}
           </div>
 
-          {/* Nivel PMV (sustituye a Dificultad) */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-foreground">
-              Nivel
-            </label>
-            <Controller
-              name="nivel"
-              control={control}
-              render={({ field }) => (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {NIVELES_PMV.map(({ id, label, desc }) => {
-                    const active = field.value === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => field.onChange(active ? null : id)}
-                        className={cn(
-                          "flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
-                          active
-                            ? "bg-brand/10 border-brand text-brand"
-                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        <span>{label}</span>
-                        <span className="text-[11px] font-normal text-muted-foreground">
-                          {desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            />
-          </div>
+          {nivelesField}
+
+          {durationRangeField}
 
           <p className="text-xs text-muted-foreground italic">
             ¿Necesitas más detalle? Cambia a{" "}
@@ -2201,10 +2211,10 @@ export function ExerciseForm({
           </AccordionSection>
 
           <AccordionSection
-            title="Parámetros de juego"
-            subtitle="Formato, jugadores, pelota, actividad, golpes y efecto."
+            title="Aspectos del juego"
+            subtitle="Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros."
             filled={paramsFilled}
-            total={6}
+            total={8}
             open={expandedSections.params}
             onToggle={(next) => toggleAccordion("params", next)}
           >

@@ -13,6 +13,7 @@ import {
   numeric,
   vector,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -124,6 +125,10 @@ export const exercises = pgTable(
     parametro: varchar("parametro", { length: 16 }), // altura|profundidad|velocidad|direccion
     tipologia: varchar("tipologia", { length: 16 }), // juego|reto|otros_deportes
     duracionRango: varchar("duracion_rango", { length: 16 }), // 1-5|5-10|10-15|15-20|+20
+    niveles: jsonb("niveles").$type<string[]>(),
+    aspectosJuego: jsonb("aspectos_juego").$type<string[]>(),
+    parametros: jsonb("parametros").$type<string[]>(),
+    tiposActividad: jsonb("tipos_actividad").$type<string[]>(),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
@@ -1039,19 +1044,16 @@ export const classListsRelations = relations(classLists, ({ one, many }) => ({
   items: many(classListItems),
 }));
 
-export const classListItemsRelations = relations(
-  classListItems,
-  ({ one }) => ({
-    list: one(classLists, {
-      fields: [classListItems.listId],
-      references: [classLists.id],
-    }),
-    class: one(classes, {
-      fields: [classListItems.classId],
-      references: [classes.id],
-    }),
-  })
-);
+export const classListItemsRelations = relations(classListItems, ({ one }) => ({
+  list: one(classLists, {
+    fields: [classListItems.listId],
+    references: [classLists.id],
+  }),
+  class: one(classes, {
+    fields: [classListItems.classId],
+    references: [classes.id],
+  }),
+}));
 
 export const classDraftsRelations = relations(classDrafts, ({ one }) => ({
   user: one(users, { fields: [classDrafts.userId], references: [users.id] }),
