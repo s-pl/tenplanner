@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import {
-  Clock3,
   ClipboardList,
+  Clock3,
   Dumbbell,
   Layers3,
   Trophy,
@@ -13,7 +14,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
-type LandingExerciseCard = {
+export type LandingExerciseCard = {
   id: string;
   name: string;
   durationMinutes: number;
@@ -21,7 +22,7 @@ type LandingExerciseCard = {
   aspectoJuego: string | null;
 };
 
-type LandingClassCard = {
+export type LandingClassCard = {
   id: string;
   name: string;
   duracionMinutes: number;
@@ -37,28 +38,43 @@ type LibraryPreview = {
   tag: string;
   level: string;
   time: string;
-  tone: string;
   icon: LucideIcon;
 };
 
-type LibraryTab = "exercises" | "classes";
+type Tab = "exercises" | "classes";
+
+const ease = [0.16, 1, 0.3, 1] as const;
+
+const tabs: Array<{
+  id: Tab;
+  label: string;
+  cta: { href: string; label: string };
+}> = [
+  {
+    id: "exercises",
+    label: "Ejercicios",
+    cta: { href: "/exercises", label: "Ver todos los ejercicios" },
+  },
+  {
+    id: "classes",
+    label: "Clases completas",
+    cta: { href: "/classes", label: "Ver todas las clases" },
+  },
+];
 
 const cardStyles = [
   {
     top: "bg-[#20201c]",
-    tone: "text-[#d6ff38]",
     exerciseIcon: Dumbbell,
     classIcon: Layers3,
   },
   {
     top: "bg-[#2b3613]",
-    tone: "text-[#d6ff38]",
     exerciseIcon: Clock3,
     classIcon: ClipboardList,
   },
   {
     top: "bg-[#3a3a34]",
-    tone: "text-[#d6ff38]",
     exerciseIcon: Trophy,
     classIcon: Trophy,
   },
@@ -80,7 +96,6 @@ function buildExerciseCards(cards: LandingExerciseCard[]): LibraryPreview[] {
       tag: cleanLabel(card.aspectoJuego, "Biblioteca"),
       level: cleanLabel(card.nivel, "Todos"),
       time: `${card.durationMinutes} min`,
-      tone: style.tone,
       icon: style.exerciseIcon,
     };
   });
@@ -97,7 +112,6 @@ function buildClassCards(cards: LandingClassCard[]): LibraryPreview[] {
       tag: "Clase",
       level: cleanLabel(card.nivel, `${card.numAlumnos ?? "Grupo"} alumnos`),
       time: `${card.duracionMinutes} min`,
-      tone: style.tone,
       icon: style.classIcon,
     };
   });
@@ -119,12 +133,7 @@ function PreviewCard({ item }: { item: LibraryPreview }) {
           {item.title}
         </h3>
         <div className="mt-4 flex flex-wrap gap-2">
-          <span
-            className={cn(
-              "rounded-full bg-white/8 px-3 py-1 text-xs font-semibold",
-              item.tone
-            )}
-          >
+          <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-[#d6ff38]">
             {item.tag}
           </span>
           <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-white/55">
@@ -139,79 +148,106 @@ function PreviewCard({ item }: { item: LibraryPreview }) {
   );
 }
 
-export function LibraryTabs({
+export function LibrarySection({
   exerciseCards,
   classCards,
 }: {
   exerciseCards: LandingExerciseCard[];
   classCards: LandingClassCard[];
 }) {
-  const [activeTab, setActiveTab] = useState<LibraryTab>("exercises");
-  const exercises = buildExerciseCards(exerciseCards);
-  const classes = buildClassCards(classCards);
-  const activeCards = activeTab === "exercises" ? exercises : classes;
-  const cta =
-    activeTab === "exercises"
-      ? { href: "/exercises", label: "Ver todos los ejercicios →" }
-      : { href: "/classes", label: "Ver todas las clases →" };
+  const [tab, setTab] = useState<Tab>("exercises");
+  const reduced = useReducedMotion();
+
+  const items =
+    tab === "exercises"
+      ? buildExerciseCards(exerciseCards)
+      : buildClassCards(classCards);
+  const active = tabs.find((t) => t.id === tab) ?? tabs[0];
 
   return (
-    <>
-      <div
-        role="tablist"
-        aria-label="Biblioteca de ejercicios y clases"
-        className="mt-12 inline-flex rounded-full bg-white/8 p-1"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "exercises"}
-          onClick={() => setActiveTab("exercises")}
-          className={cn(
-            "rounded-full px-6 py-2 text-sm transition",
-            activeTab === "exercises"
-              ? "bg-[#d6ff38] font-bold text-[#050505]"
-              : "text-white/62 hover:text-white"
-          )}
-        >
-          Ejercicios
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "classes"}
-          onClick={() => setActiveTab("classes")}
-          className={cn(
-            "rounded-full px-6 py-2 text-sm transition",
-            activeTab === "classes"
-              ? "bg-[#d6ff38] font-bold text-[#050505]"
-              : "text-white/62 hover:text-white"
-          )}
-        >
-          Clases completas
-        </button>
-      </div>
+    <section className="bg-[#050505] px-5 py-24 text-white lg:py-32">
+      <div className="mx-auto max-w-[1100px]">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.25em] text-white/45">
+          Contenido real de tenis
+        </p>
+        <h2 className="mt-6 font-heading text-[clamp(2.5rem,4.4vw,4.25rem)] font-bold leading-[0.95]">
+          Ejercicios y clases
+          <span className="block font-heading font-light italic text-white/45">
+            creados por expertos
+          </span>
+        </h2>
 
-      {activeCards.length > 0 ? (
-        <div className="mt-9 grid gap-4 md:grid-cols-3">
-          {activeCards.map((item) => (
-            <PreviewCard key={item.href} item={item} />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-9 rounded-xl border border-white/10 bg-white/[0.045] px-5 py-8 text-sm font-semibold text-white/55">
-          Aún no hay contenido visible en esta biblioteca.
-        </div>
-      )}
-
-      <div className="mt-12 flex justify-center">
-        <Link
-          href={cta.href}
-          className="rounded-full border border-white/18 bg-white/8 px-7 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-[#050505]"
+        <div
+          role="tablist"
+          aria-label="Tipo de contenido"
+          className="mt-12 inline-flex rounded-full bg-white/8 p-1"
         >
-          {cta.label}
-        </Link>
+          {tabs.map((t) => {
+            const isActive = t.id === tab;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  "rounded-full px-6 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d6ff38]",
+                  isActive
+                    ? "bg-[#d6ff38] text-[#050505]"
+                    : "text-white/62 hover:text-white"
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {items.length > 0 ? (
+          <motion.div
+            key={tab}
+            initial={reduced ? false : "hidden"}
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: {
+                transition: { staggerChildren: 0.07, delayChildren: 0.05 },
+              },
+            }}
+            className="mt-9 grid gap-4 md:grid-cols-3"
+          >
+            {items.map((item) => (
+              <motion.div
+                key={item.href}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.5, ease },
+                  },
+                }}
+              >
+                <PreviewCard item={item} />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <div className="mt-9 rounded-xl border border-white/10 bg-white/[0.045] px-5 py-8 text-sm font-semibold text-white/55">
+            Aún no hay contenido visible en esta biblioteca.
+          </div>
+        )}
+
+        <div className="mt-12 flex justify-center">
+          <Link
+            href={active.cta.href}
+            className="rounded-full border border-white/18 bg-white/8 px-7 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-[#050505]"
+          >
+            {active.cta.label} →
+          </Link>
+        </div>
       </div>
-    </>
+    </section>
   );
 }

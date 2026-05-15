@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowDown,
+  BatteryFull,
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
@@ -10,35 +11,20 @@ import {
   Pencil,
   Repeat2,
   Search,
+  Signal,
   Star,
+  Wifi,
   type LucideIcon,
 } from "lucide-react";
 
-import { LibraryTabs } from "@/components/landing/library-tabs";
 import { cn } from "@/lib/utils";
-
-type LandingExerciseCard = {
-  id: string;
-  name: string;
-  durationMinutes: number;
-  nivel: string | null;
-  aspectoJuego: string | null;
-};
-
-type LandingClassCard = {
-  id: string;
-  name: string;
-  duracionMinutes: number;
-  nivel: string | null;
-  objetivos: string | null;
-  numAlumnos: number | null;
-};
-
-const navItems = [
-  { label: "Cómo funciona", href: "#como-funciona" },
-  { label: "Ejercicios", href: "/exercises" },
-  { label: "Clases", href: "/classes" },
-];
+import { LandingNav } from "./landing-nav";
+import { Reveal, RevealItem, RevealStagger } from "./landing-reveal";
+import {
+  type LandingClassCard,
+  type LandingExerciseCard,
+  LibrarySection,
+} from "./library-tabs";
 
 const painCards = [
   {
@@ -137,17 +123,6 @@ const phoneActions: Array<{ icon: LucideIcon; label: string }> = [
   { icon: Star, label: "Mis favoritos" },
 ];
 
-function Brand() {
-  return (
-    <Link
-      href="/"
-      className="font-heading text-[22px] font-bold text-[#050505]"
-    >
-      Ten<span className="text-[#5f7000]">·</span>Planner
-    </Link>
-  );
-}
-
 function SectionTitle({
   eyebrow,
   title,
@@ -201,39 +176,19 @@ function PrimaryButton({
   );
 }
 
-function TopNav() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-[#050505]/10 bg-[#f4f4f1]/94 px-5 py-5 backdrop-blur">
-      <div className="mx-auto flex max-w-[1710px] items-center justify-between gap-4">
-        <Brand />
-        <nav className="hidden items-center gap-10 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-[#4d4d45] transition hover:text-[#5f7000]"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <Link
-          href="/register"
-          className="inline-flex min-h-11 items-center rounded-full bg-[#050505] px-6 text-sm font-bold text-white transition hover:bg-[#d6ff38] hover:text-[#050505]"
-        >
-          Empieza gratis
-        </Link>
-      </div>
-    </header>
-  );
-}
-
 function PhoneMock() {
   return (
     <div className="relative mx-auto h-[560px] w-[282px] overflow-hidden rounded-[38px] bg-[#050505] p-4 text-white shadow-[0_45px_100px_rgba(5,5,5,0.22)] ring-1 ring-black/10">
       <div className="flex items-center justify-between px-4 pt-3 text-xs font-bold text-white/85">
         <span>9:41</span>
-        <span className="text-white/55">▲ ◆ ▪▪</span>
+        <span
+          aria-hidden
+          className="flex items-center gap-1.5 text-white/55"
+        >
+          <Signal className="size-3" strokeWidth={2.5} />
+          <Wifi className="size-3" strokeWidth={2.5} />
+          <BatteryFull className="size-3.5" strokeWidth={2.5} />
+        </span>
       </div>
       <div className="mt-7 border-b border-white/8 px-4 pb-5">
         <p className="text-[11px] font-semibold text-white/45">Buenos días,</p>
@@ -368,8 +323,12 @@ function HeroSection() {
 
 function ProblemSection() {
   return (
-    <section className="bg-[#050505] px-5 py-24 text-white lg:py-32">
-      <div className="mx-auto max-w-[900px]">
+    <section className="relative overflow-hidden bg-[#050505] px-5 py-24 text-white lg:py-32">
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgba(214,255,56,0.08),transparent_70%)]"
+      />
+      <div className="relative mx-auto max-w-[900px]">
         <p className="text-[12px] font-semibold uppercase tracking-[0.28em] text-[#d6ff38]">
           El problema
         </p>
@@ -379,24 +338,23 @@ function ProblemSection() {
             A todos los monitores les pasa.
           </span>
         </h2>
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
+        <RevealStagger className="mt-14 grid gap-5 md:grid-cols-3">
           {painCards.map((card) => (
-            <article
-              key={card.quote}
-              className="min-h-[265px] rounded-2xl border border-white/10 bg-white/[0.045] p-7"
-            >
-              <span className="grid size-12 place-items-center rounded-xl bg-white/8 text-[#d6ff38]">
-                <card.icon className="size-6" />
-              </span>
-              <h3 className="mt-8 font-heading text-xl font-bold italic leading-6">
-                {card.quote}
-              </h3>
-              <p className="mt-5 text-sm leading-6 text-white/48">
-                {card.text}
-              </p>
-            </article>
+            <RevealItem key={card.quote}>
+              <article className="min-h-[265px] rounded-2xl border border-white/10 bg-white/[0.045] p-7 transition hover:border-white/18">
+                <span className="grid size-12 place-items-center rounded-xl bg-white/8 text-[#d6ff38]">
+                  <card.icon className="size-6" />
+                </span>
+                <h3 className="mt-8 font-heading text-xl font-bold italic leading-6">
+                  {card.quote}
+                </h3>
+                <p className="mt-5 text-sm leading-6 text-white/48">
+                  {card.text}
+                </p>
+              </article>
+            </RevealItem>
           ))}
-        </div>
+        </RevealStagger>
       </div>
     </section>
   );
@@ -404,30 +362,32 @@ function ProblemSection() {
 
 function HowSection() {
   return (
-    <section id="como-funciona" className="bg-[#f4f4f1] px-5 py-24 lg:py-32">
+    <section id="como-funciona" className="bg-[#f4f4f1] px-5 py-20 lg:py-28">
       <SectionTitle
         eyebrow="Cómo funciona"
         title="Tú decides."
         accent="En minutos."
       />
-      <div className="mx-auto mt-20 grid max-w-[1100px] gap-10 md:grid-cols-3">
+      <RevealStagger className="mx-auto mt-20 grid max-w-[1100px] gap-10 md:grid-cols-3">
         {steps.map((step, index) => (
-          <article key={step.title} className="relative text-center">
-            {index < steps.length - 1 && (
-              <div className="absolute left-1/2 top-9 hidden h-px w-full bg-[#d8d8cf] md:block" />
-            )}
-            <div className="relative mx-auto grid size-[72px] place-items-center rounded-full bg-[#050505] font-heading text-4xl font-bold text-[#d6ff38] shadow-[0_16px_35px_rgba(5,5,5,0.16)]">
-              {index + 1}
-            </div>
-            <h3 className="mt-8 font-heading text-2xl font-bold text-black">
-              {step.title}
-            </h3>
-            <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-7 text-[#66665d]">
-              {step.text}
-            </p>
-          </article>
+          <RevealItem key={step.title}>
+            <article className="relative text-center">
+              {index < steps.length - 1 && (
+                <div className="absolute left-1/2 top-9 hidden h-px w-full bg-[#d8d8cf] md:block" />
+              )}
+              <div className="relative mx-auto grid size-[72px] place-items-center rounded-full bg-[#050505] font-heading text-4xl font-bold text-[#d6ff38] shadow-[0_16px_35px_rgba(5,5,5,0.16)]">
+                {index + 1}
+              </div>
+              <h3 className="mt-8 font-heading text-2xl font-bold text-black">
+                {step.title}
+              </h3>
+              <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-7 text-[#66665d]">
+                {step.text}
+              </p>
+            </article>
+          </RevealItem>
         ))}
-      </div>
+      </RevealStagger>
     </section>
   );
 }
@@ -444,46 +404,45 @@ function PreparationSection() {
         No hay una única forma de planificar. Cada monitor trabaja diferente.
         Ten Planner se adapta a cómo quieres preparar cada sesión.
       </p>
-      <div className="mx-auto mt-16 grid max-w-[1110px] gap-4 md:grid-cols-2">
+      <RevealStagger className="mx-auto mt-16 grid max-w-[1110px] gap-4 md:grid-cols-2">
         {preparationCards.map((card, index) => (
-          <article
+          <RevealItem
             key={card.title}
-            className={cn(
-              "rounded-2xl border border-[#d8d8cf] bg-white p-9 shadow-[0_12px_30px_rgba(5,5,5,0.04)]",
-              index === 2 && "md:max-w-[542px]"
-            )}
+            className={cn(index === 2 && "md:max-w-[542px]")}
           >
-            <div className="grid gap-6 sm:grid-cols-[58px_1fr]">
-              <span
-                className={cn(
-                  "grid size-14 place-items-center rounded-2xl text-2xl",
-                  card.color
-                )}
-              >
-                <card.icon className="size-6" />
-              </span>
-              <div>
-                <h3 className="font-heading text-2xl font-bold text-black">
-                  {card.title}
-                </h3>
-                <p className="mt-4 text-sm leading-6 text-[#66665d]">
-                  {card.text}
-                </p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {card.chips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="rounded-full bg-[#efffba] px-3 py-1 text-xs font-semibold text-[#5f7000]"
-                    >
-                      {chip}
-                    </span>
-                  ))}
+            <article className="rounded-2xl border border-[#d8d8cf] bg-white p-9 shadow-[0_12px_30px_rgba(5,5,5,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(5,5,5,0.07)]">
+              <div className="grid gap-6 sm:grid-cols-[58px_1fr]">
+                <span
+                  className={cn(
+                    "grid size-14 place-items-center rounded-2xl text-2xl",
+                    card.color
+                  )}
+                >
+                  <card.icon className="size-6" />
+                </span>
+                <div>
+                  <h3 className="font-heading text-2xl font-bold text-black">
+                    {card.title}
+                  </h3>
+                  <p className="mt-4 text-sm leading-6 text-[#66665d]">
+                    {card.text}
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {card.chips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full bg-[#efffba] px-3 py-1 text-xs font-semibold text-[#5f7000]"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </RevealItem>
         ))}
-      </div>
+      </RevealStagger>
     </section>
   );
 }
@@ -496,52 +455,29 @@ function FeaturesSection() {
         title="Todo lo que necesita"
         accent="un monitor de tenis"
       />
-      <div className="mx-auto mt-16 grid max-w-[1110px] gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <RevealStagger
+        stagger={0.06}
+        className="mx-auto mt-16 grid max-w-[1110px] gap-4 md:grid-cols-2 lg:grid-cols-3"
+      >
         {featureCards.map((card) => {
           const Icon = card.icon;
           return (
-            <article
-              key={card.title}
-              className="min-h-[218px] rounded-2xl border border-[#d8d8cf] bg-white p-7 shadow-[0_12px_30px_rgba(5,5,5,0.04)]"
-            >
-              <span className="grid size-12 place-items-center rounded-xl bg-[#efffba] text-[#5f7000]">
-                <Icon className="size-5" />
-              </span>
-              <h3 className="mt-6 text-lg font-bold text-[#050505]">
-                {card.title}
-              </h3>
-              <p className="mt-4 text-sm leading-6 text-[#66665d]">
-                {card.text}
-              </p>
-            </article>
+            <RevealItem key={card.title}>
+              <article className="min-h-[218px] rounded-2xl border border-[#d8d8cf] bg-white p-7 shadow-[0_12px_30px_rgba(5,5,5,0.04)] transition hover:-translate-y-0.5 hover:border-[#5f7000]/25 hover:shadow-[0_18px_40px_rgba(5,5,5,0.07)]">
+                <span className="grid size-12 place-items-center rounded-xl bg-[#efffba] text-[#5f7000]">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="mt-6 text-lg font-bold text-[#050505]">
+                  {card.title}
+                </h3>
+                <p className="mt-4 text-sm leading-6 text-[#66665d]">
+                  {card.text}
+                </p>
+              </article>
+            </RevealItem>
           );
         })}
-      </div>
-    </section>
-  );
-}
-
-function LibrarySection({
-  exerciseCards,
-  classCards,
-}: {
-  exerciseCards: LandingExerciseCard[];
-  classCards: LandingClassCard[];
-}) {
-  return (
-    <section className="bg-[#050505] px-5 py-24 text-white lg:py-32">
-      <div className="mx-auto max-w-[1100px]">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.25em] text-white/45">
-          Contenido real de tenis
-        </p>
-        <h2 className="mt-6 font-heading text-[clamp(2.5rem,4.4vw,4.25rem)] font-bold leading-[0.95]">
-          Ejercicios y clases
-          <span className="block font-heading font-light italic text-white/45">
-            creados por expertos
-          </span>
-        </h2>
-        <LibraryTabs exerciseCards={exerciseCards} classCards={classCards} />
-      </div>
+      </RevealStagger>
     </section>
   );
 }
@@ -549,26 +485,28 @@ function LibrarySection({
 function FinalCtaSection() {
   return (
     <section className="border-b border-[#050505]/10 bg-[#f4f4f1] px-5 py-20">
-      <div className="mx-auto grid max-w-[1710px] gap-8 rounded-[32px] bg-[#050505] px-8 py-16 text-white md:grid-cols-[1fr_auto] md:items-center lg:px-16">
-        <div>
-          <h2 className="font-heading text-[clamp(2.4rem,4.3vw,4.3rem)] font-bold leading-[0.95]">
-            La próxima clase,
-            <span className="block font-heading font-light italic text-white/45">
-              lista en minutos.
-            </span>
-          </h2>
-          <p className="mt-5 text-base text-white/65">
-            Únete a más de 200 monitores que ya planifican mejor con Ten
-            Planner.
-          </p>
+      <Reveal>
+        <div className="mx-auto grid max-w-[1710px] gap-8 rounded-[32px] bg-[#050505] px-8 py-16 text-white md:grid-cols-[1fr_auto] md:items-center lg:px-16">
+          <div>
+            <h2 className="font-heading text-[clamp(2.4rem,4.3vw,4.3rem)] font-bold leading-[0.95]">
+              La próxima clase,
+              <span className="block font-heading font-light italic text-white/45">
+                lista en minutos.
+              </span>
+            </h2>
+            <p className="mt-5 text-base text-white/65">
+              Únete a más de 200 monitores que ya planifican mejor con Ten
+              Planner.
+            </p>
+          </div>
+          <div className="md:text-center">
+            <PrimaryButton href="/register">Empieza gratis →</PrimaryButton>
+            <p className="mt-4 text-xs text-white/42">
+              14 días gratis · Sin tarjeta
+            </p>
+          </div>
         </div>
-        <div className="md:text-center">
-          <PrimaryButton href="/register">Empieza gratis →</PrimaryButton>
-          <p className="mt-4 text-xs text-white/42">
-            14 días gratis · Sin tarjeta
-          </p>
-        </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -640,7 +578,7 @@ export function TenPlannerLanding({
         className
       )}
     >
-      <TopNav />
+      <LandingNav />
       <main id="main">
         <HeroSection />
         <ProblemSection />
