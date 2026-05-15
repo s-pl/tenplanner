@@ -131,6 +131,20 @@ type Parametro = (typeof PARAMETROS)[number]["id"];
 type Tipologia = "juego" | "reto" | "otros_deportes";
 type DuracionRango = (typeof DURACION_RANGOS)[number]["id"];
 
+const ASPECTO_TO_CATEGORY: Record<AspectoJuego, Category> = {
+  tecnica: "technique",
+  tactica: "tactics",
+  mental: "warm-up",
+  fisico: "fitness",
+};
+
+const CATEGORY_TO_ASPECTO: Record<Category, AspectoJuego> = {
+  technique: "tecnica",
+  tactics: "tactica",
+  "warm-up": "mental",
+  fitness: "fisico",
+};
+
 const EFECTO_PRESET = [
   { id: "liftado", label: "Liftado" },
   { id: "cortado", label: "Cortado" },
@@ -222,7 +236,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const CATEGORIES: {
-  id: Category;
+  id: AspectoJuego;
   label: string;
   icon: ElementType;
   color: string;
@@ -232,7 +246,7 @@ const CATEGORIES: {
   border: string;
 }[] = [
   {
-    id: "technique",
+    id: "tecnica",
     label: "Técnica",
     icon: Target,
     color: "text-blue-400",
@@ -242,7 +256,7 @@ const CATEGORIES: {
     border: "border-blue-400/20",
   },
   {
-    id: "tactics",
+    id: "tactica",
     label: "Táctica",
     icon: Brain,
     color: "text-purple-400",
@@ -252,7 +266,7 @@ const CATEGORIES: {
     border: "border-purple-400/20",
   },
   {
-    id: "warm-up",
+    id: "mental",
     label: "Trabajo mental",
     icon: Brain,
     color: "text-brand",
@@ -262,7 +276,7 @@ const CATEGORIES: {
     border: "border-brand/20",
   },
   {
-    id: "fitness",
+    id: "fisico",
     label: "Físico",
     icon: Dumbbell,
     color: "text-amber-400",
@@ -427,6 +441,32 @@ function resolveInitialTiposActividad(
   return [];
 }
 
+function resolveAspectosJuegoValues(data?: {
+  aspectoJuego?: string | null;
+  aspectosJuego?: string[] | null;
+  category?: string | null;
+}) {
+  const rawValues =
+    data?.aspectosJuego && data.aspectosJuego.length > 0
+      ? data.aspectosJuego
+      : data?.aspectoJuego
+        ? [data.aspectoJuego]
+        : data?.category && data.category in CATEGORY_TO_ASPECTO
+          ? [CATEGORY_TO_ASPECTO[data.category as Category]]
+          : [];
+
+  return rawValues.filter(
+    (value, index, values): value is AspectoJuego =>
+      ASPECTOS_JUEGO.some((aspecto) => aspecto.id === value) &&
+      values.indexOf(value) === index
+  );
+}
+
+function getPrimaryCategory(aspectos: Iterable<AspectoJuego>) {
+  const primaryAspecto = Array.from(aspectos)[0];
+  return primaryAspecto ? ASPECTO_TO_CATEGORY[primaryAspecto] : undefined;
+}
+
 function AccordionSection({
   title,
   subtitle,
@@ -547,10 +587,7 @@ export function ExerciseForm({
     )
   );
   const [aspectosJuego, setAspectosJuego] = useState<Set<AspectoJuego>>(
-    new Set(
-      initialData?.aspectosJuego ??
-        (initialData?.aspectoJuego ? [initialData.aspectoJuego] : [])
-    )
+    new Set(resolveAspectosJuegoValues(initialData))
   );
   const [parametros, setParametros] = useState<Set<Parametro>>(
     new Set(
@@ -574,6 +611,7 @@ export function ExerciseForm({
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -583,7 +621,9 @@ export function ExerciseForm({
       objectives: initialData?.objectives ?? "",
       tips: initialData?.tips ?? "",
       variantes: initialData?.variantes ?? "",
-      category: initialData?.category,
+      category:
+        initialData?.category ??
+        getPrimaryCategory(resolveAspectosJuegoValues(initialData)),
       difficulty: initialData?.difficulty,
       durationMinutes: initialData?.durationMinutes,
       location: initialData?.location ?? null,
@@ -596,8 +636,7 @@ export function ExerciseForm({
       tipoActividad: null,
       isGlobal: initialData?.isGlobal ?? false,
       nivel: initialData?.niveles?.[0] ?? initialData?.nivel ?? null,
-      aspectoJuegoPmv:
-        initialData?.aspectosJuego?.[0] ?? initialData?.aspectoJuego ?? null,
+      aspectoJuegoPmv: resolveAspectosJuegoValues(initialData)[0] ?? null,
       parametro: initialData?.parametros?.[0] ?? initialData?.parametro ?? null,
       tipologia: initialData?.tipologia ?? null,
       duracionRango: initialData?.duracionRango ?? null,
@@ -643,13 +682,17 @@ export function ExerciseForm({
       }
 
       draftHydratedRef.current = false;
+      const draftAspectosJuego = resolveAspectosJuegoValues(draft.payload);
+
       reset({
         name: draft.payload.name,
         description: draft.payload.description,
         objectives: draft.payload.objectives,
         tips: draft.payload.tips,
         variantes: draft.payload.variantes,
-        category: draft.payload.category as Category | undefined,
+        category:
+          (draft.payload.category as Category | undefined) ??
+          getPrimaryCategory(draftAspectosJuego),
         difficulty: draft.payload.difficulty as Difficulty | undefined,
         durationMinutes: draft.payload.durationMinutes,
         location: (draft.payload.location ?? null) as Location | null,
@@ -664,9 +707,7 @@ export function ExerciseForm({
         nivel: (draft.payload.niveles?.[0] ??
           draft.payload.nivel ??
           null) as NivelPmv | null,
-        aspectoJuegoPmv: (draft.payload.aspectosJuego?.[0] ??
-          draft.payload.aspectoJuego ??
-          null) as AspectoJuego | null,
+        aspectoJuegoPmv: draftAspectosJuego[0] ?? null,
         parametro: (draft.payload.parametros?.[0] ??
           draft.payload.parametro ??
           null) as Parametro | null,
@@ -682,14 +723,7 @@ export function ExerciseForm({
             (draft.payload.nivel ? [draft.payload.nivel] : [])) as NivelPmv[]
         )
       );
-      setAspectosJuego(
-        new Set(
-          (draft.payload.aspectosJuego ??
-            (draft.payload.aspectoJuego
-              ? [draft.payload.aspectoJuego]
-              : [])) as AspectoJuego[]
-        )
-      );
+      setAspectosJuego(new Set(draftAspectosJuego));
       setParametros(
         new Set(
           (draft.payload.parametros ??
@@ -803,6 +837,30 @@ export function ExerciseForm({
     setter(next);
   }
 
+  function updateAspectosJuego(next: Set<AspectoJuego>) {
+    const primaryAspecto = Array.from(next)[0] ?? null;
+
+    setAspectosJuego(next);
+    setValue(
+      "category",
+      (primaryAspecto
+        ? ASPECTO_TO_CATEGORY[primaryAspecto]
+        : undefined) as FormValues["category"],
+      { shouldDirty: true, shouldValidate: true }
+    );
+    setValue("aspectoJuegoPmv", primaryAspecto, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+  }
+
+  function toggleAspectoJuego(value: AspectoJuego) {
+    const next = new Set(aspectosJuego);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    updateAspectosJuego(next);
+  }
+
   const draftPayload: ExerciseDraftPayload = {
     name: watchedValues.name ?? "",
     description: watchedValues.description ?? "",
@@ -892,7 +950,7 @@ export function ExerciseForm({
 
   const essentialFilled = countFilled([
     !!watchedValues.name?.trim(),
-    !!watchedValues.category,
+    aspectosJuego.size > 0,
     niveles.size > 0,
     !!watchedValues.duracionRango,
     isAdmin ? !!watchedValues.isGlobal : false,
@@ -915,7 +973,6 @@ export function ExerciseForm({
     !!watchedValues.tipoPelota,
     golpes.size > 0,
     efecto.size > 0,
-    aspectosJuego.size > 0,
     parametros.size > 0,
   ]);
 
@@ -948,6 +1005,7 @@ export function ExerciseForm({
 
     const payload = {
       ...values,
+      category: getPrimaryCategory(selectedAspectosJuego) ?? values.category,
       difficulty: derivedDifficulty,
       durationMinutes: derivedDurationMinutes,
       description: values.description?.trim() || null,
@@ -1108,6 +1166,59 @@ export function ExerciseForm({
     </div>
   );
 
+  const categoryField = (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-foreground">
+        Categorías{" "}
+        <span className="font-normal text-muted-foreground">
+          (multi-selección)
+        </span>
+      </label>
+      <Controller
+        name="category"
+        control={control}
+        render={() => (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {CATEGORIES.map(
+              ({
+                id,
+                label,
+                icon: Icon,
+                color,
+                activeBg,
+                activeBorder,
+                bg,
+                border,
+              }) => {
+                const isSelected = aspectosJuego.has(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => toggleAspectoJuego(id)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-all duration-150",
+                      isSelected
+                        ? `${activeBg} ${activeBorder} ${color}`
+                        : `${bg} ${border} text-muted-foreground hover:bg-muted hover:text-foreground`
+                    )}
+                  >
+                    <Icon className="size-5" />
+                    {label}
+                  </button>
+                );
+              }
+            )}
+          </div>
+        )}
+      />
+      {errors.category ? (
+        <p className="text-xs text-destructive">{errors.category.message}</p>
+      ) : null}
+    </div>
+  );
+
   const basicSection = (
     <section>
       <SectionHeader
@@ -1137,54 +1248,7 @@ export function ExerciseForm({
           ) : null}
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-foreground">
-            Categoría
-          </label>
-          <Controller
-            name="category"
-            control={control}
-            render={({ field }) => (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {CATEGORIES.map(
-                  ({
-                    id,
-                    label,
-                    icon: Icon,
-                    color,
-                    activeBg,
-                    activeBorder,
-                    bg,
-                    border,
-                  }) => {
-                    const isSelected = field.value === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => field.onChange(id)}
-                        className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-all duration-150",
-                          isSelected
-                            ? `${activeBg} ${activeBorder} ${color}`
-                            : `${bg} ${border} text-muted-foreground hover:bg-muted hover:text-foreground`
-                        )}
-                      >
-                        <Icon className="size-5" />
-                        {label}
-                      </button>
-                    );
-                  }
-                )}
-              </div>
-            )}
-          />
-          {errors.category ? (
-            <p className="text-xs text-destructive">
-              {errors.category.message}
-            </p>
-          ) : null}
-        </div>
+        {categoryField}
 
         {nivelesField}
 
@@ -1332,7 +1396,7 @@ export function ExerciseForm({
     <section>
       <SectionHeader
         icon={SlidersHorizontal}
-        title="Aspectos del juego"
+        title="Parámetros deportivos"
         subtitle="Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros"
       />
       <div className="space-y-6">
@@ -1570,38 +1634,6 @@ export function ExerciseForm({
                     else next.add(id);
                     setEfecto(next);
                   }}
-                  className={cn(
-                    "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
-                    isSelected
-                      ? "bg-brand/10 border-brand text-brand"
-                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* PMV: Aspecto del juego */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-foreground">
-            Aspectos del juego{" "}
-            <span className="font-normal text-muted-foreground">
-              (opcional)
-            </span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {ASPECTOS_JUEGO.map(({ id, label }) => {
-              const isSelected = aspectosJuego.has(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() =>
-                    toggleSetValue(setAspectosJuego, aspectosJuego, id)
-                  }
                   className={cn(
                     "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
                     isSelected
@@ -2132,43 +2164,7 @@ export function ExerciseForm({
             ) : null}
           </div>
 
-          {/* Categoría */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-foreground">
-              Categoría
-            </label>
-            <Controller
-              name="category"
-              control={control}
-              render={({ field }) => (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {CATEGORIES.map(({ id, label }) => {
-                    const active = field.value === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => field.onChange(id)}
-                        className={cn(
-                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
-                          active
-                            ? "bg-brand/10 border-brand text-brand"
-                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            />
-            {errors.category ? (
-              <p className="text-xs text-destructive">
-                {errors.category.message as string}
-              </p>
-            ) : null}
-          </div>
+          {categoryField}
 
           {nivelesField}
 
@@ -2211,10 +2207,10 @@ export function ExerciseForm({
           </AccordionSection>
 
           <AccordionSection
-            title="Aspectos del juego"
+            title="Parámetros deportivos"
             subtitle="Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros."
             filled={paramsFilled}
-            total={8}
+            total={7}
             open={expandedSections.params}
             onToggle={(next) => toggleAccordion("params", next)}
           >
