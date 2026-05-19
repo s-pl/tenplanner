@@ -60,6 +60,14 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+function classValues(values: string[] | null, fallback: string | null) {
+  return Array.isArray(values) && values.length > 0
+    ? values
+    : fallback
+      ? [fallback]
+      : [];
+}
+
 export default async function ClassesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -90,6 +98,9 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     numAlumnos: number | null;
     objetivos: string | null;
     nivel: string | null;
+    niveles: string[] | null;
+    aspectoJuego: string | null;
+    aspectosJuego: string[] | null;
     isLibrary: boolean;
     createdAt: Date;
   }> = [];
@@ -132,8 +143,22 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       );
     }
     if (q) conds.push(ilike(classes.name, `%${q}%`));
-    if (nivel) conds.push(eq(classes.nivel, nivel));
-    if (aspecto) conds.push(eq(classes.aspectoJuego, aspecto));
+    if (nivel) {
+      conds.push(
+        or(
+          sql`${classes.niveles} @> ${JSON.stringify([nivel])}::jsonb`,
+          eq(classes.nivel, nivel)
+        )!
+      );
+    }
+    if (aspecto) {
+      conds.push(
+        or(
+          sql`${classes.aspectosJuego} @> ${JSON.stringify([aspecto])}::jsonb`,
+          eq(classes.aspectoJuego, aspecto)
+        )!
+      );
+    }
     if (duracion === "120") {
       conds.push(sql`${classes.duracionMinutes} > 90`);
     } else if (duracion) {
@@ -153,6 +178,9 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         numAlumnos: classes.numAlumnos,
         objetivos: classes.objetivos,
         nivel: classes.nivel,
+        niveles: classes.niveles,
+        aspectoJuego: classes.aspectoJuego,
+        aspectosJuego: classes.aspectosJuego,
         isLibrary: classes.isLibrary,
         createdAt: classes.createdAt,
       })
@@ -499,10 +527,23 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                             {cls.alumnosTipo}
                           </span>
                         )}
-                        {cls.nivel && (
-                          <span className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]">
-                            {cls.nivel.replace(/_/g, " ")}
+                        {classValues(cls.niveles, cls.nivel).map((nivel) => (
+                          <span
+                            key={nivel}
+                            className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]"
+                          >
+                            {nivel.replace(/_/g, " ")}
                           </span>
+                        ))}
+                        {classValues(cls.aspectosJuego, cls.aspectoJuego).map(
+                          (aspecto) => (
+                            <span
+                              key={aspecto}
+                              className="rounded-full border border-border px-2 py-1 text-[10.5px] text-foreground/60"
+                            >
+                              {aspecto.replace(/_/g, " ")}
+                            </span>
+                          )
                         )}
                       </div>
                     </Link>

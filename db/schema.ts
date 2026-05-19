@@ -626,6 +626,8 @@ export const classes = pgTable(
     numAlumnos: integer("num_alumnos"),
     nivel: varchar("nivel", { length: 32 }),
     aspectoJuego: varchar("aspecto_juego", { length: 16 }),
+    niveles: jsonb("niveles").$type<string[]>(),
+    aspectosJuego: jsonb("aspectos_juego").$type<string[]>(),
     golpes: json("golpes").$type<string[]>(),
     isLibrary: boolean("is_library").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -641,6 +643,8 @@ export const classes = pgTable(
     index("classes_is_library_idx").on(t.isLibrary),
     index("classes_nivel_idx").on(t.nivel),
     index("classes_name_idx").on(t.name),
+    index("classes_niveles_gin_idx").using("gin", t.niveles),
+    index("classes_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
   ]
 );
 

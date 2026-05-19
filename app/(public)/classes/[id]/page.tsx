@@ -24,6 +24,14 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+function classValues(values: string[] | null, fallback: string | null) {
+  return Array.isArray(values) && values.length > 0
+    ? values
+    : fallback
+      ? [fallback]
+      : [];
+}
+
 export default async function ClassDetailPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
@@ -84,6 +92,8 @@ export default async function ClassDetailPage({ params }: PageProps) {
     : false;
 
   const blockTitles = ["Bloque inicial", "Bloque principal", "Bloque final"];
+  const classNiveles = classValues(cls.niveles, cls.nivel);
+  const classAspectos = classValues(cls.aspectosJuego, cls.aspectoJuego);
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
@@ -105,11 +115,22 @@ export default async function ClassDetailPage({ params }: PageProps) {
                     Biblioteca
                   </span>
                 )}
-                {cls.nivel && (
-                  <span className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62 capitalize">
-                    {cls.nivel.replace(/_/g, " ")}
+                {classNiveles.map((nivel) => (
+                  <span
+                    key={nivel}
+                    className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62 capitalize"
+                  >
+                    {nivel.replace(/_/g, " ")}
                   </span>
-                )}
+                ))}
+                {classAspectos.map((aspecto) => (
+                  <span
+                    key={aspecto}
+                    className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62 capitalize"
+                  >
+                    {aspecto.replace(/_/g, " ")}
+                  </span>
+                ))}
               </div>
               <h1 className="max-w-4xl font-heading text-4xl font-semibold leading-tight tracking-normal text-white sm:text-5xl">
                 {cls.name}

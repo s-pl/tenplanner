@@ -45,11 +45,27 @@ const updateSchema = z.object({
     .or(z.literal("")),
   aspectosImportantes: z.string().trim().max(4000).nullable().optional(),
   nivel: z.string().trim().max(32).nullable().optional(),
+  niveles: z.array(z.string().trim().max(32)).nullable().optional(),
   aspectoJuego: z.string().trim().max(16).nullable().optional(),
+  aspectosJuego: z.array(z.string().trim().max(16)).nullable().optional(),
   golpes: z.array(z.string().max(32)).nullable().optional(),
   isLibrary: z.boolean().optional(),
   blocks: z.array(blockSchema).max(3).optional(),
 });
+
+function normalizeMultiValue(
+  values: string[] | null | undefined,
+  legacyValue: string | null | undefined
+) {
+  const normalized = Array.from(
+    new Set(
+      (values ?? (legacyValue ? [legacyValue] : []))
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+  return normalized.length > 0 ? normalized : null;
+}
 
 export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
@@ -91,15 +107,8 @@ export async function GET(_req: Request, ctx: Ctx) {
           exerciseCategory: exercises.category,
         })
         .from(classBlockExercises)
-        .leftJoin(
-          exercises,
-          eq(exercises.id, classBlockExercises.exerciseId)
-        )
-        .where(
-          or(
-            ...blocks.map((b) => eq(classBlockExercises.blockId, b.id))
-          )!
-        )
+        .leftJoin(exercises, eq(exercises.id, classBlockExercises.exerciseId))
+        .where(or(...blocks.map((b) => eq(classBlockExercises.blockId, b.id)))!)
         .orderBy(
           asc(classBlockExercises.blockId),
           asc(classBlockExercises.orderIndex)
@@ -171,10 +180,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
               exerciseIds.map((eid) => sql`${eid}::uuid`),
               sql`, `
             )})`,
-            or(
-              eq(exercises.isGlobal, true),
-              eq(exercises.createdBy, user.id)
-            )!
+            or(eq(exercises.isGlobal, true), eq(exercises.createdBy, user.id))!
           )
         );
       if (accessible.length !== exerciseIds.length) {
@@ -192,18 +198,26 @@ export async function PATCH(request: Request, ctx: Ctx) {
       if (d.name !== undefined) updateValues.name = d.name;
       if (d.duracionMinutes !== undefined)
         updateValues.duracionMinutes = d.duracionMinutes;
-      if (d.alumnosTipo !== undefined)
-        updateValues.alumnosTipo = d.alumnosTipo;
+      if (d.alumnosTipo !== undefined) updateValues.alumnosTipo = d.alumnosTipo;
       if (d.numAlumnos !== undefined) updateValues.numAlumnos = d.numAlumnos;
       if (d.objetivos !== undefined) updateValues.objetivos = d.objetivos;
       if (d.material !== undefined) updateValues.material = d.material;
-      if (d.videoUrl !== undefined)
-        updateValues.videoUrl = d.videoUrl || null;
+      if (d.videoUrl !== undefined) updateValues.videoUrl = d.videoUrl || null;
       if (d.aspectosImportantes !== undefined)
         updateValues.aspectosImportantes = d.aspectosImportantes;
-      if (d.nivel !== undefined) updateValues.nivel = d.nivel;
-      if (d.aspectoJuego !== undefined)
-        updateValues.aspectoJuego = d.aspectoJuego;
+      if (d.niveles !== undefined || d.nivel !== undefined) {
+        const niveles = normalizeMultiValue(d.niveles, d.nivel);
+        updateValues.niveles = niveles;
+        updateValues.nivel = niveles?.[0] ?? null;
+      }
+      if (d.aspectosJuego !== undefined || d.aspectoJuego !== undefined) {
+        const aspectosJuego = normalizeMultiValue(
+          d.aspectosJuego,
+          d.aspectoJuego
+        );
+        updateValues.aspectosJuego = aspectosJuego;
+        updateValues.aspectoJuego = aspectosJuego?.[0] ?? null;
+      }
       if (d.golpes !== undefined) updateValues.golpes = d.golpes;
       if (d.isLibrary !== undefined) updateValues.isLibrary = d.isLibrary;
 
