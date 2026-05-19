@@ -78,7 +78,9 @@ export interface ClassInitialData {
   alumnosTipo: "individual" | "grupal" | null;
   numAlumnos: number | null;
   nivel: string | null;
+  niveles: string[] | null;
   aspectoJuego: string | null;
+  aspectosJuego: string[] | null;
   golpes: string[] | null;
   objetivos: string | null;
   material: string | null;
@@ -119,9 +121,19 @@ export function ClassForm({
   const [numAlumnos, setNumAlumnos] = useState<number | "">(
     initialData?.numAlumnos ?? ""
   );
-  const [nivel, setNivel] = useState<string>(initialData?.nivel ?? "");
-  const [aspectoJuego, setAspectoJuego] = useState<string>(
-    initialData?.aspectoJuego ?? ""
+  const [niveles, setNiveles] = useState<string[]>(
+    initialData?.niveles && initialData.niveles.length > 0
+      ? initialData.niveles
+      : initialData?.nivel
+        ? [initialData.nivel]
+        : []
+  );
+  const [aspectosJuego, setAspectosJuego] = useState<string[]>(
+    initialData?.aspectosJuego && initialData.aspectosJuego.length > 0
+      ? initialData.aspectosJuego
+      : initialData?.aspectoJuego
+        ? [initialData.aspectoJuego]
+        : []
   );
   const [golpes, setGolpes] = useState<string[]>(initialData?.golpes ?? []);
   const [objetivos, setObjetivos] = useState(initialData?.objetivos ?? "");
@@ -304,6 +316,18 @@ export function ClassForm({
     );
   }
 
+  function toggleNivel(id: string) {
+    setNiveles((prev) =>
+      prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAspecto(id: string) {
+    setAspectosJuego((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -322,8 +346,10 @@ export function ClassForm({
       material: material.trim() || null,
       videoUrl: videoUrl.trim() || null,
       aspectosImportantes: aspectosImportantes.trim() || null,
-      nivel: nivel || null,
-      aspectoJuego: aspectoJuego || null,
+      nivel: niveles[0] ?? null,
+      niveles: niveles.length > 0 ? niveles : null,
+      aspectoJuego: aspectosJuego[0] ?? null,
+      aspectosJuego: aspectosJuego.length > 0 ? aspectosJuego : null,
       golpes: golpes.length > 0 ? golpes : null,
       isLibrary: isAdmin ? isLibrary : false,
       blocks: blocks
@@ -477,23 +503,31 @@ export function ClassForm({
               className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-foreground">
-              Nivel
-            </label>
-            <select
-              value={nivel}
-              onChange={(e) => setNivel(e.target.value)}
-              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
-            >
-              <option value="">— Selecciona —</option>
-              {NIVELES.map((n) => (
-                <option key={n.id} value={n.id}>
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-foreground">
+            Nivel
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {NIVELES.map((n) => {
+              const active = niveles.includes(n.id);
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => toggleNivel(n.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                    active
+                      ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                      : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+                  )}
+                >
                   {n.label}
-                </option>
-              ))}
-            </select>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -503,12 +537,12 @@ export function ClassForm({
           </label>
           <div className="flex flex-wrap gap-2">
             {ASPECTOS.map((a) => {
-              const active = aspectoJuego === a.id;
+              const active = aspectosJuego.includes(a.id);
               return (
                 <button
                   key={a.id}
                   type="button"
-                  onClick={() => setAspectoJuego(active ? "" : a.id)}
+                  onClick={() => toggleAspecto(a.id)}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
                     active

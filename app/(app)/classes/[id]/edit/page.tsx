@@ -80,7 +80,19 @@ export default async function EditClassPage({ params }: PageProps) {
     alumnosTipo: cls.alumnosTipo as "individual" | "grupal" | null,
     numAlumnos: cls.numAlumnos,
     nivel: cls.nivel,
+    niveles:
+      Array.isArray(cls.niveles) && cls.niveles.length > 0
+        ? cls.niveles
+        : cls.nivel
+          ? [cls.nivel]
+          : null,
     aspectoJuego: cls.aspectoJuego,
+    aspectosJuego:
+      Array.isArray(cls.aspectosJuego) && cls.aspectosJuego.length > 0
+        ? cls.aspectosJuego
+        : cls.aspectoJuego
+          ? [cls.aspectoJuego]
+          : null,
     golpes: Array.isArray(cls.golpes) ? cls.golpes : null,
     objetivos: cls.objetivos,
     material: cls.material,

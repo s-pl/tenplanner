@@ -43,11 +43,27 @@ const createSchema = z.object({
     .or(z.literal("")),
   aspectosImportantes: z.string().trim().max(4000).optional().nullable(),
   nivel: z.string().trim().max(32).optional().nullable(),
+  niveles: z.array(z.string().trim().max(32)).optional().nullable(),
   aspectoJuego: z.string().trim().max(16).optional().nullable(),
+  aspectosJuego: z.array(z.string().trim().max(16)).optional().nullable(),
   golpes: z.array(z.string().max(32)).optional().nullable(),
   isLibrary: z.boolean().optional().default(false),
   blocks: z.array(blockSchema).max(3).default([]),
 });
+
+function normalizeMultiValue(
+  values: string[] | null | undefined,
+  legacyValue: string | null | undefined
+) {
+  const normalized = Array.from(
+    new Set(
+      (values ?? (legacyValue ? [legacyValue] : []))
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+  return normalized.length > 0 ? normalized : null;
+}
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -60,6 +76,7 @@ export async function GET(request: Request) {
   const tab = searchParams.get("tab") ?? "all";
   const q = searchParams.get("q")?.trim();
   const nivel = searchParams.get("nivel")?.trim();
+  const aspecto = searchParams.get("aspecto")?.trim();
 
   const conds = [];
   if (tab === "mine" && user) {
@@ -75,7 +92,22 @@ export async function GET(request: Request) {
     );
   }
   if (q) conds.push(ilike(classes.name, `%${q}%`));
-  if (nivel) conds.push(eq(classes.nivel, nivel));
+  if (nivel) {
+    conds.push(
+      or(
+        sql`${classes.niveles} @> ${JSON.stringify([nivel])}::jsonb`,
+        eq(classes.nivel, nivel)
+      )!
+    );
+  }
+  if (aspecto) {
+    conds.push(
+      or(
+        sql`${classes.aspectosJuego} @> ${JSON.stringify([aspecto])}::jsonb`,
+        eq(classes.aspectoJuego, aspecto)
+      )!
+    );
+  }
 
   const rows = await db
     .select({
@@ -85,7 +117,9 @@ export async function GET(request: Request) {
       alumnosTipo: classes.alumnosTipo,
       numAlumnos: classes.numAlumnos,
       nivel: classes.nivel,
+      niveles: classes.niveles,
       aspectoJuego: classes.aspectoJuego,
+      aspectosJuego: classes.aspectosJuego,
       isLibrary: classes.isLibrary,
       createdBy: classes.createdBy,
       createdAt: classes.createdAt,
@@ -121,6 +155,8 @@ export async function POST(request: Request) {
     );
 
   const d = parsed.data;
+  const niveles = normalizeMultiValue(d.niveles, d.nivel);
+  const aspectosJuego = normalizeMultiValue(d.aspectosJuego, d.aspectoJuego);
 
   // Verify exercises referenced belong to user or are library
   const exerciseIds = Array.from(
@@ -140,10 +176,7 @@ export async function POST(request: Request) {
             exerciseIds.map((id) => sql`${id}::uuid`),
             sql`, `
           )})`,
-          or(
-            eq(exercises.isGlobal, true),
-            eq(exercises.createdBy, user.id)
-          )!
+          or(eq(exercises.isGlobal, true), eq(exercises.createdBy, user.id))!
         )
       );
     if (accessible.length !== exerciseIds.length) {
@@ -168,8 +201,10 @@ export async function POST(request: Request) {
           material: d.material ?? null,
           videoUrl: d.videoUrl || null,
           aspectosImportantes: d.aspectosImportantes ?? null,
-          nivel: d.nivel ?? null,
-          aspectoJuego: d.aspectoJuego ?? null,
+          nivel: niveles?.[0] ?? null,
+          niveles,
+          aspectoJuego: aspectosJuego?.[0] ?? null,
+          aspectosJuego,
           golpes: d.golpes ?? null,
           isLibrary: d.isLibrary ?? false,
         })
