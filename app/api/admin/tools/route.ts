@@ -87,6 +87,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ deleted });
     }
 
+    if (action === "apply_taxonomy_v2") {
+      // Cambios de base de datos del informe 2 (Pelota, Carácter,
+      // Situación del juego). Solo añade: no borra ni modifica datos.
+      // Cada instrucción es idempotente, así que se puede pulsar varias veces.
+      const statements = [
+        `ALTER TYPE "tipo_pelota" ADD VALUE IF NOT EXISTS 'gomaespuma'`,
+        `ALTER TYPE "tipo_pelota" ADD VALUE IF NOT EXISTS 'roja'`,
+        `ALTER TYPE "tipo_pelota" ADD VALUE IF NOT EXISTS 'naranja'`,
+        `ALTER TYPE "tipo_pelota" ADD VALUE IF NOT EXISTS 'verde'`,
+        `ALTER TYPE "tipo_pelota" ADD VALUE IF NOT EXISTS 'amarilla'`,
+        `ALTER TABLE "exercises" ADD COLUMN IF NOT EXISTS "caracter" jsonb`,
+        `ALTER TABLE "exercises" ADD COLUMN IF NOT EXISTS "situacion_juego" jsonb`,
+      ];
+      for (const statement of statements) {
+        await db.execute(sql.raw(statement));
+      }
+
+      const columns = await db.execute<{ column_name: string }>(sql`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'exercises'
+          AND column_name IN ('caracter', 'situacion_juego')
+      `);
+      const pelotas = await db.execute<{ enumlabel: string }>(sql`
+        SELECT e.enumlabel FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'tipo_pelota'
+      `);
+      const columnNames = Array.from(columns).map((r) => r.column_name);
+      const pelotaValues = Array.from(pelotas).map((r) => r.enumlabel);
+      const ok =
+        columnNames.includes("caracter") &&
+        columnNames.includes("situacion_juego") &&
+        ["gomaespuma", "roja", "naranja", "verde", "amarilla"].every((v) =>
+          pelotaValues.includes(v)
+        );
+      if (!ok) {
+        return NextResponse.json(
+          { error: "La actualización no se completó. Inténtalo de nuevo." },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({
+        message: "Base de datos actualizada. Ya puedes publicar la parte 2.",
+      });
+    }
+
     if (action === "db_stats") {
       const [
         [usersCount],

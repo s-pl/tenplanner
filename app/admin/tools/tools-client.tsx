@@ -52,6 +52,7 @@ async function runAction(action: string, extra?: Record<string, unknown>) {
   const data = (await res.json()) as {
     deleted?: number;
     error?: string;
+    message?: string;
   } & Record<string, number>;
   if (!res.ok) throw new Error(data.error ?? "Error interno");
   return data;
@@ -175,7 +176,9 @@ export function AdminToolsClient({ stats: initialStats }: Props) {
     setConfirm(null);
     try {
       const data = await runAction(action, extra);
-      if ("deleted" in data) {
+      if (typeof data.message === "string") {
+        setResult(key, { status: "done", message: data.message });
+      } else if ("deleted" in data) {
         setResult(key, {
           status: "done",
           message: `${data.deleted} registros eliminados.`,
@@ -453,6 +456,34 @@ export function AdminToolsClient({ stats: initialStats }: Props) {
               </Button>
             )}
             <ResultBadge result={results["empty_chats"] ?? null} />
+          </div>
+        </ActionCard>
+
+        <ActionCard
+          icon={Database}
+          title="Actualizar base de datos (etiquetas)"
+          description="Añade los campos nuevos de ejercicios: pelotas Gomaespuma, Roja, Naranja, Verde y Amarilla, Carácter y Situación del juego."
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-foreground/50">
+              Solo añade campos nuevos: no borra ni cambia ningún dato. Se puede
+              pulsar más de una vez sin problema.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="self-start"
+              disabled={results["taxonomy_v2"]?.status === "running"}
+              onClick={() => execute("taxonomy_v2", "apply_taxonomy_v2")}
+            >
+              {results["taxonomy_v2"]?.status === "running" ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <Database data-icon="inline-start" />
+              )}
+              Actualizar base de datos
+            </Button>
+            <ResultBadge result={results["taxonomy_v2"] ?? null} />
           </div>
         </ActionCard>
 
