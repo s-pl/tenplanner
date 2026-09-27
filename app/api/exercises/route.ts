@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
     parametro: getAllParam(searchParams, "parametro"),
     tipologia: getAllParam(searchParams, "tipologia"),
     duracionRango: getAllParam(searchParams, "duracionRango"),
+    caracter: getAllParam(searchParams, "caracter"),
+    situacionJuego: getAllParam(searchParams, "situacionJuego"),
   });
 
   if (!parsedQuery.success) {
@@ -104,6 +106,8 @@ export async function GET(request: NextRequest) {
     parametro,
     tipologia,
     duracionRango,
+    caracter,
+    situacionJuego,
   } = parsedQuery.data;
   const activeTipoActividad = Array.from(
     new Set([...(tipoActividad ?? []), ...(tipologia ?? [])])
@@ -204,6 +208,17 @@ export async function GET(request: NextRequest) {
   if (duracionRango?.length) {
     whereConditions.push(inArray(exercises.duracionRango, duracionRango));
   }
+  if (caracter?.length) {
+    const caracterWhere = jsonbArrayHasAny(exercises.caracter, caracter);
+    if (caracterWhere) whereConditions.push(caracterWhere);
+  }
+  if (situacionJuego?.length) {
+    const situacionWhere = jsonbArrayHasAny(
+      exercises.situacionJuego,
+      situacionJuego
+    );
+    if (situacionWhere) whereConditions.push(situacionWhere);
+  }
 
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -240,6 +255,8 @@ export async function GET(request: NextRequest) {
         parametro: exercises.parametro,
         parametros: exercises.parametros,
         duracionRango: exercises.duracionRango,
+        caracter: exercises.caracter,
+        situacionJuego: exercises.situacionJuego,
         createdBy: exercises.createdBy,
         createdAt: exercises.createdAt,
         updatedAt: exercises.updatedAt,
@@ -421,6 +438,8 @@ export async function POST(request: Request) {
         tipologia: legacyTipologia,
         tiposActividad,
         duracionRango: rest.duracionRango ?? null,
+        caracter: normalizeMultiValue(rest.caracter),
+        situacionJuego: normalizeMultiValue(rest.situacionJuego),
         isGlobal: isAdmin && requestedIsGlobal === true,
         createdBy: user.id,
       })

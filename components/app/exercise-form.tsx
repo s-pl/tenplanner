@@ -52,8 +52,15 @@ import { MediaUploader } from "@/components/app/media-uploader";
 import {
   ASPECTO_JUEGO_LABELS,
   deriveDurationMinutesFromRange,
+  CARACTER,
+  isLegacyPelota,
   NIVEL_IDS,
   NIVELES,
+  PELOTAS,
+  pelotaLabel,
+  SITUACION_JUEGO,
+  TIPO_PELOTA_VALUES,
+  type TipoPelota,
   NUEVOS_TIPOS_ACTIVIDAD,
   TIPO_ACTIVIDAD_LABELS,
   TIPOS_EJERCICIO,
@@ -75,7 +82,6 @@ type LegacyTipoActividad =
   | "cognitivo"
   | "competitivo"
   | "ludico";
-type TipoPelota = "normal" | "lenta" | "rapida" | "sin_pelota";
 const FORM_MODE_STORAGE_KEY = "exercise-form-mode";
 
 const GOLPES_PRESET = [
@@ -208,10 +214,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
   numJugadores: z.coerce.number().int().min(1).max(6).optional().nullable(),
-  tipoPelota: z
-    .enum(["normal", "lenta", "rapida", "sin_pelota"])
-    .optional()
-    .nullable(),
+  tipoPelota: z.enum(TIPO_PELOTA_VALUES).optional().nullable(),
   tipoActividad: z.enum(NUEVOS_TIPOS_ACTIVIDAD).optional().nullable(),
   isGlobal: z.boolean().optional(),
 });
@@ -330,6 +333,8 @@ export interface ExerciseFormProps {
     tipoPelota?: TipoPelota | null;
     tipoActividad?: LegacyTipoActividad | TipoActividad | null;
     tiposActividad?: TipoActividad[] | null;
+    caracter?: string[] | null;
+    situacionJuego?: string[] | null;
     golpes?: string[] | null;
     efecto?: string[] | null;
     variantes?: string | null;
@@ -585,6 +590,12 @@ export function ExerciseForm({
   const [golpes, setGolpes] = useState<Set<string>>(
     new Set(initialData?.golpes ?? [])
   );
+  const [caracter, setCaracter] = useState<Set<string>>(
+    new Set(initialData?.caracter ?? [])
+  );
+  const [situacionJuego, setSituacionJuego] = useState<Set<string>>(
+    new Set(initialData?.situacionJuego ?? [])
+  );
   const [efecto, setEfecto] = useState<Set<string>>(
     new Set(initialData?.efecto ?? [])
   );
@@ -725,6 +736,8 @@ export function ExerciseForm({
         )
       );
       setGolpes(new Set(draft.payload.golpes));
+      setCaracter(new Set(draft.payload.caracter ?? []));
+      setSituacionJuego(new Set(draft.payload.situacionJuego ?? []));
       setEfecto(new Set(draft.payload.efecto));
       setImageSlots(
         draft.payload.images.length === 4
@@ -869,6 +882,8 @@ export function ExerciseForm({
     parametro: Array.from(parametros)[0] ?? null,
     parametros: Array.from(parametros),
     tiposActividad: Array.from(tiposActividad),
+    caracter: Array.from(caracter),
+    situacionJuego: Array.from(situacionJuego),
     duracionRango: watchedValues.duracionRango ?? null,
     isGlobal: watchedValues.isGlobal ?? false,
     steps,
@@ -1008,6 +1023,9 @@ export function ExerciseForm({
         selectedTiposActividad.length > 0 ? selectedTiposActividad : null,
       golpes: golpes.size > 0 ? Array.from(golpes) : null,
       efecto: efecto.size > 0 ? Array.from(efecto) : null,
+      caracter: caracter.size > 0 ? Array.from(caracter) : null,
+      situacionJuego:
+        situacionJuego.size > 0 ? Array.from(situacionJuego) : null,
       variantes: values.variantes?.trim() || null,
       imageUrls: normalizedImages.slice(1),
       steps: steps
@@ -1539,15 +1557,25 @@ export function ExerciseForm({
               name="tipoPelota"
               control={control}
               render={({ field }) => {
-                const TIPOS: { id: TipoPelota; label: string }[] = [
-                  { id: "normal", label: "Normal" },
-                  { id: "lenta", label: "Lenta" },
-                  { id: "rapida", label: "Rápida" },
-                  { id: "sin_pelota", label: "Sin pelota" },
+                const TIPOS: {
+                  id: TipoPelota;
+                  label: string;
+                  color?: string;
+                }[] = [
+                  ...PELOTAS,
+                  // Pelota antigua que ya tenía el ejercicio.
+                  ...(field.value && isLegacyPelota(field.value)
+                    ? [
+                        {
+                          id: field.value,
+                          label: `${pelotaLabel(field.value)} (antigua)`,
+                        },
+                      ]
+                    : []),
                 ];
                 return (
-                  <div className="grid grid-cols-2 gap-2">
-                    {TIPOS.map(({ id, label }) => {
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {TIPOS.map(({ id, label, color }) => {
                       const isSelected = field.value === id;
                       return (
                         <button
@@ -1557,12 +1585,19 @@ export function ExerciseForm({
                             field.onChange(field.value === id ? null : id)
                           }
                           className={cn(
-                            "rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-150",
+                            "inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-150",
                             isSelected
                               ? "bg-brand/10 border-brand text-brand"
                               : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                           )}
                         >
+                          {color && (
+                            <span
+                              aria-hidden
+                              className="size-2.5 shrink-0 rounded-full border border-black/10"
+                              style={{ backgroundColor: color }}
+                            />
+                          )}
                           {label}
                         </button>
                       );
@@ -1571,6 +1606,68 @@ export function ExerciseForm({
                 );
               }}
             />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Carácter{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional, puedes elegir varios)
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CARACTER.map(({ id, label }) => {
+                const isSelected = caracter.has(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleSetValue(setCaracter, caracter, id)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                      isSelected
+                        ? "bg-brand/10 border-brand text-brand"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-foreground">
+              Situación del juego{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional, puedes elegir varias)
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SITUACION_JUEGO.map(({ id, label }) => {
+                const isSelected = situacionJuego.has(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() =>
+                      toggleSetValue(setSituacionJuego, situacionJuego, id)
+                    }
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                      isSelected
+                        ? "bg-brand/10 border-brand text-brand"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

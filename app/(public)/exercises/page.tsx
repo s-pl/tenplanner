@@ -26,9 +26,16 @@ import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
+  CARACTER_VALUES,
+  caracterLabel,
   FASES,
   NIVELES,
   nivelLabel,
+  pelotaLabel,
+  SITUACION_JUEGO_VALUES,
+  situacionJuegoLabel,
+  TIPO_PELOTA_VALUES,
+  type TipoPelota,
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
 import {
@@ -175,7 +182,15 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const activeParametro = getStrings(params.parametro);
   const activeDuracionRango = getStrings(params.duracionRango);
   const activeNumJugadores = getNumbers(params.numJugadores);
-  const activeTipoPelota = getStrings(params.tipoPelota);
+  const activeTipoPelota = getStrings(params.tipoPelota).filter((v) =>
+    (TIPO_PELOTA_VALUES as readonly string[]).includes(v)
+  ) as TipoPelota[];
+  const activeCaracter = getStrings(params.caracter).filter((v) =>
+    (CARACTER_VALUES as readonly string[]).includes(v)
+  );
+  const activeSituacionJuego = getStrings(params.situacionJuego).filter((v) =>
+    (SITUACION_JUEGO_VALUES as readonly string[]).includes(v)
+  );
   const activeTipoActividad = uniqueStrings(
     getStrings(params.tipoActividad),
     getStrings(params.tipologia)
@@ -199,7 +214,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     activeGolpes.length > 0 ||
     activeEfecto.length > 0 ||
     activeLocation.length > 0 ||
-    activeFase.length > 0;
+    activeFase.length > 0 ||
+    activeCaracter.length > 0 ||
+    activeSituacionJuego.length > 0;
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
@@ -298,19 +315,26 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     if (activeFase.length > 0) {
       listConditions.push(inArray(exercisesTable.phase, activeFase));
     }
+    if (activeCaracter.length > 0) {
+      const caracterWhere = jsonbArrayHasAny(
+        exercisesTable.caracter,
+        activeCaracter
+      );
+      if (caracterWhere) listConditions.push(caracterWhere);
+    }
+    if (activeSituacionJuego.length > 0) {
+      const situacionWhere = jsonbArrayHasAny(
+        exercisesTable.situacionJuego,
+        activeSituacionJuego
+      );
+      if (situacionWhere) listConditions.push(situacionWhere);
+    }
     if (activeNumJugadores.length > 0)
       listConditions.push(
         inArray(exercisesTable.numJugadores, activeNumJugadores)
       );
     if (activeTipoPelota.length > 0)
-      listConditions.push(
-        inArray(
-          exercisesTable.tipoPelota,
-          activeTipoPelota as Array<
-            "normal" | "lenta" | "rapida" | "sin_pelota"
-          >
-        )
-      );
+      listConditions.push(inArray(exercisesTable.tipoPelota, activeTipoPelota));
     if (activeTipoActividad.length > 0) {
       const legacyTipologiaValues = activeTipoActividad.filter(
         (value) => value !== "cognitivo"
@@ -470,6 +494,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     efecto: activeEfecto.length > 0 ? activeEfecto : undefined,
     location: activeLocation.length > 0 ? activeLocation : undefined,
     fase: activeFase.length > 0 ? activeFase : undefined,
+    caracter: activeCaracter.length > 0 ? activeCaracter : undefined,
+    situacionJuego:
+      activeSituacionJuego.length > 0 ? activeSituacionJuego : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -496,6 +523,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       "efecto",
       "location",
       "fase",
+      "caracter",
+      "situacionJuego",
     ]) {
       const value = merged[key];
       const values = Array.isArray(value) ? value : value ? [value] : [];
@@ -815,6 +844,22 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           value={value}
                         />
                       ))}
+                      {activeCaracter.map((value) => (
+                        <input
+                          key={`caracter-${value}`}
+                          type="hidden"
+                          name="caracter"
+                          value={value}
+                        />
+                      ))}
+                      {activeSituacionJuego.map((value) => (
+                        <input
+                          key={`situacion-${value}`}
+                          type="hidden"
+                          name="situacionJuego"
+                          value={value}
+                        />
+                      ))}
                     </form>
                   </div>
 
@@ -892,6 +937,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       efecto: activeEfecto,
                       location: activeLocation,
                       fase: activeFase,
+                      caracter: activeCaracter,
+                      situacionJuego: activeSituacionJuego,
                     }}
                     preserved={{
                       nivel: activeNivel,
@@ -962,7 +1009,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`pelota-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Pelota: {value.replace("_", " ")}
+                          Pelota: {pelotaLabel(value)}
                         </span>
                       ))}
                       {activeTipoActividad.map((value) => (
@@ -1003,6 +1050,22 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
                           Fase: {FASES.find((f) => f.id === value)?.label}
+                        </span>
+                      ))}
+                      {activeCaracter.map((value) => (
+                        <span
+                          key={`caracter-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Carácter: {caracterLabel(value)}
+                        </span>
+                      ))}
+                      {activeSituacionJuego.map((value) => (
+                        <span
+                          key={`situacion-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Situación: {situacionJuegoLabel(value)}
                         </span>
                       ))}
                       <Link

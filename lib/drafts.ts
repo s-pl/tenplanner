@@ -27,6 +27,8 @@ export interface ExerciseDraftPayload {
   parametro?: string | null;
   parametros?: string[];
   tiposActividad?: string[];
+  caracter?: string[];
+  situacionJuego?: string[];
   duracionRango?: string | null;
   isGlobal?: boolean;
   steps: Array<{ id: string; title: string; description: string }>;
@@ -275,6 +277,8 @@ export function hasMeaningfulExerciseDraft(payload: ExerciseDraftPayload) {
     payload.parametro ||
     (payload.parametros?.length ?? 0) > 0 ||
     (payload.tiposActividad?.length ?? 0) > 0 ||
+    (payload.caracter?.length ?? 0) > 0 ||
+    (payload.situacionJuego?.length ?? 0) > 0 ||
     payload.duracionRango ||
     payload.isGlobal ||
     payload.steps.some(

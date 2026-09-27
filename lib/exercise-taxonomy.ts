@@ -168,3 +168,67 @@ export const FASES = [
   { id: "main", label: "Parte principal" },
   { id: "cooldown", label: "Vuelta a la calma" },
 ] as const;
+
+// Pelota: se ofrecen las de color; las antiguas se siguen aceptando.
+export const PELOTAS = [
+  { id: "gomaespuma", label: "Gomaespuma", color: "#F5E6C8" },
+  { id: "roja", label: "Roja", color: "#E53935" },
+  { id: "naranja", label: "Naranja", color: "#FB8C00" },
+  { id: "verde", label: "Verde", color: "#43A047" },
+  { id: "amarilla", label: "Amarilla", color: "#D4E157" },
+] as const;
+
+export const PELOTAS_LEGACY = [
+  { id: "normal", label: "Normal" },
+  { id: "lenta", label: "Lenta" },
+  { id: "rapida", label: "Rápida" },
+  { id: "sin_pelota", label: "Sin pelota" },
+] as const;
+
+export const TIPO_PELOTA_VALUES = [
+  ...PELOTAS.map((p) => p.id),
+  ...PELOTAS_LEGACY.map((p) => p.id),
+] as unknown as readonly [
+  (typeof PELOTAS)[number]["id"] | (typeof PELOTAS_LEGACY)[number]["id"],
+  ...((typeof PELOTAS)[number]["id"] | (typeof PELOTAS_LEGACY)[number]["id"])[],
+];
+
+export type TipoPelota = (typeof TIPO_PELOTA_VALUES)[number];
+
+export function pelotaLabel(id: string) {
+  return (
+    PELOTAS.find((p) => p.id === id)?.label ??
+    PELOTAS_LEGACY.find((p) => p.id === id)?.label ??
+    id
+  );
+}
+
+export function isLegacyPelota(id: string) {
+  return PELOTAS_LEGACY.some((p) => p.id === id);
+}
+
+// Carácter (varias opciones).
+export const CARACTER = [
+  { id: "cooperativo", label: "Cooperativo" },
+  { id: "competitivo", label: "Competitivo" },
+  { id: "reto", label: "Reto" },
+] as const;
+
+export const CARACTER_VALUES = ["cooperativo", "competitivo", "reto"] as const;
+
+// Situación del juego (varias opciones).
+export const SITUACION_JUEGO = [
+  { id: "defensa", label: "Defensa" },
+  { id: "ataque", label: "Ataque" },
+  { id: "neutra", label: "Neutra" },
+] as const;
+
+export const SITUACION_JUEGO_VALUES = ["defensa", "ataque", "neutra"] as const;
+
+export function caracterLabel(id: string) {
+  return CARACTER.find((c) => c.id === id)?.label ?? id;
+}
+
+export function situacionJuegoLabel(id: string) {
+  return SITUACION_JUEGO.find((c) => c.id === id)?.label ?? id;
+}
