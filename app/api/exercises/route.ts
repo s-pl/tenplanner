@@ -22,6 +22,7 @@ import { embedExercise } from "@/lib/ai/semantic-search";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
   deriveDurationMinutesFromRange,
+  legacyTipologiaFrom,
   normalizeMultiValue,
 } from "@/lib/exercise-taxonomy";
 import {
@@ -386,8 +387,7 @@ export async function POST(request: Request) {
     const legacyTipoActividad = tiposActividad?.includes("cognitivo")
       ? "cognitivo"
       : null;
-    const legacyTipologia =
-      tiposActividad?.find((value) => value !== "cognitivo") ?? null;
+    const legacyTipologia = legacyTipologiaFrom(tiposActividad);
 
     const [createdExercise] = await db
       .insert(exercises)

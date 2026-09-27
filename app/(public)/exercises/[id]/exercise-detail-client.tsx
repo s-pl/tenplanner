@@ -29,7 +29,10 @@ import Image from "next/image";
 import { ExerciseForm } from "@/components/app/exercise-form";
 import { ExerciseRating } from "@/components/app/exercise-rating";
 import { ExerciseListPicker } from "@/components/app/exercise-list-picker";
-import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
+import {
+  ASPECTO_JUEGO_LABELS,
+  TIPO_ACTIVIDAD_LABELS,
+} from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -166,6 +169,9 @@ const GOLPE_LABELS: Record<string, string> = {
   saque: "Saque",
   chiquita: "Chiquita",
   dejada: "Dejada",
+  volea: "Volea",
+  remate: "Remate",
+  resto: "Resto",
 };
 
 const EFECTO_LABELS: Record<string, string> = {
@@ -603,7 +609,9 @@ export function ExerciseDetailClient({
                   key={aspecto}
                   className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
                 >
-                  {aspecto.replace(/_/g, " ")}
+                  {ASPECTO_JUEGO_LABELS[
+                    aspecto as keyof typeof ASPECTO_JUEGO_LABELS
+                  ] ?? aspecto.replace(/_/g, " ")}
                 </span>
               ))}
               {parametros.map((parametro) => (

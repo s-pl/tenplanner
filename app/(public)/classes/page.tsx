@@ -42,8 +42,8 @@ const ASPECTO_FILTERS = [
   { id: "", label: "Cualquiera" },
   { id: "tecnica", label: "Técnica" },
   { id: "tactica", label: "Táctica" },
-  { id: "mental", label: "Trabajo mental" },
-  { id: "fisico", label: "Físico" },
+  { id: "mental", label: "Mental / cognitivo" },
+  { id: "fisico", label: "Físico / movilidad" },
 ];
 
 const GOLPES_FILTERS = [
