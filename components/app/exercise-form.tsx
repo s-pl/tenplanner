@@ -52,6 +52,8 @@ import { MediaUploader } from "@/components/app/media-uploader";
 import {
   ASPECTO_JUEGO_LABELS,
   deriveDurationMinutesFromRange,
+  NIVEL_IDS,
+  NIVELES,
   NUEVOS_TIPOS_ACTIVIDAD,
   TIPO_ACTIVIDAD_LABELS,
   TIPOS_EJERCICIO,
@@ -87,20 +89,12 @@ const GOLPES_PRESET = [
   { id: "resto", label: "Resto" },
 ] as const;
 
-const NIVELES_PMV = [
-  { id: "descubrimiento", label: "Descubrimiento", desc: "4-6 años" },
-  { id: "desarrollo", label: "Desarrollo", desc: "6-8 años" },
-  { id: "consolidacion", label: "Consolidación", desc: "8-10 años" },
-  { id: "especializacion", label: "Especialización", desc: "10-12 años" },
-  { id: "precompeticion", label: "Precompetición", desc: "12-14 años" },
-  { id: "competicion", label: "Competición", desc: "14-18 años" },
-  { id: "adultos_iniciacion", label: "Adultos iniciación", desc: "Empiezan" },
-  {
-    id: "adultos_medio_alto",
-    label: "Adultos medio-alto",
-    desc: "Con base técnica",
-  },
-] as const;
+const NIVELES_PMV = NIVELES.map((n) => ({
+  id: n.id,
+  label: n.label,
+  desc: n.edad,
+  color: n.color,
+}));
 
 const ASPECTOS_JUEGO = [
   { id: "tecnica", label: "Técnica" },
@@ -154,7 +148,6 @@ const EFECTO_PRESET = [
   { id: "liftado", label: "Liftado" },
   { id: "cortado", label: "Cortado" },
   { id: "plano", label: "Plano" },
-  { id: "sin_efecto", label: "Sin efecto" },
 ] as const;
 
 interface Step {
@@ -186,19 +179,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
   location: z.enum(["pista", "pared", "playa", "casa"]).optional().nullable(),
-  nivel: z
-    .enum([
-      "descubrimiento",
-      "desarrollo",
-      "consolidacion",
-      "especializacion",
-      "precompeticion",
-      "competicion",
-      "adultos_iniciacion",
-      "adultos_medio_alto",
-    ])
-    .optional()
-    .nullable(),
+  nivel: z.enum(NIVEL_IDS).optional().nullable(),
   aspectoJuegoPmv: z
     .enum(["tecnica", "tactica", "mental", "fisico"])
     .optional()
@@ -297,6 +278,7 @@ const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
   especializacion: "intermediate",
   precompeticion: "advanced",
   competicion: "advanced",
+  rendimiento: "advanced",
   adultos_iniciacion: "beginner",
   adultos_medio_alto: "advanced",
 };
@@ -1106,7 +1088,7 @@ export function ExerciseForm({
         Nivel
       </label>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {NIVELES_PMV.map(({ id, label, desc }) => {
+        {NIVELES_PMV.map(({ id, label, desc, color }) => {
           const isSelected = niveles.has(id);
           return (
             <button
@@ -1120,7 +1102,14 @@ export function ExerciseForm({
                   : "border-border hover:bg-muted"
               )}
             >
-              <span className="text-sm font-semibold">{label}</span>
+              <span className="flex items-center gap-1.5 text-sm font-semibold">
+                <span
+                  aria-hidden
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+                {label}
+              </span>
               <span className="text-xs text-muted-foreground">{desc}</span>
             </button>
           );
@@ -1319,7 +1308,7 @@ export function ExerciseForm({
           <>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-foreground">
-                Fase del entrenamiento{" "}
+                Fase de la sesión{" "}
                 <span className="font-normal text-muted-foreground">
                   (opcional)
                 </span>
@@ -1330,8 +1319,8 @@ export function ExerciseForm({
                 render={({ field }) => {
                   const PHASES: { id: Phase | null; label: string }[] = [
                     { id: null, label: "Sin asignar" },
-                    { id: "activation", label: "Activación" },
-                    { id: "main", label: "Principal" },
+                    { id: "activation", label: "Calentamiento" },
+                    { id: "main", label: "Parte principal" },
                     { id: "cooldown", label: "Vuelta a la calma" },
                   ];
                   return (

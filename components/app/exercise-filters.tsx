@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import {
   ASPECTO_JUEGO_LABELS,
+  FASES,
   NUEVOS_TIPOS_ACTIVIDAD,
   tipoEjercicioOptionLabel,
 } from "@/lib/exercise-taxonomy";
@@ -15,17 +16,6 @@ const FORMATOS = [
   { id: "parejas", label: "Parejas" },
   { id: "grupal", label: "Grupal" },
   { id: "multigrupo", label: "Multigrupo" },
-] as const;
-
-const NIVELES = [
-  { id: "descubrimiento", label: "Descubrimiento" },
-  { id: "desarrollo", label: "Desarrollo" },
-  { id: "consolidacion", label: "Consolidación" },
-  { id: "especializacion", label: "Especialización" },
-  { id: "precompeticion", label: "Precompetición" },
-  { id: "competicion", label: "Competición" },
-  { id: "adultos_iniciacion", label: "Adultos iniciación" },
-  { id: "adultos_medio_alto", label: "Adultos medio-alto" },
 ] as const;
 
 const ASPECTOS = [
@@ -80,7 +70,6 @@ const EFECTOS = [
   { id: "liftado", label: "Liftado" },
   { id: "cortado", label: "Cortado" },
   { id: "plano", label: "Plano" },
-  { id: "sin_efecto", label: "Sin efecto" },
 ] as const;
 
 const UBICACIONES = [
@@ -103,8 +92,11 @@ export interface ExerciseFiltersProps {
     golpes: string[];
     efecto: string[];
     location: string[];
+    fase: string[];
   };
   preserved: {
+    // El nivel se elige en la primera pantalla; aquí solo se conserva.
+    nivel?: string[];
     q?: string;
     tab?: string;
     category?: string;
@@ -191,7 +183,7 @@ export function ExerciseFilters({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [formato, setFormato] = useState(new Set(currentFilters.formato));
-  const [nivel, setNivel] = useState(new Set(currentFilters.nivel));
+  const [fase, setFase] = useState(new Set(currentFilters.fase));
   const [aspectoJuego, setAspectoJuego] = useState(
     new Set(currentFilters.aspectoJuego)
   );
@@ -214,7 +206,7 @@ export function ExerciseFilters({
 
   const activeCount =
     formato.size +
-    nivel.size +
+    fase.size +
     aspectoJuego.size +
     parametro.size +
     duracionRango.size +
@@ -236,7 +228,8 @@ export function ExerciseFilters({
       p.set("difficulty", preserved.difficulty);
     }
     appendAll(p, "formato", formato);
-    appendAll(p, "nivel", nivel);
+    appendAll(p, "nivel", preserved.nivel ?? []);
+    appendAll(p, "fase", fase);
     appendAll(p, "aspectoJuego", aspectoJuego);
     appendAll(p, "parametro", parametro);
     appendAll(p, "duracionRango", duracionRango);
@@ -257,7 +250,7 @@ export function ExerciseFilters({
 
   function clearFilters() {
     setFormato(new Set<string>());
-    setNivel(new Set<string>());
+    setFase(new Set<string>());
     setAspectoJuego(new Set<string>());
     setParametro(new Set<string>());
     setDuracionRango(new Set<string>());
@@ -277,6 +270,7 @@ export function ExerciseFilters({
     if (preserved.difficulty && preserved.difficulty !== "all") {
       p.set("difficulty", preserved.difficulty);
     }
+    appendAll(p, "nivel", preserved.nivel ?? []);
     router.push(`/exercises${p.toString() ? `?${p}` : ""}`);
   }
 
@@ -309,12 +303,12 @@ export function ExerciseFilters({
       {open && (
         <div className="mt-3 space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FilterGroup label="Nivel">
-              {NIVELES.map(({ id, label }) => (
+            <FilterGroup label="Fase de la sesión">
+              {FASES.map(({ id, label }) => (
                 <ChipButton
                   key={id}
-                  active={nivel.has(id)}
-                  onClick={() => toggleString(nivel, setNivel, id)}
+                  active={fase.has(id)}
+                  onClick={() => toggleString(fase, setFase, id)}
                 >
                   {label}
                 </ChipButton>
