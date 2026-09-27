@@ -3,7 +3,11 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
-import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
+import {
+  ASPECTO_JUEGO_LABELS,
+  NUEVOS_TIPOS_ACTIVIDAD,
+  tipoEjercicioOptionLabel,
+} from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
 
 const FORMATOS = [
@@ -27,8 +31,8 @@ const NIVELES = [
 const ASPECTOS = [
   { id: "tecnica", label: "Técnica" },
   { id: "tactica", label: "Táctica" },
-  { id: "mental", label: "Mental" },
-  { id: "fisico", label: "Físico" },
+  { id: "mental", label: ASPECTO_JUEGO_LABELS.mental },
+  { id: "fisico", label: ASPECTO_JUEGO_LABELS.fisico },
 ] as const;
 
 const PARAMETROS = [
@@ -36,6 +40,7 @@ const PARAMETROS = [
   { id: "profundidad", label: "Profundidad" },
   { id: "velocidad", label: "Velocidad" },
   { id: "direccion", label: "Dirección" },
+  { id: "efecto", label: "Efecto" },
 ] as const;
 
 const DURACION_RANGOS = [
@@ -46,12 +51,12 @@ const DURACION_RANGOS = [
   { id: "+20", label: "+20 min" },
 ] as const;
 
-const TIPOS_ACTIVIDAD = [
-  { id: "juego", label: TIPO_ACTIVIDAD_LABELS.juego },
-  { id: "reto", label: TIPO_ACTIVIDAD_LABELS.reto },
-  { id: "cognitivo", label: TIPO_ACTIVIDAD_LABELS.cognitivo },
-  { id: "otros_deportes", label: TIPO_ACTIVIDAD_LABELS.otros_deportes },
-] as const;
+// Incluye los tipos antiguos (marcados "antiguo") para poder encontrar los
+// ejercicios que aún no se han re-etiquetado.
+const TIPOS_ACTIVIDAD = NUEVOS_TIPOS_ACTIVIDAD.map((id) => ({
+  id,
+  label: tipoEjercicioOptionLabel(id),
+}));
 
 const TIPOS_PELOTA = [
   { id: "normal", label: "Normal" },
@@ -68,6 +73,7 @@ const GOLPES = [
   { id: "remate", label: "Remate" },
   { id: "globo", label: "Globo" },
   { id: "dejada", label: "Dejada" },
+  { id: "resto", label: "Resto" },
 ] as const;
 
 const EFECTOS = [
@@ -343,7 +349,7 @@ export function ExerciseFilters({
               ))}
             </FilterGroup>
 
-            <FilterGroup label="Tipo de actividad">
+            <FilterGroup label="Tipo de ejercicio">
               {TIPOS_ACTIVIDAD.map(({ id, label }) => (
                 <ChipButton
                   key={id}

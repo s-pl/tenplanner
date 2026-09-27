@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { embedExercise } from "@/lib/ai/semantic-search";
 import {
   deriveDurationMinutesFromRange,
+  legacyTipologiaFrom,
   normalizeMultiValue,
 } from "@/lib/exercise-taxonomy";
 import {
@@ -281,8 +282,7 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       updateValues.tipoActividad = tiposActividad?.includes("cognitivo")
         ? "cognitivo"
         : null;
-      updateValues.tipologia =
-        tiposActividad?.find((value) => value !== "cognitivo") ?? null;
+      updateValues.tipologia = legacyTipologiaFrom(tiposActividad);
     }
 
     if (isAdmin && d.isGlobal !== undefined) {

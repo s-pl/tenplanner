@@ -50,6 +50,7 @@ export const GOLPES_VALUES = [
   "remate",
   "dejada",
   "globo",
+  "resto",
   // Legacy values still accepted for backwards compatibility:
   "smash",
   "bandeja",
@@ -83,6 +84,7 @@ export const PARAMETRO_VALUES = [
   "profundidad",
   "velocidad",
   "direccion",
+  "efecto",
 ] as const;
 
 export const TIPOLOGIA_VALUES = ["juego", "reto", "otros_deportes"] as const;

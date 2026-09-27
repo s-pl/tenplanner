@@ -50,8 +50,13 @@ import {
 import { cn } from "@/lib/utils";
 import { MediaUploader } from "@/components/app/media-uploader";
 import {
+  ASPECTO_JUEGO_LABELS,
   deriveDurationMinutesFromRange,
+  NUEVOS_TIPOS_ACTIVIDAD,
   TIPO_ACTIVIDAD_LABELS,
+  TIPOS_EJERCICIO,
+  tipoEjercicioOptionLabel,
+  type TipoEjercicio,
 } from "@/lib/exercise-taxonomy";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -61,7 +66,7 @@ type Phase = "activation" | "main" | "cooldown";
 type ExerciseFormMode = "quick" | "full";
 type AccordionSectionId = "essential" | "pedagogical" | "params" | "media";
 type Formato = "individual" | "parejas" | "grupal" | "multigrupo";
-type TipoActividad = "juego" | "reto" | "cognitivo" | "otros_deportes";
+type TipoActividad = TipoEjercicio;
 type LegacyTipoActividad =
   | "tecnico_tactico"
   | "fisico"
@@ -79,6 +84,7 @@ const GOLPES_PRESET = [
   { id: "remate", label: "Remate" },
   { id: "dejada", label: "Dejada" },
   { id: "globo", label: "Globo" },
+  { id: "resto", label: "Resto" },
 ] as const;
 
 const NIVELES_PMV = [
@@ -99,8 +105,8 @@ const NIVELES_PMV = [
 const ASPECTOS_JUEGO = [
   { id: "tecnica", label: "Técnica" },
   { id: "tactica", label: "Táctica" },
-  { id: "mental", label: "Trabajo mental" },
-  { id: "fisico", label: "Físico" },
+  { id: "mental", label: ASPECTO_JUEGO_LABELS.mental },
+  { id: "fisico", label: ASPECTO_JUEGO_LABELS.fisico },
 ] as const;
 
 const PARAMETROS = [
@@ -108,14 +114,13 @@ const PARAMETROS = [
   { id: "profundidad", label: "Profundidad" },
   { id: "velocidad", label: "Velocidad" },
   { id: "direccion", label: "Dirección" },
+  { id: "efecto", label: "Efecto" },
 ] as const;
 
-const TIPOS_ACTIVIDAD = [
-  { id: "juego", label: "Juego" },
-  { id: "reto", label: "Reto" },
-  { id: "cognitivo", label: TIPO_ACTIVIDAD_LABELS.cognitivo },
-  { id: "otros_deportes", label: "Otros deportes" },
-] as const;
+const TIPOS_ACTIVIDAD = TIPOS_EJERCICIO.map((id) => ({
+  id,
+  label: TIPO_ACTIVIDAD_LABELS[id],
+}));
 
 const DURACION_RANGOS = [
   { id: "1-5", label: "1-5 min" },
@@ -199,7 +204,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
   parametro: z
-    .enum(["altura", "profundidad", "velocidad", "direccion"])
+    .enum(["altura", "profundidad", "velocidad", "direccion", "efecto"])
     .optional()
     .nullable(),
   tipologia: z.enum(["juego", "reto", "otros_deportes"]).optional().nullable(),
@@ -226,10 +231,7 @@ const formSchema = z.object({
     .enum(["normal", "lenta", "rapida", "sin_pelota"])
     .optional()
     .nullable(),
-  tipoActividad: z
-    .enum(["juego", "reto", "cognitivo", "otros_deportes"])
-    .optional()
-    .nullable(),
+  tipoActividad: z.enum(NUEVOS_TIPOS_ACTIVIDAD).optional().nullable(),
   isGlobal: z.boolean().optional(),
 });
 
@@ -267,7 +269,7 @@ const CATEGORIES: {
   },
   {
     id: "mental",
-    label: "Trabajo mental",
+    label: ASPECTO_JUEGO_LABELS.mental,
     icon: Brain,
     color: "text-brand",
     activeBg: "bg-brand/15",
@@ -277,7 +279,7 @@ const CATEGORIES: {
   },
   {
     id: "fisico",
-    label: "Físico",
+    label: ASPECTO_JUEGO_LABELS.fisico,
     icon: Dumbbell,
     color: "text-amber-400",
     activeBg: "bg-amber-400/15",
@@ -1496,13 +1498,25 @@ export function ExerciseForm({
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Tipo de actividad{" "}
+              Tipo de ejercicio{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                (opcional, puedes elegir varios)
               </span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {TIPOS_ACTIVIDAD.map(({ id, label }) => {
+              {[
+                ...TIPOS_ACTIVIDAD,
+                // Etiquetas antiguas que ya tenía el ejercicio: se muestran
+                // para poder quitarlas al re-etiquetar.
+                ...Array.from(tiposActividad)
+                  .filter(
+                    (id) => !(TIPOS_EJERCICIO as readonly string[]).includes(id)
+                  )
+                  .map((id) => ({
+                    id,
+                    label: tipoEjercicioOptionLabel(id),
+                  })),
+              ].map(({ id, label }) => {
                 const isSelected = tiposActividad.has(id);
                 return (
                   <button
