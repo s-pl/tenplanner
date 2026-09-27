@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedImageUrl, isPublicHttpUrl } from "@/lib/url-safety";
-import { NUEVOS_TIPOS_ACTIVIDAD } from "@/lib/exercise-taxonomy";
+import {
+  CARACTER_VALUES,
+  NUEVOS_TIPOS_ACTIVIDAD,
+  SITUACION_JUEGO_VALUES,
+  TIPO_PELOTA_VALUES,
+} from "@/lib/exercise-taxonomy";
 
 export const exerciseCategorySchema = z.enum([
   "technique",
@@ -35,12 +40,9 @@ export const tipoActividadSchema = z.enum([
 
 export const nuevoTipoActividadSchema = z.enum(NUEVOS_TIPOS_ACTIVIDAD);
 
-export const tipoPelotaSchema = z.enum([
-  "normal",
-  "lenta",
-  "rapida",
-  "sin_pelota",
-]);
+export const tipoPelotaSchema = z.enum(TIPO_PELOTA_VALUES);
+export const caracterSchema = z.enum(CARACTER_VALUES);
+export const situacionJuegoSchema = z.enum(SITUACION_JUEGO_VALUES);
 
 export const GOLPES_VALUES = [
   "derecha",
@@ -138,7 +140,11 @@ function repeated<T extends z.ZodTypeAny>(schema: T) {
 const multiNivelSchema = z.array(nivelPmvSchema).max(12);
 const multiAspectoJuegoSchema = z.array(aspectoJuegoSchema).max(8);
 const multiParametroSchema = z.array(parametroSchema).max(8);
-const multiTipoActividadSchema = z.array(nuevoTipoActividadValueSchema).max(8);
+const multiTipoActividadSchema = z
+  .array(nuevoTipoActividadValueSchema)
+  .max(NUEVOS_TIPOS_ACTIVIDAD.length);
+const multiCaracterSchema = z.array(caracterSchema).max(3);
+const multiSituacionJuegoSchema = z.array(situacionJuegoSchema).max(3);
 
 const nameSchema = z
   .string()
@@ -208,6 +214,8 @@ export const exercisesListQuerySchema = z.object({
   parametro: repeated(parametroSchema),
   tipologia: repeated(tipologiaSchema),
   duracionRango: repeated(duracionRangoSchema),
+  caracter: repeated(caracterSchema),
+  situacionJuego: repeated(situacionJuegoSchema),
 });
 
 export const createExerciseSchema = z.object({
@@ -253,6 +261,8 @@ export const createExerciseSchema = z.object({
   aspectosJuego: multiAspectoJuegoSchema.optional().nullable(),
   parametros: multiParametroSchema.optional().nullable(),
   tiposActividad: multiTipoActividadSchema.optional().nullable(),
+  caracter: multiCaracterSchema.optional().nullable(),
+  situacionJuego: multiSituacionJuegoSchema.optional().nullable(),
   steps: z
     .array(
       z.object({

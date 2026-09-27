@@ -75,6 +75,8 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         parametros: exercises.parametros,
         tipologia: exercises.tipologia,
         duracionRango: exercises.duracionRango,
+        caracter: exercises.caracter,
+        situacionJuego: exercises.situacionJuego,
         phase: exercises.phase,
         intensity: exercises.intensity,
         createdAt: exercises.createdAt,
@@ -226,6 +228,13 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       if (d[field] !== undefined) {
         updateValues[field] = d[field];
       }
+    }
+
+    if (d.caracter !== undefined) {
+      updateValues.caracter = normalizeMultiValue(d.caracter);
+    }
+    if (d.situacionJuego !== undefined) {
+      updateValues.situacionJuego = normalizeMultiValue(d.situacionJuego);
     }
 
     if (d.durationMinutes !== undefined && d.durationMinutes !== null) {

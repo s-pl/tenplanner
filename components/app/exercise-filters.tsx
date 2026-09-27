@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import {
   ASPECTO_JUEGO_LABELS,
+  CARACTER,
   FASES,
   NUEVOS_TIPOS_ACTIVIDAD,
+  PELOTAS,
+  PELOTAS_LEGACY,
+  SITUACION_JUEGO,
   tipoEjercicioOptionLabel,
 } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
@@ -48,12 +52,12 @@ const TIPOS_ACTIVIDAD = NUEVOS_TIPOS_ACTIVIDAD.map((id) => ({
   label: tipoEjercicioOptionLabel(id),
 }));
 
-const TIPOS_PELOTA = [
-  { id: "normal", label: "Normal" },
-  { id: "lenta", label: "Lenta" },
-  { id: "rapida", label: "Rápida" },
-  { id: "sin_pelota", label: "Sin pelota" },
-] as const;
+// Incluye las pelotas antiguas (marcadas) para encontrar los ejercicios
+// que aún no se han re-etiquetado.
+const TIPOS_PELOTA: { id: string; label: string; color?: string }[] = [
+  ...PELOTAS,
+  ...PELOTAS_LEGACY.map((p) => ({ id: p.id, label: `${p.label} (antigua)` })),
+];
 
 const GOLPES = [
   { id: "derecha", label: "Derecha" },
@@ -93,6 +97,8 @@ export interface ExerciseFiltersProps {
     efecto: string[];
     location: string[];
     fase: string[];
+    caracter: string[];
+    situacionJuego: string[];
   };
   preserved: {
     // El nivel se elige en la primera pantalla; aquí solo se conserva.
@@ -184,6 +190,10 @@ export function ExerciseFilters({
   const [open, setOpen] = useState(false);
   const [formato, setFormato] = useState(new Set(currentFilters.formato));
   const [fase, setFase] = useState(new Set(currentFilters.fase));
+  const [caracter, setCaracter] = useState(new Set(currentFilters.caracter));
+  const [situacionJuego, setSituacionJuego] = useState(
+    new Set(currentFilters.situacionJuego)
+  );
   const [aspectoJuego, setAspectoJuego] = useState(
     new Set(currentFilters.aspectoJuego)
   );
@@ -207,6 +217,8 @@ export function ExerciseFilters({
   const activeCount =
     formato.size +
     fase.size +
+    caracter.size +
+    situacionJuego.size +
     aspectoJuego.size +
     parametro.size +
     duracionRango.size +
@@ -230,6 +242,8 @@ export function ExerciseFilters({
     appendAll(p, "formato", formato);
     appendAll(p, "nivel", preserved.nivel ?? []);
     appendAll(p, "fase", fase);
+    appendAll(p, "caracter", caracter);
+    appendAll(p, "situacionJuego", situacionJuego);
     appendAll(p, "aspectoJuego", aspectoJuego);
     appendAll(p, "parametro", parametro);
     appendAll(p, "duracionRango", duracionRango);
@@ -251,6 +265,8 @@ export function ExerciseFilters({
   function clearFilters() {
     setFormato(new Set<string>());
     setFase(new Set<string>());
+    setCaracter(new Set<string>());
+    setSituacionJuego(new Set<string>());
     setAspectoJuego(new Set<string>());
     setParametro(new Set<string>());
     setDuracionRango(new Set<string>());
@@ -357,6 +373,32 @@ export function ExerciseFilters({
               ))}
             </FilterGroup>
 
+            <FilterGroup label="Carácter">
+              {CARACTER.map(({ id, label }) => (
+                <ChipButton
+                  key={id}
+                  active={caracter.has(id)}
+                  onClick={() => toggleString(caracter, setCaracter, id)}
+                >
+                  {label}
+                </ChipButton>
+              ))}
+            </FilterGroup>
+
+            <FilterGroup label="Situación del juego">
+              {SITUACION_JUEGO.map(({ id, label }) => (
+                <ChipButton
+                  key={id}
+                  active={situacionJuego.has(id)}
+                  onClick={() =>
+                    toggleString(situacionJuego, setSituacionJuego, id)
+                  }
+                >
+                  {label}
+                </ChipButton>
+              ))}
+            </FilterGroup>
+
             <FilterGroup label="Rango de duración">
               {DURACION_RANGOS.map(({ id, label }) => (
                 <ChipButton
@@ -406,13 +448,22 @@ export function ExerciseFilters({
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <FilterGroup label="Pelota">
-              {TIPOS_PELOTA.map(({ id, label }) => (
+              {TIPOS_PELOTA.map(({ id, label, color }) => (
                 <ChipButton
                   key={id}
                   active={tipoPelota.has(id)}
                   onClick={() => toggleString(tipoPelota, setTipoPelota, id)}
                 >
-                  {label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {color && (
+                      <span
+                        aria-hidden
+                        className="size-2 shrink-0 rounded-full border border-black/10"
+                        style={{ backgroundColor: color }}
+                      />
+                    )}
+                    {label}
+                  </span>
                 </ChipButton>
               ))}
             </FilterGroup>

@@ -31,7 +31,11 @@ import { ExerciseRating } from "@/components/app/exercise-rating";
 import { ExerciseListPicker } from "@/components/app/exercise-list-picker";
 import {
   ASPECTO_JUEGO_LABELS,
+  caracterLabel,
   nivelLabel,
+  pelotaLabel,
+  situacionJuegoLabel,
+  type TipoPelota,
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
@@ -47,7 +51,6 @@ type TipoActividad =
   | "cognitivo"
   | "competitivo"
   | "ludico";
-type TipoPelota = "normal" | "lenta" | "rapida" | "sin_pelota";
 
 export interface ExerciseData {
   id: string;
@@ -70,6 +73,8 @@ export interface ExerciseData {
   tipoPelota: TipoPelota | null;
   tipoActividad: TipoActividad | null;
   tiposActividad: string[] | null;
+  caracter: string[] | null;
+  situacionJuego: string[] | null;
   golpes: string[] | null;
   efecto: string[] | null;
   nivel: string | null;
@@ -142,13 +147,6 @@ const LEGACY_TIPO_ACTIVIDAD_LABELS: Record<TipoActividad, string> = {
   cognitivo: "Cognitivo",
   competitivo: "Competitivo",
   ludico: "Lúdico",
-};
-
-const TIPO_PELOTA_LABELS: Record<TipoPelota, string> = {
-  normal: "Normal",
-  lenta: "Lenta",
-  rapida: "Rápida",
-  sin_pelota: "Sin pelota",
 };
 
 const GOLPE_LABELS: Record<string, string> = {
@@ -305,6 +303,8 @@ export function ExerciseDetailClient({
               tipoPelota: exercise.tipoPelota,
               tipoActividad: exercise.tipoActividad,
               tiposActividad: exercise.tiposActividad as never,
+              caracter: exercise.caracter,
+              situacionJuego: exercise.situacionJuego,
               golpes: exercise.golpes,
               efecto: exercise.efecto,
               nivel: exercise.nivel as never,
@@ -361,6 +361,8 @@ export function ExerciseDetailClient({
     aspectosJuego.length > 0 ||
     parametros.length > 0 ||
     tiposActividad.length > 0 ||
+    (exercise.caracter?.length ?? 0) > 0 ||
+    (exercise.situacionJuego?.length ?? 0) > 0 ||
     exercise.duracionRango ||
     (exercise.golpes && exercise.golpes.length > 0) ||
     (exercise.efecto && exercise.efecto.length > 0);
@@ -619,9 +621,25 @@ export function ExerciseDetailClient({
               )}
               {exercise.tipoPelota && (
                 <span className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10">
-                  🎾 {TIPO_PELOTA_LABELS[exercise.tipoPelota]}
+                  🎾 {pelotaLabel(exercise.tipoPelota)}
                 </span>
               )}
+              {exercise.caracter?.map((c) => (
+                <span
+                  key={`caracter-${c}`}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  {caracterLabel(c)}
+                </span>
+              ))}
+              {exercise.situacionJuego?.map((sj) => (
+                <span
+                  key={`situacion-${sj}`}
+                  className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
+                >
+                  Situación: {situacionJuegoLabel(sj)}
+                </span>
+              ))}
               {exercise.golpes &&
                 exercise.golpes.map((g) => (
                   <span

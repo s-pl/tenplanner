@@ -116,13 +116,7 @@ export default async function ExercisePage({ params }: PageProps) {
             | "multigrupo"
             | null) ?? null,
         numJugadores: exercise.numJugadores ?? null,
-        tipoPelota:
-          (exercise.tipoPelota as
-            | "normal"
-            | "lenta"
-            | "rapida"
-            | "sin_pelota"
-            | null) ?? null,
+        tipoPelota: exercise.tipoPelota ?? null,
         tipoActividad:
           (exercise.tipoActividad as
             | "tecnico_tactico"
@@ -132,6 +126,8 @@ export default async function ExercisePage({ params }: PageProps) {
             | "ludico"
             | null) ?? null,
         tiposActividad: (exercise.tiposActividad as string[] | null) ?? null,
+        caracter: (exercise.caracter as string[] | null) ?? null,
+        situacionJuego: (exercise.situacionJuego as string[] | null) ?? null,
         golpes: (exercise.golpes as string[] | null) ?? null,
         efecto: (exercise.efecto as string[] | null) ?? null,
         nivel: exercise.nivel ?? null,

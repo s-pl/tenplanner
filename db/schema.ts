@@ -63,6 +63,11 @@ export const tipoPelotaEnum = pgEnum("tipo_pelota", [
   "lenta",
   "rapida",
   "sin_pelota",
+  "gomaespuma",
+  "roja",
+  "naranja",
+  "verde",
+  "amarilla",
 ]);
 
 export const aiEmbeddingSourceEnum = pgEnum("ai_embedding_source", [
@@ -129,6 +134,8 @@ export const exercises = pgTable(
     aspectosJuego: jsonb("aspectos_juego").$type<string[]>(),
     parametros: jsonb("parametros").$type<string[]>(),
     tiposActividad: jsonb("tipos_actividad").$type<string[]>(),
+    caracter: jsonb("caracter").$type<string[]>(),
+    situacionJuego: jsonb("situacion_juego").$type<string[]>(),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {

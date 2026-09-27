@@ -204,6 +204,13 @@
       "when": 1779200000000,
       "tag": "0028_classes_multi_taxonomy",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790500000000,
+      "tag": "0029_exercise_caracter_situacion_pelota",
+      "breakpoints": true
     }
   ]
 }
