@@ -25,7 +25,12 @@ import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { TIPO_ACTIVIDAD_LABELS } from "@/lib/exercise-taxonomy";
+import {
+  FASES,
+  NIVELES,
+  nivelLabel,
+  TIPO_ACTIVIDAD_LABELS,
+} from "@/lib/exercise-taxonomy";
 import {
   Plus,
   ArrowLeft,
@@ -56,18 +61,6 @@ const CATEGORY_CODE: Record<Category, string> = {
   tactics: "TÁC",
   fitness: "FÍS",
   "warm-up": "CAL",
-};
-
-const DIFFICULTY_LABEL: Record<Difficulty, string> = {
-  beginner: "Iniciación",
-  intermediate: "Intermedio",
-  advanced: "Avanzado",
-};
-
-const DIFFICULTY_BARS: Record<Difficulty, number> = {
-  beginner: 2,
-  intermediate: 3,
-  advanced: 5,
 };
 
 const CATEGORIES = [
@@ -190,6 +183,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const activeGolpes = getStrings(params.golpe);
   const activeEfecto = getStrings(params.efecto);
   const activeLocation = getStrings(params.location);
+  const activeFase = getStrings(params.fase).filter((v) =>
+    FASES.some((f) => f.id === v)
+  ) as Array<(typeof FASES)[number]["id"]>;
 
   const advancedActive =
     activeFormato.length > 0 ||
@@ -202,7 +198,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     activeTipoActividad.length > 0 ||
     activeGolpes.length > 0 ||
     activeEfecto.length > 0 ||
-    activeLocation.length > 0;
+    activeLocation.length > 0 ||
+    activeFase.length > 0;
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
@@ -297,6 +294,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       listConditions.push(
         inArray(exercisesTable.duracionRango, activeDuracionRango)
       );
+    }
+    if (activeFase.length > 0) {
+      listConditions.push(inArray(exercisesTable.phase, activeFase));
     }
     if (activeNumJugadores.length > 0)
       listConditions.push(
@@ -469,6 +469,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     golpe: activeGolpes.length > 0 ? activeGolpes : undefined,
     efecto: activeEfecto.length > 0 ? activeEfecto : undefined,
     location: activeLocation.length > 0 ? activeLocation : undefined,
+    fase: activeFase.length > 0 ? activeFase : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -494,6 +495,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       "golpe",
       "efecto",
       "location",
+      "fase",
     ]) {
       const value = merged[key];
       const values = Array.isArray(value) ? value : value ? [value] : [];
@@ -805,38 +807,74 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           value={value}
                         />
                       ))}
+                      {activeFase.map((value) => (
+                        <input
+                          key={`fase-${value}`}
+                          type="hidden"
+                          name="fase"
+                          value={value}
+                        />
+                      ))}
                     </form>
+                  </div>
 
-                    <div className="flex items-center gap-1.5 overflow-x-auto">
-                      <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                        Nivel:
-                      </span>
-                      {DIFFICULTIES.map((diff) => {
-                        const isActive = activeDifficulty === diff;
-                        const label =
-                          diff === "all"
-                            ? "Todos"
-                            : DIFFICULTY_LABEL[diff as Difficulty];
-                        return (
-                          <Link
-                            key={diff}
-                            href={buildHref({
-                              category: activeCategory,
-                              difficulty: diff,
-                              q: searchTerm || undefined,
-                              tab: activeTab,
-                            })}
-                            className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-sans font-semibold tracking-[0.08em] transition-colors ${
-                              isActive
-                                ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
-                                : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
-                            }`}
-                          >
-                            {label}
-                          </Link>
-                        );
+                  {/* ─── Niveles (etapas) con edad y color ─── */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+                      Nivel:
+                    </span>
+                    <Link
+                      href={buildHref({
+                        nivel: undefined,
+                        category: activeCategory,
+                        difficulty: activeDifficulty,
+                        q: searchTerm || undefined,
+                        tab: activeTab,
                       })}
-                    </div>
+                      className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-sans font-semibold tracking-[0.08em] transition-colors ${
+                        activeNivel.length === 0
+                          ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                          : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
+                      }`}
+                    >
+                      Todos
+                    </Link>
+                    {NIVELES.map((n) => {
+                      const isActive = activeNivel.includes(n.id);
+                      const nextNivel = isActive
+                        ? activeNivel.filter((v) => v !== n.id)
+                        : [...activeNivel, n.id];
+                      return (
+                        <Link
+                          key={n.id}
+                          href={buildHref({
+                            nivel: nextNivel.length > 0 ? nextNivel : undefined,
+                            category: activeCategory,
+                            difficulty: activeDifficulty,
+                            q: searchTerm || undefined,
+                            tab: activeTab,
+                          })}
+                          title={n.edad}
+                          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-sans font-semibold transition-colors ${
+                            isActive
+                              ? "border-[#050505] bg-[#050505] text-white dark:border-white dark:bg-white dark:text-[#050505]"
+                              : "border-foreground/15 text-foreground/70 hover:border-foreground/30 hover:text-foreground"
+                          }`}
+                        >
+                          <span
+                            aria-hidden
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: n.color }}
+                          />
+                          {n.label}
+                          <span
+                            className={`font-normal ${isActive ? "opacity-70" : "text-foreground/45"}`}
+                          >
+                            {n.edad}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
 
                   {/* ─── Filtros avanzados ─── */}
@@ -853,8 +891,10 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       golpes: activeGolpes,
                       efecto: activeEfecto,
                       location: activeLocation,
+                      fase: activeFase,
                     }}
                     preserved={{
+                      nivel: activeNivel,
                       q: searchTerm || undefined,
                       tab: activeTab !== "all" ? activeTab : undefined,
                       category:
@@ -882,7 +922,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`nivel-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Nivel: {value.replace(/_/g, " ")}
+                          Nivel: {nivelLabel(value)}
                         </span>
                       ))}
                       {activeAspectoJuego.map((value) => (
@@ -957,6 +997,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           {value}
                         </span>
                       ))}
+                      {activeFase.map((value) => (
+                        <span
+                          key={`fase-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Fase: {FASES.find((f) => f.id === value)?.label}
+                        </span>
+                      ))}
                       <Link
                         href={buildHref({
                           category: activeCategory,
@@ -1005,10 +1053,6 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     {filtered.map((exercise) => {
                       const catLabel =
                         CATEGORY_LABEL[exercise.category as Category];
-                      const diffLabel =
-                        DIFFICULTY_LABEL[exercise.difficulty as Difficulty];
-                      const diffBars =
-                        DIFFICULTY_BARS[exercise.difficulty as Difficulty];
                       const steps = Number(exercise.stepsCount ?? 0);
                       const materials = Number(exercise.materialsCount ?? 0);
 
@@ -1121,20 +1165,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               </div>
                             ) : null}
 
-                            <div className="grid gap-4 border-t border-foreground/10 pt-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                              <div className="space-y-1.5">
-                                <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-foreground/40">
-                                  {diffLabel}
-                                </p>
-                                <div className="flex gap-0.5">
-                                  {[1, 2, 3, 4, 5].map((n) => (
-                                    <span
-                                      key={n}
-                                      className={`h-[3px] w-5 rounded-full ${n <= diffBars ? "bg-[#D6FF38]" : "bg-foreground/15"}`}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
+                            <div className="flex justify-end border-t border-foreground/10 pt-4">
                               <div className="flex items-center gap-3 font-sans text-[10px] tabular-nums text-foreground/50">
                                 <span className="inline-flex items-center gap-1">
                                   <Clock className="size-3" strokeWidth={1.6} />{" "}

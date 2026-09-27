@@ -68,6 +68,7 @@ export const NIVEL_PMV_VALUES = [
   "especializacion",
   "precompeticion",
   "competicion",
+  "rendimiento",
   "adultos_iniciacion",
   "adultos_medio_alto",
 ] as const;

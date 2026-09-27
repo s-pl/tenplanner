@@ -24,13 +24,18 @@ export const TIPOS_EJERCICIO = [
   "situacion_juego",
   "juego_puntos",
   "juego_ludico",
-  "fisico_movilidad",
-  "otros_deportes",
+  "preparacion_fisica",
 ] as const;
 
 // Valores antiguos: se siguen aceptando para no romper los ejercicios ya
 // etiquetados, pero ya no se ofrecen para ejercicios nuevos.
-export const TIPOS_EJERCICIO_LEGACY = ["juego", "reto", "cognitivo"] as const;
+export const TIPOS_EJERCICIO_LEGACY = [
+  "juego",
+  "reto",
+  "cognitivo",
+  "otros_deportes",
+  "fisico_movilidad",
+] as const;
 
 export const NUEVOS_TIPOS_ACTIVIDAD = [
   ...TIPOS_EJERCICIO,
@@ -46,9 +51,10 @@ export const TIPO_ACTIVIDAD_LABELS: Record<TipoEjercicio, string> = {
   situacion_juego: "Situación de juego",
   juego_puntos: "Juego de puntos",
   juego_ludico: "Juego lúdico",
+  preparacion_fisica: "Preparación física",
+  // Antiguos
   fisico_movilidad: "Físico / movilidad",
   otros_deportes: "Otros deportes",
-  // Antiguos
   juego: "Juego",
   reto: "Reto",
   cognitivo: "Cognitivo",
@@ -91,3 +97,74 @@ export function legacyTipologiaFrom(values: string[] | null | undefined) {
       | undefined) ?? null
   );
 }
+
+// Niveles (etapas) con edad y color para que se identifiquen de un vistazo.
+export const NIVELES = [
+  {
+    id: "descubrimiento",
+    label: "Descubrimiento",
+    edad: "4-6 años",
+    color: "#E53935",
+  },
+  { id: "desarrollo", label: "Desarrollo", edad: "6-8 años", color: "#FB8C00" },
+  {
+    id: "consolidacion",
+    label: "Consolidación",
+    edad: "8-10 años",
+    color: "#43A047",
+  },
+  {
+    id: "especializacion",
+    label: "Especialización",
+    edad: "10-12 años",
+    color: "#FFE600",
+  },
+  {
+    id: "precompeticion",
+    label: "Precompetición",
+    edad: "12-14 años",
+    color: "#FFC400",
+  },
+  {
+    id: "competicion",
+    label: "Competición",
+    edad: "14-16 años",
+    color: "#FFA000",
+  },
+  {
+    id: "rendimiento",
+    label: "Rendimiento",
+    edad: "14-18 años",
+    color: "#E68A00",
+  },
+  {
+    id: "adultos_iniciacion",
+    label: "Adultos iniciación",
+    edad: "Adultos",
+    color: "#64B5F6",
+  },
+  {
+    id: "adultos_medio_alto",
+    label: "Adultos medio-alto",
+    edad: "Adultos",
+    color: "#1565C0",
+  },
+] as const;
+
+export type NivelId = (typeof NIVELES)[number]["id"];
+
+export const NIVEL_IDS = NIVELES.map((n) => n.id) as unknown as readonly [
+  NivelId,
+  ...NivelId[],
+];
+
+export function nivelLabel(id: string) {
+  return NIVELES.find((n) => n.id === id)?.label ?? id.replace(/_/g, " ");
+}
+
+// Fase de la sesión (columna `phase`).
+export const FASES = [
+  { id: "activation", label: "Calentamiento" },
+  { id: "main", label: "Parte principal" },
+  { id: "cooldown", label: "Vuelta a la calma" },
+] as const;

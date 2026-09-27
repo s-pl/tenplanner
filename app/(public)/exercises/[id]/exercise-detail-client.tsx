@@ -31,6 +31,7 @@ import { ExerciseRating } from "@/components/app/exercise-rating";
 import { ExerciseListPicker } from "@/components/app/exercise-list-picker";
 import {
   ASPECTO_JUEGO_LABELS,
+  nivelLabel,
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
@@ -115,12 +116,6 @@ const CATEGORY_META: Record<
     label: "Calentamiento",
     icon: Flame,
   },
-};
-
-const DIFFICULTY_META: Record<Difficulty, { label: string }> = {
-  beginner: { label: "Principiante" },
-  intermediate: { label: "Intermedio" },
-  advanced: { label: "Avanzado" },
 };
 
 const LOCATION_LABELS: Record<string, string> = {
@@ -208,7 +203,6 @@ export function ExerciseDetailClient({
   const [loadingLists, setLoadingLists] = useState(false);
 
   const cat = CATEGORY_META[exercise.category];
-  const diff = DIFFICULTY_META[exercise.difficulty];
   const CategoryIcon = cat.icon;
 
   const refreshSavedLists = useCallback(async () => {
@@ -428,10 +422,6 @@ export function ExerciseDetailClient({
                 {cat.label}
               </p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-xs font-medium text-white/78">
-                  {diff.label}
-                </span>
-                <span className="text-xs text-white/35">·</span>
                 <span className="flex items-center gap-1 text-xs text-white/66">
                   <Clock className="size-3" />
                   {exercise.durationMinutes} min
@@ -601,7 +591,7 @@ export function ExerciseDetailClient({
                   key={nivel}
                   className="rounded-full bg-[#050505]/6 px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-white/10"
                 >
-                  Nivel: {nivel.replace(/_/g, " ")}
+                  Nivel: {nivelLabel(nivel)}
                 </span>
               ))}
               {aspectosJuego.map((aspecto) => (
