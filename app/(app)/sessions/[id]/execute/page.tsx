@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { exercises, sessions, sessionExercises } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { sessions } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { loadSessionPlan } from "@/lib/sessions/plan";
 import { ExecuteSessionClient } from "./execute-client";
 
 interface PageProps {
@@ -19,45 +20,49 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const [[sessionRow], exerciseRows] = await Promise.all([
-    db.select().from(sessions).where(eq(sessions.id, id)).limit(1),
-    db
-      .select({
-        exerciseId: exercises.id,
-        name: exercises.name,
-        category: exercises.category,
-        difficulty: exercises.difficulty,
-        description: exercises.description,
-        durationMinutes: sessionExercises.durationMinutes,
-        defaultDuration: exercises.durationMinutes,
-        notes: sessionExercises.notes,
-        orderIndex: sessionExercises.orderIndex,
-        steps: exercises.steps,
-        tips: exercises.tips,
-        materials: exercises.materials,
-      })
-      .from(sessionExercises)
-      .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
-      .where(eq(sessionExercises.sessionId, id))
-      .orderBy(asc(sessionExercises.orderIndex)),
-  ]);
+  const [sessionRow] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, id))
+    .limit(1);
 
   if (!sessionRow) notFound();
   if (sessionRow.userId !== user.id) notFound();
 
-  const resolvedExercises = exerciseRows.map((e) => ({
-    exerciseId: e.exerciseId,
-    name: e.name,
-    category: e.category,
-    difficulty: e.difficulty,
-    description: e.description,
-    durationMinutes: e.durationMinutes ?? e.defaultDuration,
-    notes: e.notes,
-    orderIndex: e.orderIndex,
-    steps: Array.isArray(e.steps) ? e.steps : [],
-    tips: e.tips,
-    materials: Array.isArray(e.materials) ? (e.materials as string[]) : [],
-  }));
+  const plan = await loadSessionPlan(id);
+  const resolvedExercises = plan.items.map((item, orderIndex) =>
+    item.kind === "exercise"
+      ? {
+          key: item.key,
+          kind: "exercise" as const,
+          exerciseId: item.exerciseId,
+          name: item.name,
+          category: item.category,
+          difficulty: item.difficulty,
+          description: item.description,
+          durationMinutes: item.durationMinutes ?? item.defaultDurationMinutes,
+          notes: item.notes,
+          orderIndex,
+          steps: item.steps,
+          tips: item.tips,
+          materials: item.materials,
+        }
+      : {
+          key: item.key,
+          kind: "text" as const,
+          exerciseId: null,
+          name: item.text,
+          category: "text",
+          difficulty: "",
+          description: item.description,
+          durationMinutes: item.durationMinutes ?? 0,
+          notes: item.notes,
+          orderIndex,
+          steps: [],
+          tips: null,
+          materials: [],
+        }
+  );
 
   return (
     <ExecuteSessionClient

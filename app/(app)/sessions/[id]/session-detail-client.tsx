@@ -23,10 +23,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  SessionForm,
-  type AvailableExercise,
-} from "@/components/app/session-form";
+import type { AvailableExercise } from "@/components/app/session-form";
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
@@ -132,7 +129,8 @@ function formatSeconds(seconds: number) {
 interface Props {
   session: SessionData;
   sessionExercises: SessionExerciseData[];
-  availableExercises: AvailableExercise[];
+  /** Ya no se usa aquí (la edición va en /sessions/[id]/edit). */
+  availableExercises?: AvailableExercise[];
   analytics: SessionAnalytics;
   students: SessionStudentData[];
   favoritedExerciseIds: string[];
@@ -158,9 +156,7 @@ export interface SessionBlockData {
 
 function MetadataChips({ session }: { session: SessionData }) {
   const hasAny =
-    !!session.objective ||
-    !!session.location ||
-    session.tags.length > 0;
+    !!session.objective || !!session.location || session.tags.length > 0;
   if (!hasAny) return null;
 
   return (
@@ -524,13 +520,11 @@ function SessionRoadmap({
 export function SessionDetailClient({
   session,
   sessionExercises,
-  availableExercises,
   analytics,
   students,
   sessionBlocks,
 }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -542,10 +536,10 @@ export function SessionDetailClient({
   const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [statusDialog, setStatusDialog] = useState<
-    | { kind: "complete" | "cancel"; note: string }
-    | null
-  >(null);
+  const [statusDialog, setStatusDialog] = useState<{
+    kind: "complete" | "cancel";
+    note: string;
+  } | null>(null);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatDates, setRepeatDates] = useState<string[]>([""]);
   const [repeating, setRepeating] = useState(false);
@@ -651,50 +645,6 @@ export function SessionDetailClient({
     }
   }
 
-  if (mode === "edit") {
-    return (
-      <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] md:px-8">
-        <div className="flex items-center gap-4 rounded-lg border border-[#050505]/10 bg-white p-4 shadow-[0_14px_42px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045]">
-          <button
-            onClick={() => setMode("view")}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-[#F4F4F1] text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
-          >
-            <ArrowLeft className="size-4" />
-          </button>
-          <div>
-            <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-              Editar sesión
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Modifica los datos de la sesión
-            </p>
-          </div>
-        </div>
-        <SessionForm
-          mode="edit"
-          sessionId={session.id}
-          availableExercises={availableExercises}
-          initialData={{
-            title: session.title,
-            description: session.description,
-            scheduledAt: session.scheduledAt,
-            exercises: sessionExercises.map((e) => ({
-              exerciseId: e.exerciseId,
-              name: e.name,
-              category: e.category,
-              durationMinutes: e.durationMinutes,
-            })),
-          }}
-          onSuccess={() => {
-            setMode("view");
-            router.refresh();
-          }}
-          onCancel={() => setMode("view")}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] sm:px-6 md:px-8">
       {/* Header */}
@@ -715,14 +665,16 @@ export function SessionDetailClient({
           </p>
         </div>
         <div className="relative mt-4 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0 sm:justify-end">
-          {/* Execute session — only for upcoming/scheduled */}
-          {status === "scheduled" && (
+          {/* Dar clase: ir viendo la sesión paso a paso */}
+          {status !== "cancelled" && (
             <Link
               href={`/sessions/${session.id}/execute`}
               className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
             >
               <Play className="size-3.5" />
-              <span className="hidden sm:inline">Dar clase</span>
+              <span className="hidden sm:inline">
+                {status === "completed" ? "Ver en modo clase" : "Dar clase"}
+              </span>
             </Link>
           )}
           {/* Reutilizar */}
@@ -752,13 +704,13 @@ export function SessionDetailClient({
             )}
             <span className="hidden sm:inline">PDF</span>
           </button>
-          <button
-            onClick={() => setMode("edit")}
+          <Link
+            href={`/sessions/${session.id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
             <Pencil className="size-3.5" />
             <span className="hidden sm:inline">Editar</span>
-          </button>
+          </Link>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white/70 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.035]"
@@ -789,7 +741,7 @@ export function SessionDetailClient({
                   className={cn(
                     "text-xs font-bold uppercase tracking-widest",
                     status === "completed"
-                    ? "text-[#D6FF38]"
+                      ? "text-[#D6FF38]"
                       : status === "cancelled"
                         ? "text-destructive"
                         : "text-white/60"
@@ -826,7 +778,7 @@ export function SessionDetailClient({
               ) : (
                 <CheckCircle2 className="size-3" />
               )}
-              Marcar completada
+              Sesión completada
             </button>
             <button
               onClick={() => setStatusDialog({ kind: "cancel", note: "" })}
@@ -1409,7 +1361,9 @@ export function SessionDetailClient({
                 disabled={updatingStatus}
                 onClick={async () => {
                   const targetStatus =
-                    statusDialog.kind === "complete" ? "completed" : "cancelled";
+                    statusDialog.kind === "complete"
+                      ? "completed"
+                      : "cancelled";
                   await handleStatusChange(
                     targetStatus,
                     statusDialog.note.trim() || null
@@ -1445,8 +1399,8 @@ export function SessionDetailClient({
               Repetir sesión
             </h3>
             <p className="text-sm text-muted-foreground">
-              Clona esta sesión (con sus ejercicios) en una o varias fechas.
-              Los alumnos asignados <em>no</em> se copian.
+              Clona esta sesión (con sus ejercicios) en una o varias fechas. Los
+              alumnos asignados <em>no</em> se copian.
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {repeatDates.map((d, i) => (
@@ -1465,9 +1419,7 @@ export function SessionDetailClient({
                     <button
                       type="button"
                       onClick={() =>
-                        setRepeatDates((prev) =>
-                          prev.filter((_, j) => j !== i)
-                        )
+                        setRepeatDates((prev) => prev.filter((_, j) => j !== i))
                       }
                       className="size-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Quitar fecha"

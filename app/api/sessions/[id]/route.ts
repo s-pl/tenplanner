@@ -122,7 +122,9 @@ function normalizeBlocks(
   }[]
 ) {
   const source =
-    blocks && blocks.length > 0 ? blocks : buildBlocksFromExercises(exerciseItems);
+    blocks && blocks.length > 0
+      ? blocks
+      : buildBlocksFromExercises(exerciseItems);
   const byOrder = new Map<number, SessionBlockInput>();
 
   for (const block of source) {
@@ -207,7 +209,10 @@ async function getAccessibleExerciseSnapshots(
 ) {
   const uniqueIds = Array.from(new Set(exerciseIds));
   if (uniqueIds.length === 0) {
-    return { snapshots: new Map<string, ExerciseSnapshot>(), inaccessibleIds: [] };
+    return {
+      snapshots: new Map<string, ExerciseSnapshot>(),
+      inaccessibleIds: [],
+    };
   }
 
   const rows = await db
@@ -219,7 +224,10 @@ async function getAccessibleExerciseSnapshots(
     })
     .from(exercises)
     .where(
-      and(inArray(exercises.id, uniqueIds), exerciseVisibleToUserCondition(userId))
+      and(
+        inArray(exercises.id, uniqueIds),
+        exerciseVisibleToUserCondition(userId)
+      )
     );
 
   const snapshots = new Map(rows.map((row) => [row.id, row]));
@@ -307,9 +315,15 @@ export async function GET(_request: Request, context: RouteContext) {
         itemNotes: sessionBlockItems.notes,
       })
       .from(sessionBlocks)
-      .leftJoin(sessionBlockItems, eq(sessionBlockItems.blockId, sessionBlocks.id))
+      .leftJoin(
+        sessionBlockItems,
+        eq(sessionBlockItems.blockId, sessionBlocks.id)
+      )
       .where(eq(sessionBlocks.sessionId, id))
-      .orderBy(asc(sessionBlocks.orderIndex), asc(sessionBlockItems.orderIndex));
+      .orderBy(
+        asc(sessionBlocks.orderIndex),
+        asc(sessionBlockItems.orderIndex)
+      );
 
     const blockMap = new Map<
       string,
@@ -582,21 +596,54 @@ export async function PUT(request: Request, context: RouteContext) {
         .returning();
 
       if (replacesPlan) {
+        // Conservar lo registrado al dar la clase (valoración, notas,
+        // tiempos) de los ejercicios que siguen en la sesión.
+        const previousExecution = await tx
+          .select({
+            exerciseId: sessionExercises.exerciseId,
+            coachRating: sessionExercises.coachRating,
+            actualDurationSeconds: sessionExercises.actualDurationSeconds,
+            completedAt: sessionExercises.completedAt,
+            executionNotes: sessionExercises.executionNotes,
+            wasSkipped: sessionExercises.wasSkipped,
+          })
+          .from(sessionExercises)
+          .where(eq(sessionExercises.sessionId, id));
+        const executionByExercise = new Map<
+          string,
+          (typeof previousExecution)[number][]
+        >();
+        for (const row of previousExecution) {
+          const list = executionByExercise.get(row.exerciseId) ?? [];
+          list.push(row);
+          executionByExercise.set(row.exerciseId, list);
+        }
+
         await tx
           .delete(sessionExercises)
           .where(eq(sessionExercises.sessionId, id));
 
         if (compatibilityExercises.length > 0) {
           await tx.insert(sessionExercises).values(
-            compatibilityExercises.map((item, idx) => ({
-              sessionId: id,
-              exerciseId: item.exerciseId,
-              orderIndex: idx,
-              durationMinutes: item.durationMinutes ?? null,
-              notes: item.notes ?? null,
-              phase: normalizePhase(item.phase),
-              intensity: item.intensity ?? null,
-            }))
+            compatibilityExercises.map((item, idx) => {
+              const previous = executionByExercise
+                .get(item.exerciseId)
+                ?.shift();
+              return {
+                sessionId: id,
+                exerciseId: item.exerciseId,
+                orderIndex: idx,
+                durationMinutes: item.durationMinutes ?? null,
+                notes: item.notes ?? null,
+                phase: normalizePhase(item.phase),
+                intensity: item.intensity ?? null,
+                coachRating: previous?.coachRating ?? null,
+                actualDurationSeconds: previous?.actualDurationSeconds ?? null,
+                completedAt: previous?.completedAt ?? null,
+                executionNotes: previous?.executionNotes ?? null,
+                wasSkipped: previous?.wasSkipped ?? false,
+              };
+            })
           );
         }
 

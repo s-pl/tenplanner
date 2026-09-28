@@ -6,7 +6,6 @@ import { db } from "@/db";
 import {
   exercises,
   sessions,
-  sessionExercises,
   classes,
   classBlocks,
   classBlockExercises,
@@ -22,6 +21,11 @@ import type {
   WizardSessionBlock,
 } from "@/components/app/session-wizard/types";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { loadSessionPlan } from "@/lib/sessions/plan";
+import {
+  createTextItem,
+  planItemsToWizard,
+} from "@/components/app/session-wizard/timeline";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import {
   ArrowLeft,
@@ -159,7 +163,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         )
         .leftJoin(exercises, eq(exercises.id, classBlockExercises.exerciseId))
         .where(eq(classBlocks.classId, fromClassId))
-        .orderBy(asc(classBlocks.orderIndex), asc(classBlockExercises.orderIndex));
+        .orderBy(
+          asc(classBlocks.orderIndex),
+          asc(classBlockExercises.orderIndex)
+        );
 
       const blockMap = new Map<number, WizardSessionBlock>();
       function phaseFromBlock(orderIndex: number): TrainingPhase {
@@ -186,15 +193,18 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
             items: [],
           } satisfies WizardSessionBlock);
 
-        if (row.itemOrderIndex !== null) {
-          block.items.push({
-            exerciseId: row.itemExerciseId,
-            freeText: row.freeText,
-            durationMinutes: row.itemDuration,
-            notes: null,
-          });
-        }
         blockMap.set(orderIndex, block);
+
+        // Textos libres de la clase: van a la línea de tiempo en su sitio.
+        if (!row.itemExerciseId && row.freeText?.trim()) {
+          fromClassExercises.push(
+            createTextItem(
+              row.freeText.trim(),
+              phaseFromBlock(orderIndex),
+              row.itemDuration ?? null
+            )
+          );
+        }
 
         if (row.exerciseId && row.name && row.category) {
           fromClassExercises.push({
@@ -210,19 +220,20 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         }
       }
 
-      fromClassBlocks = [1, 2, 3].map((orderIndex) =>
-        blockMap.get(orderIndex) ??
-        ({
-          orderIndex: orderIndex as 1 | 2 | 3,
-          title:
-            orderIndex === 1
-              ? "Bloque inicial"
-              : orderIndex === 3
-                ? "Bloque final"
-                : "Bloque principal",
-          notes: "",
-          items: [],
-        } satisfies WizardSessionBlock)
+      fromClassBlocks = [1, 2, 3].map(
+        (orderIndex) =>
+          blockMap.get(orderIndex) ??
+          ({
+            orderIndex: orderIndex as 1 | 2 | 3,
+            title:
+              orderIndex === 1
+                ? "Bloque inicial"
+                : orderIndex === 3
+                  ? "Bloque final"
+                  : "Bloque principal",
+            notes: "",
+            items: [],
+          } satisfies WizardSessionBlock)
       );
     }
   }
@@ -255,32 +266,8 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         location: sourceSession.location,
       };
 
-      const sourceExercises = await db
-        .select({
-          exerciseId: exercises.id,
-          name: exercises.name,
-          category: exercises.category,
-          durationMinutes: sessionExercises.durationMinutes,
-          defaultDuration: exercises.durationMinutes,
-          notes: sessionExercises.notes,
-          phase: sessionExercises.phase,
-          intensity: sessionExercises.intensity,
-        })
-        .from(sessionExercises)
-        .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
-        .where(eq(sessionExercises.sessionId, fromSessionId))
-        .orderBy(asc(sessionExercises.orderIndex));
-
-      fromExercises = sourceExercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        name: e.name,
-        category: e.category,
-        durationMinutes: e.durationMinutes ?? e.defaultDuration,
-        overrideDuration: e.durationMinutes ?? null,
-        notes: e.notes ?? "",
-        phase: e.phase ?? null,
-        intensity: e.intensity ?? null,
-      }));
+      const plan = await loadSessionPlan(fromSessionId);
+      fromExercises = planItemsToWizard(plan.items);
     }
   }
 
@@ -310,8 +297,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           : undefined;
   const allowDraftRestore =
     !fromSession && !fromClass && preSelected.length === 0;
-  const noPreload =
-    !fromSession && !fromClass && preSelected.length === 0;
+  const noPreload = !fromSession && !fromClass && preSelected.length === 0;
 
   return (
     <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
@@ -322,49 +308,48 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
             className="court-grid pointer-events-none absolute inset-0 opacity-40 dark:opacity-25"
           />
           <div className="relative flex items-center gap-4">
-          <Link
-            href="/sessions"
-            aria-label="Volver a sesiones"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-[#F4F4F1] text-[0px] text-foreground/60 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
-          >
-            <ArrowLeft className="size-4 text-foreground/60" />
-            ←
-          </Link>
-          <div className="min-w-0">
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
-              <Sparkles className="size-3.5 text-brand" />
-              Wizard de sesión
-            </p>
-          <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
-            {fromSession ? (
-              <>
-                Reutilizando{" "}
-                <em className="italic text-brand">
-                  &ldquo;{fromSession.title}&rdquo;
-                </em>
-              </>
-            ) : fromClass ? (
-              <>
-                Desde clase{" "}
-                <em className="italic text-brand">
-                  &ldquo;{fromClass.name}&rdquo;
-                </em>
-              </>
-            ) : preSelected.length > 0 ? (
-              <>
-                <em className="italic text-brand">
-                  {preSelected.length} ejercicio
-                  {preSelected.length !== 1 ? "s" : ""}
-                </em>{" "}
-                cargados
-              </>
-            ) : (
-              <>
-                Nueva <em className="italic text-brand">sesión</em>
-              </>
-            )}
-          </h1>
-          </div>
+            <Link
+              href="/sessions"
+              aria-label="Volver a sesiones"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-[#F4F4F1] text-[0px] text-foreground/60 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
+            >
+              <ArrowLeft className="size-4 text-foreground/60" />←
+            </Link>
+            <div className="min-w-0">
+              <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
+                <Sparkles className="size-3.5 text-brand" />
+                Wizard de sesión
+              </p>
+              <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
+                {fromSession ? (
+                  <>
+                    Reutilizando{" "}
+                    <em className="italic text-brand">
+                      &ldquo;{fromSession.title}&rdquo;
+                    </em>
+                  </>
+                ) : fromClass ? (
+                  <>
+                    Desde clase{" "}
+                    <em className="italic text-brand">
+                      &ldquo;{fromClass.name}&rdquo;
+                    </em>
+                  </>
+                ) : preSelected.length > 0 ? (
+                  <>
+                    <em className="italic text-brand">
+                      {preSelected.length} ejercicio
+                      {preSelected.length !== 1 ? "s" : ""}
+                    </em>{" "}
+                    cargados
+                  </>
+                ) : (
+                  <>
+                    Nueva <em className="italic text-brand">sesión</em>
+                  </>
+                )}
+              </h1>
+            </div>
           </div>
         </header>
 

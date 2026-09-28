@@ -23,6 +23,7 @@ interface StepConfigurationProps {
   errors: Partial<Record<keyof WizardState, string>>;
   places: { id: string; name: string }[];
   monitorName?: string;
+  hideRecurrence?: boolean;
 }
 
 function formatScheduledAt(scheduledAt: string): string {
@@ -160,6 +161,7 @@ export function StepConfiguration({
   errors,
   places = [],
   monitorName,
+  hideRecurrence = false,
 }: StepConfigurationProps) {
   const [studentsOpen, setStudentsOpen] = useState(false);
 
@@ -260,7 +262,7 @@ export function StepConfiguration({
           )}
         </div>
 
-        <RecurrenceBlock state={state} update={update} />
+        {!hideRecurrence && <RecurrenceBlock state={state} update={update} />}
       </div>
 
       <div className="hidden lg:block">
@@ -282,9 +284,7 @@ function RecurrenceBlock({
 }) {
   const r = state.recurrence;
   const scheduled = new Date(state.scheduledAt);
-  const baseWeekday = isNaN(scheduled.getTime())
-    ? null
-    : scheduled.getDay();
+  const baseWeekday = isNaN(scheduled.getTime()) ? null : scheduled.getDay();
 
   function toggleEnabled(next: boolean) {
     update({

@@ -1,23 +1,21 @@
 import { createElement, type ReactElement } from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { db } from "@/db";
-import {
-  exercises,
-  sessionExercises,
-  sessionStudents,
-  sessions,
-  students,
-  users,
-} from "@/db/schema";
+import { sessionStudents, sessions, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
   sessionIdParamsSchema,
   zodValidationErrorResponse,
 } from "../../validation";
-import { SessionPdf, type PdfSession } from "@/lib/sessions/pdf";
+import {
+  SessionPdf,
+  type PdfExercise,
+  type PdfSession,
+} from "@/lib/sessions/pdf";
+import { loadSessionPlan } from "@/lib/sessions/plan";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -75,23 +73,10 @@ export async function GET(_request: Request, context: RouteContext) {
     .where(eq(users.id, user.id))
     .limit(1);
 
-  const exerciseRows = await db
-    .select({
-      orderIndex: sessionExercises.orderIndex,
-      durationMinutes: sessionExercises.durationMinutes,
-      notes: sessionExercises.notes,
-      phase: sessionExercises.phase,
-      intensity: sessionExercises.intensity,
-      exerciseName: exercises.name,
-      exerciseCategory: exercises.category,
-      exerciseDifficulty: exercises.difficulty,
-      exerciseDurationMinutes: exercises.durationMinutes,
-      exerciseMaterials: exercises.materials,
-    })
-    .from(sessionExercises)
-    .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
-    .where(eq(sessionExercises.sessionId, id))
-    .orderBy(asc(sessionExercises.orderIndex));
+  const plan = await loadSessionPlan(id);
+  const blockTitles = new Map(
+    plan.blocks.map((block) => [block.orderIndex, block.title])
+  );
 
   const studentRows = await db
     .select({
@@ -112,17 +97,42 @@ export async function GET(_request: Request, context: RouteContext) {
     tags: session.tags,
     location: session.location,
     coachName: coachRow?.name ?? user.email ?? "Entrenador",
-    exercises: exerciseRows.map((e) => ({
-      name: e.exerciseName,
-      category: e.exerciseCategory,
-      difficulty: e.exerciseDifficulty,
-      orderIndex: e.orderIndex,
-      durationMinutes: e.durationMinutes ?? e.exerciseDurationMinutes,
-      notes: e.notes,
-      phase: e.phase,
-      intensity: e.intensity,
-      materials: Array.isArray(e.exerciseMaterials) ? e.exerciseMaterials : [],
-    })),
+    material: session.material,
+    observations: session.observations,
+    exercises: plan.items.map((item, orderIndex) =>
+      item.kind === "exercise"
+        ? {
+            kind: "exercise" as const,
+            name: item.name,
+            category: item.category as PdfExercise["category"],
+            difficulty: item.difficulty as PdfExercise["difficulty"],
+            orderIndex,
+            durationMinutes:
+              item.durationMinutes ?? item.defaultDurationMinutes,
+            notes: item.notes,
+            phase: item.phase,
+            intensity: null,
+            materials: item.materials,
+            description: item.description,
+            steps: item.steps,
+            tips: item.tips,
+            blockTitle: blockTitles.get(item.blockOrder) ?? null,
+          }
+        : {
+            kind: "text" as const,
+            name: item.text,
+            category: "technique" as const,
+            difficulty: "beginner" as const,
+            orderIndex,
+            durationMinutes: item.durationMinutes,
+            notes: item.notes,
+            phase: item.phase,
+            intensity: null,
+            materials: [],
+            description: item.description,
+            blockTitle: blockTitles.get(item.blockOrder) ?? null,
+          }
+    ),
     students: studentRows,
   };
 

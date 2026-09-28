@@ -13,6 +13,7 @@ import {
   Plus,
   Search,
   StickyNote,
+  Type,
   X,
 } from "lucide-react";
 import {
@@ -35,6 +36,7 @@ import {
   type WizardExercise,
   type WizardState,
 } from "./types";
+import { createTextItem, isTextItem } from "./timeline";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -44,6 +46,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const CATEGORY_BAR: Record<string, string> = {
+  text: "bg-foreground/30",
   technique: "bg-blue-400",
   tactics: "bg-purple-400",
   fitness: "bg-amber-400",
@@ -84,6 +87,7 @@ export function StepExercises({
   );
   const [durationEditValue, setDurationEditValue] = useState("");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [focusedTextIdx, setFocusedTextIdx] = useState<number | null>(null);
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -94,6 +98,8 @@ export function StepExercises({
   const dragCounter = useRef(0);
 
   const selected = state.exercises;
+  const textCount = selected.filter(isTextItem).length;
+  const exerciseCount = selected.length - textCount;
   const totalDuration = selected.reduce(
     (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
     0
@@ -165,6 +171,10 @@ export function StepExercises({
 
     if (nextItems.length === 0) return;
     setExercises([...selected, ...nextItems]);
+  }
+
+  function addTextItem() {
+    setExercises([...selected, createTextItem()]);
   }
 
   function removeExercise(id: string) {
@@ -376,7 +386,10 @@ export function StepExercises({
         {selected.length > 0 && (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              {selected.length} ejercicio{selected.length !== 1 ? "s" : ""}
+              {exerciseCount} ejercicio{exerciseCount !== 1 ? "s" : ""}
+              {textCount > 0
+                ? ` · ${textCount} texto${textCount !== 1 ? "s" : ""} libre${textCount !== 1 ? "s" : ""}`
+                : ""}
             </span>
             <span className="font-semibold text-foreground">
               {formatMinutes(totalDuration)}
@@ -392,12 +405,22 @@ export function StepExercises({
               <span className="text-sm font-bold text-foreground uppercase tracking-wide">
                 Plan de entrenamiento
               </span>
-              {totalDuration > 0 && (
-                <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
-                  <Clock className="size-3" />
-                  {formatMinutes(totalDuration)}
-                </span>
-              )}
+              <div className="ml-auto flex items-center gap-2">
+                {totalDuration > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
+                    <Clock className="size-3" />
+                    {formatMinutes(totalDuration)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={addTextItem}
+                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                >
+                  <Plus className="size-3" />
+                  Texto libre
+                </button>
+              </div>
             </div>
 
             <div
@@ -443,6 +466,14 @@ export function StepExercises({
                     Arrastra ejercicios desde la biblioteca o pulsa{" "}
                     <Plus className="size-3 inline" />
                   </p>
+                  <button
+                    type="button"
+                    onClick={addTextItem}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                  >
+                    <Type className="size-3.5" />
+                    Escribir texto libre
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -462,9 +493,13 @@ export function StepExercises({
                           )}
                         />
                         <div
-                          draggable={!isEditingDuration}
+                          draggable={
+                            !isEditingDuration && focusedTextIdx !== idx
+                          }
                           onDragStart={(e) =>
-                            !isEditingDuration && onTimelineDragStart(e, idx)
+                            !isEditingDuration &&
+                            focusedTextIdx !== idx &&
+                            onTimelineDragStart(e, idx)
                           }
                           onDragEnd={() => {
                             setDragSrcIdx(null);
@@ -493,18 +528,42 @@ export function StepExercises({
                             />
                             <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate leading-snug">
-                                {ex.name}
-                              </p>
+                              {isTextItem(ex) ? (
+                                <textarea
+                                  value={ex.freeText ?? ""}
+                                  onChange={(e) =>
+                                    patchItem(idx, {
+                                      freeText: e.target.value,
+                                      name: e.target.value,
+                                    })
+                                  }
+                                  onFocus={() => setFocusedTextIdx(idx)}
+                                  onBlur={() => setFocusedTextIdx(null)}
+                                  autoFocus={!ex.freeText}
+                                  rows={2}
+                                  maxLength={2000}
+                                  placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
+                                  className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                />
+                              ) : (
+                                <p className="text-sm font-medium text-foreground truncate leading-snug">
+                                  {ex.name}
+                                </p>
+                              )}
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span
                                   className={cn(
                                     "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                                    CATEGORY_COLORS[ex.category] ??
-                                      "text-muted-foreground bg-muted"
+                                    isTextItem(ex)
+                                      ? "text-foreground/70 bg-muted"
+                                      : (CATEGORY_COLORS[ex.category] ??
+                                          "text-muted-foreground bg-muted")
                                   )}
                                 >
-                                  {CATEGORY_LABELS[ex.category] ?? ex.category}
+                                  {isTextItem(ex)
+                                    ? "Texto libre"
+                                    : (CATEGORY_LABELS[ex.category] ??
+                                      ex.category)}
                                 </span>
                                 {ex.phase && (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
@@ -561,9 +620,7 @@ export function StepExercises({
                               title="Ajustes"
                               className={cn(
                                 "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
-                                isExpanded ||
-                                  ex.notes ||
-                                  ex.phase
+                                isExpanded || ex.notes || ex.phase
                                   ? "text-brand bg-brand/10"
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
                               )}
@@ -628,7 +685,11 @@ export function StepExercises({
                                 onChange={(e) =>
                                   patchItem(idx, { notes: e.target.value })
                                 }
-                                placeholder="Notas para este ejercicio…"
+                                placeholder={
+                                  isTextItem(ex)
+                                    ? "Notas…"
+                                    : "Notas para este ejercicio…"
+                                }
                                 rows={2}
                                 className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
                               />
