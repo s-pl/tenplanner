@@ -19,9 +19,16 @@ import { defaultScheduledAt } from "./defaults";
 import { ProgressIndicator } from "./progress-indicator";
 import { StepConfiguration } from "./step-configuration";
 import { StepExercises } from "./step-exercises";
+import {
+  buildBlocksPayload,
+  buildExercisesPayload,
+  hasPlanContent,
+  isTextItem,
+  normalizeBlocks,
+  textItemsFromBlocks,
+} from "./timeline";
 import type {
   AvailableExercise,
-  TrainingPhase,
   WizardExercise,
   WizardSessionBlock,
   WizardState,
@@ -29,26 +36,6 @@ import type {
 
 const STEP_LABELS = ["Configuración", "Ejercicios"];
 const TOTAL_STEPS = STEP_LABELS.length;
-const BLOCKS: Array<{ orderIndex: 1 | 2 | 3; title: string }> = [
-  { orderIndex: 1, title: "Bloque inicial" },
-  { orderIndex: 2, title: "Bloque principal" },
-  { orderIndex: 3, title: "Bloque final" },
-];
-
-type BlockPayloadItem = {
-  exerciseId?: string;
-  freeText?: string | null;
-  durationMinutes: number | null;
-  notes: string | null;
-};
-
-type BlockPayload = {
-  orderIndex: 1 | 2 | 3;
-  title: string;
-  notes: string | null;
-  items: BlockPayloadItem[];
-};
-
 interface SessionWizardProps {
   availableExercises: AvailableExercise[];
   initialExercises?: WizardExercise[];
@@ -63,61 +50,11 @@ interface SessionWizardProps {
   places?: { id: string; name: string }[];
   monitorName?: string;
   allowDraftRestore?: boolean;
-}
-
-function phaseToBlockOrder(phase: TrainingPhase | null): 1 | 2 | 3 {
-  if (phase === "activation") return 1;
-  if (phase === "cooldown") return 3;
-  return 2;
-}
-
-function normalizeBlocks(
-  blocks: WizardSessionBlock[] | undefined
-): WizardSessionBlock[] {
-  const byOrder = new Map(blocks?.map((block) => [block.orderIndex, block]));
-  return BLOCKS.map((fallback) => {
-    const block = byOrder.get(fallback.orderIndex);
-    return {
-      orderIndex: fallback.orderIndex,
-      title: block?.title || fallback.title,
-      notes: block?.notes ?? "",
-      items: Array.isArray(block?.items) ? block.items : [],
-    };
-  });
-}
-
-function buildBlocksPayload(state: WizardState): BlockPayload[] {
-  const blocks = normalizeBlocks(state.blocks);
-  const byOrder = new Map<1 | 2 | 3, BlockPayload>(
-    blocks.map((block) => [
-      block.orderIndex,
-      {
-        orderIndex: block.orderIndex,
-        title: block.title,
-        notes: block.notes.trim() || null,
-        items: block.items
-          .filter((item) => !item.exerciseId && item.freeText?.trim())
-          .map((item) => ({
-            freeText: item.freeText?.trim() ?? null,
-            durationMinutes: item.durationMinutes ?? null,
-            notes: item.notes?.trim() || null,
-          })),
-      } satisfies BlockPayload,
-    ])
-  );
-
-  for (const exercise of state.exercises) {
-    const orderIndex = phaseToBlockOrder(exercise.phase);
-    const block = byOrder.get(orderIndex);
-    if (!block) continue;
-    block.items.push({
-      exerciseId: exercise.exerciseId,
-      durationMinutes: exercise.overrideDuration ?? null,
-      notes: exercise.notes.trim() || null,
-    });
-  }
-
-  return BLOCKS.map((block) => byOrder.get(block.orderIndex)!);
+  /** Editar una sesión existente (también las pasadas). */
+  edit?: {
+    sessionId: string;
+    initialState: Partial<WizardState>;
+  };
 }
 
 function validateStep(
@@ -158,8 +95,9 @@ function validateStep(
   }
 
   if (step === 2) {
-    if (state.exercises.length === 0) {
-      errors.exercises = "Añade al menos un ejercicio antes de crear la sesión";
+    if (!hasPlanContent(state)) {
+      errors.exercises =
+        "Añade al menos un ejercicio o un texto libre antes de guardar la sesión";
     }
   }
 
@@ -190,7 +128,9 @@ function isWizardSessionBlock(value: unknown): value is WizardSessionBlock {
   if (!value || typeof value !== "object") return false;
   const block = value as Partial<WizardSessionBlock>;
   return (
-    (block.orderIndex === 1 || block.orderIndex === 2 || block.orderIndex === 3) &&
+    (block.orderIndex === 1 ||
+      block.orderIndex === 2 ||
+      block.orderIndex === 3) &&
     typeof block.title === "string" &&
     typeof block.notes === "string" &&
     Array.isArray(block.items)
@@ -232,7 +172,10 @@ function createInitialState({
     intensity: null,
     tags: [],
     studentIds: [],
-    exercises: initialExercises ?? [],
+    exercises: [
+      ...(initialExercises ?? []),
+      ...textItemsFromBlocks(initialBlocks),
+    ],
     blocks: normalizeBlocks(initialBlocks),
     recurrence: {
       enabled: false,
@@ -293,13 +236,16 @@ function sanitizeDraftPayload(
         ? payload.objective
         : fallback.objective,
     material:
-      typeof payload.material === "string" ? payload.material : fallback.material,
+      typeof payload.material === "string"
+        ? payload.material
+        : fallback.material,
     observations:
       typeof payload.observations === "string"
         ? payload.observations
         : fallback.observations,
     sourceClassId:
-      typeof payload.sourceClassId === "string" || payload.sourceClassId === null
+      typeof payload.sourceClassId === "string" ||
+      payload.sourceClassId === null
         ? payload.sourceClassId
         : fallback.sourceClassId,
     intensity:
@@ -315,7 +261,19 @@ function sanitizeDraftPayload(
         )
       : fallback.studentIds,
     exercises: Array.isArray(payload.exercises)
-      ? payload.exercises.filter(isWizardExercise)
+      ? [
+          ...payload.exercises.filter(isWizardExercise),
+          // Borradores antiguos guardaban los textos libres dentro de bloques.
+          ...(payload.exercises.some(
+            (item) => isWizardExercise(item) && isTextItem(item)
+          )
+            ? []
+            : textItemsFromBlocks(
+                Array.isArray(payload.blocks)
+                  ? payload.blocks.filter(isWizardSessionBlock)
+                  : undefined
+              )),
+        ]
       : fallback.exercises,
     blocks: Array.isArray(payload.blocks)
       ? normalizeBlocks(payload.blocks.filter(isWizardSessionBlock))
@@ -338,7 +296,9 @@ export function SessionWizard({
   places = [],
   monitorName,
   allowDraftRestore = true,
+  edit,
 }: SessionWizardProps) {
+  const isEdit = !!edit;
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -347,8 +307,8 @@ export function SessionWizard({
     Number.isFinite(rawStep) && rawStep >= 1 && rawStep <= TOTAL_STEPS
       ? rawStep
       : 1;
-  const [baselineState] = useState<WizardState>(() =>
-    createInitialState({
+  const [baselineState] = useState<WizardState>(() => {
+    const base = createInitialState({
       initialExercises,
       initialTitle,
       initialObjective,
@@ -358,10 +318,22 @@ export function SessionWizard({
       initialBlocks,
       initialLocation,
       initialPlaceId,
-    })
-  );
+    });
+    return edit ? { ...base, ...edit.initialState } : base;
+  });
 
   const [state, setState] = useState<WizardState>(baselineState);
+
+  // En edición la fecha llega en ISO (UTC); se pasa a la hora local del
+  // navegador para el campo fecha/hora.
+  useEffect(() => {
+    if (!edit?.initialState.scheduledAt) return;
+    const d = new Date(edit.initialState.scheduledAt);
+    if (isNaN(d.getTime())) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setState((prev) => ({ ...prev, scheduledAt: local }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -382,6 +354,11 @@ export function SessionWizard({
     let cancelled = false;
 
     async function hydrate() {
+      if (isEdit) {
+        // En edición no se usan borradores.
+        draftReadyRef.current = false;
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       const restoredDraftId = params.get("draft");
 
@@ -397,12 +374,7 @@ export function SessionWizard({
           draftReadyRef.current = false;
           draftIdRef.current = restoredDraftId;
           setHasDraft(true);
-          setState(
-            sanitizeDraftPayload(
-              draft.payload,
-              baselineState
-            )
-          );
+          setState(sanitizeDraftPayload(draft.payload, baselineState));
           window.setTimeout(() => {
             if (!cancelled) draftReadyRef.current = true;
           }, 0);
@@ -535,7 +507,7 @@ export function SessionWizard({
 
       // Compute the list of dates: original + recurring ones if enabled.
       const dates: string[] = [scheduledIso];
-      if (state.recurrence.enabled && state.recurrence.weeks > 1) {
+      if (!edit && state.recurrence.enabled && state.recurrence.weeks > 1) {
         const weekdays =
           state.recurrence.weekdays.length > 0
             ? state.recurrence.weekdays
@@ -558,14 +530,45 @@ export function SessionWizard({
         dates.sort();
       }
 
-      const exercisesPayload = state.exercises.map((exercise) => ({
-        exerciseId: exercise.exerciseId,
-        durationMinutes: exercise.overrideDuration ?? null,
-        notes: exercise.notes.trim() || null,
-        phase: exercise.phase,
-        intensity: exercise.intensity,
-      }));
+      const exercisesPayload = buildExercisesPayload(state);
       const blocksPayload = buildBlocksPayload(state);
+
+      if (edit) {
+        const res = await fetch(`/api/sessions/${edit.sessionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: state.title.trim(),
+            scheduledAt: scheduledIso,
+            durationMinutes: state.durationMinutes,
+            objective: state.objective.trim() || null,
+            material: state.material.trim() || null,
+            observations: state.observations.trim() || null,
+            intensity: state.intensity,
+            tags: state.tags.length > 0 ? state.tags : null,
+            location: state.location.trim() || null,
+            placeId: state.placeId,
+            studentIds: state.studentIds,
+            exercises: exercisesPayload,
+            blocks: blocksPayload,
+          }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            details?: Array<{ message: string }>;
+            error?: string;
+          };
+          setServerError(
+            data.details?.map((d) => d.message).join(". ") ??
+              data.error ??
+              "No se pudieron guardar los cambios."
+          );
+          return;
+        }
+        router.push(`/sessions/${edit.sessionId}`);
+        router.refresh();
+        return;
+      }
 
       // Submit all sessions sequentially. If any fails we stop and report.
       let res: Response | null = null;
@@ -660,7 +663,12 @@ export function SessionWizard({
           total={TOTAL_STEPS}
           labels={STEP_LABELS}
         />
-        <div className="mt-1 flex items-center gap-2 sm:shrink-0">
+        <div
+          className={cn(
+            "mt-1 flex items-center gap-2 sm:shrink-0",
+            isEdit && "hidden"
+          )}
+        >
           <button
             type="button"
             onClick={() => void handleSaveDraft()}
@@ -697,6 +705,7 @@ export function SessionWizard({
             errors={visibleErrors}
             places={places}
             monitorName={monitorName}
+            hideRecurrence={isEdit}
           />
         ) : (
           <StepExercises
@@ -731,7 +740,7 @@ export function SessionWizard({
       >
         {step === 1 ? (
           <Link
-            href="/sessions"
+            href={edit ? `/sessions/${edit.sessionId}` : "/sessions"}
             className="px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Cancelar
@@ -754,7 +763,9 @@ export function SessionWizard({
             className={cn(
               "inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-colors",
               "rounded-full bg-[#D6FF38] text-[#050505]",
-              canProceed ? "hover:bg-[#c8ef2f]" : "opacity-55 cursor-not-allowed"
+              canProceed
+                ? "hover:bg-[#c8ef2f]"
+                : "opacity-55 cursor-not-allowed"
             )}
           >
             Siguiente
@@ -764,7 +775,7 @@ export function SessionWizard({
           <div className="flex items-center gap-3">
             {state.exercises.length > 0 && (
               <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
-                {state.exercises.length} ejercicio
+                {state.exercises.length} elemento
                 {state.exercises.length !== 1 ? "s" : ""}
                 {" · "}
                 {state.exercises.reduce(
@@ -777,11 +788,11 @@ export function SessionWizard({
             <button
               type="button"
               onClick={onSubmit}
-              disabled={submitting || state.exercises.length === 0}
+              disabled={submitting || !hasPlanContent(state)}
               className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f] disabled:opacity-55"
             >
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              Crear sesión
+              {isEdit ? "Guardar cambios" : "Crear sesión"}
             </button>
           </div>
         )}

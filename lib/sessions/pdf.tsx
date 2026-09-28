@@ -1,6 +1,12 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 export type PdfExercise = {
+  /** "text" = texto libre del monitor. */
+  kind?: "exercise" | "text";
+  description?: string | null;
+  steps?: Array<{ title: string; description: string }>;
+  tips?: string | null;
+  blockTitle?: string | null;
   name: string;
   category: "technique" | "tactics" | "fitness" | "warm-up";
   difficulty: "beginner" | "intermediate" | "advanced";
@@ -21,6 +27,8 @@ export type PdfSession = {
   intensity: number | null;
   tags: string[] | null;
   location: string | null;
+  material?: string | null;
+  observations?: string | null;
   exercises: PdfExercise[];
   students: { name: string; playerLevel: string | null }[];
   coachName: string;
@@ -217,6 +225,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
 
+  exerciseDescription: {
+    fontSize: 9,
+    color: "#374151",
+    lineHeight: 1.45,
+    marginTop: 4,
+  },
+  stepRow: { flexDirection: "row", marginTop: 3 },
+  stepNumber: {
+    fontSize: 8.5,
+    fontFamily: "Helvetica-Bold",
+    color: BRAND,
+    width: 12,
+  },
+  stepText: { fontSize: 8.5, color: "#374151", flex: 1, lineHeight: 1.4 },
+  stepTitle: { fontFamily: "Helvetica-Bold", color: "#111827" },
+  textItem: {
+    borderLeftWidth: 3,
+    borderLeftColor: GRAY,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 5,
+    padding: 9,
+    marginBottom: 5,
+  },
+  textItemBody: { fontSize: 10, color: "#111827", lineHeight: 1.45, flex: 1 },
+
   // Footer
   footer: {
     position: "absolute",
@@ -234,23 +269,17 @@ const styles = StyleSheet.create({
 
 const PHASE_LABEL: Record<NonNullable<PdfExercise["phase"]> | "none", string> =
   {
-    activation: "Activación",
-    main: "Principal",
-    cooldown: "Vuelta a la calma",
-    none: "Sin fase asignada",
+    activation: "Bloque inicial",
+    main: "Bloque principal",
+    cooldown: "Bloque final",
+    none: "Sin bloque asignado",
   };
 
-const CATEGORY_LABEL: Record<PdfExercise["category"], string> = {
+const CATEGORY_LABEL: Record<string, string> = {
   technique: "Técnica",
   tactics: "Táctica",
   fitness: "Físico",
   "warm-up": "Calentamiento",
-};
-
-const DIFFICULTY_LABEL: Record<PdfExercise["difficulty"], string> = {
-  beginner: "Principiante",
-  intermediate: "Intermedio",
-  advanced: "Avanzado",
 };
 
 const INTENSITY_LABEL = [
@@ -339,7 +368,9 @@ export function SessionPdf({ session }: { session: PdfSession }) {
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Ejercicios</Text>
-            <Text style={styles.metaValue}>{session.exercises.length}</Text>
+            <Text style={styles.metaValue}>
+              {session.exercises.filter((e) => e.kind !== "text").length}
+            </Text>
           </View>
           {session.intensity != null && (
             <View style={styles.metaItem}>
@@ -376,6 +407,20 @@ export function SessionPdf({ session }: { session: PdfSession }) {
           <>
             <Text style={styles.sectionTitle}>Descripción</Text>
             <Text style={styles.bodyText}>{session.description}</Text>
+          </>
+        )}
+
+        {session.material && (
+          <>
+            <Text style={styles.sectionTitle}>Material</Text>
+            <Text style={styles.bodyText}>{session.material}</Text>
+          </>
+        )}
+
+        {session.observations && (
+          <>
+            <Text style={styles.sectionTitle}>Observaciones</Text>
+            <Text style={styles.bodyText}>{session.observations}</Text>
           </>
         )}
 
@@ -416,59 +461,127 @@ export function SessionPdf({ session }: { session: PdfSession }) {
         )}
 
         {/* Exercises */}
-        <Text style={styles.sectionTitle}>Plan de entrenamiento</Text>
 
-        {phases.map(({ phase, items }) => (
-          <View key={phase} style={styles.phaseBlock} wrap={false}>
-            <Text style={styles.phaseTitle}>{PHASE_LABEL[phase]}</Text>
-            {items.map((ex) => (
-              <View
-                key={`${phase}-${ex.orderIndex}-${ex.name}`}
-                style={styles.exercise}
-              >
-                <View style={styles.exerciseHeader}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      flex: 1,
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <Text style={styles.exerciseNumber}>
-                      {ex.orderIndex + 1}.
-                    </Text>
-                    <Text style={styles.exerciseName}>{ex.name}</Text>
+        {phases.map(({ phase, items }, phaseIdx) => (
+          <View key={phase} style={styles.phaseBlock}>
+            {/* El título va dentro del primer bloque para no quedarse
+                solo al final de una página. */}
+            {phaseIdx === 0 && (
+              <Text style={styles.sectionTitle}>Plan de entrenamiento</Text>
+            )}
+            <Text style={styles.phaseTitle} minPresenceAhead={80}>
+              {items[0]?.blockTitle || PHASE_LABEL[phase]}
+            </Text>
+            {items.map((ex) =>
+              ex.kind === "text" ? (
+                <View
+                  key={`${phase}-${ex.orderIndex}`}
+                  style={styles.textItem}
+                  wrap={false}
+                >
+                  <View style={styles.exerciseHeader}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flex: 1,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <Text style={styles.exerciseNumber}>
+                        {ex.orderIndex + 1}.
+                      </Text>
+                      <Text style={styles.textItemBody}>{ex.name}</Text>
+                    </View>
+                    {ex.durationMinutes ? (
+                      <Text style={styles.exerciseDuration}>
+                        {ex.durationMinutes} min
+                      </Text>
+                    ) : null}
                   </View>
-                  {ex.durationMinutes ? (
-                    <Text style={styles.exerciseDuration}>
-                      {ex.durationMinutes} min
+                  {ex.description ? (
+                    <Text style={styles.exerciseDescription}>
+                      {ex.description}
                     </Text>
                   ) : null}
+                  {ex.notes ? (
+                    <Text style={styles.exerciseNotes}>Notas: {ex.notes}</Text>
+                  ) : null}
                 </View>
-
-                <Text style={styles.exerciseMeta}>
-                  {CATEGORY_LABEL[ex.category]} ·{" "}
-                  {DIFFICULTY_LABEL[ex.difficulty]}
-                  {ex.intensity != null
-                    ? ` · Intensidad ${ex.intensity}/5 (${INTENSITY_LABEL[ex.intensity]})`
-                    : ""}
-                </Text>
-
-                {ex.notes && (
-                  <Text style={styles.exerciseNotes}>📝 {ex.notes}</Text>
-                )}
-
-                {ex.materials && ex.materials.length > 0 && (
-                  <View style={styles.exerciseMaterials}>
-                    {ex.materials.map((m) => (
-                      <View key={m} style={styles.exerciseMaterialChip}>
-                        <Text>{m}</Text>
-                      </View>
-                    ))}
+              ) : (
+                <View
+                  key={`${phase}-${ex.orderIndex}-${ex.name}`}
+                  style={styles.exercise}
+                  wrap={false}
+                >
+                  <View style={styles.exerciseHeader}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flex: 1,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <Text style={styles.exerciseNumber}>
+                        {ex.orderIndex + 1}.
+                      </Text>
+                      <Text style={styles.exerciseName}>{ex.name}</Text>
+                    </View>
+                    {ex.durationMinutes ? (
+                      <Text style={styles.exerciseDuration}>
+                        {ex.durationMinutes} min
+                      </Text>
+                    ) : null}
                   </View>
-                )}
-              </View>
-            ))}
+
+                  <Text style={styles.exerciseMeta}>
+                    {CATEGORY_LABEL[ex.category] ?? ex.category}
+                    {ex.intensity != null
+                      ? ` · Intensidad ${ex.intensity}/5 (${INTENSITY_LABEL[ex.intensity]})`
+                      : ""}
+                  </Text>
+
+                  {ex.description ? (
+                    <Text style={styles.exerciseDescription}>
+                      {ex.description}
+                    </Text>
+                  ) : null}
+
+                  {ex.steps && ex.steps.length > 0 ? (
+                    <View style={{ marginTop: 4 }}>
+                      {ex.steps.map((step, i) => (
+                        <View key={i} style={styles.stepRow}>
+                          <Text style={styles.stepNumber}>{i + 1}.</Text>
+                          <Text style={styles.stepText}>
+                            <Text style={styles.stepTitle}>{step.title}</Text>
+                            {step.description ? ` — ${step.description}` : ""}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {ex.tips ? (
+                    <Text style={styles.exerciseDescription}>
+                      Consejos: {ex.tips}
+                    </Text>
+                  ) : null}
+
+                  {ex.notes && (
+                    <Text style={styles.exerciseNotes}>Notas: {ex.notes}</Text>
+                  )}
+
+                  {ex.materials && ex.materials.length > 0 && (
+                    <View style={styles.exerciseMaterials}>
+                      {ex.materials.map((m) => (
+                        <View key={m} style={styles.exerciseMaterialChip}>
+                          <Text>{m}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )
+            )}
           </View>
         ))}
 

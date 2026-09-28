@@ -42,7 +42,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 interface ExerciseData {
-  exerciseId: string;
+  /** Clave única del elemento del plan. */
+  key: string;
+  /** "text" = texto libre del monitor (no es un ejercicio de la biblioteca). */
+  kind: "exercise" | "text";
+  exerciseId: string | null;
   name: string;
   category: string;
   difficulty: string;
@@ -102,6 +106,8 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
   const [countdownMode, setCountdownMode] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
+  const [showQuickComplete, setShowQuickComplete] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const [executionById, setExecutionById] = useState<
     Record<string, ExerciseExecution>
   >({});
@@ -153,10 +159,10 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     }
   }
 
-  function markDone(exerciseId: string) {
+  function markDone(key: string) {
     setDone((prev) => {
       const next = new Set(prev);
-      next.add(exerciseId);
+      next.add(key);
       return next;
     });
   }
@@ -167,12 +173,9 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     return Math.max(exercise.durationMinutes * 60 - timerSeconds, 0);
   }
 
-  function updateExecution(
-    exerciseId: string,
-    patch: Partial<ExerciseExecution>
-  ) {
+  function updateExecution(key: string, patch: Partial<ExerciseExecution>) {
     setExecutionById((prev) => {
-      const currentEntry = prev[exerciseId] ?? {
+      const currentEntry = prev[key] ?? {
         actualDurationSeconds: 0,
         completed: false,
         skipped: false,
@@ -181,7 +184,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
       };
       return {
         ...prev,
-        [exerciseId]: { ...currentEntry, ...patch },
+        [key]: { ...currentEntry, ...patch },
       };
     });
   }
@@ -194,12 +197,12 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     skipped?: boolean;
   }) {
     if (!current) return;
-    updateExecution(current.exerciseId, {
+    updateExecution(current.key, {
       actualDurationSeconds: elapsedSecondsFor(current),
       completed,
       skipped,
     });
-    if (completed) markDone(current.exerciseId);
+    if (completed) markDone(current.key);
   }
 
   function goNext() {
@@ -237,38 +240,108 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     setCurrentIdx(idx);
   }
 
-  async function handleFinish() {
+  async function handleFinish({ markAll = false }: { markAll?: boolean } = {}) {
     setFinishing(true);
+    setFinishError(null);
     const currentElapsed = current ? elapsedSecondsFor(current) : 0;
-    const payload = exercises.map((exercise) => {
-      const existing = executionById[exercise.exerciseId];
-      const isCurrent = current?.exerciseId === exercise.exerciseId;
-      const completed =
-        done.has(exercise.exerciseId) || isCurrent || existing?.completed;
-      return {
-        exerciseId: exercise.exerciseId,
-        actualDurationSeconds: isCurrent
-          ? currentElapsed
-          : (existing?.actualDurationSeconds ?? 0),
-        completed: Boolean(completed),
-        skipped: existing?.skipped ?? false,
-        rating: existing?.rating ?? null,
-        notes: existing?.notes ?? null,
-      };
-    });
+    const payload = exercises
+      .filter((exercise) => exercise.kind === "exercise" && exercise.exerciseId)
+      .map((exercise) => {
+        const existing = executionById[exercise.key];
+        const isCurrent = current?.key === exercise.key;
+        const completed =
+          markAll ||
+          done.has(exercise.key) ||
+          (started && isCurrent) ||
+          existing?.completed;
+        return {
+          exerciseId: exercise.exerciseId as string,
+          actualDurationSeconds:
+            started && isCurrent
+              ? currentElapsed
+              : (existing?.actualDurationSeconds ?? 0),
+          completed: Boolean(completed),
+          skipped: existing?.skipped ?? false,
+          rating: existing?.rating ?? null,
+          notes: existing?.notes ?? null,
+        };
+      });
 
-    const res = await fetch(`/api/sessions/${session.id}/execution`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exercises: payload, completeSession: true }),
-    });
+    // Sesión solo con textos libres: basta con marcarla como completada.
+    const res =
+      payload.length > 0
+        ? await fetch(`/api/sessions/${session.id}/execution`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ exercises: payload, completeSession: true }),
+          })
+        : await fetch(`/api/sessions/${session.id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "completed" }),
+          });
     if (!res.ok) {
       setFinishing(false);
+      setFinishError(
+        "No se pudo guardar. Revisa la conexión e inténtalo de nuevo."
+      );
       return;
     }
     router.push(`/sessions/${session.id}`);
     router.refresh();
   }
+
+  const exerciseItemsCount = exercises.filter(
+    (e) => e.kind === "exercise"
+  ).length;
+
+  const quickCompleteModal = showQuickComplete ? (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={() => !finishing && setShowQuickComplete(false)}
+      />
+      <div className="relative w-full max-w-sm rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+        <div className="text-center mb-6">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground">
+            <CheckCircle2 className="size-7" />
+          </div>
+          <h2 className="mb-1 text-2xl font-black text-foreground">
+            ¿Sesión completada?
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Se marcará la sesión como completada
+            {exerciseItemsCount > 0
+              ? ` y los ${exerciseItemsCount} ejercicio${exerciseItemsCount !== 1 ? "s" : ""} como realizados`
+              : ""}
+            , sin ir uno por uno.
+          </p>
+          {finishError && (
+            <p className="mt-3 text-sm font-semibold text-destructive">
+              {finishError}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowQuickComplete(false)}
+            disabled={finishing}
+            className="flex-1 rounded-full border border-[#050505]/10 px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
+          >
+            Volver
+          </button>
+          <button
+            onClick={() => handleFinish({ markAll: true })}
+            disabled={finishing}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60"
+          >
+            {finishing && <Loader2 className="size-4 animate-spin" />}
+            Sí, completada
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (exercises.length === 0) {
     return (
@@ -277,7 +350,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           <Dumbbell className="size-7 text-foreground/45" />
         </div>
         <p className="mb-2 text-2xl font-black text-foreground/70">
-          Esta sesión no tiene ejercicios.
+          Esta sesión no tiene contenido.
         </p>
         <Link
           href={`/sessions/${session.id}`}
@@ -309,9 +382,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8 px-4 py-8">
           {/* Session overview */}
           <div className="text-center space-y-2">
-            <p className="tp-kicker">
-              Preparación
-            </p>
+            <p className="tp-kicker">Preparación</p>
             <h1 className="text-3xl font-black leading-tight text-foreground">
               {session.title}
             </h1>
@@ -326,7 +397,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
               <span className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1.5">
                 <Dumbbell className="size-3.5 text-brand" />
-                {totalExercises} ejercicio{totalExercises !== 1 ? "s" : ""}
+                {totalExercises} elemento{totalExercises !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -360,14 +431,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           {/* Exercise list preview */}
           <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
             <div className="border-b border-[#050505]/10 px-5 py-3.5 dark:border-white/10">
-              <h2 className="text-sm font-black text-foreground">Ejercicios</h2>
+              <h2 className="text-sm font-black text-foreground">
+                Plan de la sesión
+              </h2>
             </div>
             <div className="divide-y divide-[#050505]/10 dark:divide-white/10">
               {exercises.map((ex, idx) => (
-                <div
-                  key={ex.exerciseId}
-                  className="flex items-center gap-3 px-5 py-3"
-                >
+                <div key={ex.key} className="flex items-center gap-3 px-5 py-3">
                   <span className="text-[10px] font-mono text-muted-foreground/50 w-4 shrink-0 text-right">
                     {idx + 1}
                   </span>
@@ -384,7 +454,14 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                     )}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-black text-foreground">
+                    <p
+                      className={cn(
+                        "text-sm font-black text-foreground",
+                        ex.kind === "text"
+                          ? "line-clamp-2 whitespace-pre-line font-semibold"
+                          : "truncate"
+                      )}
+                    >
                       {ex.name}
                     </p>
                     <p
@@ -396,9 +473,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                       {CATEGORY_LABELS[ex.category] ?? ex.category}
                     </p>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-                    {ex.durationMinutes} min
-                  </span>
+                  {ex.durationMinutes > 0 && (
+                    <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                      {ex.durationMinutes} min
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -413,7 +492,15 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
             <Play className="size-5 translate-x-0.5" />
             Comenzar sesión
           </button>
+          <button
+            onClick={() => setShowQuickComplete(true)}
+            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#050505]/15 text-sm font-black text-foreground transition-colors hover:bg-muted dark:border-white/15"
+          >
+            <CheckCircle2 className="size-4" />
+            Sesión completada
+          </button>
         </footer>
+        {quickCompleteModal}
       </div>
     );
   }
@@ -423,7 +510,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
     countdownMode && current
       ? Math.min(100, (timerSeconds / (current.durationMinutes * 60)) * 100)
       : 0;
-  const currentExecution = executionById[current.exerciseId] ?? {
+  const currentExecution = executionById[current.key] ?? {
     actualDurationSeconds: 0,
     completed: false,
     skipped: false,
@@ -451,11 +538,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
         </div>
 
         <button
-          onClick={() => setShowFinish(true)}
+          onClick={() => setShowQuickComplete(true)}
           className="inline-flex items-center gap-1 text-xs font-semibold text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors"
         >
           <Flag className="size-3" />
-          Terminar
+          Sesión completada
         </button>
       </header>
 
@@ -485,15 +572,23 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           >
             {CATEGORY_LABELS[current.category] ?? current.category}
           </p>
-          <h1 className="mb-3 text-3xl font-black leading-tight text-foreground">
-            {current.name}
-          </h1>
+          {current.kind === "text" ? (
+            <p className="mb-3 whitespace-pre-line text-xl font-bold leading-snug text-foreground">
+              {current.name}
+            </p>
+          ) : (
+            <h1 className="mb-3 text-3xl font-black leading-tight text-foreground">
+              {current.name}
+            </h1>
+          )}
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="size-3" />
-              {current.durationMinutes} min sugeridos
-            </span>
-            {done.has(current.exerciseId) && (
+            {current.durationMinutes > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock className="size-3" />
+                {current.durationMinutes} min sugeridos
+              </span>
+            )}
+            {done.has(current.key) && (
               <span className="flex items-center gap-1 text-brand font-semibold">
                 <CheckCircle2 className="size-3" />
                 Completado
@@ -578,49 +673,51 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           </div>
         </div>
 
-        {/* Live execution notes */}
-        <div className="space-y-4 rounded-[28px] border border-[#050505]/10 bg-white p-4 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase text-muted-foreground">
-                Registro de pista
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Se guarda al completar la sesión.
-              </p>
+        {/* Live execution notes (solo ejercicios de la biblioteca) */}
+        {current.kind === "exercise" && (
+          <div className="space-y-4 rounded-[28px] border border-[#050505]/10 bg-white p-4 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase text-muted-foreground">
+                  Registro de pista
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Se guarda al completar la sesión.
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      updateExecution(current.key, { rating: value })
+                    }
+                    className={cn(
+                      "size-8 rounded-full border text-xs font-black transition-colors",
+                      currentExecution.rating === value
+                        ? "border-brand bg-brand text-brand-foreground"
+                        : "border-[#050505]/10 text-muted-foreground hover:border-brand/40 hover:text-foreground dark:border-white/10"
+                    )}
+                    aria-label={`Valorar ejercicio con ${value}`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() =>
-                    updateExecution(current.exerciseId, { rating: value })
-                  }
-                  className={cn(
-                    "size-8 rounded-full border text-xs font-black transition-colors",
-                    currentExecution.rating === value
-                      ? "border-brand bg-brand text-brand-foreground"
-                      : "border-[#050505]/10 text-muted-foreground hover:border-brand/40 hover:text-foreground dark:border-white/10"
-                  )}
-                  aria-label={`Valorar ejercicio con ${value}`}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
+            <textarea
+              value={currentExecution.notes}
+              onChange={(event) =>
+                updateExecution(current.key, { notes: event.target.value })
+              }
+              rows={3}
+              maxLength={1000}
+              placeholder="Notas rápidas: ajuste aplicado, respuesta del alumno, variante usada..."
+              className="tp-field w-full resize-none px-3 py-2 text-sm placeholder:text-muted-foreground"
+            />
           </div>
-          <textarea
-            value={currentExecution.notes}
-            onChange={(event) =>
-              updateExecution(current.exerciseId, { notes: event.target.value })
-            }
-            rows={3}
-            maxLength={1000}
-            placeholder="Notas rápidas: ajuste aplicado, respuesta del alumno, variante usada..."
-            className="tp-field w-full resize-none px-3 py-2 text-sm placeholder:text-muted-foreground"
-          />
-        </div>
+        )}
 
         {/* Materials for this exercise */}
         {current.materials && current.materials.length > 0 && (
@@ -702,11 +799,11 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
       {/* Exercise index strip */}
       <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto border-t border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
         {exercises.map((ex, idx) => {
-          const isDone = done.has(ex.exerciseId);
+          const isDone = done.has(ex.key);
           const isCurrent = idx === currentIdx;
           return (
             <button
-              key={ex.exerciseId}
+              key={ex.key}
               onClick={() => selectExercise(idx)}
               title={ex.name}
               className={cn(
@@ -779,8 +876,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                 ¡Sesión completada!
               </h2>
               <p className="text-sm text-muted-foreground">
-                {done.size} de {totalExercises} ejercicios realizados
+                {done.size} de {totalExercises} elementos realizados
               </p>
+              {finishError && (
+                <p className="mt-3 text-sm font-semibold text-destructive">
+                  {finishError}
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               <button
@@ -791,7 +893,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
                 Seguir
               </button>
               <button
-                onClick={handleFinish}
+                onClick={() => handleFinish()}
                 disabled={finishing}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60"
               >
@@ -802,6 +904,7 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           </div>
         </div>
       )}
+      {quickCompleteModal}
     </div>
   );
 }

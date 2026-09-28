@@ -16,7 +16,14 @@ export interface StudentOption {
 }
 
 export interface WizardExercise {
+  /**
+   * Para ejercicios de la biblioteca, su id. Para textos libres, una clave
+   * local que empieza por "text-" (nunca se envía al servidor como id).
+   */
   exerciseId: string;
+  /** "text" = texto libre escrito por el monitor, sin crear un ejercicio. */
+  kind?: "exercise" | "text";
+  freeText?: string;
   name: string;
   category: string;
   durationMinutes: number;
