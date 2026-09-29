@@ -20,6 +20,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { FavoriteToggle } from "@/components/app/favorite-toggle";
+import { AddToSessionButton } from "@/components/app/add-to-session-dialog";
 import { ExerciseFilters } from "@/components/app/exercise-filters";
 import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
@@ -1165,6 +1166,13 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                                   />
                                   {owner.label}
                                 </span>
+                              )}
+                              {user && (
+                                <AddToSessionButton
+                                  variant="icon"
+                                  exerciseIds={[exercise.id]}
+                                  label={exercise.name}
+                                />
                               )}
                               <FavoriteToggle
                                 exerciseId={exercise.id}

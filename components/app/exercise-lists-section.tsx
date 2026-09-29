@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AddToSessionDialog } from "@/components/app/add-to-session-dialog";
 
 interface ListedExercise {
   id: string;
@@ -99,6 +100,7 @@ function CollectionCard({
   removingKey: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [addToSessionOpen, setAddToSessionOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(list.name);
   const [renameSaving, setRenameSaving] = useState(false);
@@ -401,18 +403,39 @@ function CollectionCard({
                   {list.itemsCount} ejercicio{list.itemsCount !== 1 ? "s" : ""}{" "}
                   en esta colección
                 </span>
-                <Link
-                  href={sessionHref}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors",
-                    list.items.length > 0
-                      ? cn(accent.text, "hover:opacity-70")
-                      : "text-foreground/25 pointer-events-none"
+                <div className="flex items-center gap-4">
+                  {list.items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAddToSessionOpen(true)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors",
+                        accent.text,
+                        "hover:opacity-70"
+                      )}
+                    >
+                      Añadir a sesión <Plus className="size-3" />
+                    </button>
                   )}
-                >
-                  Crear sesión <ArrowRight className="size-3" />
-                </Link>
+                  <Link
+                    href={sessionHref}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors",
+                      list.items.length > 0
+                        ? cn(accent.text, "hover:opacity-70")
+                        : "text-foreground/25 pointer-events-none"
+                    )}
+                  >
+                    Crear sesión <ArrowRight className="size-3" />
+                  </Link>
+                </div>
               </div>
+              <AddToSessionDialog
+                open={addToSessionOpen}
+                onOpenChange={setAddToSessionOpen}
+                exerciseIds={list.items.map((i) => i.id)}
+                label={list.name}
+              />
             </>
           )}
         </div>

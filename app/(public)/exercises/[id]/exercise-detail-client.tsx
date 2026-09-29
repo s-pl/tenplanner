@@ -19,7 +19,6 @@ import {
   ListOrdered,
   ExternalLink,
   BookMarked,
-  CalendarPlus,
   Shuffle,
   Lock,
   ShieldAlert,
@@ -39,6 +38,7 @@ import {
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
+import { AddToSessionButton } from "@/components/app/add-to-session-dialog";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -481,16 +481,10 @@ export function ExerciseDetailClient({
                     ? `En ${savedInLists.length} lista${savedInLists.length !== 1 ? "s" : ""}`
                     : "Guardar"}
                 </button>
-                <Link
-                  href={`/sessions/new?exercises=${exercise.id}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38]/15 dark:border-white/10 dark:bg-[#050505]"
-                >
-                  <CalendarPlus
-                    className="size-4 text-brand"
-                    strokeWidth={1.6}
-                  />
-                  Añadir a sesión
-                </Link>
+                <AddToSessionButton
+                  exerciseIds={[exercise.id]}
+                  label={exercise.name}
+                />
               </>
             )}
             {!userId && (
