@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clock, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 interface SessionData {
@@ -42,8 +51,15 @@ function getFirstDayOfMonth(year: number, month: number) {
   return (day + 6) % 7;
 }
 
-export function CalendarClient({ sessions }: CalendarClientProps) {
+export function CalendarClient({
+  sessions: initialSessions,
+}: CalendarClientProps) {
+  const router = useRouter();
   const today = new Date();
+  const [sessions, setSessions] = useState(initialSessions);
+  const [toDelete, setToDelete] = useState<SessionData | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -86,6 +102,26 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
       const day = d.getDate();
       if (!sessionsByDay.has(day)) sessionsByDay.set(day, []);
       sessionsByDay.get(day)!.push(s);
+    }
+  }
+
+  async function deleteSession(session: SessionData) {
+    setDeletingId(session.id);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setDeleteError("No se pudo eliminar la sesión. Inténtalo de nuevo.");
+        return;
+      }
+      setSessions((prev) => prev.filter((s) => s.id !== session.id));
+      router.refresh();
+    } catch {
+      setDeleteError("Error de red. Inténtalo de nuevo.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -209,12 +245,15 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                     {hasSessions && (
                       <div className="mt-1 space-y-0.5">
                         {daySessions.slice(0, 2).map((s) => (
-                          <div
+                          <Link
                             key={s.id}
-                            className="truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground"
+                            href={`/sessions/${s.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            title={s.title}
+                            className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
                           >
                             {s.title}
-                          </div>
+                          </Link>
                         ))}
                         {daySessions.length > 2 && (
                           <div className="text-[10px] text-muted-foreground px-1.5">
@@ -272,9 +311,12 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground">
+                    <Link
+                      href={`/sessions/${s.id}`}
+                      className="block truncate text-sm font-medium text-foreground hover:text-brand"
+                    >
                       {s.title}
-                    </p>
+                    </Link>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Clock className="size-3" />
                       {s.durationMinutes} min
@@ -286,12 +328,49 @@ export function CalendarClient({ sessions }: CalendarClientProps) {
                   >
                     Ver
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => setToDelete(s)}
+                    disabled={deletingId === s.id}
+                    aria-label={`Eliminar ${s.title}`}
+                    title="Eliminar sesión"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                  >
+                    {deletingId === s.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-4" />
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
           )}
+          {deleteError && (
+            <p className="text-sm font-medium text-destructive">
+              {deleteError}
+            </p>
+          )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setToDelete(null);
+        }}
+        title="¿Eliminar esta sesión?"
+        description={
+          toDelete
+            ? `“${toDelete.title}” se borrará con su plan de ejercicios y sus notas. Esta acción no se puede deshacer.`
+            : undefined
+        }
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => {
+          if (toDelete) void deleteSession(toDelete);
+        }}
+      />
     </div>
   );
 }

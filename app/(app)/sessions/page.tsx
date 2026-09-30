@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { SessionFavoriteToggle } from "@/components/app/session-favorite-toggle";
+import { SessionsBulkList } from "./sessions-bulk-list";
 import { getFavoritedSessionIds } from "@/lib/sessions/favorites";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
@@ -23,14 +23,11 @@ import {
 } from "drizzle-orm";
 import {
   Plus,
-  ArrowRight,
   ArrowLeft,
   ArrowUpRight,
   Lock,
   Search,
   CalendarClock,
-  Clock,
-  Dumbbell,
 } from "lucide-react";
 import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
@@ -177,6 +174,16 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     .orderBy(asc(sessionsTable.scheduledAt))
     .limit(PAGE_SIZE)
     .offset(offset);
+
+  // Ids de todas las sesiones del filtro (para "seleccionar todas").
+  const allFilteredIds = (
+    await db
+      .select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(whereClause)
+      .orderBy(asc(sessionsTable.scheduledAt))
+      .limit(500)
+  ).map((r) => r.id);
 
   const sessionIds = sessionRows.map((s) => s.id);
   const exerciseCounts =
@@ -371,91 +378,40 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   </Link>
                 </div>
               ) : (
-                <ul className="grid gap-2">
-                  {sessionRows.map((session) => {
+                <SessionsBulkList
+                  items={sessionRows.map((session) => {
                     const date = new Date(session.scheduledAt);
                     const isPast = date < now;
-                    const count = exerciseCountMap.get(session.id) ?? 0;
-                    const relative = humanDate(date);
-                    const statusLabel =
-                      session.status === "completed"
-                        ? "Completada"
-                        : session.status === "cancelled"
-                          ? "Cancelada"
-                          : isPast
-                            ? "Sin completar"
-                            : "Programada";
-                    const statusColor =
-                      session.status === "completed"
-                        ? "bg-brand/10 text-brand border-brand/20"
-                        : session.status === "cancelled"
-                          ? "bg-destructive/10 text-destructive/80 border-destructive/20"
-                          : isPast
-                            ? "bg-foreground/5 text-foreground/55 border-border"
-                            : "bg-blue-500/10 text-blue-500 border-blue-500/20";
-
-                    return (
-                      <li
-                        key={session.id}
-                        className="relative rounded-lg border border-[#050505]/10 bg-white shadow-[0_12px_36px_rgba(5,5,5,0.035)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
-                      >
-                        <Link
-                          href={`/sessions/${session.id}`}
-                          className="group flex items-center gap-4 px-4 py-3.5"
-                        >
-                          <div className="flex w-20 shrink-0 flex-col items-start border-r border-border pr-3">
-                            <p className="font-heading text-xl leading-none tabular-nums text-foreground">
-                              {formatDayMonth(date)}
-                            </p>
-                            <p className="mt-1 text-[11px] uppercase text-foreground/50 tabular-nums">
-                              {formatWeekday(date)} · {formatTime(date)}
-                            </p>
-                          </div>
-
-                          <div className="min-w-0 flex-1 pr-10">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span
-                                className={`inline-flex items-center text-[10.5px] font-medium px-1.5 py-0.5 rounded border ${statusColor}`}
-                              >
-                                {statusLabel}
-                              </span>
-                              {relative && (
-                                <span className="text-[12px] text-foreground/50">
-                                  {relative}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[15px] text-foreground truncate">
-                              {session.title}
-                            </p>
-                            <p className="mt-1 text-[12px] text-foreground/55 tabular-nums">
-                              <span className="inline-flex items-center gap-1">
-                                <Clock className="size-3" />
-                                {session.durationMinutes} min
-                              </span>{" "}
-                              <span className="mx-1 text-foreground/25">/</span>
-                              <span className="inline-flex items-center gap-1">
-                                <Dumbbell className="size-3" />
-                                {count}{" "}
-                                {count === 1 ? "ejercicio" : "ejercicios"}
-                              </span>
-                            </p>
-                          </div>
-
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-foreground/30 transition-colors group-hover:border-[#D6FF38]/70 group-hover:bg-[#D6FF38]/15 group-hover:text-foreground">
-                            <ArrowRight className="size-4" />
-                          </span>
-                        </Link>
-                        <SessionFavoriteToggle
-                          sessionId={session.id}
-                          sessionTitle={session.title}
-                          initialFavorited={favoritedIds.has(session.id)}
-                          className="absolute right-[4.25rem] top-1/2 -translate-y-1/2"
-                        />
-                      </li>
-                    );
+                    return {
+                      id: session.id,
+                      title: session.title,
+                      dayMonth: formatDayMonth(date),
+                      weekdayTime: `${formatWeekday(date)} · ${formatTime(date)}`,
+                      statusLabel:
+                        session.status === "completed"
+                          ? "Completada"
+                          : session.status === "cancelled"
+                            ? "Cancelada"
+                            : isPast
+                              ? "Sin completar"
+                              : "Programada",
+                      statusColor:
+                        session.status === "completed"
+                          ? "bg-brand/10 text-brand border-brand/20"
+                          : session.status === "cancelled"
+                            ? "bg-destructive/10 text-destructive/80 border-destructive/20"
+                            : isPast
+                              ? "bg-foreground/5 text-foreground/55 border-border"
+                              : "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                      relative: humanDate(date) || null,
+                      durationMinutes: session.durationMinutes,
+                      exerciseCount: exerciseCountMap.get(session.id) ?? 0,
+                      favorited: favoritedIds.has(session.id),
+                    };
                   })}
-                </ul>
+                  allIds={allFilteredIds}
+                  totalFiltered={totalFiltered}
+                />
               )}
 
               {totalFiltered > 0 && totalPages > 1 && (
