@@ -489,6 +489,29 @@ export function AdminToolsClient({ stats: initialStats }: Props) {
 
         <ActionCard
           icon={Download}
+          title="Exportar todos los datos"
+          description="Copia de seguridad completa: ejercicios, sesiones, clases, alumnos, lugares, usuarios y ajustes."
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-foreground/50">
+              Descarga un archivo .json. No incluye contraseñas. Contiene datos
+              personales: guárdalo en un lugar seguro.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="self-start"
+              onClick={() => window.open("/api/admin/export", "_blank")}
+            >
+              <Download data-icon="inline-start" />
+              Descargar copia
+            </Button>
+          </div>
+        </ActionCard>
+
+        <ActionCard
+          icon={Download}
           title="Exportar usuarios"
           description="Descarga un CSV con todos los usuarios registrados, fecha de alta y rol."
         >
