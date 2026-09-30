@@ -20,7 +20,6 @@ import {
   NotebookPen,
   Plus,
   ShieldCheck,
-  Store,
   UserCircle,
   Users,
   Users2,
@@ -98,12 +97,7 @@ const navItems: NavItem[] = [
     allLabel: "Ver todas",
     submenu: [
       { href: "/sessions", label: "Mis sesiones", icon: ClipboardList },
-      {
-        href: "/sessions/templates",
-        label: "Plantillas",
-        icon: Store,
-        feature: "sessionTemplates",
-      },
+      { href: "/sessions/favorites", label: "Favoritas", icon: Heart },
       { href: "/sessions/new", label: "Nueva sesión", icon: Plus },
     ],
   },

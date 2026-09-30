@@ -20,6 +20,7 @@ import {
   resolvePhase,
   type AnalyticsExerciseInput,
 } from "@/lib/sessions/analytics";
+import { getFavoritedSessionIds } from "@/lib/sessions/favorites";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 
 interface PageProps {
@@ -206,6 +207,10 @@ export default async function SessionPage({ params }: PageProps) {
     tags.length
   );
 
+  const favoritedSessionIds = await getFavoritedSessionIds(user.id, [
+    session.id,
+  ]);
+
   return (
     <SessionDetailClient
       session={{
@@ -232,6 +237,7 @@ export default async function SessionPage({ params }: PageProps) {
       students={studentRows}
       favoritedExerciseIds={Array.from(favoritedIds)}
       sessionBlocks={sessionBlocksData}
+      isFavorite={favoritedSessionIds.has(session.id)}
     />
   );
 }

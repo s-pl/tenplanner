@@ -211,6 +211,13 @@
       "when": 1790500000000,
       "tag": "0029_exercise_caracter_situacion_pelota",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0030_session_lists",
+      "breakpoints": true
     }
   ]
 }

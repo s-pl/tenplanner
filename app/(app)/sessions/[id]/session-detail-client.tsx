@@ -19,10 +19,10 @@ import {
   Copy,
   Star,
   Play,
-  Upload,
   CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
+import { SessionFavoriteToggle } from "@/components/app/session-favorite-toggle";
 import type { AvailableExercise } from "@/components/app/session-form";
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
@@ -135,6 +135,7 @@ interface Props {
   students: SessionStudentData[];
   favoritedExerciseIds: string[];
   sessionBlocks: SessionBlockData[];
+  isFavorite?: boolean;
 }
 
 export interface SessionBlockData {
@@ -523,17 +524,13 @@ export function SessionDetailClient({
   analytics,
   students,
   sessionBlocks,
+  isFavorite = false,
 }: Props) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [showPublishDialog, setShowPublishDialog] = useState(false);
-  const [sanitizeNotes, setSanitizeNotes] = useState(true);
-  const [templateTitle, setTemplateTitle] = useState(session.title);
-  const [templateDescription, setTemplateDescription] = useState("");
-  const [publishing, setPublishing] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusDialog, setStatusDialog] = useState<{
@@ -622,29 +619,6 @@ export function SessionDetailClient({
     router.refresh();
   }
 
-  async function handlePublish() {
-    if (!templateTitle.trim()) return;
-    setPublishing(true);
-    try {
-      const res = await fetch(`/api/sessions/${session.id}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sanitizeNotes,
-          templateTitle: templateTitle.trim(),
-          templateDescription: templateDescription.trim() || null,
-        }),
-      });
-      const json = (await res.json()) as { data?: { templateId: string } };
-      if (res.ok && json.data?.templateId) {
-        router.push(`/sessions/templates/${json.data.templateId}`);
-      }
-    } finally {
-      setPublishing(false);
-      setShowPublishDialog(false);
-    }
-  }
-
   return (
     <div className="min-h-full w-full space-y-6 bg-[#F4F4F1] px-4 py-8 dark:bg-[#050505] sm:px-6 md:px-8">
       {/* Header */}
@@ -685,13 +659,12 @@ export function SessionDetailClient({
             <Copy className="size-3.5" />
             <span className="hidden sm:inline">Reutilizar</span>
           </Link>
-          <button
-            onClick={() => setShowPublishDialog(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#D6FF38]/45 bg-[#D6FF38]/10 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#D6FF38]/20"
-          >
-            <Upload className="size-3.5" />
-            <span className="hidden sm:inline">Publicar</span>
-          </button>
+          <SessionFavoriteToggle
+            sessionId={session.id}
+            sessionTitle={session.title}
+            initialFavorited={isFavorite}
+            variant="pill"
+          />
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
@@ -1172,141 +1145,6 @@ export function SessionDetailClient({
               >
                 {deleting && <Loader2 className="size-4 animate-spin" />}
                 Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPublishDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-2xl border border-foreground/15 bg-background shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-foreground/8">
-              <button
-                onClick={() => setShowPublishDialog(false)}
-                className="absolute right-4 top-4 size-7 flex items-center justify-center rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/8 transition-colors"
-              >
-                <X className="size-4" />
-              </button>
-              <p className="font-sans text-[9px] uppercase tracking-[0.22em] text-foreground/40 mb-1">
-                Publicar como plantilla
-              </p>
-              <h2 className="font-heading text-[20px] text-foreground">
-                Compartir en la biblioteca
-              </h2>
-              <p className="mt-1 text-[13px] text-foreground/50 leading-relaxed">
-                Se crea una copia pública. Tu información personal no se
-                publica.
-              </p>
-            </div>
-
-            <div className="px-6 py-5 space-y-4">
-              {/* Template title */}
-              <div className="space-y-1.5">
-                <label className="block text-[12px] font-semibold text-foreground/70 uppercase tracking-[0.1em]">
-                  Título de la plantilla <span className="text-brand">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={templateTitle}
-                  onChange={(e) => setTemplateTitle(e.target.value)}
-                  maxLength={255}
-                  className="w-full h-10 px-3.5 rounded-xl border border-foreground/15 bg-background text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50 transition-colors"
-                />
-              </div>
-
-              {/* Template description */}
-              <div className="space-y-1.5">
-                <label className="block text-[12px] font-semibold text-foreground/70 uppercase tracking-[0.1em]">
-                  Descripción{" "}
-                  <span className="font-normal normal-case tracking-normal text-foreground/40">
-                    (opcional)
-                  </span>
-                </label>
-                <textarea
-                  value={templateDescription}
-                  onChange={(e) => setTemplateDescription(e.target.value)}
-                  maxLength={500}
-                  rows={3}
-                  placeholder="Explica el objetivo, nivel o contexto de uso de esta plantilla…"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-foreground/15 bg-background text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:border-brand/50 transition-colors resize-none"
-                />
-              </div>
-
-              {/* Privacy summary */}
-              <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-3.5 space-y-2">
-                <p className="text-[11px] font-semibold text-foreground/50 uppercase tracking-[0.12em]">
-                  Qué se publica
-                </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px]">
-                  {[
-                    { label: "Estructura de ejercicios", included: true },
-                    { label: "Duración e intensidad", included: true },
-                    { label: "Objetivo y etiquetas", included: true },
-                    { label: "Tu nombre (autor)", included: true },
-                    { label: "Alumnos asignados", included: false },
-                    { label: "Ubicación del entreno", included: false },
-                    { label: "Asistencia y notas privadas", included: false },
-                  ].map(({ label, included }) => (
-                    <span
-                      key={label}
-                      className={cn(
-                        "flex items-center gap-1.5",
-                        included
-                          ? "text-foreground/70"
-                          : "text-foreground/35 line-through"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "size-1.5 rounded-full shrink-0",
-                          included ? "bg-brand" : "bg-foreground/20"
-                        )}
-                      />
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Strip notes */}
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={sanitizeNotes}
-                  onChange={(e) => setSanitizeNotes(e.target.checked)}
-                  className="mt-0.5 accent-[var(--brand)]"
-                />
-                <div>
-                  <p className="text-[13px] font-medium text-foreground">
-                    Vaciar notas de ejercicios
-                  </p>
-                  <p className="text-[12px] text-foreground/50">
-                    Elimina anotaciones personales de cada ejercicio.
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex gap-2 px-6 pb-6">
-              <button
-                onClick={() => setShowPublishDialog(false)}
-                className="flex-1 rounded-xl border border-foreground/15 px-4 py-2.5 text-[13px] font-medium text-foreground/70 hover:border-foreground/30 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={publishing || !templateTitle.trim()}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand text-background px-4 py-2.5 text-[13px] font-semibold hover:bg-brand/90 disabled:opacity-60 transition-colors"
-              >
-                {publishing ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Upload className="size-4" />
-                )}
-                Publicar plantilla
               </button>
             </div>
           </div>
