@@ -19,6 +19,7 @@ import { defaultScheduledAt } from "./defaults";
 import { ProgressIndicator } from "./progress-indicator";
 import { StepConfiguration } from "./step-configuration";
 import { StepExercises } from "./step-exercises";
+import { computeSessionDates, sessionCode } from "./recurrence";
 import {
   buildBlocksPayload,
   buildExercisesPayload,
@@ -95,7 +96,7 @@ function validateStep(
   }
 
   if (step === 2) {
-    if (!hasPlanContent(state)) {
+    if (!hasPlanContent(state) && !state.recurrence.enabled) {
       errors.exercises =
         "Añade al menos un ejercicio o un texto libre antes de guardar la sesión";
     }
@@ -182,6 +183,7 @@ function createInitialState({
       frequency: "weekly",
       weeks: 4,
       weekdays: [],
+      mode: "until",
     },
   };
 }
@@ -335,6 +337,10 @@ export function SessionWizard({
     setState((prev) => ({ ...prev, scheduledAt: local }));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [, setHasDraft] = useState(false);
@@ -505,30 +511,14 @@ export function SessionWizard({
       const scheduledDate = new Date(state.scheduledAt);
       const scheduledIso = scheduledDate.toISOString();
 
-      // Compute the list of dates: original + recurring ones if enabled.
-      const dates: string[] = [scheduledIso];
-      if (!edit && state.recurrence.enabled && state.recurrence.weeks > 1) {
-        const weekdays =
-          state.recurrence.weekdays.length > 0
-            ? state.recurrence.weekdays
-            : [scheduledDate.getDay()];
-
-        // Generate every weekday occurrence within the configured number of
-        // weeks, starting from the same hour on the original day.
-        for (let w = 0; w < state.recurrence.weeks; w++) {
-          for (const wd of weekdays) {
-            const d = new Date(scheduledDate);
-            // Move to the start of week of scheduledDate
-            const diff = wd - scheduledDate.getDay() + w * 7;
-            d.setDate(scheduledDate.getDate() + diff);
-            const iso = d.toISOString();
-            // Skip past dates (before the original) and the original itself.
-            if (d.getTime() <= scheduledDate.getTime()) continue;
-            if (!dates.includes(iso)) dates.push(iso);
-          }
-        }
-        dates.sort();
-      }
+      // Fechas: la primera + las repeticiones (semanas o hasta fin de curso).
+      const sessionDates = edit
+        ? [scheduledDate]
+        : computeSessionDates(scheduledDate, state.recurrence).dates;
+      const titleFor = (date: Date) =>
+        !edit && state.useCodeTitle
+          ? sessionCode(date, state.groupName ?? "")
+          : state.title.trim();
 
       const exercisesPayload = buildExercisesPayload(state);
       const blocksPayload = buildBlocksPayload(state);
@@ -572,14 +562,18 @@ export function SessionWizard({
 
       // Submit all sessions sequentially. If any fails we stop and report.
       let res: Response | null = null;
-      for (const iso of dates) {
+      let createdCount = 0;
+      for (const date of sessionDates) {
+        if (sessionDates.length > 1) {
+          setProgress({ done: createdCount, total: sessionDates.length });
+        }
         res = await fetch("/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: state.title.trim(),
+            title: titleFor(date),
             description: null,
-            scheduledAt: iso,
+            scheduledAt: date.toISOString(),
             durationMinutes: state.durationMinutes,
             objective: state.objective.trim() || null,
             material: state.material.trim() || null,
@@ -595,7 +589,9 @@ export function SessionWizard({
           }),
         });
         if (!res.ok) break;
+        createdCount++;
       }
+      setProgress(null);
 
       // Use the last response for downstream handling so failures bubble up.
       if (!res) {
@@ -634,7 +630,11 @@ export function SessionWizard({
             .join(". ") ??
           data.error ??
           "Ha ocurrido un error.";
-        setServerError(msg);
+        setServerError(
+          createdCount > 0
+            ? `Se crearon ${createdCount} de ${sessionDates.length} sesiones; el resto falló: ${msg}`
+            : msg
+        );
         return;
       }
 
@@ -650,6 +650,7 @@ export function SessionWizard({
       setServerError("Error de red. Inténtalo de nuevo.");
     } finally {
       setSubmitting(false);
+      setProgress(null);
     }
   }
 
@@ -788,11 +789,20 @@ export function SessionWizard({
             <button
               type="button"
               onClick={onSubmit}
-              disabled={submitting || !hasPlanContent(state)}
+              disabled={
+                submitting ||
+                (!hasPlanContent(state) && !state.recurrence.enabled)
+              }
               className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-6 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f] disabled:opacity-55"
             >
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {isEdit ? "Guardar cambios" : "Crear sesión"}
+              {isEdit
+                ? "Guardar cambios"
+                : progress
+                  ? `Creando ${progress.done + 1} de ${progress.total}…`
+                  : state.recurrence.enabled
+                    ? "Crear sesiones"
+                    : "Crear sesión"}
             </button>
           </div>
         )}

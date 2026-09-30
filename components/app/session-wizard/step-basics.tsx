@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { DateTimePicker } from "@/components/app/date-time-picker";
 import { cn } from "@/lib/utils";
 import { LOCATION_OPTIONS, type WizardState } from "./types";
+import { sessionCode } from "./recurrence";
 
 interface StepBasicsProps {
   state: WizardState;
@@ -11,7 +12,36 @@ interface StepBasicsProps {
   errors: Partial<Record<keyof WizardState, string>>;
 }
 
-export function StepBasics({ state, update, errors }: StepBasicsProps) {
+export function StepBasics({
+  state,
+  update,
+  errors,
+  allowCodeTitle = true,
+}: StepBasicsProps & { allowCodeTitle?: boolean }) {
+  const codeFor = (scheduledAt: string, groupName: string) => {
+    const d = new Date(scheduledAt);
+    return isNaN(d.getTime()) ? "" : sessionCode(d, groupName);
+  };
+
+  function setCodeMode(on: boolean) {
+    update(
+      on
+        ? {
+            useCodeTitle: true,
+            title: codeFor(state.scheduledAt, state.groupName ?? ""),
+          }
+        : { useCodeTitle: false }
+    );
+  }
+
+  function setGroupName(groupName: string) {
+    update(
+      state.useCodeTitle
+        ? { groupName, title: codeFor(state.scheduledAt, groupName) }
+        : { groupName }
+    );
+  }
+
   function bumpDuration(delta: number) {
     const next = Math.max(5, Math.min(600, state.durationMinutes + delta));
     update({ durationMinutes: next });
@@ -38,7 +68,10 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
           placeholder="Ej: Entrenamiento de técnica ofensiva"
           autoComplete="off"
           value={state.title}
-          onChange={(e) => update({ title: e.target.value })}
+          onChange={(e) =>
+            // Si se escribe a mano, deja de usarse el código automático.
+            update({ title: e.target.value, useCodeTitle: false })
+          }
           aria-invalid={!!errors.title}
           className={cn(
             "w-full h-12 px-4 text-base bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-all text-foreground placeholder:text-muted-foreground/50 font-medium",
@@ -49,6 +82,38 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
         />
         {errors.title && (
           <p className="text-xs text-destructive font-medium">{errors.title}</p>
+        )}
+
+        {allowCodeTitle && (
+          <div className="rounded-xl border border-border bg-muted/30 px-3 py-3">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={!!state.useCodeTitle}
+                onChange={(e) => setCodeMode(e.target.checked)}
+                className="mt-0.5 size-4 accent-[#D6FF38]"
+              />
+              <span className="text-sm">
+                <span className="font-semibold text-foreground">
+                  Nombre automático: fecha + grupo
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Ej.: 260930_Galácticas. Si repites la sesión, cada una lleva
+                  su fecha. Luego puedes cambiar el nombre de cualquiera.
+                </span>
+              </span>
+            </label>
+            {state.useCodeTitle && (
+              <input
+                type="text"
+                value={state.groupName ?? ""}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="Nombre del grupo (ej.: Galácticas)"
+                maxLength={60}
+                className="mt-2.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-brand/50 focus:outline-none focus:ring-2 focus:ring-brand/40"
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -63,7 +128,16 @@ export function StepBasics({ state, update, errors }: StepBasicsProps) {
           </label>
           <DateTimePicker
             value={state.scheduledAt}
-            onChange={(v) => update({ scheduledAt: v })}
+            onChange={(v) =>
+              update(
+                state.useCodeTitle
+                  ? {
+                      scheduledAt: v,
+                      title: codeFor(v, state.groupName ?? ""),
+                    }
+                  : { scheduledAt: v }
+              )
+            }
             error={!!errors.scheduledAt}
           />
           {errors.scheduledAt && (
