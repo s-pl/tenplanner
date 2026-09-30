@@ -409,6 +409,48 @@ export const groupStudents = pgTable(
   ]
 );
 
+// Session lists (listas de sesiones favoritas, p. ej. "Favoritas")
+export const sessionLists = pgTable(
+  "session_lists",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    emoji: varchar("emoji", { length: 10 }).default("⭐"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("session_lists_user_id_idx").on(t.userId)]
+);
+
+export const sessionListItems = pgTable(
+  "session_list_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    listId: uuid("list_id")
+      .references(() => sessionLists.id, { onDelete: "cascade" })
+      .notNull(),
+    sessionId: uuid("session_id")
+      .references(() => sessions.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("session_list_items_list_session_uniq").on(
+      t.listId,
+      t.sessionId
+    ),
+    index("session_list_items_list_id_idx").on(t.listId),
+    index("session_list_items_session_id_idx").on(t.sessionId),
+  ]
+);
+
 // Exercise ratings (1-5 per user)
 export const exerciseRatings = pgTable(
   "exercise_ratings",

@@ -488,6 +488,34 @@ export function AdminToolsClient({ stats: initialStats }: Props) {
         </ActionCard>
 
         <ActionCard
+          icon={Database}
+          title="Activar sesiones favoritas"
+          description="Crea las tablas para guardar sesiones en listas de favoritas (botón del corazón en Sesiones)."
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-foreground/50">
+              Solo añade tablas nuevas: no borra ni cambia ningún dato. Se puede
+              pulsar más de una vez sin problema.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="self-start"
+              disabled={results["session_lists"]?.status === "running"}
+              onClick={() => execute("session_lists", "apply_session_lists")}
+            >
+              {results["session_lists"]?.status === "running" ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <Database data-icon="inline-start" />
+              )}
+              Activar sesiones favoritas
+            </Button>
+            <ResultBadge result={results["session_lists"] ?? null} />
+          </div>
+        </ActionCard>
+
+        <ActionCard
           icon={Download}
           title="Exportar usuarios"
           description="Descarga un CSV con todos los usuarios registrados, fecha de alta y rol."

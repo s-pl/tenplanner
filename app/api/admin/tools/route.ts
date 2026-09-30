@@ -133,6 +133,47 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === "apply_session_lists") {
+      // Crea las tablas de las listas de sesiones favoritas. Solo añade:
+      // no borra ni modifica datos. Idempotente.
+      const statements = [
+        `CREATE TABLE IF NOT EXISTS "session_lists" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+          "name" varchar(100) NOT NULL,
+          "emoji" varchar(10) DEFAULT '⭐',
+          "is_default" boolean DEFAULT false NOT NULL,
+          "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )`,
+        `CREATE TABLE IF NOT EXISTS "session_list_items" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "list_id" uuid NOT NULL REFERENCES "session_lists"("id") ON DELETE cascade,
+          "session_id" uuid NOT NULL REFERENCES "sessions"("id") ON DELETE cascade,
+          "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )`,
+        `CREATE INDEX IF NOT EXISTS "session_lists_user_id_idx" ON "session_lists" ("user_id")`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS "session_list_items_list_session_uniq" ON "session_list_items" ("list_id","session_id")`,
+        `CREATE INDEX IF NOT EXISTS "session_list_items_list_id_idx" ON "session_list_items" ("list_id")`,
+        `CREATE INDEX IF NOT EXISTS "session_list_items_session_id_idx" ON "session_list_items" ("session_id")`,
+      ];
+      for (const statement of statements) {
+        await db.execute(sql.raw(statement));
+      }
+      const tables = await db.execute<{ table_name: string }>(sql`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_name IN ('session_lists', 'session_list_items')
+      `);
+      if (Array.from(tables).length !== 2) {
+        return NextResponse.json(
+          { error: "La actualización no se completó. Inténtalo de nuevo." },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({
+        message: "Listo: ya se pueden guardar sesiones favoritas.",
+      });
+    }
+
     if (action === "db_stats") {
       const [
         [usersCount],

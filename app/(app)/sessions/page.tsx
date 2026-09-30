@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
+import { SessionFavoriteToggle } from "@/components/app/session-favorite-toggle";
+import { getFavoritedSessionIds } from "@/lib/sessions/favorites";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import {
@@ -188,6 +190,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const exerciseCountMap = new Map(
     exerciseCounts.map((r) => [r.sessionId, r.count])
   );
+
+  const favoritedIds = await getFavoritedSessionIds(user.id, sessionIds);
 
   const now = new Date();
 
@@ -393,7 +397,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                     return (
                       <li
                         key={session.id}
-                        className="rounded-lg border border-[#050505]/10 bg-white shadow-[0_12px_36px_rgba(5,5,5,0.035)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
+                        className="relative rounded-lg border border-[#050505]/10 bg-white shadow-[0_12px_36px_rgba(5,5,5,0.035)] transition-colors hover:border-[#D6FF38]/70 dark:border-white/10 dark:bg-white/[0.045]"
                       >
                         <Link
                           href={`/sessions/${session.id}`}
@@ -408,7 +412,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                             </p>
                           </div>
 
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 pr-10">
                             <div className="flex items-center gap-2 mb-1">
                               <span
                                 className={`inline-flex items-center text-[10.5px] font-medium px-1.5 py-0.5 rounded border ${statusColor}`}
@@ -442,6 +446,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                             <ArrowRight className="size-4" />
                           </span>
                         </Link>
+                        <SessionFavoriteToggle
+                          sessionId={session.id}
+                          sessionTitle={session.title}
+                          initialFavorited={favoritedIds.has(session.id)}
+                          className="absolute right-[4.25rem] top-1/2 -translate-y-1/2"
+                        />
                       </li>
                     );
                   })}
