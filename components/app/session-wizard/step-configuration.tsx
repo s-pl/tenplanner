@@ -16,6 +16,13 @@ import { StepBasics } from "./step-basics";
 import { StepObjective } from "./step-objective";
 import { StepStudents } from "./step-students";
 import type { WizardState } from "./types";
+import {
+  computeSessionDates,
+  defaultCourseEnd,
+  MAX_RECURRING_SESSIONS,
+  sessionCode,
+  toDateInput,
+} from "./recurrence";
 
 interface StepConfigurationProps {
   state: WizardState;
@@ -168,7 +175,12 @@ export function StepConfiguration({
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_252px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <StepBasics state={state} update={update} errors={errors} />
+        <StepBasics
+          state={state}
+          update={update}
+          errors={errors}
+          allowCodeTitle={!hideRecurrence}
+        />
 
         <div className="space-y-1.5">
           <label
@@ -272,6 +284,15 @@ export function StepConfiguration({
   );
 }
 
+function formatShort(date: Date, withWeekday = true) {
+  return new Intl.DateTimeFormat("es-ES", {
+    ...(withWeekday ? { weekday: "short" as const } : {}),
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 const WEEKDAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
 const WEEKDAY_TO_JSDAY = [1, 2, 3, 4, 5, 6, 0];
 
@@ -285,11 +306,20 @@ function RecurrenceBlock({
   const r = state.recurrence;
   const scheduled = new Date(state.scheduledAt);
   const baseWeekday = isNaN(scheduled.getTime()) ? null : scheduled.getDay();
+  const mode = r.mode ?? "weeks";
+  const until =
+    r.until ||
+    defaultCourseEnd(isNaN(scheduled.getTime()) ? new Date() : scheduled);
+  const preview = r.enabled
+    ? computeSessionDates(scheduled, { ...r, mode, until })
+    : { dates: [], truncated: false };
 
   function toggleEnabled(next: boolean) {
     update({
       recurrence: {
         ...r,
+        mode,
+        until,
         enabled: next,
         weekdays:
           r.weekdays.length === 0 && baseWeekday !== null
@@ -327,8 +357,8 @@ function RecurrenceBlock({
           </p>
           <p className="text-xs text-muted-foreground">
             {r.enabled
-              ? `Cada semana durante ${r.weeks} semanas${r.weekdays.length > 1 ? " - varios días" : ""}`
-              : "Crea esta misma sesión los próximos días que indiques"}
+              ? `${preview.dates.length} sesiones${mode === "until" ? ` hasta el ${formatShort(new Date(until + "T12:00:00"), false)}` : ` en ${r.weeks} semanas`}`
+              : "Crea esta sesión cada semana, por ejemplo todo el curso"}
           </p>
         </div>
         <span
@@ -380,36 +410,121 @@ function RecurrenceBlock({
             )}
           </div>
 
-          <div>
-            <label
-              htmlFor="recurrence-weeks"
-              className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Durante cuántas semanas
-            </label>
-            <input
-              id="recurrence-weeks"
-              type="number"
-              min={2}
-              max={52}
-              value={r.weeks}
-              onChange={(e) =>
-                update({
-                  recurrence: {
-                    ...r,
-                    weeks: Math.min(
-                      52,
-                      Math.max(2, parseInt(e.target.value, 10) || 2)
-                    ),
-                  },
-                })
-              }
-              className="h-10 w-24 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
-            />
-            <span className="ml-2 text-xs text-muted-foreground">
-              semanas (incluida la primera)
-            </span>
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Hasta cuándo
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  { id: "until", label: "Hasta una fecha" },
+                  { id: "weeks", label: "Número de semanas" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() =>
+                    update({
+                      recurrence: {
+                        ...r,
+                        mode: option.id,
+                        until:
+                          r.until ||
+                          defaultCourseEnd(
+                            isNaN(scheduled.getTime()) ? new Date() : scheduled
+                          ),
+                      },
+                    })
+                  }
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                    mode === option.id
+                      ? "border-brand bg-brand text-brand-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {mode === "until" ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="recurrence-until"
+                  type="date"
+                  value={until}
+                  min={
+                    isNaN(scheduled.getTime())
+                      ? undefined
+                      : toDateInput(scheduled)
+                  }
+                  onChange={(e) =>
+                    update({ recurrence: { ...r, until: e.target.value } })
+                  }
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
+                />
+                <span className="text-xs text-muted-foreground">
+                  incluida (p. ej. fin de curso)
+                </span>
+              </div>
+            ) : (
+              <div>
+                <input
+                  id="recurrence-weeks"
+                  type="number"
+                  min={2}
+                  max={52}
+                  value={r.weeks}
+                  onChange={(e) =>
+                    update({
+                      recurrence: {
+                        ...r,
+                        weeks: Math.min(
+                          52,
+                          Math.max(2, parseInt(e.target.value, 10) || 2)
+                        ),
+                      },
+                    })
+                  }
+                  className="h-10 w-24 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
+                />
+                <span className="ml-2 text-xs text-muted-foreground">
+                  semanas (incluida la primera)
+                </span>
+              </div>
+            )}
           </div>
+
+          {preview.dates.length > 0 && (
+            <div className="rounded-xl border border-brand/30 bg-brand/5 px-3 py-3">
+              <p className="text-sm font-semibold text-foreground">
+                Se crearán {preview.dates.length} sesiones
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {formatShort(preview.dates[0])}
+                {preview.dates.length > 1
+                  ? ` → ${formatShort(preview.dates[preview.dates.length - 1])}`
+                  : ""}
+              </p>
+              {state.useCodeTitle && (
+                <p className="mt-2 break-words font-mono text-[11px] text-foreground/70">
+                  {preview.dates
+                    .slice(0, 3)
+                    .map((d) => sessionCode(d, state.groupName ?? ""))
+                    .join(", ")}
+                  {preview.dates.length > 3 ? ", …" : ""}
+                </p>
+              )}
+              {preview.truncated && (
+                <p className="mt-2 text-xs font-medium text-destructive">
+                  Máximo {MAX_RECURRING_SESSIONS} sesiones de una vez: se
+                  crearán las primeras {MAX_RECURRING_SESSIONS}.
+                </p>
+              )}
+            </div>
+          )}
 
           <p className="text-[12px] italic text-muted-foreground">
             Se crearán automáticamente todas las sesiones para los días

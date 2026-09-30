@@ -54,6 +54,10 @@ export interface WizardRecurrence {
   frequency: WizardRecurrenceFrequency;
   weeks: number; // total weeks including the original
   weekdays: number[]; // 0=Sun..6=Sat (multi-select)
+  /** "weeks" = durante N semanas; "until" = hasta una fecha (fin de curso). */
+  mode?: "weeks" | "until";
+  /** Fecha final (YYYY-MM-DD), incluida. */
+  until?: string;
 }
 
 export interface WizardState {
@@ -72,6 +76,10 @@ export interface WizardState {
   exercises: WizardExercise[];
   blocks: WizardSessionBlock[];
   recurrence: WizardRecurrence;
+  /** Nombre del grupo para el código de la sesión (AAMMDD_Grupo). */
+  groupName?: string;
+  /** Si está activo, cada sesión se llama AAMMDD_Grupo según su fecha. */
+  useCodeTitle?: boolean;
 }
 
 export interface WizardPlace {

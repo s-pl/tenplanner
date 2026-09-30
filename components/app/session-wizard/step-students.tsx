@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StudentOption, WizardState } from "./types";
+import { sessionCode } from "./recurrence";
 
 interface StepStudentsProps {
   state: WizardState;
@@ -85,7 +86,19 @@ export function StepStudents({ state, update }: StepStudentsProps) {
     } else {
       group.studentIds.forEach((id) => set.add(id));
     }
-    update({ studentIds: Array.from(set) });
+    update({
+      studentIds: Array.from(set),
+      // Propone el nombre del grupo para el código de la sesión.
+      ...(!allSelected && !state.groupName?.trim()
+        ? {
+            groupName: group.name,
+            ...(state.useCodeTitle &&
+            !isNaN(new Date(state.scheduledAt).getTime())
+              ? { title: sessionCode(new Date(state.scheduledAt), group.name) }
+              : {}),
+          }
+        : {}),
+    });
   }
 
   const filtered = students.filter((s) =>
