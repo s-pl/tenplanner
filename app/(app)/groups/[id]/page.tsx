@@ -6,6 +6,7 @@ import { groups, groupStudents, students } from "@/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
 import { ArrowLeft, Users } from "lucide-react";
 import { GroupDetailClient } from "./group-detail-client";
+import { GroupEditDetails } from "./group-edit-details";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
 
@@ -108,6 +109,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
               {memberRows.length === 1 ? "alumno" : "alumnos"}
             </p>
           </div>
+          <GroupEditDetails
+            key={`${group.name}|${group.description ?? ""}`}
+            groupId={id}
+            name={group.name}
+            description={group.description}
+          />
         </div>
       </header>
 
