@@ -4,14 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Copy,
   Loader2,
   Plus,
   Trash2,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  SessionDateDialog,
+  type DialogResult,
+} from "@/components/app/session-date-dialog";
+import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
 
 interface SessionData {
@@ -60,6 +67,12 @@ export function CalendarClient({
   const [toDelete, setToDelete] = useState<SessionData | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{
+    mode: "move" | "duplicate";
+    session: SessionData;
+  } | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -123,6 +136,86 @@ export function CalendarClient({
     } finally {
       setDeletingId(null);
     }
+  }
+
+  // Arrastrar una sesión a otro día: conserva la hora y, si el nombre es un
+  // código AAMMDD_Grupo, actualiza la fecha del nombre.
+  async function moveSessionToDay(sessionId: string, day: number) {
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    const old = new Date(session.scheduledAt);
+    if (
+      old.getFullYear() === viewYear &&
+      old.getMonth() === viewMonth &&
+      old.getDate() === day
+    )
+      return;
+    const target = new Date(
+      viewYear,
+      viewMonth,
+      day,
+      old.getHours(),
+      old.getMinutes()
+    );
+    const newTitle = retitleForDate(session.title, old, target);
+    const previous = sessions;
+    setActionError(null);
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              scheduledAt: target.toISOString(),
+              title: newTitle ?? s.title,
+            }
+          : s
+      )
+    );
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledAt: target.toISOString(),
+          ...(newTitle ? { title: newTitle } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error("failed");
+      router.refresh();
+    } catch {
+      setSessions(previous);
+      setActionError("No se pudo mover la sesión. Inténtalo de nuevo.");
+    }
+  }
+
+  function handleDialogDone(result: DialogResult) {
+    if (!dialog) return;
+    const original = dialog.session;
+    if (dialog.mode === "move") {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === original.id
+            ? { ...s, scheduledAt: result.scheduledAt, title: result.title }
+            : s
+        )
+      );
+    } else {
+      setSessions((prev) => [
+        ...prev,
+        {
+          id: result.id,
+          title: result.title,
+          scheduledAt: result.scheduledAt,
+          durationMinutes: original.durationMinutes,
+        },
+      ]);
+      const d = new Date(result.scheduledAt);
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+      setSelectedDay(d.getDate());
+    }
+    setActionError(null);
+    router.refresh();
   }
 
   const selectedSessions = selectedDay
@@ -214,7 +307,24 @@ export function CalendarClient({
                   isValid &&
                   setSelectedDay(dayNum === selectedDay ? null : dayNum)
                 }
+                onDragOver={(e) => {
+                  if (!isValid) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dragOverDay !== dayNum) setDragOverDay(dayNum);
+                }}
+                onDragLeave={() => {
+                  if (dragOverDay === dayNum) setDragOverDay(null);
+                }}
+                onDrop={(e) => {
+                  if (!isValid) return;
+                  e.preventDefault();
+                  setDragOverDay(null);
+                  const id = e.dataTransfer.getData("text/plain");
+                  if (id) void moveSessionToDay(id, dayNum);
+                }}
                 className={cn(
+                  isValid && dragOverDay === dayNum && "ring-2 ring-inset ring-brand bg-brand/15",
                   "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
                   isValid ? "cursor-pointer" : "cursor-default",
                   !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
@@ -248,6 +358,12 @@ export function CalendarClient({
                           <Link
                             key={s.id}
                             href={`/sessions/${s.id}`}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", s.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => setDragOverDay(null)}
                             onClick={(e) => e.stopPropagation()}
                             title={s.title}
                             className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
@@ -330,6 +446,24 @@ export function CalendarClient({
                   </Link>
                   <button
                     type="button"
+                    onClick={() => setDialog({ mode: "move", session: s })}
+                    aria-label={`Mover ${s.title}`}
+                    title="Mover a otro día"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <CalendarDays className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ mode: "duplicate", session: s })}
+                    aria-label={`Duplicar ${s.title}`}
+                    title="Duplicar sesión"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setToDelete(s)}
                     disabled={deletingId === s.id}
                     aria-label={`Eliminar ${s.title}`}
@@ -352,6 +486,23 @@ export function CalendarClient({
             </p>
           )}
         </div>
+      )}
+
+      {actionError && (
+        <p className="text-sm font-medium text-destructive">{actionError}</p>
+      )}
+
+      {dialog && (
+        <SessionDateDialog
+          key={`${dialog.mode}-${dialog.session.id}`}
+          mode={dialog.mode}
+          session={dialog.session}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDialog(null);
+          }}
+          onDone={handleDialogDone}
+        />
       )}
 
       <ConfirmDialog
