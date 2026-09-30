@@ -17,11 +17,13 @@ import {
   Circle,
   FileDown,
   Copy,
+  Repeat,
   Star,
   Play,
   CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
+import { SessionDateDialog } from "@/components/app/session-date-dialog";
 import { SessionFavoriteToggle } from "@/components/app/session-favorite-toggle";
 import type { AvailableExercise } from "@/components/app/session-form";
 import { SessionAnalyticsView } from "@/components/app/session-analytics";
@@ -531,6 +533,7 @@ export function SessionDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
   const [status, setStatus] = useState(session.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusDialog, setStatusDialog] = useState<{
@@ -651,12 +654,21 @@ export function SessionDetailClient({
               </span>
             </Link>
           )}
-          {/* Reutilizar */}
+          {/* Duplicar: copia completa en otra fecha, en un paso */}
+          <button
+            type="button"
+            onClick={() => setShowDuplicate(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
+          >
+            <Copy className="size-3.5" />
+            <span className="hidden sm:inline">Duplicar</span>
+          </button>
+          {/* Reutilizar: abre el asistente con esta sesión como base */}
           <Link
             href={`/sessions/new?from=${session.id}`}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
           >
-            <Copy className="size-3.5" />
+            <Repeat className="size-3.5" />
             <span className="hidden sm:inline">Reutilizar</span>
           </Link>
           <SessionFavoriteToggle
@@ -1149,6 +1161,25 @@ export function SessionDetailClient({
             </div>
           </div>
         </div>
+      )}
+
+      {showDuplicate && (
+        <SessionDateDialog
+          mode="duplicate"
+          session={{
+            id: session.id,
+            title: session.title,
+            scheduledAt: session.scheduledAt,
+          }}
+          open
+          onOpenChange={(open) => {
+            if (!open) setShowDuplicate(false);
+          }}
+          onDone={(result) => {
+            router.push(`/sessions/${result.id}`);
+            router.refresh();
+          }}
+        />
       )}
 
       {/* Status note dialog */}
