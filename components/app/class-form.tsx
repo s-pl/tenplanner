@@ -22,8 +22,6 @@ const NIVELES = [
   { id: "precompeticion", label: "Precompetición (12-14)" },
   { id: "competicion", label: "Competición (14-16)" },
   { id: "rendimiento", label: "Rendimiento (14-18)" },
-  { id: "adultos_iniciacion", label: "Adultos iniciación" },
-  { id: "adultos_medio_alto", label: "Adultos medio-alto" },
 ];
 
 const ASPECTOS = [

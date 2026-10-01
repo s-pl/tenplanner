@@ -71,8 +71,6 @@ export const NIVEL_PMV_VALUES = [
   "precompeticion",
   "competicion",
   "rendimiento",
-  "adultos_iniciacion",
-  "adultos_medio_alto",
 ] as const;
 
 export const ASPECTO_JUEGO_VALUES = [

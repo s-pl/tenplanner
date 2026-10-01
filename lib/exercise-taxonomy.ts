@@ -137,18 +137,6 @@ export const NIVELES = [
     edad: "14-18 años",
     color: "#E68A00",
   },
-  {
-    id: "adultos_iniciacion",
-    label: "Adultos iniciación",
-    edad: "Adultos",
-    color: "#64B5F6",
-  },
-  {
-    id: "adultos_medio_alto",
-    label: "Adultos medio-alto",
-    edad: "Adultos",
-    color: "#1565C0",
-  },
 ] as const;
 
 export type NivelId = (typeof NIVELES)[number]["id"];
