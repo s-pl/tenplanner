@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { loadSessionPlan } from "@/lib/sessions/plan";
+import { getExerciseDiagrams } from "@/lib/exercise-diagrams";
 import { ExecuteSessionClient } from "./execute-client";
 
 interface PageProps {
@@ -74,6 +75,9 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
         status: sessionRow.status,
       }}
       exercises={resolvedExercises}
+      diagrams={getExerciseDiagrams(
+        resolvedExercises.map((e) => e.exerciseId).filter((x): x is string => !!x)
+      )}
     />
   );
 }

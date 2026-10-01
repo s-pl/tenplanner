@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ExerciseDiagramView } from "@/components/app/exercise-diagram";
+import type { Diagram } from "@/lib/exercise-diagrams/types";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -182,6 +184,7 @@ export function ExerciseDetailClient({
   initialRating = null,
   ratingAvg = null,
   ratingTotal = 0,
+  diagram = null,
 }: {
   exercise: ExerciseData;
   canEdit?: boolean;
@@ -190,6 +193,7 @@ export function ExerciseDetailClient({
   initialRating?: number | null;
   ratingAvg?: number | null;
   ratingTotal?: number;
+  diagram?: Diagram | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -674,6 +678,8 @@ export function ExerciseDetailClient({
               </p>
             </div>
           )}
+
+          {diagram && <ExerciseDiagramView diagram={diagram} maxWidth={300} />}
 
           {exercise.steps && exercise.steps.length > 0 && (
             <div>

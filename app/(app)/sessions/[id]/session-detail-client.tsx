@@ -1,5 +1,7 @@
 "use client";
 
+import { ExerciseDiagramView } from "@/components/app/exercise-diagram";
+import type { Diagram } from "@/lib/exercise-diagrams/types";
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -138,6 +140,8 @@ interface Props {
   favoritedExerciseIds: string[];
   sessionBlocks: SessionBlockData[];
   isFavorite?: boolean;
+  /** Esquemas de pista por id de ejercicio. */
+  diagrams?: Record<string, Diagram>;
 }
 
 export interface SessionBlockData {
@@ -527,6 +531,7 @@ export function SessionDetailClient({
   students,
   sessionBlocks,
   isFavorite = false,
+  diagrams,
 }: Props) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1029,6 +1034,13 @@ export function SessionDetailClient({
                             </span>
                           ))}
                         </div>
+                      )}
+                      {diagrams?.[ex.exerciseId] && (
+                        <ExerciseDiagramView
+                          diagram={diagrams[ex.exerciseId]}
+                          className="mt-3"
+                          maxWidth={200}
+                        />
                       )}
                       {ex.notes && (
                         <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed italic">

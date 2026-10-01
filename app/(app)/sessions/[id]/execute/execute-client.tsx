@@ -1,5 +1,7 @@
 "use client";
 
+import { ExerciseDiagramView } from "@/components/app/exercise-diagram";
+import type { Diagram } from "@/lib/exercise-diagrams/types";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -70,6 +72,7 @@ interface SessionData {
 interface Props {
   session: SessionData;
   exercises: ExerciseData[];
+  diagrams?: Record<string, Diagram>;
 }
 
 type ExerciseExecution = {
@@ -96,7 +99,7 @@ function formatDate(isoString: string) {
   }).format(new Date(isoString));
 }
 
-export function ExecuteSessionClient({ session, exercises }: Props) {
+export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
   const router = useRouter();
   const [started, setStarted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -741,6 +744,13 @@ export function ExecuteSessionClient({ session, exercises }: Props) {
           <div className="text-sm text-foreground/70 leading-relaxed">
             {current.description}
           </div>
+        )}
+
+        {current.exerciseId && diagrams?.[current.exerciseId] && (
+          <ExerciseDiagramView
+            diagram={diagrams[current.exerciseId]}
+            maxWidth={280}
+          />
         )}
 
         {/* Steps */}

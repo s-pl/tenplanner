@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { SessionDetailClient } from "./session-detail-client";
+import { getExerciseDiagrams } from "@/lib/exercise-diagrams";
 import {
   computeSessionAnalytics,
   resolveIntensity,
@@ -232,6 +233,7 @@ export default async function SessionPage({ params }: PageProps) {
         status: session.status,
       }}
       sessionExercises={resolvedExercises}
+      diagrams={getExerciseDiagrams(resolvedExercises.map((e) => e.exerciseId))}
       availableExercises={allExercises}
       analytics={analytics}
       students={studentRows}

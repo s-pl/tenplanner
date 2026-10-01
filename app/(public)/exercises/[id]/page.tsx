@@ -4,6 +4,7 @@ import { exercises, users, exerciseRatings } from "@/db/schema";
 import { and, eq, avg, count } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { ExerciseDetailClient } from "./exercise-detail-client";
+import { getExerciseDiagram } from "@/lib/exercise-diagrams";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -86,6 +87,7 @@ export default async function ExercisePage({ params }: PageProps) {
       initialRating={userRating}
       ratingAvg={ratingData.avg}
       ratingTotal={ratingData.total}
+      diagram={getExerciseDiagram(exercise.id)}
       exercise={{
         id: exercise.id,
         name: exercise.name,
