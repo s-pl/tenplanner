@@ -40,7 +40,6 @@ const DURACION_FILTERS = [
 ];
 
 const ASPECTO_FILTERS = [
-  { id: "", label: "Cualquiera" },
   { id: "tecnica", label: "Técnica" },
   { id: "tactica", label: "Táctica" },
   { id: "mental", label: "Mental / cognitivo" },
@@ -69,6 +68,12 @@ function classValues(values: string[] | null, fallback: string | null) {
       : [];
 }
 
+function paramList(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value.map((v) => v.trim()).filter(Boolean);
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
 export default async function ClassesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -87,8 +92,8 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const nivel = typeof params.nivel === "string" ? params.nivel : "";
   const duracion = typeof params.duracion === "string" ? params.duracion : "";
-  const aspecto = typeof params.aspecto === "string" ? params.aspecto : "";
-  const golpe = typeof params.golpe === "string" ? params.golpe : "";
+  const aspectoList = paramList(params.aspecto);
+  const golpeList = paramList(params.golpe);
 
   // For drafts tab we don't query classes
   let rows: Array<{
@@ -152,11 +157,17 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         )!
       );
     }
-    if (aspecto) {
+    if (aspectoList.length > 0) {
+      // Coincide si la clase tiene AL MENOS UNO de los aspectos seleccionados.
       conds.push(
         or(
-          sql`${classes.aspectosJuego} @> ${JSON.stringify([aspecto])}::jsonb`,
-          eq(classes.aspectoJuego, aspecto)
+          ...aspectoList.map(
+            (a) =>
+              or(
+                sql`${classes.aspectosJuego} @> ${JSON.stringify([a])}::jsonb`,
+                eq(classes.aspectoJuego, a)
+              )!
+          )
         )!
       );
     }
@@ -166,8 +177,15 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       const d = Number(duracion);
       if (Number.isFinite(d)) conds.push(eq(classes.duracionMinutes, d));
     }
-    if (golpe) {
-      conds.push(sql`${classes.golpes}::jsonb @> ${`["${golpe}"]`}::jsonb`);
+    if (golpeList.length > 0) {
+      // Coincide si la clase tiene AL MENOS UNO de los golpes seleccionados.
+      conds.push(
+        or(
+          ...golpeList.map(
+            (g) => sql`${classes.golpes}::jsonb @> ${`["${g}"]`}::jsonb`
+          )
+        )!
+      );
     }
 
     rows = await db
@@ -262,8 +280,8 @@ export default async function ClassesPage({ searchParams }: PageProps) {
             if (q) sp.set("q", q);
             if (nivel) sp.set("nivel", nivel);
             if (duracion) sp.set("duracion", duracion);
-            if (aspecto) sp.set("aspecto", aspecto);
-            if (golpe) sp.set("golpe", golpe);
+            aspectoList.forEach((a) => sp.append("aspecto", a));
+            golpeList.forEach((g) => sp.append("golpe", g));
             return (
               <Link
                 key={t}
@@ -410,45 +428,74 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 </select>
               </div>
               <div>
-                <label
-                  htmlFor="aspecto"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-                >
-                  Aspecto
+                <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Aspecto{" "}
+                  <span className="normal-case tracking-normal text-muted-foreground/70">
+                    (varios)
+                  </span>
                 </label>
-                <select
-                  id="aspecto"
-                  name="aspecto"
-                  defaultValue={aspecto}
-                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
-                >
-                  {ASPECTO_FILTERS.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
+                <details className="relative">
+                  <summary className="flex h-11 w-full min-w-[9rem] cursor-pointer list-none items-center justify-between gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]">
+                    {aspectoList.length > 0
+                      ? ASPECTO_FILTERS.filter((a) =>
+                          aspectoList.includes(a.id)
+                        )
+                          .map((a) => a.label)
+                          .join(", ")
+                      : "Cualquiera"}
+                  </summary>
+                  <div className="absolute z-10 mt-2 w-56 space-y-1 rounded-lg border border-[#050505]/12 bg-white p-2 shadow-lg dark:border-white/10 dark:bg-[#0a0a0a]">
+                    {ASPECTO_FILTERS.map((a) => (
+                      <label
+                        key={a.id}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground hover:bg-[#D6FF38]/10"
+                      >
+                        <input
+                          type="checkbox"
+                          name="aspecto"
+                          value={a.id}
+                          defaultChecked={aspectoList.includes(a.id)}
+                          className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
+                        />
+                        {a.label}
+                      </label>
+                    ))}
+                  </div>
+                </details>
               </div>
               <div>
-                <label
-                  htmlFor="golpe"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-                >
-                  Golpe
+                <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Golpe{" "}
+                  <span className="normal-case tracking-normal text-muted-foreground/70">
+                    (varios)
+                  </span>
                 </label>
-                <select
-                  id="golpe"
-                  name="golpe"
-                  defaultValue={golpe}
-                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
-                >
-                  <option value="">Cualquiera</option>
-                  {GOLPES_FILTERS.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.label}
-                    </option>
-                  ))}
-                </select>
+                <details className="relative">
+                  <summary className="flex h-11 w-full min-w-[9rem] cursor-pointer list-none items-center justify-between gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]">
+                    {golpeList.length > 0
+                      ? GOLPES_FILTERS.filter((g) => golpeList.includes(g.id))
+                          .map((g) => g.label)
+                          .join(", ")
+                      : "Cualquiera"}
+                  </summary>
+                  <div className="absolute z-10 mt-2 w-56 space-y-1 rounded-lg border border-[#050505]/12 bg-white p-2 shadow-lg dark:border-white/10 dark:bg-[#0a0a0a]">
+                    {GOLPES_FILTERS.map((g) => (
+                      <label
+                        key={g.id}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground hover:bg-[#D6FF38]/10"
+                      >
+                        <input
+                          type="checkbox"
+                          name="golpe"
+                          value={g.id}
+                          defaultChecked={golpeList.includes(g.id)}
+                          className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
+                        />
+                        {g.label}
+                      </label>
+                    ))}
+                  </div>
+                </details>
               </div>
               <button
                 type="submit"
