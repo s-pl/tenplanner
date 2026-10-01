@@ -318,9 +318,9 @@ export function ClassForm({
   }
 
   function toggleNivel(id: string) {
-    setNiveles((prev) =>
-      prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]
-    );
+    // El nivel es de selección única: al pulsar uno se sustituye el anterior;
+    // si ya estaba seleccionado, se deselecciona.
+    setNiveles((prev) => (prev[0] === id ? [] : [id]));
   }
 
   function toggleAspecto(id: string) {
@@ -508,7 +508,10 @@ export function ClassForm({
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Nivel
+            Nivel{" "}
+            <span className="font-normal text-muted-foreground">
+              (elige uno)
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             {NIVELES.map((n) => {
@@ -534,7 +537,10 @@ export function ClassForm({
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Aspecto del juego
+            Aspecto del juego{" "}
+            <span className="font-normal text-muted-foreground">
+              (puedes elegir varios)
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             {ASPECTOS.map((a) => {
@@ -560,7 +566,10 @@ export function ClassForm({
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
-            Golpes
+            Golpes{" "}
+            <span className="font-normal text-muted-foreground">
+              (puedes elegir varios)
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             {GOLPES.map((g) => {
