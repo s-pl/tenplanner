@@ -6,6 +6,7 @@ export interface AvailableExercise {
   category: string;
   difficulty: string;
   durationMinutes: number;
+  description?: string | null;
 }
 
 export interface StudentOption {

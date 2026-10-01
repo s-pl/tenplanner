@@ -92,6 +92,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
       category: exercises.category,
       difficulty: exercises.difficulty,
       durationMinutes: exercises.durationMinutes,
+      description: exercises.description,
     })
     .from(exercises)
     .where(

@@ -2,6 +2,7 @@
 
 import { useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
+import NextLink from "next/link";
 import {
   Loader2,
   GraduationCap,
@@ -11,6 +12,7 @@ import {
   Type,
   Dumbbell,
   GripVertical,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,7 @@ interface AvailableExercise {
   id: string;
   name: string;
   category: string;
+  description?: string | null;
 }
 
 type BlockItem =
@@ -826,18 +829,38 @@ export function ClassForm({
                     <X className="size-4" />
                   </button>
                 </div>
-                <ul className="max-h-48 overflow-y-auto space-y-1">
+                <ul className="max-h-64 overflow-y-auto space-y-1">
                   {filteredExercises(search)
                     .slice(0, 30)
                     .map((ex) => (
-                      <li key={ex.id}>
+                      <li
+                        key={ex.id}
+                        className="flex items-start gap-1 rounded-lg hover:bg-brand/10"
+                      >
                         <button
                           type="button"
                           onClick={() => addExerciseToBlock(blockIdx, ex)}
-                          className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-brand/10 hover:text-brand transition-colors text-foreground/80"
+                          className="min-w-0 flex-1 text-left px-3 py-2 text-sm transition-colors hover:text-brand text-foreground/80"
                         >
-                          {ex.name}
+                          <span className="block truncate font-medium">
+                            {ex.name}
+                          </span>
+                          {ex.description && (
+                            <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
+                              {ex.description}
+                            </span>
+                          )}
                         </button>
+                        <NextLink
+                          href={`/exercises/${ex.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Ver ficha completa del ejercicio"
+                          className="mt-2 mr-2 shrink-0 text-muted-foreground hover:text-brand"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </NextLink>
                       </li>
                     ))}
                   {filteredExercises(search).length === 0 && (

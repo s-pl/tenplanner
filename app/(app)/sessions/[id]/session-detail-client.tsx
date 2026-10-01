@@ -913,7 +913,18 @@ export function SessionDetailClient({
                         className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
                       >
                         <p className="text-sm font-medium text-foreground">
-                          {item.exerciseName ?? item.freeText ?? "Item"}
+                          {item.exerciseId && item.exerciseName ? (
+                            <Link
+                              href={`/exercises/${item.exerciseId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-brand hover:underline"
+                            >
+                              {item.exerciseName}
+                            </Link>
+                          ) : (
+                            (item.exerciseName ?? item.freeText ?? "Item")
+                          )}
                         </p>
                         {item.exerciseDescription && (
                           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">

@@ -67,6 +67,7 @@ export default async function EditSessionPage({ params }: PageProps) {
           category: exercises.category,
           difficulty: exercises.difficulty,
           durationMinutes: exercises.durationMinutes,
+          description: exercises.description,
         })
         .from(exercises)
         .where(

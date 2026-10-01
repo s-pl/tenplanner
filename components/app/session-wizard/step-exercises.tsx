@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef, useState, DragEvent, useEffect } from "react";
+import NextLink from "next/link";
 import {
   BookOpen,
   CalendarDays,
   ChevronDown,
   Clock,
   Dumbbell,
+  ExternalLink,
   Filter,
   GripVertical,
   Loader2,
@@ -287,6 +289,7 @@ export function StepExercises({
           category: string;
           difficulty: string;
           durationMinutes: number;
+          description?: string | null;
         }>;
       };
 
@@ -297,6 +300,7 @@ export function StepExercises({
             category: exercise.category,
             difficulty: exercise.difficulty,
             durationMinutes: exercise.durationMinutes,
+            description: exercise.description ?? null,
           }))
         : [];
 
@@ -856,6 +860,11 @@ export function StepExercises({
                           <p className="text-sm font-medium text-foreground truncate leading-snug">
                             {ex.name}
                           </p>
+                          {ex.description && (
+                            <p className="truncate text-[11px] text-muted-foreground leading-snug">
+                              {ex.description}
+                            </p>
+                          )}
                           <span
                             className={cn(
                               "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
@@ -870,6 +879,16 @@ export function StepExercises({
                           <Clock className="size-3" />
                           {ex.durationMinutes} min
                         </span>
+                        <NextLink
+                          href={`/exercises/${ex.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Ver ficha completa del ejercicio"
+                          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </NextLink>
                         <button
                           type="button"
                           onClick={() => addExercise(ex)}

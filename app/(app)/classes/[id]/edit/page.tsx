@@ -68,6 +68,7 @@ export default async function EditClassPage({ params }: PageProps) {
       id: exercises.id,
       name: exercises.name,
       category: exercises.category,
+      description: exercises.description,
     })
     .from(exercises)
     .where(or(eq(exercises.isGlobal, true), eq(exercises.createdBy, user.id))!)
