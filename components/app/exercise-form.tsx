@@ -32,7 +32,6 @@ import {
   Package,
   ChevronUp,
   ChevronDown,
-  ImageIcon,
   Globe,
   SlidersHorizontal,
   Users,
@@ -48,7 +47,6 @@ import {
   type ExerciseDraftPayload,
 } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
-import { MediaUploader } from "@/components/app/media-uploader";
 import {
   ASPECTO_JUEGO_LABELS,
   deriveDurationMinutesFromRange,
@@ -400,23 +398,6 @@ function resolveInitialFormMode(
     : "quick";
 }
 
-function buildImageSlots(initialData?: ExerciseFormProps["initialData"]) {
-  const images = [
-    initialData?.imageUrl ?? null,
-    ...(initialData?.imageUrls ?? []),
-  ].filter(
-    (value, index, current): value is string =>
-      !!value && current.indexOf(value) === index
-  );
-
-  return [
-    images[0] ?? null,
-    images[1] ?? null,
-    images[2] ?? null,
-    images[3] ?? null,
-  ] satisfies Array<string | null>;
-}
-
 function countFilled(values: boolean[]) {
   return values.filter(Boolean).length;
 }
@@ -556,9 +537,6 @@ export function ExerciseForm({
   );
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
-  const [imageSlots, setImageSlots] = useState<Array<string | null>>(() =>
-    buildImageSlots(initialData)
-  );
   const [steps, setSteps] = useState<Step[]>(() =>
     (initialData?.steps ?? []).map((s, i) => ({
       id: String(i),
@@ -638,9 +616,6 @@ export function ExerciseForm({
     },
   });
   const watchedValues = useWatch({ control });
-  const normalizedImages = imageSlots.filter((value): value is string =>
-    Boolean(value)
-  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -739,16 +714,6 @@ export function ExerciseForm({
       setCaracter(new Set(draft.payload.caracter ?? []));
       setSituacionJuego(new Set(draft.payload.situacionJuego ?? []));
       setEfecto(new Set(draft.payload.efecto));
-      setImageSlots(
-        draft.payload.images.length === 4
-          ? draft.payload.images
-          : [
-              draft.payload.images[0] ?? null,
-              draft.payload.images[1] ?? null,
-              draft.payload.images[2] ?? null,
-              draft.payload.images[3] ?? null,
-            ]
-      );
       hydrationTimeout = window.setTimeout(() => {
         draftHydratedRef.current = true;
       }, 0);
@@ -888,7 +853,7 @@ export function ExerciseForm({
     isGlobal: watchedValues.isGlobal ?? false,
     steps,
     materials,
-    images: imageSlots,
+    images: [],
     golpes: Array.from(golpes),
     efecto: Array.from(efecto),
     formMode,
@@ -978,8 +943,6 @@ export function ExerciseForm({
   const mediaFilled = countFilled([
     !!watchedValues.location,
     materials.length > 0,
-    normalizedImages.length > 0,
-    normalizedImages.length >= 3,
   ]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
@@ -1011,7 +974,6 @@ export function ExerciseForm({
       objectives: values.objectives?.trim() || null,
       tips: values.tips?.trim() || null,
       videoUrl: values.videoUrl?.trim() || null,
-      imageUrl: normalizedImages[0] ?? null,
       phase: values.phase ?? null,
       intensity: values.intensity ?? null,
       isGlobal: isAdmin ? (values.isGlobal ?? false) : undefined,
@@ -1027,7 +989,6 @@ export function ExerciseForm({
       situacionJuego:
         situacionJuego.size > 0 ? Array.from(situacionJuego) : null,
       variantes: values.variantes?.trim() || null,
-      imageUrls: normalizedImages.slice(1),
       steps: steps
         .filter((s) => s.title.trim())
         .map((s) => ({
@@ -2035,79 +1996,6 @@ export function ExerciseForm({
     </section>
   );
 
-  const imageSection = (
-    <section>
-      <SectionHeader
-        icon={ImageIcon}
-        title="Imágenes del ejercicio"
-        subtitle="Hasta 4 imágenes totales, en el orden y combinación que prefieras"
-      />
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Galería flexible
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Reparte las fotos como quieras entre portada, pasos,
-                progresiones o variantes.
-              </p>
-            </div>
-            <span className="rounded-full bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              {normalizedImages.length}/4 ocupadas
-            </span>
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {imageSlots.map((url, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "rounded-2xl border border-border/70 p-4",
-                idx === 0 && "border-brand/20 bg-brand/[0.03]"
-              )}
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {idx === 0 ? "Imagen principal" : `Imagen ${idx + 1}`}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {idx === 0
-                      ? "La portada que se usa para presentar el ejercicio."
-                      : "Úsala para enseñar un paso, otra vista o una variante."}
-                  </p>
-                </div>
-                {url ? (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                    Lista
-                  </span>
-                ) : null}
-              </div>
-
-              <MediaUploader
-                value={url}
-                onChange={(value) =>
-                  setImageSlots((current) => {
-                    const next = [...current];
-                    next[idx] = value;
-                    return next as Array<string | null>;
-                  })
-                }
-                storagePath={`exercises/${exerciseId ?? "new"}/image-${idx}`}
-                bucket="exercise-media"
-                label={idx === 0 ? "Portada" : `Imagen ${idx + 1}`}
-                searchSuggestion="deportes de raqueta entrenamiento"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
   const resourcesSection = (
     <section>
       <SectionHeader
@@ -2319,16 +2207,13 @@ export function ExerciseForm({
 
           <AccordionSection
             title="Material y media"
-            subtitle="Lugar, materiales y una galería flexible de hasta 4 imágenes."
+            subtitle="Lugar y materiales necesarios."
             filled={mediaFilled}
-            total={4}
+            total={2}
             open={expandedSections.media}
             onToggle={(next) => toggleAccordion("media", next)}
           >
-            <div className="flex flex-col gap-8">
-              {materialsSection}
-              {imageSection}
-            </div>
+            <div className="flex flex-col gap-8">{materialsSection}</div>
           </AccordionSection>
         </div>
       )}
