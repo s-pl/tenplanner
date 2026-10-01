@@ -1,4 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { ExerciseDiagramPdf } from "@/lib/exercise-diagrams/pdf";
+import type { Diagram } from "@/lib/exercise-diagrams/types";
 
 export type PdfExercise = {
   /** "text" = texto libre del monitor. */
@@ -16,6 +18,8 @@ export type PdfExercise = {
   phase: "activation" | "main" | "cooldown" | null;
   intensity: number | null;
   materials?: string[] | null;
+  /** Esquema de pista del ejercicio (si existe). */
+  diagram?: Diagram | null;
 };
 
 export type PdfSession = {
@@ -544,6 +548,20 @@ export function SessionPdf({ session }: { session: PdfSession }) {
                     <Text style={styles.exerciseDescription}>
                       {ex.description}
                     </Text>
+                  ) : null}
+
+                  {ex.diagram ? (
+                    <View style={{ marginTop: 6, alignItems: "center" }}>
+                      <ExerciseDiagramPdf diagram={ex.diagram} width={150} />
+                      <Text
+                        style={{ fontSize: 7, color: GRAY, marginTop: 2 }}
+                      >
+                        {ex.diagram.caption
+                          ? `${ex.diagram.caption} · `
+                          : ""}
+                        Esquema orientativo
+                      </Text>
+                    </View>
                   ) : null}
 
                   {ex.steps && ex.steps.length > 0 ? (

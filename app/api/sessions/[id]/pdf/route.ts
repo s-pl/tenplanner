@@ -1,3 +1,4 @@
+import { getExerciseDiagram } from "@/lib/exercise-diagrams";
 import { createElement, type ReactElement } from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
 import { eq } from "drizzle-orm";
@@ -115,6 +116,7 @@ export async function GET(_request: Request, context: RouteContext) {
             materials: item.materials,
             description: item.description,
             steps: item.steps,
+            diagram: getExerciseDiagram(item.exerciseId),
             tips: item.tips,
             blockTitle: blockTitles.get(item.blockOrder) ?? null,
           }
