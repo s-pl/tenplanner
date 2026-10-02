@@ -41,6 +41,7 @@ import {
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
 import { AddToSessionButton } from "@/components/app/add-to-session-dialog";
+import { PrevNextNav } from "@/components/app/prev-next-nav";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -186,6 +187,10 @@ export function ExerciseDetailClient({
   ratingAvg = null,
   ratingTotal = 0,
   diagram = null,
+  prevHref = null,
+  nextHref = null,
+  navPosition = null,
+  navTotal = null,
 }: {
   exercise: ExerciseData;
   canEdit?: boolean;
@@ -195,6 +200,10 @@ export function ExerciseDetailClient({
   ratingAvg?: number | null;
   ratingTotal?: number;
   diagram?: Diagram | null;
+  prevHref?: string | null;
+  nextHref?: string | null;
+  navPosition?: number | null;
+  navTotal?: number | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -388,6 +397,13 @@ export function ExerciseDetailClient({
           <p className="text-xs text-muted-foreground font-medium truncate">
             Biblioteca de Ejercicios
           </p>
+          <PrevNextNav
+            prevHref={prevHref}
+            nextHref={nextHref}
+            position={navPosition}
+            total={navTotal}
+            className="ml-1"
+          />
         </div>
         {canEdit ? (
           <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">

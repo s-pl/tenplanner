@@ -36,10 +36,13 @@ export function SessionsBulkList({
   items,
   allIds,
   totalFiltered,
+  navQuery = "",
 }: {
   items: SessionListItem[];
   allIds: string[];
   totalFiltered: number;
+  /** Querystring (filter/search) carried into each session's detail link for Next/Previous navigation. */
+  navQuery?: string;
 }) {
   const router = useRouter();
   const [selecting, setSelecting] = useState(false);
@@ -250,7 +253,7 @@ export function SessionsBulkList({
               ) : (
                 <>
                   <Link
-                    href={`/sessions/${session.id}`}
+                    href={`/sessions/${session.id}${navQuery ? `?${navQuery}` : ""}`}
                     className="group flex items-center gap-4 px-4 py-3.5"
                   >
                     {body}

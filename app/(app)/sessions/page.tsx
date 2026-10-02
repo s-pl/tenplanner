@@ -33,6 +33,7 @@ import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
 import { getAppSettings } from "@/lib/app-settings";
 import { cn } from "@/lib/utils";
+import { sessionNavQueryString } from "@/lib/nav/session-nav";
 type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
 
@@ -411,6 +412,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   })}
                   allIds={allFilteredIds}
                   totalFiltered={totalFiltered}
+                  navQuery={sessionNavQueryString({
+                    filter: activeFilter,
+                    q: searchTerm || undefined,
+                  })}
                 />
               )}
 

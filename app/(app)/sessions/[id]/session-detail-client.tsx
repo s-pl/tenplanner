@@ -32,6 +32,7 @@ import { SessionAnalyticsView } from "@/components/app/session-analytics";
 import type { SessionAnalytics } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
 import { Target, MapPin, Hash, Package } from "lucide-react";
+import { PrevNextNav } from "@/components/app/prev-next-nav";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -142,6 +143,10 @@ interface Props {
   isFavorite?: boolean;
   /** Esquemas de pista por id de ejercicio. */
   diagrams?: Record<string, Diagram>;
+  prevHref?: string | null;
+  nextHref?: string | null;
+  navPosition?: number | null;
+  navTotal?: number | null;
 }
 
 export interface SessionBlockData {
@@ -540,6 +545,10 @@ export function SessionDetailClient({
   sessionBlocks,
   isFavorite = false,
   diagrams,
+  prevHref = null,
+  nextHref = null,
+  navPosition = null,
+  navTotal = null,
 }: Props) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -653,6 +662,13 @@ export function SessionDetailClient({
           <p className="relative rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground dark:bg-[#050505]/70">
             Sesiones de Entrenamiento
           </p>
+          <PrevNextNav
+            prevHref={prevHref}
+            nextHref={nextHref}
+            position={navPosition}
+            total={navTotal}
+            className="relative ml-1"
+          />
         </div>
         <div className="relative mt-4 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0 sm:justify-end">
           {/* Dar clase: ir viendo la sesión paso a paso */}

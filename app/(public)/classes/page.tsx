@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { classes, classFavorites, classDrafts } from "@/db/schema";
 import { Plus, Search, FileText, Heart } from "lucide-react";
+import { classNavQueryString } from "@/lib/nav/class-nav";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -215,6 +216,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         .where(eq(classFavorites.userId, user.id))
     : [];
   const favorites = new Set(favRows.map((f) => f.classId));
+  const navQs = classNavQueryString(params);
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
@@ -527,7 +529,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 {rows.map((cls) => (
                   <li key={cls.id}>
                     <Link
-                      href={`/classes/${cls.id}`}
+                      href={`/classes/${cls.id}${navQs ? `?${navQs}` : ""}`}
                       className="group flex h-full flex-col justify-between overflow-hidden rounded-lg border border-[#050505]/10 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#D6FF38] hover:shadow-[0_24px_50px_rgba(5,5,5,0.12)] dark:border-white/10 dark:bg-white/[0.04]"
                     >
                       <div>

@@ -5,13 +5,20 @@ import { and, eq, avg, count } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { ExerciseDetailClient } from "./exercise-detail-client";
 import { getExerciseDiagram } from "@/lib/exercise-diagrams";
+import { getBooleanSetting } from "@/lib/app-settings";
+import {
+  exerciseNavQueryString,
+  getFilteredExerciseIds,
+} from "@/lib/nav/exercise-nav";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function ExercisePage({ params }: PageProps) {
+export default async function ExercisePage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const navParams = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -79,6 +86,25 @@ export default async function ExercisePage({ params }: PageProps) {
   const isOwner = exercise.createdBy === user?.id;
   const canEdit = !!user && (isAdmin || (!exercise.isGlobal && isOwner));
 
+  const publicExercisesEnabled = await getBooleanSetting(
+    "feature.public_exercises_enabled"
+  );
+  const navIds = await getFilteredExerciseIds(navParams, {
+    userId: user?.id ?? null,
+    publicExercisesEnabled,
+  });
+  const navIdx = navIds.indexOf(id);
+  const navSuffix = (() => {
+    const qs = exerciseNavQueryString(navParams);
+    return qs ? `?${qs}` : "";
+  })();
+  const prevHref =
+    navIdx > 0 ? `/exercises/${navIds[navIdx - 1]}${navSuffix}` : null;
+  const nextHref =
+    navIdx >= 0 && navIdx < navIds.length - 1
+      ? `/exercises/${navIds[navIdx + 1]}${navSuffix}`
+      : null;
+
   return (
     <ExerciseDetailClient
       canEdit={canEdit}
@@ -87,6 +113,10 @@ export default async function ExercisePage({ params }: PageProps) {
       initialRating={userRating}
       ratingAvg={ratingData.avg}
       ratingTotal={ratingData.total}
+      prevHref={prevHref}
+      nextHref={nextHref}
+      navPosition={navIdx >= 0 ? navIdx + 1 : null}
+      navTotal={navIds.length > 0 ? navIds.length : null}
       diagram={getExerciseDiagram(exercise.id)}
       exercise={{
         id: exercise.id,

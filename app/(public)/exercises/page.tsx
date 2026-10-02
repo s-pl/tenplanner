@@ -26,6 +26,7 @@ import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { exerciseNavQueryString } from "@/lib/nav/exercise-nav";
 import {
   AUTORIA_VALUES,
   autoriaLabel,
@@ -384,6 +385,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   const listWhere = and(...listConditions);
   const offset = (currentPage - 1) * PAGE_SIZE;
+  const navQs = exerciseNavQueryString(params);
 
   const draftCountRows = user
     ? await db
@@ -1217,7 +1219,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           </div>
 
                           <Link
-                            href={`/exercises/${exercise.id}`}
+                            href={`/exercises/${exercise.id}${navQs ? `?${navQs}` : ""}`}
                             className="group block flex-1 px-4 pb-6 pt-5 transition-colors hover:bg-[#D6FF38]/[0.05] sm:px-6"
                           >
                             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6D7F00] dark:text-[#D6FF38]">

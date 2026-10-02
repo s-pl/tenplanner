@@ -24,12 +24,17 @@ import {
 import { getFavoritedSessionIds } from "@/lib/sessions/favorites";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
+import {
+  getFilteredSessionIds,
+  sessionNavQueryString,
+} from "@/lib/nav/session-nav";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ filter?: string; q?: string }>;
 }
 
-export default async function SessionPage({ params }: PageProps) {
+export default async function SessionPage({ params, searchParams }: PageProps) {
   const supabase = await createClient();
   const {
     data: { session: authSession },
@@ -39,6 +44,7 @@ export default async function SessionPage({ params }: PageProps) {
   if (!user) redirect("/login");
 
   const { id } = await params;
+  const navParams = await searchParams;
 
   const [[sessionRow], exerciseRows, allExercises, studentRows, favRows, blockRows] =
     await Promise.all([
@@ -223,8 +229,23 @@ export default async function SessionPage({ params }: PageProps) {
     session.id,
   ]);
 
+  const navIds = await getFilteredSessionIds(navParams, { userId: user.id });
+  const navIdx = navIds.indexOf(id);
+  const navQs = sessionNavQueryString(navParams);
+  const navSuffix = navQs ? `?${navQs}` : "";
+  const prevHref =
+    navIdx > 0 ? `/sessions/${navIds[navIdx - 1]}${navSuffix}` : null;
+  const nextHref =
+    navIdx >= 0 && navIdx < navIds.length - 1
+      ? `/sessions/${navIds[navIdx + 1]}${navSuffix}`
+      : null;
+
   return (
     <SessionDetailClient
+      prevHref={prevHref}
+      nextHref={nextHref}
+      navPosition={navIdx >= 0 ? navIdx + 1 : null}
+      navTotal={navIds.length > 0 ? navIds.length : null}
       session={{
         id: session.id,
         title: session.title,
