@@ -9,7 +9,6 @@ import {
 } from "@/db/schema";
 import {
   and,
-  asc,
   count,
   eq,
   ilike,
@@ -26,7 +25,13 @@ import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { exerciseNavQueryString } from "@/lib/nav/exercise-nav";
+import {
+  exerciseNavQueryString,
+  exerciseOrderBy,
+  EXERCISE_SORTS,
+  parseExerciseSort,
+  type ExerciseSort,
+} from "@/lib/nav/exercise-nav";
 import {
   AUTORIA_VALUES,
   autoriaLabel,
@@ -94,6 +99,13 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 const PAGE_SIZE = 30;
+
+const SORT_LABELS: Record<ExerciseSort, string> = {
+  alpha: "Alfabético",
+  popular: "Más populares",
+  recent: "Más recientes",
+  oldest: "Más antiguos",
+};
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -175,6 +187,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         : requestedTab;
 
   const searchTerm = getString(params.q).trim();
+  const activeSort = parseExerciseSort(params);
   const parsedPage = Number(getString(params.page) || "1");
   const currentPage =
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
@@ -419,7 +432,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         })
         .from(exercisesTable)
         .where(listWhere)
-        .orderBy(asc(exercisesTable.name))
+        .orderBy(...exerciseOrderBy(activeSort))
         .limit(PAGE_SIZE + 1)
         .offset(offset),
       db.select({ total: count() }).from(exercisesTable).where(allVisibleWhere),
@@ -510,6 +523,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     situacionJuego:
       activeSituacionJuego.length > 0 ? activeSituacionJuego : undefined,
     autoria: activeAutoria.length > 0 ? activeAutoria : undefined,
+    sort: activeSort !== "alpha" ? activeSort : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -521,6 +535,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       p.set("difficulty", merged.difficulty as string);
     if (merged.q) p.set("q", merged.q as string);
     if (merged.tab && merged.tab !== "all") p.set("tab", merged.tab as string);
+    if (merged.sort && merged.sort !== "alpha")
+      p.set("sort", merged.sort as string);
     if (merged.page && merged.page !== "1")
       p.set("page", merged.page as string);
     for (const key of [
@@ -883,6 +899,35 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         />
                       ))}
                     </form>
+                  </div>
+
+                  {/* ─── Orden ─── */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+                      Ordenar por:
+                    </span>
+                    {EXERCISE_SORTS.map((s) => {
+                      const isActive = activeSort === s;
+                      return (
+                        <Link
+                          key={s}
+                          href={buildHref({
+                            sort: s === "alpha" ? undefined : s,
+                            category: activeCategory,
+                            difficulty: activeDifficulty,
+                            q: searchTerm || undefined,
+                            tab: activeTab,
+                          })}
+                          className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-sans font-semibold tracking-[0.08em] transition-colors ${
+                            isActive
+                              ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                              : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
+                          }`}
+                        >
+                          {SORT_LABELS[s]}
+                        </Link>
+                      );
+                    })}
                   </div>
 
                   {/* ─── Niveles (etapas) con edad y color ─── */}

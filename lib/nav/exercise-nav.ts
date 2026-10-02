@@ -7,6 +7,7 @@ import {
 import {
   and,
   asc,
+  desc,
   eq,
   ilike,
   inArray,
@@ -61,6 +62,38 @@ function jsonbArrayHasAny(column: AnyColumn, values: string[]) {
         sql`coalesce(${column}::jsonb, '[]'::jsonb) @> ${JSON.stringify([value])}::jsonb`
     )
   );
+}
+
+export const EXERCISE_SORTS = ["alpha", "popular", "recent", "oldest"] as const;
+export type ExerciseSort = (typeof EXERCISE_SORTS)[number];
+
+export function parseExerciseSort(params: ExerciseNavParams): ExerciseSort {
+  const v = getString(params.sort);
+  return (EXERCISE_SORTS as readonly string[]).includes(v)
+    ? (v as ExerciseSort)
+    : "alpha";
+}
+
+/** Times the exercise has been added to a session — used to rank "más populares". */
+const POPULARITY_SQL = sql`(select count(*)::int from session_exercises se where se.exercise_id = ${exercisesTable.id})`;
+
+/**
+ * Returns the ORDER BY clauses for a given sort mode. Shared by the list
+ * page's display query and the nav-ids query so pagination and Next/Previous
+ * always reflect the same order the coach sees on screen.
+ */
+export function exerciseOrderBy(sort: ExerciseSort) {
+  switch (sort) {
+    case "popular":
+      return [sql`${POPULARITY_SQL} desc`, asc(exercisesTable.name)];
+    case "recent":
+      return [desc(exercisesTable.createdAt)];
+    case "oldest":
+      return [asc(exercisesTable.createdAt)];
+    case "alpha":
+    default:
+      return [asc(exercisesTable.name)];
+  }
 }
 
 /**
@@ -274,12 +307,13 @@ export async function getFilteredExerciseIds(
     conditions.push(inArray(exercisesTable.autoria, activeAutoria));
 
   const where = and(...conditions);
+  const sort = parseExerciseSort(params);
 
   const rows = await db
     .select({ id: exercisesTable.id })
     .from(exercisesTable)
     .where(where)
-    .orderBy(asc(exercisesTable.name))
+    .orderBy(...exerciseOrderBy(sort))
     .limit(2000);
 
   return rows.map((r) => r.id);
@@ -291,6 +325,7 @@ const NAV_QUERY_KEYS = [
   "difficulty",
   "q",
   "tab",
+  "sort",
   "formato",
   "nivel",
   "aspectoJuego",
