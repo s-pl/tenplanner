@@ -32,6 +32,7 @@ import { ExerciseRating } from "@/components/app/exercise-rating";
 import { ExerciseListPicker } from "@/components/app/exercise-list-picker";
 import {
   ASPECTO_JUEGO_LABELS,
+  autoriaLabel,
   caracterLabel,
   nivelLabel,
   pelotaLabel,
@@ -90,6 +91,7 @@ export interface ExerciseData {
   phase: Phase | null;
   intensity: number | null;
   isGlobal: boolean;
+  autoria: string | null;
   isAiGenerated: boolean;
   createdBy: string | null;
   createdAt: string;
@@ -322,6 +324,7 @@ export function ExerciseDetailClient({
               phase: exercise.phase,
               intensity: exercise.intensity,
               isGlobal: exercise.isGlobal,
+              autoria: exercise.autoria,
             }}
             onSuccess={() => {
               setMode("view");
@@ -437,6 +440,15 @@ export function ExerciseDetailClient({
                     <span className="text-xs text-white/35">·</span>
                     <span className="text-xs text-white/66">
                       {LOCATION_LABELS[exercise.location]}
+                    </span>
+                  </>
+                )}
+                {exercise.isGlobal && (
+                  <>
+                    <span className="text-xs text-white/35">·</span>
+                    <span className="inline-flex items-center gap-1 text-xs text-[#D6FF38]">
+                      <BookMarked className="size-3" />
+                      {autoriaLabel(exercise.autoria)}
                     </span>
                   </>
                 )}

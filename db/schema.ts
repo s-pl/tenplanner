@@ -147,6 +147,10 @@ export const exercises = pgTable(
     tiposActividad: jsonb("tipos_actividad").$type<string[]>(),
     caracter: jsonb("caracter").$type<string[]>(),
     situacionJuego: jsonb("situacion_juego").$type<string[]>(),
+    // Autoría del ejercicio/clase: "ten_planner" | "libre" | el id de un
+    // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
+    // Texto libre (no enum) para poder añadir nuevas autorías sin migración.
+    autoria: varchar("autoria", { length: 64 }).default("libre"),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
@@ -166,6 +170,7 @@ export const exercises = pgTable(
     index("exercises_is_global_idx").on(t.isGlobal),
     index("exercises_category_created_at_idx").on(t.category, t.createdAt),
     index("exercises_name_idx").on(t.name),
+    index("exercises_autoria_idx").on(t.autoria),
   ]
 );
 

@@ -49,6 +49,8 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ASPECTO_JUEGO_LABELS,
+  AUTORIAS,
+  AUTORIA_VALUES,
   deriveDurationMinutesFromRange,
   CARACTER,
   isLegacyPelota,
@@ -215,6 +217,7 @@ const formSchema = z.object({
   tipoPelota: z.enum(TIPO_PELOTA_VALUES).optional().nullable(),
   tipoActividad: z.enum(NUEVOS_TIPOS_ACTIVIDAD).optional().nullable(),
   isGlobal: z.boolean().optional(),
+  autoria: z.enum(AUTORIA_VALUES).optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -336,6 +339,7 @@ export interface ExerciseFormProps {
     variantes?: string | null;
     imageUrls?: string[] | null;
     isGlobal?: boolean;
+    autoria?: string | null;
     nivel?: NivelPmv | null;
     niveles?: NivelPmv[] | null;
     aspectoJuego?: AspectoJuego | null;
@@ -606,6 +610,7 @@ export function ExerciseForm({
       tipoPelota: initialData?.tipoPelota ?? null,
       tipoActividad: null,
       isGlobal: initialData?.isGlobal ?? false,
+      autoria: (initialData?.autoria as FormValues["autoria"]) ?? "libre",
       nivel: initialData?.niveles?.[0] ?? initialData?.nivel ?? null,
       aspectoJuegoPmv: resolveAspectosJuegoValues(initialData)[0] ?? null,
       parametro: initialData?.parametros?.[0] ?? initialData?.parametro ?? null,
@@ -672,6 +677,7 @@ export function ExerciseForm({
         tipoPelota: (draft.payload.tipoPelota ?? null) as TipoPelota | null,
         tipoActividad: null,
         isGlobal: draft.payload.isGlobal ?? false,
+        autoria: (draft.payload.autoria as FormValues["autoria"]) ?? "libre",
         nivel: (draft.payload.niveles?.[0] ??
           draft.payload.nivel ??
           null) as NivelPmv | null,
@@ -849,6 +855,7 @@ export function ExerciseForm({
     situacionJuego: Array.from(situacionJuego),
     duracionRango: watchedValues.duracionRango ?? null,
     isGlobal: watchedValues.isGlobal ?? false,
+    autoria: watchedValues.autoria ?? "libre",
     steps,
     materials,
     images: [],
@@ -975,6 +982,7 @@ export function ExerciseForm({
       phase: values.phase ?? null,
       intensity: values.intensity ?? null,
       isGlobal: isAdmin ? (values.isGlobal ?? false) : undefined,
+      autoria: isAdmin ? (values.autoria ?? "libre") : undefined,
       formato: values.formato ?? null,
       numJugadores: values.numJugadores ?? null,
       tipoPelota: values.tipoPelota ?? null,
@@ -1352,6 +1360,42 @@ export function ExerciseForm({
                     </label>
                   )}
                 />
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-sm font-semibold text-foreground">
+                    Autoría
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    De quién es este ejercicio dentro de la biblioteca
+                    pública.
+                  </p>
+                  <Controller
+                    name="autoria"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="flex flex-wrap gap-2">
+                        {AUTORIAS.map(({ id, label }) => {
+                          const isSelected = (field.value ?? "libre") === id;
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => field.onChange(id)}
+                              className={cn(
+                                "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                                isSelected
+                                  ? "bg-brand/10 border-brand text-brand"
+                                  : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  />
+                </div>
               </div>
             ) : null}
           </>

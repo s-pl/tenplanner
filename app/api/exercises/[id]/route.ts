@@ -58,6 +58,7 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         tips: exercises.tips,
         createdBy: exercises.createdBy,
         isGlobal: exercises.isGlobal,
+        autoria: exercises.autoria,
         formato: exercises.formato,
         numJugadores: exercises.numJugadores,
         tipoPelota: exercises.tipoPelota,
@@ -296,6 +297,10 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
 
     if (isAdmin && d.isGlobal !== undefined) {
       updateValues.isGlobal = d.isGlobal;
+    }
+
+    if (isAdmin && d.autoria !== undefined) {
+      updateValues.autoria = d.autoria ?? "libre";
     }
 
     const [updatedExercise] = await db

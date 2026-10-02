@@ -371,7 +371,11 @@ export async function POST(request: Request) {
       .limit(1);
     const isAdmin = !!dbUser?.isAdmin;
 
-    const { isGlobal: requestedIsGlobal, ...rest } = parsedBody.data;
+    const {
+      isGlobal: requestedIsGlobal,
+      autoria: requestedAutoria,
+      ...rest
+    } = parsedBody.data;
     const niveles = normalizeMultiValue(
       rest.niveles ?? (rest.nivel ? [rest.nivel] : null)
     );
@@ -441,6 +445,7 @@ export async function POST(request: Request) {
         caracter: normalizeMultiValue(rest.caracter),
         situacionJuego: normalizeMultiValue(rest.situacionJuego),
         isGlobal: isAdmin && requestedIsGlobal === true,
+        autoria: isAdmin && requestedAutoria ? requestedAutoria : "libre",
         createdBy: user.id,
       })
       .returning();

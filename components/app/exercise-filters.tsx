@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import {
   ASPECTO_JUEGO_LABELS,
+  AUTORIAS,
   CARACTER,
   FASES,
   NUEVOS_TIPOS_ACTIVIDAD,
@@ -99,6 +100,7 @@ export interface ExerciseFiltersProps {
     fase: string[];
     caracter: string[];
     situacionJuego: string[];
+    autoria: string[];
   };
   preserved: {
     // El nivel se elige en la primera pantalla; aquí solo se conserva.
@@ -213,6 +215,7 @@ export function ExerciseFilters({
   const [golpes, setGolpes] = useState(new Set(currentFilters.golpes));
   const [efecto, setEfecto] = useState(new Set(currentFilters.efecto));
   const [location, setLocation] = useState(new Set(currentFilters.location));
+  const [autoria, setAutoria] = useState(new Set(currentFilters.autoria));
 
   const activeCount =
     formato.size +
@@ -227,7 +230,8 @@ export function ExerciseFilters({
     tipoActividad.size +
     golpes.size +
     efecto.size +
-    location.size;
+    location.size +
+    autoria.size;
 
   function buildParams() {
     const p = new URLSearchParams();
@@ -253,6 +257,7 @@ export function ExerciseFilters({
     appendAll(p, "golpe", golpes);
     appendAll(p, "efecto", efecto);
     appendAll(p, "location", location);
+    appendAll(p, "autoria", autoria);
     return p;
   }
 
@@ -276,6 +281,7 @@ export function ExerciseFilters({
     setGolpes(new Set<string>());
     setEfecto(new Set<string>());
     setLocation(new Set<string>());
+    setAutoria(new Set<string>());
 
     const p = new URLSearchParams();
     if (preserved.q) p.set("q", preserved.q);
@@ -480,6 +486,18 @@ export function ExerciseFilters({
               ))}
             </FilterGroup>
           </div>
+
+          <FilterGroup label="Autoría">
+            {AUTORIAS.map(({ id, label }) => (
+              <ChipButton
+                key={id}
+                active={autoria.has(id)}
+                onClick={() => toggleString(autoria, setAutoria, id)}
+              >
+                {label}
+              </ChipButton>
+            ))}
+          </FilterGroup>
 
           <FilterGroup label="Golpes">
             {GOLPES.map(({ id, label }) => (

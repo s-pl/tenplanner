@@ -232,6 +232,13 @@
       "when": 1790939282935,
       "tag": "0032_dev_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790944168321,
+      "tag": "0033_exercise_autoria",
+      "breakpoints": true
     }
   ]
 }

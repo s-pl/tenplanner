@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedImageUrl, isPublicHttpUrl } from "@/lib/url-safety";
 import {
+  AUTORIA_VALUES,
   CARACTER_VALUES,
   NUEVOS_TIPOS_ACTIVIDAD,
   SITUACION_JUEGO_VALUES,
@@ -127,6 +128,7 @@ export const EFECTO_VALUES = [
 
 export const golpeSchema = z.enum(GOLPES_VALUES);
 export const efectoSchema = z.enum(EFECTO_VALUES);
+export const autoriaSchema = z.enum(AUTORIA_VALUES);
 
 function repeated<T extends z.ZodTypeAny>(schema: T) {
   return z.preprocess((value) => {
@@ -214,6 +216,7 @@ export const exercisesListQuerySchema = z.object({
   duracionRango: repeated(duracionRangoSchema),
   caracter: repeated(caracterSchema),
   situacionJuego: repeated(situacionJuegoSchema),
+  autoria: repeated(autoriaSchema),
 });
 
 export const createExerciseSchema = z.object({
@@ -250,6 +253,7 @@ export const createExerciseSchema = z.object({
   variantes: z.string().trim().max(2000).optional().nullable(),
   imageUrls: z.array(imageUrlSchema).max(4).optional().nullable(),
   isGlobal: z.boolean().optional(),
+  autoria: autoriaSchema.optional().nullable(),
   nivel: nivelPmvSchema.optional().nullable(),
   aspectoJuego: aspectoJuegoSchema.optional().nullable(),
   parametro: parametroSchema.optional().nullable(),

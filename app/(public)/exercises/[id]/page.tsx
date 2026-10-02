@@ -143,6 +143,7 @@ export default async function ExercisePage({ params }: PageProps) {
         phase: exercise.phase ?? null,
         intensity: exercise.intensity ?? null,
         isGlobal: exercise.isGlobal,
+        autoria: exercise.autoria ?? null,
         isAiGenerated: exercise.isAiGenerated,
         createdBy: exercise.createdBy,
         createdAt: exercise.createdAt.toISOString(),

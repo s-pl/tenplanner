@@ -27,6 +27,8 @@ import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
+  AUTORIA_VALUES,
+  autoriaLabel,
   CARACTER_VALUES,
   caracterLabel,
   FASES,
@@ -202,6 +204,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const activeFase = getStrings(params.fase).filter((v) =>
     FASES.some((f) => f.id === v)
   ) as Array<(typeof FASES)[number]["id"]>;
+  const activeAutoria = getStrings(params.autoria).filter((v) =>
+    (AUTORIA_VALUES as readonly string[]).includes(v)
+  );
 
   const advancedActive =
     activeFormato.length > 0 ||
@@ -217,7 +222,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     activeLocation.length > 0 ||
     activeFase.length > 0 ||
     activeCaracter.length > 0 ||
-    activeSituacionJuego.length > 0;
+    activeSituacionJuego.length > 0 ||
+    activeAutoria.length > 0;
 
   // Unauthenticated users only see global exercises
   const allVisibleWhere = user
@@ -372,6 +378,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     }
     if (activeLocation.length > 0)
       listConditions.push(inArray(exercisesTable.location, activeLocation));
+    if (activeAutoria.length > 0)
+      listConditions.push(inArray(exercisesTable.autoria, activeAutoria));
   }
 
   const listWhere = and(...listConditions);
@@ -398,6 +406,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
           imageUrl: exercisesTable.imageUrl,
           isAiGenerated: exercisesTable.isAiGenerated,
           isGlobal: exercisesTable.isGlobal,
+          autoria: exercisesTable.autoria,
           createdBy: exercisesTable.createdBy,
           formato: exercisesTable.formato,
           numJugadores: exercisesTable.numJugadores,
@@ -498,6 +507,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     caracter: activeCaracter.length > 0 ? activeCaracter : undefined,
     situacionJuego:
       activeSituacionJuego.length > 0 ? activeSituacionJuego : undefined,
+    autoria: activeAutoria.length > 0 ? activeAutoria : undefined,
   };
 
   function buildHref(params: Record<string, string | string[] | undefined>) {
@@ -526,6 +536,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       "fase",
       "caracter",
       "situacionJuego",
+      "autoria",
     ]) {
       const value = merged[key];
       const values = Array.isArray(value) ? value : value ? [value] : [];
@@ -861,6 +872,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           value={value}
                         />
                       ))}
+                      {activeAutoria.map((value) => (
+                        <input
+                          key={`autoria-${value}`}
+                          type="hidden"
+                          name="autoria"
+                          value={value}
+                        />
+                      ))}
                     </form>
                   </div>
 
@@ -940,6 +959,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       fase: activeFase,
                       caracter: activeCaracter,
                       situacionJuego: activeSituacionJuego,
+                      autoria: activeAutoria,
                     }}
                     preserved={{
                       nivel: activeNivel,
@@ -1069,6 +1089,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           Situación: {situacionJuegoLabel(value)}
                         </span>
                       ))}
+                      {activeAutoria.map((value) => (
+                        <span
+                          key={`autoria-${value}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
+                        >
+                          Autoría: {autoriaLabel(value)}
+                        </span>
+                      ))}
                       <Link
                         href={buildHref({
                           category: activeCategory,
@@ -1086,6 +1114,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           golpe: undefined,
                           efecto: undefined,
                           location: undefined,
+                          autoria: undefined,
                         })}
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 hover:text-foreground border border-foreground/15 rounded transition-colors"
                       >
@@ -1127,7 +1156,10 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       if (exercise.isAiGenerated)
                         owner = { label: "IA", icon: Sparkles };
                       else if (exercise.isGlobal)
-                        owner = { label: "GLB", icon: Globe };
+                        owner = {
+                          label: autoriaLabel(exercise.autoria),
+                          icon: Globe,
+                        };
                       else if (user && exercise.createdBy === user.id)
                         owner = { label: "PRP", icon: User };
 

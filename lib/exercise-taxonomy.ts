@@ -220,3 +220,25 @@ export function caracterLabel(id: string) {
 export function situacionJuegoLabel(id: string) {
   return SITUACION_JUEGO.find((c) => c.id === id)?.label ?? id;
 }
+
+// Autoría del ejercicio/clase: de quién es el contenido.
+// "libre" es el valor por defecto (sin autoría asignada / uso libre).
+// Según los monitores vayan proponiendo ejercicios públicos, se añaden
+// aquí nuevas entradas (id estable + label de presentación).
+export const AUTORIAS = [
+  { id: "ten_planner", label: "Ten Planner" },
+  { id: "academia_christian_larsen", label: "Academia Christian Larsen" },
+  { id: "libre", label: "Libre" },
+] as const;
+
+export const AUTORIA_VALUES = AUTORIAS.map((a) => a.id) as unknown as readonly [
+  (typeof AUTORIAS)[number]["id"],
+  ...(typeof AUTORIAS)[number]["id"][],
+];
+
+export type Autoria = (typeof AUTORIAS)[number]["id"];
+
+export function autoriaLabel(id: string | null | undefined) {
+  if (!id) return AUTORIAS.find((a) => a.id === "libre")!.label;
+  return AUTORIAS.find((a) => a.id === id)?.label ?? id.replace(/_/g, " ");
+}

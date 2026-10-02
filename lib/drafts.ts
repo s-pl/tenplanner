@@ -31,6 +31,7 @@ export interface ExerciseDraftPayload {
   situacionJuego?: string[];
   duracionRango?: string | null;
   isGlobal?: boolean;
+  autoria?: string | null;
   steps: Array<{ id: string; title: string; description: string }>;
   materials: string[];
   images: Array<string | null>;
