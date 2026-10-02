@@ -23,6 +23,7 @@ import {
 } from "@/lib/sessions/analytics";
 import { getFavoritedSessionIds } from "@/lib/sessions/favorites";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
+import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -114,6 +115,8 @@ export default async function SessionPage({ params }: PageProps) {
           itemFreeText: sessionBlockItems.freeText,
           itemDurationMinutes: sessionBlockItems.durationMinutes,
           itemNotes: sessionBlockItems.notes,
+          itemKind: sessionBlockItems.kind,
+          itemStations: sessionBlockItems.stations,
         })
         .from(sessionBlocks)
         .leftJoin(sessionBlockItems, eq(sessionBlockItems.blockId, sessionBlocks.id))
@@ -173,6 +176,8 @@ export default async function SessionPage({ params }: PageProps) {
         freeText: string | null;
         durationMinutes: number | null;
         notes: string | null;
+        kind: "exercise" | "text" | "warmup" | "stations";
+        stations: StationItemJson[];
       }>;
     }>
   >((blocks, row) => {
@@ -197,6 +202,12 @@ export default async function SessionPage({ params }: PageProps) {
         freeText: row.itemFreeText,
         durationMinutes: row.itemDurationMinutes,
         notes: row.itemNotes,
+        kind: resolveItemKind({
+          kind: row.itemKind,
+          exerciseId: row.itemExerciseId,
+          freeText: row.itemFreeText,
+        }),
+        stations: (row.itemStations as StationItemJson[] | null) ?? [],
       });
     }
     return blocks;

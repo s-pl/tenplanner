@@ -16,6 +16,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import type { StationItemJson } from "@/lib/block-items";
 
 // Enums
 export const exerciseCategoryEnum = pgEnum("exercise_category", [
@@ -306,6 +307,11 @@ export const sessionBlockItems = pgTable(
     orderIndex: integer("order_index").notNull(),
     durationMinutes: integer("duration_minutes"),
     notes: text("notes"),
+    // "exercise"|"text"|"warmup"|"stations"; null = legacy (infer from
+    // exerciseId/freeText).
+    kind: varchar("kind", { length: 16 }),
+    // Sub-items for kind="stations" (2-10 estaciones); see lib/block-items.ts.
+    stations: jsonb("stations").$type<StationItemJson[]>(),
   },
   (t) => [
     index("session_block_items_block_id_idx").on(t.blockId),
@@ -743,6 +749,11 @@ export const classBlockExercises = pgTable(
     freeText: text("free_text"), // si exerciseId es null, contenido manual
     orderIndex: integer("order_index").notNull(),
     durationMinutes: integer("duration_minutes"),
+    // "exercise"|"text"|"warmup"|"stations"; null = legacy (infer from
+    // exerciseId/freeText).
+    kind: varchar("kind", { length: 16 }),
+    // Sub-items for kind="stations" (2-10 estaciones); see lib/block-items.ts.
+    stations: jsonb("stations").$type<StationItemJson[]>(),
   },
   (t) => [
     index("class_block_exercises_block_id_idx").on(t.blockId),

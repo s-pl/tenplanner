@@ -10,14 +10,48 @@ import {
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { isPublicHttpUrl } from "@/lib/url-safety";
+import {
+  BLOCK_ITEM_KINDS,
+  STATION_COUNT_MAX,
+  STATION_COUNT_MIN,
+} from "@/lib/block-items";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const blockExerciseSchema = z.object({
-  exerciseId: z.string().uuid().optional().nullable(),
-  freeText: z.string().trim().max(2000).optional().nullable(),
-  durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
-});
+const stationItemSchema = z
+  .object({
+    kind: z.enum(["exercise", "text"]),
+    exerciseId: z.string().uuid().optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+  })
+  .refine(
+    (v) =>
+      v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim(),
+    { message: "Cada estación necesita un ejercicio o un texto." }
+  );
+
+const blockExerciseSchema = z
+  .object({
+    kind: z.enum(BLOCK_ITEM_KINDS).optional(),
+    exerciseId: z.string().uuid().optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+    stations: z
+      .array(stationItemSchema)
+      .min(STATION_COUNT_MIN)
+      .max(STATION_COUNT_MAX)
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (item) => {
+      if (item.kind === "stations") return (item.stations?.length ?? 0) > 0;
+      if (item.kind === "warmup") return item.durationMinutes != null;
+      return true;
+    },
+    { message: "Datos de bloque inválidos." }
+  );
 
 const blockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),
@@ -103,6 +137,8 @@ export async function GET(_req: Request, ctx: Ctx) {
           freeText: classBlockExercises.freeText,
           orderIndex: classBlockExercises.orderIndex,
           durationMinutes: classBlockExercises.durationMinutes,
+          kind: classBlockExercises.kind,
+          stations: classBlockExercises.stations,
           exerciseName: exercises.name,
           exerciseCategory: exercises.category,
         })
@@ -161,18 +197,23 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   const d = parsed.data;
 
-  // Verify exercises referenced in new blocks belong to user or are global
+  // Verify exercises referenced (top-level items and stations) belong to
+  // the user or are library exercises.
+  const exerciseNameMap = new Map<string, string>();
   if (d.blocks) {
     const exerciseIds = Array.from(
       new Set(
         d.blocks.flatMap((b) =>
-          b.items.map((i) => i.exerciseId).filter((eid): eid is string => !!eid)
+          b.items.flatMap((i) => [
+            i.exerciseId,
+            ...(i.stations ?? []).map((s) => s.exerciseId),
+          ])
         )
-      )
-    );
+      ).values()
+    ).filter((eid): eid is string => !!eid);
     if (exerciseIds.length > 0) {
       const accessible = await db
-        .select({ id: exercises.id })
+        .select({ id: exercises.id, name: exercises.name })
         .from(exercises)
         .where(
           and(
@@ -189,7 +230,22 @@ export async function PATCH(request: Request, ctx: Ctx) {
           { status: 400 }
         );
       }
+      for (const ex of accessible) exerciseNameMap.set(ex.id, ex.name);
     }
+  }
+
+  function buildStations(
+    stations: NonNullable<(typeof d.blocks)>[number]["items"][number]["stations"]
+  ) {
+    return (stations ?? []).map((s) => ({
+      kind: s.kind,
+      exerciseId: s.exerciseId ?? null,
+      exerciseName: s.exerciseId
+        ? (exerciseNameMap.get(s.exerciseId) ?? null)
+        : null,
+      freeText: s.freeText ?? null,
+      durationMinutes: s.durationMinutes ?? null,
+    }));
   }
 
   try {
@@ -246,6 +302,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
                 freeText: item.freeText ?? null,
                 orderIndex: idx,
                 durationMinutes: item.durationMinutes ?? null,
+                kind: item.kind ?? null,
+                stations:
+                  item.kind === "stations"
+                    ? buildStations(item.stations)
+                    : null,
               }))
             );
           }

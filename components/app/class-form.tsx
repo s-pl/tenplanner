@@ -13,8 +13,16 @@ import {
   Dumbbell,
   GripVertical,
   ExternalLink,
+  Flame,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  emptyStationDraft,
+  STATION_COUNT_MAX,
+  STATION_COUNT_MIN,
+  type StationDraftItem,
+} from "@/lib/block-items";
 
 const NIVELES = [
   { id: "descubrimiento", label: "Descubrimiento (4-6)" },
@@ -65,7 +73,9 @@ type BlockItem =
       name: string;
       durationMinutes: number | null;
     }
-  | { kind: "text"; freeText: string; durationMinutes: number | null };
+  | { kind: "text"; freeText: string; durationMinutes: number | null }
+  | { kind: "warmup"; durationMinutes: number | null }
+  | { kind: "stations"; introText: string; stations: StationDraftItem[] };
 
 interface BlockState {
   orderIndex: number;
@@ -219,6 +229,102 @@ export function ClassForm({
     );
   }
 
+  function addWarmupToBlock(blockIdx: number) {
+    setBlocks((prev) =>
+      prev.map((b, i) =>
+        i === blockIdx
+          ? {
+              ...b,
+              items: [
+                ...b.items,
+                { kind: "warmup" as const, durationMinutes: null },
+              ],
+            }
+          : b
+      )
+    );
+  }
+
+  const [stationsDraftBlock, setStationsDraftBlock] = useState<number | null>(
+    null
+  );
+  const [stationsDraftCount, setStationsDraftCount] = useState(4);
+
+  function confirmStationsDraft() {
+    if (stationsDraftBlock === null) return;
+    const n = Math.min(
+      STATION_COUNT_MAX,
+      Math.max(STATION_COUNT_MIN, stationsDraftCount)
+    );
+    const blockIdx = stationsDraftBlock;
+    setBlocks((prev) =>
+      prev.map((b, i) =>
+        i === blockIdx
+          ? {
+              ...b,
+              items: [
+                ...b.items,
+                {
+                  kind: "stations" as const,
+                  introText: "",
+                  stations: Array.from({ length: n }, emptyStationDraft),
+                },
+              ],
+            }
+          : b
+      )
+    );
+    setStationsDraftBlock(null);
+    setStationsDraftCount(4);
+  }
+
+  function updateStation(
+    blockIdx: number,
+    itemIdx: number,
+    stationIdx: number,
+    patch: Partial<StationDraftItem>
+  ) {
+    setBlocks((prev) =>
+      prev.map((b, i) => {
+        if (i !== blockIdx) return b;
+        return {
+          ...b,
+          items: b.items.map((it, j) => {
+            if (j !== itemIdx || it.kind !== "stations") return it;
+            return {
+              ...it,
+              stations: it.stations.map((s, k) =>
+                k === stationIdx ? { ...s, ...patch } : s
+              ),
+            };
+          }),
+        };
+      })
+    );
+  }
+
+  const [stationPickerOpen, setStationPickerOpen] = useState<{
+    blockIdx: number;
+    itemIdx: number;
+    stationIdx: number;
+  } | null>(null);
+  const [stationSearch, setStationSearch] = useState("");
+
+  function setStationExercise(
+    blockIdx: number,
+    itemIdx: number,
+    stationIdx: number,
+    ex: AvailableExercise
+  ) {
+    updateStation(blockIdx, itemIdx, stationIdx, {
+      kind: "exercise",
+      exerciseId: ex.id,
+      name: ex.name,
+    });
+    setStationPickerOpen(null);
+    setStationSearch("");
+  }
+
   function removeItem(blockIdx: number, itemIdx: number) {
     setBlocks((prev) =>
       prev.map((b, i) =>
@@ -360,19 +466,53 @@ export function ClassForm({
           orderIndex: b.orderIndex,
           title: b.title.trim() || null,
           notes: b.notes.trim() || null,
-          items: b.items.map((item) =>
-            item.kind === "exercise"
-              ? {
-                  exerciseId: item.exerciseId,
-                  freeText: null,
-                  durationMinutes: item.durationMinutes,
-                }
-              : {
-                  exerciseId: null,
-                  freeText: item.freeText.trim() || null,
-                  durationMinutes: item.durationMinutes,
-                }
-          ),
+          items: b.items.map((item) => {
+            if (item.kind === "exercise") {
+              return {
+                kind: "exercise" as const,
+                exerciseId: item.exerciseId,
+                freeText: null,
+                durationMinutes: item.durationMinutes,
+              };
+            }
+            if (item.kind === "warmup") {
+              return {
+                kind: "warmup" as const,
+                exerciseId: null,
+                freeText: null,
+                durationMinutes: item.durationMinutes,
+              };
+            }
+            if (item.kind === "stations") {
+              return {
+                kind: "stations" as const,
+                exerciseId: null,
+                freeText: item.introText.trim() || null,
+                durationMinutes: null,
+                stations: item.stations.map((s) =>
+                  s.kind === "exercise"
+                    ? {
+                        kind: "exercise" as const,
+                        exerciseId: s.exerciseId,
+                        freeText: null,
+                        durationMinutes: s.durationMinutes,
+                      }
+                    : {
+                        kind: "text" as const,
+                        exerciseId: null,
+                        freeText: s.freeText.trim() || null,
+                        durationMinutes: s.durationMinutes,
+                      }
+                ),
+              };
+            }
+            return {
+              kind: "text" as const,
+              exerciseId: null,
+              freeText: item.freeText.trim() || null,
+              durationMinutes: item.durationMinutes,
+            };
+          }),
         })),
     };
 
@@ -748,7 +888,7 @@ export function ClassForm({
                               {item.name}
                             </span>
                           </div>
-                        ) : (
+                        ) : item.kind === "text" ? (
                           <div className="flex items-start gap-2">
                             <Type className="size-3.5 text-muted-foreground mt-1 shrink-0" />
                             <textarea
@@ -764,23 +904,225 @@ export function ClassForm({
                               className="flex-1 text-sm bg-transparent border-0 focus:outline-none text-foreground resize-none placeholder:text-muted-foreground"
                             />
                           </div>
+                        ) : item.kind === "warmup" ? (
+                          <div className="flex items-center gap-2">
+                            <Flame className="size-3.5 text-brand shrink-0" />
+                            <span className="text-sm font-medium text-foreground">
+                              Calentamiento
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <LayoutGrid className="size-3.5 text-brand shrink-0" />
+                              <span className="text-sm font-medium text-foreground">
+                                Estaciones ({item.stations.length})
+                              </span>
+                            </div>
+                            <textarea
+                              rows={1}
+                              value={item.introText}
+                              onChange={(e) =>
+                                updateItem(blockIdx, itemIdx, {
+                                  introText: e.target.value,
+                                } as Partial<BlockItem>)
+                              }
+                              placeholder="Explica el ejercicio de estaciones (opcional)…"
+                              className="w-full resize-none rounded-lg border border-foreground/10 bg-background/60 px-2.5 py-1.5 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none placeholder:text-muted-foreground"
+                            />
+                            <ul className="space-y-2">
+                              {item.stations.map((station, stationIdx) => (
+                                <li
+                                  key={stationIdx}
+                                  className="flex items-start gap-2 rounded-lg border border-foreground/10 bg-background/40 p-2"
+                                >
+                                  <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
+                                    {String(stationIdx + 1).padStart(2, "0")}
+                                  </span>
+                                  <div className="flex-1 min-w-0 space-y-1.5">
+                                    <div className="flex gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setStationPickerOpen({
+                                            blockIdx,
+                                            itemIdx,
+                                            stationIdx,
+                                          })
+                                        }
+                                        className={cn(
+                                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                          station.kind === "exercise"
+                                            ? "border-brand/40 bg-brand/10 text-brand"
+                                            : "border-foreground/15 text-muted-foreground hover:border-brand/40"
+                                        )}
+                                      >
+                                        Ejercicio
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateStation(
+                                            blockIdx,
+                                            itemIdx,
+                                            stationIdx,
+                                            {
+                                              kind: "text",
+                                              exerciseId: null,
+                                              name: "",
+                                            }
+                                          )
+                                        }
+                                        className={cn(
+                                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                          station.kind === "text"
+                                            ? "border-brand/40 bg-brand/10 text-brand"
+                                            : "border-foreground/15 text-muted-foreground hover:border-brand/40"
+                                        )}
+                                      >
+                                        Texto libre
+                                      </button>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={300}
+                                        placeholder="min"
+                                        value={station.durationMinutes ?? ""}
+                                        onChange={(e) =>
+                                          updateStation(
+                                            blockIdx,
+                                            itemIdx,
+                                            stationIdx,
+                                            {
+                                              durationMinutes: e.target.value
+                                                ? Number(e.target.value)
+                                                : null,
+                                            }
+                                          )
+                                        }
+                                        className="ml-auto h-6 w-14 rounded-lg border border-foreground/15 bg-background/70 px-1.5 text-[11px] tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
+                                      />
+                                    </div>
+                                    {station.kind === "exercise" ? (
+                                      stationPickerOpen?.blockIdx ===
+                                        blockIdx &&
+                                      stationPickerOpen?.itemIdx === itemIdx &&
+                                      stationPickerOpen?.stationIdx ===
+                                        stationIdx ? (
+                                        <div className="space-y-1.5 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-2">
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              type="text"
+                                              value={stationSearch}
+                                              onChange={(e) =>
+                                                setStationSearch(
+                                                  e.target.value
+                                                )
+                                              }
+                                              autoFocus
+                                              placeholder="Buscar ejercicio…"
+                                              className="h-7 flex-1 rounded-lg border border-foreground/15 bg-background/80 px-2 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setStationPickerOpen(null);
+                                                setStationSearch("");
+                                              }}
+                                              className="size-6 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+                                              aria-label="Cerrar"
+                                            >
+                                              <X className="size-3.5" />
+                                            </button>
+                                          </div>
+                                          <ul className="max-h-40 overflow-y-auto space-y-0.5">
+                                            {filteredExercises(stationSearch)
+                                              .slice(0, 20)
+                                              .map((ex) => (
+                                                <li key={ex.id}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setStationExercise(
+                                                        blockIdx,
+                                                        itemIdx,
+                                                        stationIdx,
+                                                        ex
+                                                      )
+                                                    }
+                                                    className="w-full truncate rounded px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-brand/10 hover:text-brand"
+                                                  >
+                                                    {ex.name}
+                                                  </button>
+                                                </li>
+                                              ))}
+                                            {filteredExercises(stationSearch)
+                                              .length === 0 && (
+                                              <li className="px-2 py-1 text-xs italic text-muted-foreground">
+                                                Sin resultados.
+                                              </li>
+                                            )}
+                                          </ul>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setStationPickerOpen({
+                                              blockIdx,
+                                              itemIdx,
+                                              stationIdx,
+                                            })
+                                          }
+                                          className="truncate text-left text-xs text-foreground hover:text-brand"
+                                        >
+                                          {station.name || (
+                                            <span className="italic text-muted-foreground">
+                                              Elige un ejercicio…
+                                            </span>
+                                          )}
+                                        </button>
+                                      )
+                                    ) : (
+                                      <textarea
+                                        rows={1}
+                                        value={station.freeText}
+                                        onChange={(e) =>
+                                          updateStation(
+                                            blockIdx,
+                                            itemIdx,
+                                            stationIdx,
+                                            { freeText: e.target.value }
+                                          )
+                                        }
+                                        placeholder="Describe la estación…"
+                                        className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
+                                      />
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                       </div>
-                      <input
-                        type="number"
-                        min={1}
-                        max={300}
-                        placeholder="min"
-                        value={item.durationMinutes ?? ""}
-                        onChange={(e) =>
-                          updateItem(blockIdx, itemIdx, {
-                            durationMinutes: e.target.value
-                              ? Number(e.target.value)
-                              : null,
-                          } as Partial<BlockItem>)
-                        }
-                        className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
-                      />
+                      {item.kind !== "stations" && (
+                        <input
+                          type="number"
+                          min={1}
+                          max={300}
+                          placeholder="min"
+                          value={item.durationMinutes ?? ""}
+                          onChange={(e) =>
+                            updateItem(blockIdx, itemIdx, {
+                              durationMinutes: e.target.value
+                                ? Number(e.target.value)
+                                : null,
+                            } as Partial<BlockItem>)
+                          }
+                          className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeItem(blockIdx, itemIdx)}
@@ -870,8 +1212,41 @@ export function ClassForm({
                   )}
                 </ul>
               </div>
+            ) : stationsDraftBlock === blockIdx ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
+                <label className="text-xs font-semibold text-foreground">
+                  ¿Cuántas estaciones?
+                </label>
+                <input
+                  type="number"
+                  min={STATION_COUNT_MIN}
+                  max={STATION_COUNT_MAX}
+                  value={stationsDraftCount}
+                  onChange={(e) =>
+                    setStationsDraftCount(Number(e.target.value))
+                  }
+                  className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/80 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
+                />
+                <span className="text-xs text-muted-foreground">
+                  (de {STATION_COUNT_MIN} a {STATION_COUNT_MAX})
+                </span>
+                <button
+                  type="button"
+                  onClick={confirmStationsDraft}
+                  className="rounded-full bg-[#050505] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505]"
+                >
+                  Crear estaciones
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStationsDraftBlock(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Cancelar
+                </button>
+              </div>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -888,6 +1263,23 @@ export function ClassForm({
                   className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                 >
                   <Type className="size-3.5" /> Texto libre
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addWarmupToBlock(blockIdx)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
+                >
+                  <Flame className="size-3.5" /> Calentamiento
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStationsDraftBlock(blockIdx);
+                    setStationsDraftCount(4);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
+                >
+                  <LayoutGrid className="size-3.5" /> Estaciones
                 </button>
               </div>
             )}

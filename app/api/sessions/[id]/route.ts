@@ -23,21 +23,31 @@ import {
   exerciseVisibleToUserCondition,
 } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
+import type { StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
+type SessionBlockInputItem = {
+  kind?: "exercise" | "text" | "warmup" | "stations";
+  exerciseId?: string | null;
+  freeText?: string | null;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  stations?: Array<{
+    kind: "exercise" | "text";
+    exerciseId?: string | null;
+    freeText?: string | null;
+    durationMinutes?: number | null;
+  }> | null;
+};
+
 type SessionBlockInput = {
   orderIndex: number;
   title?: string | null;
   notes?: string | null;
-  items: Array<{
-    exerciseId?: string | null;
-    freeText?: string | null;
-    durationMinutes?: number | null;
-    notes?: string | null;
-  }>;
+  items: SessionBlockInputItem[];
 };
 
 type TrainingPhase = "activation" | "main" | "cooldown";
@@ -158,7 +168,10 @@ function normalizeBlocks(
 
 function exerciseIdsFromBlocks(blocks: SessionBlockInput[]) {
   return blocks.flatMap((block) =>
-    block.items.flatMap((item) => (item.exerciseId ? [item.exerciseId] : []))
+    block.items.flatMap((item) => [
+      ...(item.exerciseId ? [item.exerciseId] : []),
+      ...(item.stations ?? []).flatMap((s) => (s.exerciseId ? [s.exerciseId] : [])),
+    ])
   );
 }
 
@@ -313,6 +326,8 @@ export async function GET(_request: Request, context: RouteContext) {
         itemFreeText: sessionBlockItems.freeText,
         itemDurationMinutes: sessionBlockItems.durationMinutes,
         itemNotes: sessionBlockItems.notes,
+        itemKind: sessionBlockItems.kind,
+        itemStations: sessionBlockItems.stations,
       })
       .from(sessionBlocks)
       .leftJoin(
@@ -341,6 +356,8 @@ export async function GET(_request: Request, context: RouteContext) {
           freeText: string | null;
           durationMinutes: number | null;
           notes: string | null;
+          kind: string | null;
+          stations: StationItemJson[] | null;
         }>;
       }
     >();
@@ -368,6 +385,8 @@ export async function GET(_request: Request, context: RouteContext) {
             freeText: string | null;
             durationMinutes: number | null;
             notes: string | null;
+            kind: string | null;
+            stations: StationItemJson[] | null;
           }>;
         });
       if (row.itemId) {
@@ -380,6 +399,8 @@ export async function GET(_request: Request, context: RouteContext) {
           freeText: row.itemFreeText,
           durationMinutes: row.itemDurationMinutes,
           notes: row.itemNotes,
+          kind: row.itemKind,
+          stations: row.itemStations as StationItemJson[] | null,
         });
       }
       blockMap.set(row.blockId, block);
@@ -649,6 +670,20 @@ export async function PUT(request: Request, context: RouteContext) {
 
         await tx.delete(sessionBlocks).where(eq(sessionBlocks.sessionId, id));
 
+        function buildStations(
+          stations: SessionBlockInputItem["stations"]
+        ): StationItemJson[] {
+          return (stations ?? []).map((s) => ({
+            kind: s.kind,
+            exerciseId: s.exerciseId ?? null,
+            exerciseName: s.exerciseId
+              ? (snapshots.get(s.exerciseId)?.name ?? null)
+              : null,
+            freeText: s.freeText ?? null,
+            durationMinutes: s.durationMinutes ?? null,
+          }));
+        }
+
         for (const block of normalizedBlocks) {
           const [sessionBlock] = await tx
             .insert(sessionBlocks)
@@ -676,6 +711,11 @@ export async function PUT(request: Request, context: RouteContext) {
                   durationMinutes:
                     item.durationMinutes ?? snapshot?.durationMinutes ?? null,
                   notes: item.notes ?? null,
+                  kind: item.kind ?? null,
+                  stations:
+                    item.kind === "stations"
+                      ? buildStations(item.stations)
+                      : null,
                 };
               })
             );

@@ -24,8 +24,11 @@ import { getBooleanSetting } from "@/lib/app-settings";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import {
   createTextItem,
+  createWarmupItem,
+  createStationsItem,
   planItemsToWizard,
 } from "@/components/app/session-wizard/timeline";
+import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import {
   ArrowLeft,
@@ -152,6 +155,8 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           freeText: classBlockExercises.freeText,
           itemDuration: classBlockExercises.durationMinutes,
           itemOrderIndex: classBlockExercises.orderIndex,
+          itemKind: classBlockExercises.kind,
+          itemStations: classBlockExercises.stations,
           exerciseId: exercises.id,
           name: exercises.name,
           category: exercises.category,
@@ -195,6 +200,39 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           } satisfies WizardSessionBlock);
 
         blockMap.set(orderIndex, block);
+
+        const itemKind = resolveItemKind({
+          kind: row.itemKind,
+          exerciseId: row.itemExerciseId,
+          freeText: row.freeText,
+        });
+
+        if (itemKind === "warmup") {
+          fromClassExercises.push(
+            createWarmupItem(phaseFromBlock(orderIndex), row.itemDuration ?? null)
+          );
+          continue;
+        }
+
+        if (itemKind === "stations") {
+          const stations = (row.itemStations as StationItemJson[] | null) ?? [];
+          const stationsItem = createStationsItem(
+            phaseFromBlock(orderIndex),
+            stations.length || 1,
+            row.freeText ?? ""
+          );
+          if (stations.length) {
+            stationsItem.stations = stations.map((s) => ({
+              kind: s.kind,
+              exerciseId: s.exerciseId,
+              name: s.exerciseName ?? "",
+              freeText: s.freeText ?? "",
+              durationMinutes: s.durationMinutes,
+            }));
+          }
+          fromClassExercises.push(stationsItem);
+          continue;
+        }
 
         // Textos libres de la clase: van a la línea de tiempo en su sitio.
         if (!row.itemExerciseId && row.freeText?.trim()) {

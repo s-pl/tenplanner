@@ -10,7 +10,9 @@ import {
   Dumbbell,
   ExternalLink,
   Filter,
+  Flame,
   GripVertical,
+  LayoutGrid,
   Loader2,
   Plus,
   Search,
@@ -32,19 +34,33 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
+  STATION_COUNT_MAX,
+  STATION_COUNT_MIN,
+  type StationDraftItem,
+} from "@/lib/block-items";
+import {
   PHASE_LABELS,
   type AvailableExercise,
   type TrainingPhase,
   type WizardExercise,
   type WizardState,
 } from "./types";
-import { createTextItem, isTextItem } from "./timeline";
+import {
+  createStationsItem,
+  createTextItem,
+  createWarmupItem,
+  isStationsItem,
+  isTextItem,
+  isWarmupItem,
+} from "./timeline";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
   tactics: "text-purple-400 bg-purple-400/10",
   fitness: "text-amber-400 bg-amber-400/10",
   "warm-up": "text-brand bg-brand/10",
+  warmup: "text-brand bg-brand/10",
+  stations: "text-emerald-400 bg-emerald-400/10",
 };
 
 const CATEGORY_BAR: Record<string, string> = {
@@ -53,6 +69,8 @@ const CATEGORY_BAR: Record<string, string> = {
   tactics: "bg-purple-400",
   fitness: "bg-amber-400",
   "warm-up": "bg-brand",
+  warmup: "bg-brand",
+  stations: "bg-emerald-400",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -60,6 +78,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   tactics: "Táctica",
   fitness: "Fitness",
   "warm-up": "Calentamiento",
+  warmup: "Calentamiento",
+  stations: "Estaciones",
 };
 
 interface StepExercisesProps {
@@ -98,6 +118,14 @@ export function StepExercises({
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [refreshingLibrary, setRefreshingLibrary] = useState(false);
   const dragCounter = useRef(0);
+
+  const [stationsDraftActive, setStationsDraftActive] = useState(false);
+  const [stationsDraftCount, setStationsDraftCount] = useState(4);
+  const [stationPickerOpen, setStationPickerOpen] = useState<{
+    itemIdx: number;
+    stationIdx: number;
+  } | null>(null);
+  const [stationSearch, setStationSearch] = useState("");
 
   const selected = state.exercises;
   const textCount = selected.filter(isTextItem).length;
@@ -178,6 +206,56 @@ export function StepExercises({
   function addTextItem() {
     setExercises([...selected, createTextItem()]);
   }
+
+  function addWarmupItem() {
+    setExercises([...selected, createWarmupItem()]);
+  }
+
+  function confirmStationsDraft() {
+    const n = Math.min(
+      STATION_COUNT_MAX,
+      Math.max(STATION_COUNT_MIN, stationsDraftCount || STATION_COUNT_MIN)
+    );
+    setExercises([...selected, createStationsItem(null, n, "")]);
+    setStationsDraftActive(false);
+    setStationsDraftCount(4);
+  }
+
+  function updateStation(
+    itemIdx: number,
+    stationIdx: number,
+    patch: Partial<StationDraftItem>
+  ) {
+    setExercises(
+      selected.map((ex, i) => {
+        if (i !== itemIdx || !isStationsItem(ex)) return ex;
+        return {
+          ...ex,
+          stations: (ex.stations ?? []).map((s, k) =>
+            k === stationIdx ? { ...s, ...patch } : s
+          ),
+        };
+      })
+    );
+  }
+
+  function setStationExercise(
+    itemIdx: number,
+    stationIdx: number,
+    ex: AvailableExercise
+  ) {
+    updateStation(itemIdx, stationIdx, {
+      kind: "exercise",
+      exerciseId: ex.id,
+      name: ex.name,
+    });
+    setStationPickerOpen(null);
+    setStationSearch("");
+  }
+
+  const filteredStationExercises = libraryExercises.filter((ex) =>
+    ex.name.toLowerCase().includes(stationSearch.toLowerCase())
+  );
 
   function removeExercise(id: string) {
     setExercises(selected.filter((e) => e.exerciseId !== id));
@@ -409,21 +487,74 @@ export function StepExercises({
               <span className="text-sm font-bold text-foreground uppercase tracking-wide">
                 Plan de entrenamiento
               </span>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 {totalDuration > 0 && (
                   <span className="flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
                     <Clock className="size-3" />
                     {formatMinutes(totalDuration)}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={addTextItem}
-                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
-                >
-                  <Plus className="size-3" />
-                  Texto libre
-                </button>
+                {stationsDraftActive ? (
+                  <div className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-2 py-1">
+                    <span className="text-[10px] font-semibold text-foreground whitespace-nowrap">
+                      ¿Cuántas?
+                    </span>
+                    <input
+                      type="number"
+                      min={STATION_COUNT_MIN}
+                      max={STATION_COUNT_MAX}
+                      value={stationsDraftCount}
+                      onChange={(e) =>
+                        setStationsDraftCount(Number(e.target.value))
+                      }
+                      className="h-6 w-12 rounded-md border border-border bg-background px-1 text-xs text-center tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-brand/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={confirmStationsDraft}
+                      className="rounded-md bg-foreground px-2 py-1 text-[10px] font-bold text-background transition-colors hover:bg-foreground/90"
+                    >
+                      Crear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStationsDraftActive(false)}
+                      className="text-[10px] text-muted-foreground hover:text-foreground"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={addTextItem}
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                    >
+                      <Plus className="size-3" />
+                      Texto libre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addWarmupItem}
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                    >
+                      <Flame className="size-3" />
+                      Calentamiento
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStationsDraftActive(true);
+                        setStationsDraftCount(4);
+                      }}
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                    >
+                      <LayoutGrid className="size-3" />
+                      Estaciones
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -549,6 +680,16 @@ export function StepExercises({
                                   placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
                                   className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
                                 />
+                              ) : isWarmupItem(ex) ? (
+                                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
+                                  <Flame className="size-3.5 text-brand shrink-0" />
+                                  Calentamiento
+                                </p>
+                              ) : isStationsItem(ex) ? (
+                                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
+                                  <LayoutGrid className="size-3.5 text-emerald-500 shrink-0" />
+                                  Estaciones ({ex.stations?.length ?? 0})
+                                </p>
                               ) : (
                                 <p className="text-sm font-medium text-foreground truncate leading-snug">
                                   {ex.name}
@@ -577,7 +718,7 @@ export function StepExercises({
                               </div>
                             </div>
 
-                            {isEditingDuration ? (
+                            {isStationsItem(ex) ? null : isEditingDuration ? (
                               <div className="flex items-center gap-1 shrink-0">
                                 <input
                                   ref={durationInputRef}
@@ -640,6 +781,180 @@ export function StepExercises({
                               <X className="size-3.5" />
                             </button>
                           </div>
+
+                          {isStationsItem(ex) && (
+                            <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-2.5">
+                              <textarea
+                                rows={1}
+                                value={ex.freeText ?? ""}
+                                onChange={(e) =>
+                                  patchItem(idx, { freeText: e.target.value })
+                                }
+                                placeholder="Explica el ejercicio de estaciones (opcional)…"
+                                className="field-sizing-content w-full resize-none rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                              />
+                              <ul className="space-y-2">
+                                {(ex.stations ?? []).map(
+                                  (station, stationIdx) => (
+                                    <li
+                                      key={stationIdx}
+                                      className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2"
+                                    >
+                                      <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
+                                        {String(stationIdx + 1).padStart(
+                                          2,
+                                          "0"
+                                        )}
+                                      </span>
+                                      <div className="flex-1 min-w-0 space-y-1.5">
+                                        <div className="flex gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setStationPickerOpen({
+                                                itemIdx: idx,
+                                                stationIdx,
+                                              })
+                                            }
+                                            className={cn(
+                                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                              station.kind === "exercise"
+                                                ? "border-brand/40 bg-brand/10 text-brand"
+                                                : "border-border text-muted-foreground hover:border-brand/40"
+                                            )}
+                                          >
+                                            Ejercicio
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              updateStation(idx, stationIdx, {
+                                                kind: "text",
+                                                exerciseId: null,
+                                                name: "",
+                                              })
+                                            }
+                                            className={cn(
+                                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                              station.kind === "text"
+                                                ? "border-brand/40 bg-brand/10 text-brand"
+                                                : "border-border text-muted-foreground hover:border-brand/40"
+                                            )}
+                                          >
+                                            Texto libre
+                                          </button>
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={300}
+                                            placeholder="min"
+                                            value={station.durationMinutes ?? ""}
+                                            onChange={(e) =>
+                                              updateStation(idx, stationIdx, {
+                                                durationMinutes: e.target.value
+                                                  ? Number(e.target.value)
+                                                  : null,
+                                              })
+                                            }
+                                            className="ml-auto h-6 w-14 rounded-lg border border-border bg-background px-1.5 text-[11px] tabular-nums text-foreground focus:border-brand/50 focus:outline-none"
+                                          />
+                                        </div>
+                                        {station.kind === "exercise" ? (
+                                          stationPickerOpen?.itemIdx === idx &&
+                                          stationPickerOpen?.stationIdx ===
+                                            stationIdx ? (
+                                            <div className="space-y-1.5 rounded-lg border border-brand/40 bg-brand/10 p-2">
+                                              <div className="flex items-center gap-1.5">
+                                                <input
+                                                  type="text"
+                                                  value={stationSearch}
+                                                  onChange={(e) =>
+                                                    setStationSearch(
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  autoFocus
+                                                  placeholder="Buscar ejercicio…"
+                                                  className="h-7 flex-1 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:border-brand/50 focus:outline-none"
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setStationPickerOpen(null);
+                                                    setStationSearch("");
+                                                  }}
+                                                  className="size-6 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                  aria-label="Cerrar"
+                                                >
+                                                  <X className="size-3.5" />
+                                                </button>
+                                              </div>
+                                              <ul className="max-h-40 overflow-y-auto space-y-0.5">
+                                                {filteredStationExercises
+                                                  .slice(0, 20)
+                                                  .map((libEx) => (
+                                                    <li key={libEx.id}>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                          setStationExercise(
+                                                            idx,
+                                                            stationIdx,
+                                                            libEx
+                                                          )
+                                                        }
+                                                        className="w-full truncate rounded px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-brand/10 hover:text-brand"
+                                                      >
+                                                        {libEx.name}
+                                                      </button>
+                                                    </li>
+                                                  ))}
+                                                {filteredStationExercises.length ===
+                                                  0 && (
+                                                  <li className="px-2 py-1 text-xs italic text-muted-foreground">
+                                                    Sin resultados.
+                                                  </li>
+                                                )}
+                                              </ul>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setStationPickerOpen({
+                                                  itemIdx: idx,
+                                                  stationIdx,
+                                                })
+                                              }
+                                              className="truncate text-left text-xs text-foreground hover:text-brand"
+                                            >
+                                              {station.name || (
+                                                <span className="italic text-muted-foreground">
+                                                  Elige un ejercicio…
+                                                </span>
+                                              )}
+                                            </button>
+                                          )
+                                        ) : (
+                                          <textarea
+                                            rows={1}
+                                            value={station.freeText}
+                                            onChange={(e) =>
+                                              updateStation(idx, stationIdx, {
+                                                freeText: e.target.value,
+                                              })
+                                            }
+                                            placeholder="Describe la estación…"
+                                            className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
+                                          />
+                                        )}
+                                      </div>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
 
                           {isExpanded && (
                             <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">

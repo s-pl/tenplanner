@@ -10,12 +10,46 @@ import {
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { isPublicHttpUrl } from "@/lib/url-safety";
+import {
+  BLOCK_ITEM_KINDS,
+  STATION_COUNT_MAX,
+  STATION_COUNT_MIN,
+} from "@/lib/block-items";
 
-const blockExerciseSchema = z.object({
-  exerciseId: z.string().uuid().optional().nullable(),
-  freeText: z.string().trim().max(2000).optional().nullable(),
-  durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
-});
+const stationItemSchema = z
+  .object({
+    kind: z.enum(["exercise", "text"]),
+    exerciseId: z.string().uuid().optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+  })
+  .refine(
+    (v) =>
+      v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim(),
+    { message: "Cada estación necesita un ejercicio o un texto." }
+  );
+
+const blockExerciseSchema = z
+  .object({
+    kind: z.enum(BLOCK_ITEM_KINDS).optional(),
+    exerciseId: z.string().uuid().optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+    stations: z
+      .array(stationItemSchema)
+      .min(STATION_COUNT_MIN)
+      .max(STATION_COUNT_MAX)
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (item) => {
+      if (item.kind === "stations") return (item.stations?.length ?? 0) > 0;
+      if (item.kind === "warmup") return item.durationMinutes != null;
+      return true;
+    },
+    { message: "Datos de bloque inválidos." }
+  );
 
 const blockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),
@@ -158,17 +192,22 @@ export async function POST(request: Request) {
   const niveles = normalizeMultiValue(d.niveles, d.nivel);
   const aspectosJuego = normalizeMultiValue(d.aspectosJuego, d.aspectoJuego);
 
-  // Verify exercises referenced belong to user or are library
+  // Verify exercises referenced (top-level items and stations) belong to
+  // the user or are library exercises.
   const exerciseIds = Array.from(
     new Set(
       d.blocks.flatMap((b) =>
-        b.items.map((i) => i.exerciseId).filter((id): id is string => !!id)
+        b.items.flatMap((i) => [
+          i.exerciseId,
+          ...(i.stations ?? []).map((s) => s.exerciseId),
+        ])
       )
-    )
-  );
+    ).values()
+  ).filter((id): id is string => !!id);
+  const exerciseNameMap = new Map<string, string>();
   if (exerciseIds.length > 0) {
     const accessible = await db
-      .select({ id: exercises.id })
+      .select({ id: exercises.id, name: exercises.name })
       .from(exercises)
       .where(
         and(
@@ -185,6 +224,19 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    for (const ex of accessible) exerciseNameMap.set(ex.id, ex.name);
+  }
+
+  function buildStations(stations: typeof d.blocks[number]["items"][number]["stations"]) {
+    return (stations ?? []).map((s) => ({
+      kind: s.kind,
+      exerciseId: s.exerciseId ?? null,
+      exerciseName: s.exerciseId
+        ? (exerciseNameMap.get(s.exerciseId) ?? null)
+        : null,
+      freeText: s.freeText ?? null,
+      durationMinutes: s.durationMinutes ?? null,
+    }));
   }
 
   try {
@@ -229,6 +281,9 @@ export async function POST(request: Request) {
               freeText: item.freeText ?? null,
               orderIndex: idx,
               durationMinutes: item.durationMinutes ?? null,
+              kind: item.kind ?? null,
+              stations:
+                item.kind === "stations" ? buildStations(item.stations) : null,
             }))
           );
         }

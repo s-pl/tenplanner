@@ -1,3 +1,5 @@
+import type { StationDraftItem } from "@/lib/block-items";
+
 export type TrainingPhase = "activation" | "main" | "cooldown";
 
 export interface AvailableExercise {
@@ -18,13 +20,19 @@ export interface StudentOption {
 
 export interface WizardExercise {
   /**
-   * Para ejercicios de la biblioteca, su id. Para textos libres, una clave
-   * local que empieza por "text-" (nunca se envía al servidor como id).
+   * Para ejercicios de la biblioteca, su id. Para textos libres,
+   * calentamientos y estaciones, una clave local que empieza por "text-",
+   * "warmup-" o "stations-" (nunca se envía al servidor como id).
    */
   exerciseId: string;
-  /** "text" = texto libre escrito por el monitor, sin crear un ejercicio. */
-  kind?: "exercise" | "text";
+  /**
+   * "text" = texto libre; "warmup" = calentamiento (solo duración);
+   * "stations" = 2-10 estaciones (cada una ejercicio o texto).
+   */
+  kind?: "exercise" | "text" | "warmup" | "stations";
   freeText?: string;
+  /** Solo para kind "stations". */
+  stations?: StationDraftItem[];
   name: string;
   category: string;
   durationMinutes: number;
@@ -35,10 +43,12 @@ export interface WizardExercise {
 }
 
 export interface WizardBlockItem {
+  kind?: "exercise" | "text" | "warmup" | "stations";
   exerciseId?: string | null;
   freeText?: string | null;
   durationMinutes?: number | null;
   notes?: string | null;
+  stations?: StationDraftItem[] | null;
 }
 
 export interface WizardSessionBlock {

@@ -100,41 +100,80 @@ export async function GET(_request: Request, context: RouteContext) {
     coachName: coachRow?.name ?? user.email ?? "Entrenador",
     material: session.material,
     observations: session.observations,
-    exercises: plan.items.map((item, orderIndex) =>
-      item.kind === "exercise"
-        ? {
-            kind: "exercise" as const,
-            name: item.name,
-            category: item.category as PdfExercise["category"],
-            difficulty: item.difficulty as PdfExercise["difficulty"],
-            orderIndex,
-            durationMinutes:
-              item.durationMinutes ?? item.defaultDurationMinutes,
-            notes: item.notes,
-            phase: item.phase,
-            intensity: null,
-            materials: item.materials,
-            description: item.description,
-            steps: item.steps,
-            diagram: getExerciseDiagram(item.exerciseId),
-            tips: item.tips,
-            blockTitle: blockTitles.get(item.blockOrder) ?? null,
-          }
-        : {
-            kind: "text" as const,
-            name: item.text,
-            category: "technique" as const,
-            difficulty: "beginner" as const,
-            orderIndex,
-            durationMinutes: item.durationMinutes,
-            notes: item.notes,
-            phase: item.phase,
-            intensity: null,
-            materials: [],
-            description: item.description,
-            blockTitle: blockTitles.get(item.blockOrder) ?? null,
-          }
-    ),
+    exercises: plan.items.map((item, orderIndex) => {
+      if (item.kind === "exercise") {
+        return {
+          kind: "exercise" as const,
+          name: item.name,
+          category: item.category as PdfExercise["category"],
+          difficulty: item.difficulty as PdfExercise["difficulty"],
+          orderIndex,
+          durationMinutes:
+            item.durationMinutes ?? item.defaultDurationMinutes,
+          notes: item.notes,
+          phase: item.phase,
+          intensity: null,
+          materials: item.materials,
+          description: item.description,
+          steps: item.steps,
+          diagram: getExerciseDiagram(item.exerciseId),
+          tips: item.tips,
+          blockTitle: blockTitles.get(item.blockOrder) ?? null,
+        };
+      }
+      if (item.kind === "warmup") {
+        return {
+          kind: "text" as const,
+          name: "Calentamiento",
+          category: "warm-up" as const,
+          difficulty: "beginner" as const,
+          orderIndex,
+          durationMinutes: item.durationMinutes,
+          notes: item.notes,
+          phase: item.phase,
+          intensity: null,
+          materials: [],
+          description: null,
+          blockTitle: blockTitles.get(item.blockOrder) ?? null,
+        };
+      }
+      if (item.kind === "stations") {
+        const stationLines = item.stations.map(
+          (station, idx) =>
+            `${idx + 1}. ${station.kind === "exercise" ? (station.exerciseName ?? "Ejercicio") : (station.freeText ?? "")}`
+        );
+        return {
+          kind: "text" as const,
+          name: "Estaciones",
+          category: "technique" as const,
+          difficulty: "beginner" as const,
+          orderIndex,
+          durationMinutes: item.durationMinutes,
+          notes: item.notes,
+          phase: item.phase,
+          intensity: null,
+          materials: [],
+          description: [item.introText, ...stationLines]
+            .filter((v) => v && v.trim())
+            .join("\n"),
+          blockTitle: blockTitles.get(item.blockOrder) ?? null,
+        };
+      }
+      return {
+        kind: "text" as const,
+        name: item.text,
+        category: "technique" as const,
+        difficulty: "beginner" as const,
+        orderIndex,
+        durationMinutes: item.durationMinutes,
+        notes: item.notes,
+        phase: item.phase,
+        intensity: null,
+        materials: [],
+        description: item.description,
+        blockTitle: blockTitles.get(item.blockOrder) ?? null,
+      };
+    }),
     students: studentRows,
   };
 

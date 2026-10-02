@@ -25,6 +25,7 @@ import {
 } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
 import { embedSession } from "@/lib/ai/semantic-search";
+import type { StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -48,16 +49,25 @@ async function ensureUser(user: {
     .onConflictDoNothing();
 }
 
+type SessionBlockInputItem = {
+  kind?: "exercise" | "text" | "warmup" | "stations";
+  exerciseId?: string | null;
+  freeText?: string | null;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  stations?: Array<{
+    kind: "exercise" | "text";
+    exerciseId?: string | null;
+    freeText?: string | null;
+    durationMinutes?: number | null;
+  }> | null;
+};
+
 type SessionBlockInput = {
   orderIndex: number;
   title?: string | null;
   notes?: string | null;
-  items: Array<{
-    exerciseId?: string | null;
-    freeText?: string | null;
-    durationMinutes?: number | null;
-    notes?: string | null;
-  }>;
+  items: SessionBlockInputItem[];
 };
 
 type TrainingPhase = "activation" | "main" | "cooldown";
@@ -175,7 +185,10 @@ function normalizeBlocks(
 
 function exerciseIdsFromBlocks(blocks: SessionBlockInput[]) {
   return blocks.flatMap((block) =>
-    block.items.flatMap((item) => (item.exerciseId ? [item.exerciseId] : []))
+    block.items.flatMap((item) => [
+      ...(item.exerciseId ? [item.exerciseId] : []),
+      ...(item.stations ?? []).flatMap((s) => (s.exerciseId ? [s.exerciseId] : [])),
+    ])
   );
 }
 
@@ -563,6 +576,20 @@ export async function POST(request: Request) {
         );
       }
 
+      function buildStations(
+        stations: SessionBlockInputItem["stations"]
+      ): StationItemJson[] {
+        return (stations ?? []).map((s) => ({
+          kind: s.kind,
+          exerciseId: s.exerciseId ?? null,
+          exerciseName: s.exerciseId
+            ? (snapshots.get(s.exerciseId)?.name ?? null)
+            : null,
+          freeText: s.freeText ?? null,
+          durationMinutes: s.durationMinutes ?? null,
+        }));
+      }
+
       for (const block of normalizedBlocks) {
         const [sessionBlock] = await tx
           .insert(sessionBlocks)
@@ -590,6 +617,11 @@ export async function POST(request: Request) {
                 durationMinutes:
                   item.durationMinutes ?? snapshot?.durationMinutes ?? null,
                 notes: item.notes ?? null,
+                kind: item.kind ?? null,
+                stations:
+                  item.kind === "stations"
+                    ? buildStations(item.stations)
+                    : null,
               };
             })
           );

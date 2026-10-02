@@ -6,6 +6,7 @@ import {
   sessionBlocks,
   sessionExercises,
 } from "@/db/schema";
+import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 
 export type SessionPlanPhase = "activation" | "main" | "cooldown";
 
@@ -38,6 +39,24 @@ export type SessionPlanItem =
       text: string;
       /** Descripción guardada (p. ej. de un ejercicio que ya no existe). */
       description: string | null;
+      durationMinutes: number | null;
+      notes: string | null;
+    }
+  | {
+      kind: "warmup";
+      key: string;
+      phase: SessionPlanPhase;
+      blockOrder: 1 | 2 | 3;
+      durationMinutes: number | null;
+      notes: string | null;
+    }
+  | {
+      kind: "stations";
+      key: string;
+      phase: SessionPlanPhase;
+      blockOrder: 1 | 2 | 3;
+      introText: string | null;
+      stations: StationItemJson[];
       durationMinutes: number | null;
       notes: string | null;
     };
@@ -110,6 +129,8 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       itemFreeText: sessionBlockItems.freeText,
       itemDuration: sessionBlockItems.durationMinutes,
       itemNotes: sessionBlockItems.notes,
+      itemKind: sessionBlockItems.kind,
+      itemStations: sessionBlockItems.stations,
       exId: exercises.id,
       exName: exercises.name,
       exDescription: exercises.description,
@@ -157,6 +178,35 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       if (row.itemId === null) continue;
       const order = blockOrderFromIndex(row.blockOrder);
       const phase = phaseFromBlockOrder(order);
+      const itemKind = resolveItemKind({
+        kind: row.itemKind,
+        exerciseId: row.itemExerciseId,
+        freeText: row.itemFreeText,
+      });
+      if (itemKind === "warmup") {
+        items.push({
+          kind: "warmup",
+          key: row.itemId,
+          phase,
+          blockOrder: order,
+          durationMinutes: row.itemDuration ?? null,
+          notes: row.itemNotes ?? null,
+        });
+        continue;
+      }
+      if (itemKind === "stations") {
+        items.push({
+          kind: "stations",
+          key: row.itemId,
+          phase,
+          blockOrder: order,
+          introText: row.itemFreeText ?? null,
+          stations: (row.itemStations as StationItemJson[] | null) ?? [],
+          durationMinutes: row.itemDuration ?? null,
+          notes: row.itemNotes ?? null,
+        });
+        continue;
+      }
       if (row.exId && row.exName && row.exCategory && row.exDifficulty) {
         items.push({
           kind: "exercise",

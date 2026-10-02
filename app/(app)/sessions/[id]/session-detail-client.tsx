@@ -158,6 +158,14 @@ export interface SessionBlockData {
     freeText: string | null;
     durationMinutes: number | null;
     notes: string | null;
+    kind?: "exercise" | "text" | "warmup" | "stations";
+    stations?: Array<{
+      kind: "exercise" | "text";
+      exerciseId: string | null;
+      exerciseName: string | null;
+      freeText: string | null;
+      durationMinutes: number | null;
+    }>;
   }>;
 }
 
@@ -907,38 +915,100 @@ export function SessionDetailClient({
                       Sin items definidos.
                     </p>
                   ) : (
-                    block.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
-                      >
-                        <p className="text-sm font-medium text-foreground">
-                          {item.exerciseId && item.exerciseName ? (
-                            <Link
-                              href={`/exercises/${item.exerciseId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-brand hover:underline"
-                            >
-                              {item.exerciseName}
-                            </Link>
-                          ) : (
-                            (item.exerciseName ?? item.freeText ?? "Item")
-                          )}
-                        </p>
-                        {item.exerciseDescription && (
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                            {item.exerciseDescription}
+                    block.items.map((item) =>
+                      item.kind === "warmup" ? (
+                        <div
+                          key={item.id}
+                          className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                        >
+                          <p className="text-sm font-medium text-foreground">
+                            Calentamiento
                           </p>
-                        )}
-                        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                          {item.durationMinutes && (
-                            <span>{item.durationMinutes} min</span>
-                          )}
-                          {item.notes && <span>{item.notes}</span>}
+                          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                            {item.durationMinutes && (
+                              <span>{item.durationMinutes} min</span>
+                            )}
+                            {item.notes && <span>{item.notes}</span>}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ) : item.kind === "stations" ? (
+                        <div
+                          key={item.id}
+                          className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                        >
+                          <p className="text-sm font-medium text-foreground">
+                            Estaciones ({item.stations?.length ?? 0})
+                          </p>
+                          {item.freeText && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {item.freeText}
+                            </p>
+                          )}
+                          <ul className="mt-2 space-y-1">
+                            {(item.stations ?? []).map((station, idx) => (
+                              <li
+                                key={idx}
+                                className="text-xs text-muted-foreground"
+                              >
+                                {idx + 1}.{" "}
+                                {station.kind === "exercise" &&
+                                station.exerciseId ? (
+                                  <Link
+                                    href={`/exercises/${station.exerciseId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-foreground hover:text-brand hover:underline"
+                                  >
+                                    {station.exerciseName ?? "Ejercicio"}
+                                  </Link>
+                                ) : (
+                                  (station.freeText ?? station.exerciseName)
+                                )}
+                                {station.durationMinutes
+                                  ? ` · ${station.durationMinutes} min`
+                                  : ""}
+                              </li>
+                            ))}
+                          </ul>
+                          {item.notes && (
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              {item.notes}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          key={item.id}
+                          className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                        >
+                          <p className="text-sm font-medium text-foreground">
+                            {item.exerciseId && item.exerciseName ? (
+                              <Link
+                                href={`/exercises/${item.exerciseId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-brand hover:underline"
+                              >
+                                {item.exerciseName}
+                              </Link>
+                            ) : (
+                              (item.exerciseName ?? item.freeText ?? "Item")
+                            )}
+                          </p>
+                          {item.exerciseDescription && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {item.exerciseDescription}
+                            </p>
+                          )}
+                          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                            {item.durationMinutes && (
+                              <span>{item.durationMinutes} min</span>
+                            )}
+                            {item.notes && <span>{item.notes}</span>}
+                          </div>
+                        </div>
+                      )
+                    )
                   )}
                 </div>
               </div>

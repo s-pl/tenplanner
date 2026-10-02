@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  BLOCK_ITEM_KINDS,
+  STATION_COUNT_MAX,
+  STATION_COUNT_MIN,
+} from "@/lib/block-items";
 
 const phaseEnum = z.enum(["activation", "main", "cooldown"]);
+
+const stationItemSchema = z
+  .object({
+    kind: z.enum(["exercise", "text"]),
+    exerciseId: z.string().uuid().optional().nullable(),
+    freeText: z.string().trim().max(2000).optional().nullable(),
+    durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
+  })
+  .refine(
+    (v) => (v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim()),
+    { message: "Cada estación necesita un ejercicio o un texto." }
+  );
 
 const exerciseItemSchema = z.object({
   exerciseId: z.string().uuid("El ID del ejercicio debe ser un UUID válido"),
@@ -30,14 +47,26 @@ const exerciseItemSchema = z.object({
 
 const sessionBlockItemSchema = z
   .object({
+    kind: z.enum(BLOCK_ITEM_KINDS).optional(),
     exerciseId: z.string().uuid("ID de ejercicio inválido").optional().nullable(),
     freeText: z.string().trim().max(2000).optional().nullable(),
     durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
     notes: z.string().trim().max(1000).optional().nullable(),
+    stations: z
+      .array(stationItemSchema)
+      .min(STATION_COUNT_MIN)
+      .max(STATION_COUNT_MAX)
+      .optional()
+      .nullable(),
   })
-  .refine((item) => !!item.exerciseId || !!item.freeText?.trim(), {
-    message: "Cada item de bloque necesita ejercicio o texto",
-  });
+  .refine(
+    (item) => {
+      if (item.kind === "stations") return (item.stations?.length ?? 0) > 0;
+      if (item.kind === "warmup") return true;
+      return !!item.exerciseId || !!item.freeText?.trim();
+    },
+    { message: "Cada item de bloque necesita ejercicio, texto o estaciones" }
+  );
 
 const sessionBlockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),

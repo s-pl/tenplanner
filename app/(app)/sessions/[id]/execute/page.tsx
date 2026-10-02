@@ -31,39 +31,80 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
   if (sessionRow.userId !== user.id) notFound();
 
   const plan = await loadSessionPlan(id);
-  const resolvedExercises = plan.items.map((item, orderIndex) =>
-    item.kind === "exercise"
-      ? {
-          key: item.key,
-          kind: "exercise" as const,
-          exerciseId: item.exerciseId,
-          name: item.name,
-          category: item.category,
-          difficulty: item.difficulty,
-          description: item.description,
-          durationMinutes: item.durationMinutes ?? item.defaultDurationMinutes,
-          notes: item.notes,
-          orderIndex,
-          steps: item.steps,
-          tips: item.tips,
-          materials: item.materials,
-        }
-      : {
-          key: item.key,
-          kind: "text" as const,
-          exerciseId: null,
-          name: item.text,
-          category: "text",
-          difficulty: "",
-          description: item.description,
-          durationMinutes: item.durationMinutes ?? 0,
-          notes: item.notes,
-          orderIndex,
-          steps: [],
-          tips: null,
-          materials: [],
-        }
-  );
+  const resolvedExercises = plan.items.map((item, orderIndex) => {
+    if (item.kind === "exercise") {
+      return {
+        key: item.key,
+        kind: "exercise" as const,
+        exerciseId: item.exerciseId,
+        name: item.name,
+        category: item.category,
+        difficulty: item.difficulty,
+        description: item.description,
+        durationMinutes: item.durationMinutes ?? item.defaultDurationMinutes,
+        notes: item.notes,
+        orderIndex,
+        steps: item.steps,
+        tips: item.tips,
+        materials: item.materials,
+      };
+    }
+    if (item.kind === "warmup") {
+      return {
+        key: item.key,
+        kind: "text" as const,
+        exerciseId: null,
+        name: "Calentamiento",
+        category: "warm-up",
+        difficulty: "",
+        description: null,
+        durationMinutes: item.durationMinutes ?? 0,
+        notes: item.notes,
+        orderIndex,
+        steps: [],
+        tips: null,
+        materials: [],
+      };
+    }
+    if (item.kind === "stations") {
+      const stationLines = item.stations.map(
+        (station, idx) =>
+          `${idx + 1}. ${station.kind === "exercise" ? (station.exerciseName ?? "Ejercicio") : (station.freeText ?? "")}`
+      );
+      return {
+        key: item.key,
+        kind: "text" as const,
+        exerciseId: null,
+        name: "Estaciones",
+        category: "stations",
+        difficulty: "",
+        description: [item.introText, ...stationLines]
+          .filter((v) => v && v.trim())
+          .join("\n"),
+        durationMinutes: item.durationMinutes ?? 0,
+        notes: item.notes,
+        orderIndex,
+        steps: [],
+        tips: null,
+        materials: [],
+      };
+    }
+    return {
+      key: item.key,
+      kind: "text" as const,
+      exerciseId: null,
+      name: item.text,
+      category: "text",
+      difficulty: "",
+      description: item.description,
+      durationMinutes: item.durationMinutes ?? 0,
+      notes: item.notes,
+      orderIndex,
+      steps: [],
+      tips: null,
+      materials: [],
+    };
+  });
 
   return (
     <ExecuteSessionClient

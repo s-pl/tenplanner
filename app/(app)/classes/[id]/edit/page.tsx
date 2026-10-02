@@ -12,6 +12,7 @@ import {
   users,
 } from "@/db/schema";
 import { ClassForm } from "@/components/app/class-form";
+import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -52,6 +53,8 @@ export default async function EditClassPage({ params }: PageProps) {
           freeText: classBlockExercises.freeText,
           orderIndex: classBlockExercises.orderIndex,
           durationMinutes: classBlockExercises.durationMinutes,
+          kind: classBlockExercises.kind,
+          stations: classBlockExercises.stations,
           exerciseName: exercises.name,
         })
         .from(classBlockExercises)
@@ -106,8 +109,29 @@ export default async function EditClassPage({ params }: PageProps) {
       notes: b.notes,
       items: items
         .filter((it) => it.blockId === b.id)
-        .map((it) =>
-          it.exerciseId && it.exerciseName
+        .map((it) => {
+          const itemKind = resolveItemKind(it);
+          if (itemKind === "warmup") {
+            return {
+              kind: "warmup" as const,
+              durationMinutes: it.durationMinutes,
+            };
+          }
+          if (itemKind === "stations") {
+            const stations = (it.stations as StationItemJson[] | null) ?? [];
+            return {
+              kind: "stations" as const,
+              introText: it.freeText ?? "",
+              stations: stations.map((s) => ({
+                kind: s.kind,
+                exerciseId: s.exerciseId,
+                name: s.exerciseName ?? "",
+                freeText: s.freeText ?? "",
+                durationMinutes: s.durationMinutes,
+              })),
+            };
+          }
+          return it.exerciseId && it.exerciseName
             ? {
                 kind: "exercise" as const,
                 exerciseId: it.exerciseId,
@@ -118,8 +142,8 @@ export default async function EditClassPage({ params }: PageProps) {
                 kind: "text" as const,
                 freeText: it.freeText ?? "",
                 durationMinutes: it.durationMinutes,
-              }
-        ),
+              };
+        }),
     })),
   };
 

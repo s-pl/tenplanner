@@ -19,6 +19,7 @@ import {
   exercises,
 } from "@/db/schema";
 import { ClassActions } from "./class-actions";
+import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -64,6 +65,8 @@ export default async function ClassDetailPage({ params }: PageProps) {
           freeText: classBlockExercises.freeText,
           orderIndex: classBlockExercises.orderIndex,
           durationMinutes: classBlockExercises.durationMinutes,
+          kind: classBlockExercises.kind,
+          stations: classBlockExercises.stations,
           exerciseName: exercises.name,
           exerciseDescription: exercises.description,
         })
@@ -224,38 +227,91 @@ export default async function ClassDetailPage({ params }: PageProps) {
                         (sin ejercicios)
                       </li>
                     ) : (
-                      blockItems.map((item, i) => (
-                        <li
-                          key={`${item.blockId}-${i}`}
-                          className="text-sm text-foreground/85 flex items-start gap-2"
-                        >
-                          <span className="text-muted-foreground tabular-nums text-xs pt-0.5">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <span className="flex-1">
-                            {item.exerciseId && item.exerciseName ? (
-                              <Link
-                                href={`/exercises/${item.exerciseId}?fromClass=${cls.id}`}
-                                className="font-medium text-foreground hover:text-brand"
-                              >
-                                {item.exerciseName}
-                              </Link>
-                            ) : (
-                              (item.freeText ?? "-")
-                            )}
-                            {item.durationMinutes && (
-                              <span className="text-muted-foreground ml-2 text-xs">
-                                · {item.durationMinutes} min
-                              </span>
-                            )}
-                            {item.exerciseDescription && (
-                              <span className="mt-1 block text-xs leading-5 text-muted-foreground line-clamp-2">
-                                {item.exerciseDescription}
-                              </span>
-                            )}
-                          </span>
-                        </li>
-                      ))
+                      blockItems.map((item, i) => {
+                        const itemKind = resolveItemKind(item);
+                        return (
+                          <li
+                            key={`${item.blockId}-${i}`}
+                            className="text-sm text-foreground/85 flex items-start gap-2"
+                          >
+                            <span className="text-muted-foreground tabular-nums text-xs pt-0.5">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <span className="flex-1">
+                              {itemKind === "warmup" ? (
+                                <span className="font-medium text-foreground">
+                                  Calentamiento
+                                </span>
+                              ) : itemKind === "stations" ? (
+                                <>
+                                  <span className="font-medium text-foreground">
+                                    Estaciones (
+                                    {(item.stations as StationItemJson[])
+                                      ?.length ?? 0}
+                                    )
+                                  </span>
+                                  {item.freeText && (
+                                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                      {item.freeText}
+                                    </span>
+                                  )}
+                                  <ul className="mt-1.5 space-y-1 pl-4">
+                                    {(
+                                      (item.stations as StationItemJson[]) ??
+                                      []
+                                    ).map((st, si) => (
+                                      <li
+                                        key={si}
+                                        className="text-xs text-foreground/75"
+                                      >
+                                        {String(si + 1).padStart(2, "0")} ·{" "}
+                                        {st.kind === "exercise" &&
+                                        st.exerciseId &&
+                                        st.exerciseName ? (
+                                          <Link
+                                            href={`/exercises/${st.exerciseId}?fromClass=${cls.id}`}
+                                            className="font-medium text-foreground hover:text-brand"
+                                          >
+                                            {st.exerciseName}
+                                          </Link>
+                                        ) : (
+                                          (st.freeText ?? "-")
+                                        )}
+                                        {st.durationMinutes && (
+                                          <span className="text-muted-foreground ml-1.5">
+                                            · {st.durationMinutes} min
+                                          </span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              ) : item.exerciseId && item.exerciseName ? (
+                                <Link
+                                  href={`/exercises/${item.exerciseId}?fromClass=${cls.id}`}
+                                  className="font-medium text-foreground hover:text-brand"
+                                >
+                                  {item.exerciseName}
+                                </Link>
+                              ) : (
+                                (item.freeText ?? "-")
+                              )}
+                              {itemKind !== "stations" &&
+                                item.durationMinutes && (
+                                  <span className="text-muted-foreground ml-2 text-xs">
+                                    · {item.durationMinutes} min
+                                  </span>
+                                )}
+                              {itemKind === "exercise" &&
+                                item.exerciseDescription && (
+                                  <span className="mt-1 block text-xs leading-5 text-muted-foreground line-clamp-2">
+                                    {item.exerciseDescription}
+                                  </span>
+                                )}
+                            </span>
+                          </li>
+                        );
+                      })
                     )}
                   </ul>
                   {block.notes && (
