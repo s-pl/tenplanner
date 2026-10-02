@@ -40,7 +40,6 @@ import {
   type TipoPelota,
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
-import { cn } from "@/lib/utils";
 import { AddToSessionButton } from "@/components/app/add-to-session-dialog";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -787,39 +786,6 @@ export function ExerciseDetailClient({
                 Ver vídeo
                 <ExternalLink className="size-3" />
               </a>
-            </div>
-          )}
-
-          {/* Image gallery */}
-          {exercise.imageUrls && exercise.imageUrls.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
-                Galería
-              </p>
-              <div
-                className={cn(
-                  "grid gap-2",
-                  exercise.imageUrls.length === 1
-                    ? "grid-cols-1"
-                    : exercise.imageUrls.length === 2
-                      ? "grid-cols-2"
-                      : "grid-cols-2"
-                )}
-              >
-                {exercise.imageUrls.map((url, idx) => (
-                  <div
-                    key={idx}
-                    className="aspect-video rounded-xl overflow-hidden bg-muted relative"
-                  >
-                    <Image
-                      src={url}
-                      alt={`${exercise.name} ${idx + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
