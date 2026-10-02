@@ -27,6 +27,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   tactics: "border-purple-500/40 bg-purple-500/5",
   fitness: "border-amber-500/40 bg-amber-500/5",
   "warm-up": "border-brand/40 bg-brand/5",
+  warmup: "border-sky-500/40 bg-sky-500/5",
+  stations: "border-emerald-500/40 bg-emerald-500/5",
 };
 
 const CATEGORY_ACCENT: Record<string, string> = {
@@ -34,6 +36,8 @@ const CATEGORY_ACCENT: Record<string, string> = {
   tactics: "text-purple-400",
   fitness: "text-amber-400",
   "warm-up": "text-brand",
+  warmup: "text-sky-400",
+  stations: "text-emerald-400",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -41,6 +45,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   tactics: "Táctica",
   fitness: "Fitness",
   "warm-up": "Calentamiento",
+  warmup: "Descanso",
+  stations: "Estaciones",
 };
 
 interface ExerciseData {
@@ -451,9 +457,16 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
                       ex.category === "tactics" && "bg-purple-400",
                       ex.category === "fitness" && "bg-amber-400",
                       ex.category === "warm-up" && "bg-brand",
-                      !["technique", "tactics", "fitness", "warm-up"].includes(
-                        ex.category
-                      ) && "bg-muted"
+                      ex.category === "warmup" && "bg-sky-400",
+                      ex.category === "stations" && "bg-emerald-400",
+                      ![
+                        "technique",
+                        "tactics",
+                        "fitness",
+                        "warm-up",
+                        "warmup",
+                        "stations",
+                      ].includes(ex.category) && "bg-muted"
                     )}
                   />
                   <div className="flex-1 min-w-0">

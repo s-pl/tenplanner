@@ -70,7 +70,7 @@ export function createWarmupItem(
   return {
     exerciseId: `${WARMUP_ITEM_PREFIX}${randomKey()}`,
     kind: "warmup",
-    name: "Calentamiento",
+    name: "Descanso",
     category: "warmup",
     durationMinutes: durationMinutes ?? DEFAULT_TEXT_DURATION,
     overrideDuration: durationMinutes,

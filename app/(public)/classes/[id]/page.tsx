@@ -240,7 +240,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                             <span className="flex-1">
                               {itemKind === "warmup" ? (
                                 <span className="font-medium text-foreground">
-                                  Calentamiento
+                                  Descanso
                                 </span>
                               ) : itemKind === "stations" ? (
                                 <>

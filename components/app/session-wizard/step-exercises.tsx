@@ -7,10 +7,10 @@ import {
   CalendarDays,
   ChevronDown,
   Clock,
+  Coffee,
   Dumbbell,
   ExternalLink,
   Filter,
-  Flame,
   GripVertical,
   LayoutGrid,
   Loader2,
@@ -59,7 +59,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   tactics: "text-purple-400 bg-purple-400/10",
   fitness: "text-amber-400 bg-amber-400/10",
   "warm-up": "text-brand bg-brand/10",
-  warmup: "text-brand bg-brand/10",
+  warmup: "text-sky-400 bg-sky-400/10",
   stations: "text-emerald-400 bg-emerald-400/10",
 };
 
@@ -69,7 +69,7 @@ const CATEGORY_BAR: Record<string, string> = {
   tactics: "bg-purple-400",
   fitness: "bg-amber-400",
   "warm-up": "bg-brand",
-  warmup: "bg-brand",
+  warmup: "bg-sky-400",
   stations: "bg-emerald-400",
 };
 
@@ -78,7 +78,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   tactics: "Táctica",
   fitness: "Fitness",
   "warm-up": "Calentamiento",
-  warmup: "Calentamiento",
+  warmup: "Descanso",
   stations: "Estaciones",
 };
 
@@ -539,8 +539,8 @@ export function StepExercises({
                       onClick={addWarmupItem}
                       className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
                     >
-                      <Flame className="size-3" />
-                      Calentamiento
+                      <Coffee className="size-3" />
+                      Descanso
                     </button>
                     <button
                       type="button"
@@ -682,8 +682,8 @@ export function StepExercises({
                                 />
                               ) : isWarmupItem(ex) ? (
                                 <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
-                                  <Flame className="size-3.5 text-brand shrink-0" />
-                                  Calentamiento
+                                  <Coffee className="size-3.5 text-sky-400 shrink-0" />
+                                  Descanso
                                 </p>
                               ) : isStationsItem(ex) ? (
                                 <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">

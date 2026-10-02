@@ -922,7 +922,7 @@ export function SessionDetailClient({
                           className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
                         >
                           <p className="text-sm font-medium text-foreground">
-                            Calentamiento
+                            Descanso
                           </p>
                           <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                             {item.durationMinutes && (

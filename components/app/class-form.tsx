@@ -13,7 +13,7 @@ import {
   Dumbbell,
   GripVertical,
   ExternalLink,
-  Flame,
+  Coffee,
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -906,9 +906,9 @@ export function ClassForm({
                           </div>
                         ) : item.kind === "warmup" ? (
                           <div className="flex items-center gap-2">
-                            <Flame className="size-3.5 text-brand shrink-0" />
+                            <Coffee className="size-3.5 text-sky-500 shrink-0" />
                             <span className="text-sm font-medium text-foreground">
-                              Calentamiento
+                              Descanso
                             </span>
                           </div>
                         ) : (
@@ -1269,7 +1269,7 @@ export function ClassForm({
                   onClick={() => addWarmupToBlock(blockIdx)}
                   className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                 >
-                  <Flame className="size-3.5" /> Calentamiento
+                  <Coffee className="size-3.5" /> Descanso
                 </button>
                 <button
                   type="button"

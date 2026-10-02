@@ -21,12 +21,12 @@ export interface StudentOption {
 export interface WizardExercise {
   /**
    * Para ejercicios de la biblioteca, su id. Para textos libres,
-   * calentamientos y estaciones, una clave local que empieza por "text-",
+   * descansos y estaciones, una clave local que empieza por "text-",
    * "warmup-" o "stations-" (nunca se envía al servidor como id).
    */
   exerciseId: string;
   /**
-   * "text" = texto libre; "warmup" = calentamiento (solo duración);
+   * "text" = texto libre; "warmup" = descanso (solo duración);
    * "stations" = 2-10 estaciones (cada una ejercicio o texto).
    */
   kind?: "exercise" | "text" | "warmup" | "stations";

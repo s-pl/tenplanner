@@ -124,7 +124,7 @@ export async function GET(_request: Request, context: RouteContext) {
       if (item.kind === "warmup") {
         return {
           kind: "text" as const,
-          name: "Calentamiento",
+          name: "Descanso",
           category: "warm-up" as const,
           difficulty: "beginner" as const,
           orderIndex,
