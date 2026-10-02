@@ -10,6 +10,7 @@ import {
   applyFontSize,
 } from "@/lib/accent-colors";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { ResourcesPanel } from "@/components/app/resources-panel";
 import {
   Mail,
   Trash2,
@@ -42,7 +43,7 @@ function applyThemePreference(isDark: boolean) {
   applyAccentColor(localStorage.getItem("accent") ?? "blue");
 }
 
-type Tab = "profile" | "appearance" | "stats" | "data";
+type Tab = "profile" | "appearance" | "resources" | "stats" | "data";
 
 interface ProfileClientProps {
   user: {
@@ -65,8 +66,9 @@ interface ProfileClientProps {
 const TABS: { id: Tab; label: string; code: string }[] = [
   { id: "profile", label: "Perfil", code: "01" },
   { id: "appearance", label: "Apariencia", code: "02" },
-  { id: "stats", label: "Estadísticas", code: "03" },
-  { id: "data", label: "Datos", code: "04" },
+  { id: "resources", label: "Mis recursos", code: "03" },
+  { id: "stats", label: "Estadísticas", code: "04" },
+  { id: "data", label: "Datos", code: "05" },
 ];
 
 export function ProfileClient({ user, stats }: ProfileClientProps) {
@@ -551,6 +553,13 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
               <ThemeToggle />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── MIS RECURSOS ── */}
+      {tab === "resources" && (
+        <div className="tp-panel p-5 sm:p-6">
+          <ResourcesPanel userId={user.id} />
         </div>
       )}
 

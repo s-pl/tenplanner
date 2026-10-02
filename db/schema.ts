@@ -812,6 +812,64 @@ export const classDrafts = pgTable(
   (t) => [index("class_drafts_user_updated_at_idx").on(t.userId, t.updatedAt)]
 );
 
+// Calendar events (free-form items in the calendar, distinct from sessions)
+export const calendarEvents = pgTable(
+  "calendar_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("calendar_events_user_id_idx").on(t.userId),
+    index("calendar_events_start_at_idx").on(t.startAt),
+    index("calendar_events_user_start_at_idx").on(t.userId, t.startAt),
+  ]
+);
+
+// Resources ("Mis recursos") — enlaces, documentos e imágenes de utilidad
+// para el monitor, organizados en Todos / Favoritos.
+export const resources = pgTable(
+  "resources",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    url: text("url"),
+    documentUrl: text("document_url"),
+    documentName: varchar("document_name", { length: 255 }),
+    imageUrl: text("image_url"),
+    isFavorite: boolean("is_favorite").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("resources_user_id_idx").on(t.userId),
+    index("resources_user_favorite_idx").on(t.userId, t.isFavorite),
+    index("resources_user_created_at_idx").on(t.userId, t.createdAt),
+  ]
+);
+
 // Dr. Planner chat history
 export const drPlannerChats = pgTable(
   "dr_planner_chats",
@@ -865,6 +923,25 @@ export const usersRelations = relations(users, ({ many }) => ({
   coachedStudents: many(students),
   groups: many(groups),
   classLists: many(classLists),
+  calendarEvents: many(calendarEvents),
+  resources: many(resources),
+}));
+
+export const calendarEventsRelations = relations(
+  calendarEvents,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [calendarEvents.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const resourcesRelations = relations(resources, ({ one }) => ({
+  user: one(users, {
+    fields: [resources.userId],
+    references: [users.id],
+  }),
 }));
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({

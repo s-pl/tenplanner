@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions as sessionsTable } from "@/db/schema";
+import {
+  sessions as sessionsTable,
+  calendarEvents as calendarEventsTable,
+} from "@/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
 import { FeatureLocked } from "@/components/app/feature-locked";
@@ -60,12 +63,38 @@ export default async function CalendarPage() {
     .orderBy(asc(sessionsTable.scheduledAt))
     .limit(MAX_SESSIONS);
 
+  const events = await db
+    .select({
+      id: calendarEventsTable.id,
+      title: calendarEventsTable.title,
+      description: calendarEventsTable.description,
+      startAt: calendarEventsTable.startAt,
+      endAt: calendarEventsTable.endAt,
+    })
+    .from(calendarEventsTable)
+    .where(
+      and(
+        eq(calendarEventsTable.userId, user.id),
+        gte(calendarEventsTable.startAt, windowStart),
+        lte(calendarEventsTable.startAt, windowEnd)
+      )
+    )
+    .orderBy(asc(calendarEventsTable.startAt))
+    .limit(MAX_SESSIONS);
+
   const serialized = sessions.map((s) => ({
     ...s,
     scheduledAt: s.scheduledAt.toISOString(),
   }));
 
+  const serializedEvents = events.map((e) => ({
+    ...e,
+    startAt: e.startAt.toISOString(),
+    endAt: e.endAt.toISOString(),
+  }));
+
   const total = serialized.length;
+  const totalEvents = serializedEvents.length;
 
   return (
     <div className="tp-page">
@@ -81,7 +110,13 @@ export default async function CalendarPage() {
             </h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
               {total} sesión{total !== 1 ? "es" : ""} planificada
-              {total !== 1 ? "s" : ""} dentro de la ventana activa.
+              {total !== 1 ? "s" : ""}
+              {totalEvents > 0 && (
+                <>
+                  {" "}y {totalEvents} evento{totalEvents !== 1 ? "s" : ""}
+                </>
+              )}{" "}
+              dentro de la ventana activa.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -101,11 +136,11 @@ export default async function CalendarPage() {
             </Link>
           </div>
         </header>
-        {total === 0 ? (
+        {total === 0 && totalEvents === 0 ? (
           <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
             <p className="max-w-xs text-sm leading-6 text-foreground/55">
-              Aún no tienes sesiones planificadas. Crea tu primera sesión para
-              verla aquí.
+              Aún no tienes sesiones ni eventos planificados. Crea el primero
+              para verlo aquí.
             </p>
             <Link
               href="/sessions/new"
@@ -116,7 +151,7 @@ export default async function CalendarPage() {
             </Link>
           </div>
         ) : (
-          <CalendarClient sessions={serialized} />
+          <CalendarClient sessions={serialized} events={serializedEvents} />
         )}
       </div>
     </div>

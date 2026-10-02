@@ -218,6 +218,13 @@
       "when": 1790600000000,
       "tag": "0030_session_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790700000000,
+      "tag": "0031_calendar_events_and_resources",
+      "breakpoints": true
     }
   ]
 }
