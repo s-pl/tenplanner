@@ -75,6 +75,17 @@ export const aiEmbeddingSourceEnum = pgEnum("ai_embedding_source", [
   "session",
 ]);
 
+export const devTaskAssigneeEnum = pgEnum("dev_task_assignee", [
+  "dario",
+  "david",
+  "ambos",
+]);
+
+export const devTaskStatusEnum = pgEnum("dev_task_status", [
+  "pendiente",
+  "resuelto",
+]);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -1335,5 +1346,35 @@ export const aiUserRestrictions = pgTable(
   (t) => [
     index("ai_user_restrictions_restricted_idx").on(t.isRestricted),
     index("ai_user_restrictions_model_idx").on(t.modelOverride),
+  ]
+);
+
+// Internal task tracker for David & Darío — not visible to other admins or users.
+export const devTasks = pgTable(
+  "dev_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    assignedTo: devTaskAssigneeEnum("assigned_to").notNull(),
+    status: devTaskStatusEnum("status").default("pendiente").notNull(),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    observaciones: text("observaciones"),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("dev_tasks_status_idx").on(t.status),
+    index("dev_tasks_assigned_to_idx").on(t.assignedTo),
+    index("dev_tasks_created_at_idx").on(t.createdAt),
   ]
 );

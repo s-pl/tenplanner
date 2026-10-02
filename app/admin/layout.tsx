@@ -42,7 +42,7 @@ export default async function AdminLayout({
         aria-hidden="true"
         className="pointer-events-none fixed inset-x-0 top-0 z-50 h-px bg-brand"
       />
-      <AdminSidebar />
+      <AdminSidebar userEmail={user.email ?? null} />
       <main className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <MaintenanceBanner message={maintenanceBanner} />
         {children}

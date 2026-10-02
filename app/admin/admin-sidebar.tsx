@@ -17,8 +17,10 @@ import {
   MessageSquare,
   Palette,
   Wrench,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isDevTaskUser } from "@/lib/dev-tasks";
 
 const adminNav = [
   { href: "/admin", label: "Metricas", icon: LayoutDashboard, exact: true },
@@ -43,17 +45,26 @@ const adminNav = [
   },
 ];
 
+const devTaskNavItem = {
+  href: "/admin/incidencias",
+  label: "Incidencias",
+  icon: ListChecks,
+  exact: false,
+};
+
 function AdminNavLinks({
   pathname,
   onNavigate,
+  items,
 }: {
   pathname: string;
   onNavigate?: () => void;
+  items: typeof adminNav;
 }) {
   return (
     <nav className="flex-1 p-3">
       <div className="flex flex-col gap-0.5">
-        {adminNav.map((item) => {
+        {items.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
@@ -79,16 +90,20 @@ function AdminNavLinks({
   );
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({ userEmail }: { userEmail?: string | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  const navItems = isDevTaskUser(userEmail)
+    ? [...adminNav, devTaskNavItem]
+    : adminNav;
+
   const activeItem =
-    adminNav.find((item) =>
+    navItems.find((item) =>
       item.exact ? pathname === item.href : pathname.startsWith(item.href)
-    ) ?? adminNav[0];
+    ) ?? navItems[0];
 
   useEffect(() => {
     if (!open) return;
@@ -139,7 +154,7 @@ export function AdminSidebar() {
           </p>
         </div>
 
-        <AdminNavLinks pathname={pathname} />
+        <AdminNavLinks pathname={pathname} items={navItems} />
 
         <div className="border-t border-sidebar-border p-3">
           <Link
@@ -191,6 +206,7 @@ export function AdminSidebar() {
             <AdminNavLinks
               pathname={pathname}
               onNavigate={() => setOpen(false)}
+              items={navItems}
             />
             <div className="border-t border-sidebar-border p-3">
               <Link

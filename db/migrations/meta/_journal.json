@@ -225,6 +225,13 @@
       "when": 1790700000000,
       "tag": "0031_calendar_events_and_resources",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790939282935,
+      "tag": "0032_dev_tasks",
+      "breakpoints": true
     }
   ]
 }
