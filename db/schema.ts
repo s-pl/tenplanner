@@ -927,15 +927,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   resources: many(resources),
 }));
 
-export const calendarEventsRelations = relations(
-  calendarEvents,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [calendarEvents.userId],
-      references: [users.id],
-    }),
-  })
-);
+export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [calendarEvents.userId],
+    references: [users.id],
+  }),
+}));
 
 export const resourcesRelations = relations(resources, ({ one }) => ({
   user: one(users, {

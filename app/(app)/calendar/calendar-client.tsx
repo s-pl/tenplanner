@@ -367,9 +367,7 @@ export function CalendarClient({
                 <ClipboardList className="size-4" />
                 Nueva sesión
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setEventDialog({ event: null })}
-              >
+              <DropdownMenuItem onClick={() => setEventDialog({ event: null })}>
                 <CalendarDays className="size-4 text-[#2563eb]" />
                 Nuevo evento
               </DropdownMenuItem>
@@ -454,13 +452,17 @@ export function CalendarClient({
                   if (id) void moveSessionToDay(id, dayNum);
                 }}
                 className={cn(
-                  isValid && dragOverDay === dayNum && "ring-2 ring-inset ring-brand bg-brand/15",
+                  isValid &&
+                    dragOverDay === dayNum &&
+                    "ring-2 ring-inset ring-brand bg-brand/15",
                   "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
                   isValid ? "cursor-pointer" : "cursor-default",
                   !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
                   isValid && isPast && !isSelected && "opacity-50",
                   isSelected && "bg-brand/15",
-                  isValid && !isSelected && "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
+                  isValid &&
+                    !isSelected &&
+                    "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
                   // Remove border on last row
                   idx >= totalCells - 7 && "border-b-0"
                 )}
@@ -713,9 +715,7 @@ export function CalendarClient({
             </p>
           )}
           {eventError && (
-            <p className="text-sm font-medium text-destructive">
-              {eventError}
-            </p>
+            <p className="text-sm font-medium text-destructive">{eventError}</p>
           )}
         </div>
       )}

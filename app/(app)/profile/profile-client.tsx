@@ -347,7 +347,7 @@ export function ProfileClient({ user, stats }: ProfileClientProps) {
             </div>
 
             {/* Micro stats */}
-              <dl className="hidden grid-cols-3 gap-2 md:grid md:pb-1">
+            <dl className="hidden grid-cols-3 gap-2 md:grid md:pb-1">
               {[
                 {
                   icon: Activity,

@@ -8,7 +8,13 @@ import { createClient } from "@/lib/supabase/server";
 const createSchema = z.object({
   title: z.string().trim().min(1, "Título obligatorio").max(255),
   description: z.string().trim().max(4000).optional().nullable(),
-  url: z.string().trim().url("Enlace no válido").max(2000).optional().nullable(),
+  url: z
+    .string()
+    .trim()
+    .url("Enlace no válido")
+    .max(2000)
+    .optional()
+    .nullable(),
   documentUrl: z.string().trim().url().max(2000).optional().nullable(),
   documentName: z.string().trim().max(255).optional().nullable(),
   imageUrl: z.string().trim().url().max(2000).optional().nullable(),

@@ -113,7 +113,8 @@ export default async function CalendarPage() {
               {total !== 1 ? "s" : ""}
               {totalEvents > 0 && (
                 <>
-                  {" "}y {totalEvents} evento{totalEvents !== 1 ? "s" : ""}
+                  {" "}
+                  y {totalEvents} evento{totalEvents !== 1 ? "s" : ""}
                 </>
               )}{" "}
               dentro de la ventana activa.

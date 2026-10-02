@@ -280,8 +280,6 @@ const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
   precompeticion: "advanced",
   competicion: "advanced",
   rendimiento: "advanced",
-  adultos_iniciacion: "beginner",
-  adultos_medio_alto: "advanced",
 };
 
 const LOCATIONS: { id: Location; label: string; icon: string }[] = [

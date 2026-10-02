@@ -40,8 +40,15 @@ export async function PATCH(request: Request, ctx: Ctx) {
       { status: 422 }
     );
 
-  const { title, description, url, documentUrl, documentName, imageUrl, isFavorite } =
-    parsed.data;
+  const {
+    title,
+    description,
+    url,
+    documentUrl,
+    documentName,
+    imageUrl,
+    isFavorite,
+  } = parsed.data;
 
   const [updated] = await db
     .update(resources)
