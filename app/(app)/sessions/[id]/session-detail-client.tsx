@@ -936,9 +936,16 @@ export function SessionDetailClient({
                           key={item.id}
                           className="rounded-md border border-border/60 bg-muted/20 px-3 py-2"
                         >
-                          <p className="text-sm font-medium text-foreground">
-                            Estaciones ({item.stations?.length ?? 0})
-                          </p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              Estaciones ({item.stations?.length ?? 0})
+                            </p>
+                            {item.durationMinutes && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {item.durationMinutes} min/estación
+                              </span>
+                            )}
+                          </div>
                           {item.freeText && (
                             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                               {item.freeText}
@@ -964,9 +971,6 @@ export function SessionDetailClient({
                                 ) : (
                                   (station.freeText ?? station.exerciseName)
                                 )}
-                                {station.durationMinutes
-                                  ? ` · ${station.durationMinutes} min`
-                                  : ""}
                               </li>
                             ))}
                           </ul>

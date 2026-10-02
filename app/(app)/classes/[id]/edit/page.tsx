@@ -122,6 +122,7 @@ export default async function EditClassPage({ params }: PageProps) {
             return {
               kind: "stations" as const,
               introText: it.freeText ?? "",
+              durationMinutes: it.durationMinutes,
               stations: stations.map((s) => ({
                 kind: s.kind,
                 exerciseId: s.exerciseId,

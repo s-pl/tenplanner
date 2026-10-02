@@ -219,7 +219,8 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           const stationsItem = createStationsItem(
             phaseFromBlock(orderIndex),
             stations.length || 1,
-            row.freeText ?? ""
+            row.freeText ?? "",
+            row.itemDuration ?? null
           );
           if (stations.length) {
             stationsItem.stations = stations.map((s) => ({

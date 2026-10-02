@@ -83,7 +83,9 @@ export function createWarmupItem(
 export function createStationsItem(
   phase: TrainingPhase | null = null,
   stationCount = 4,
-  introText = ""
+  introText = "",
+  /** Duración por estación (la misma para todas), no la suma. */
+  durationMinutes: number | null = null
 ): WizardExercise {
   return {
     exerciseId: `${STATIONS_ITEM_PREFIX}${randomKey()}`,
@@ -92,8 +94,8 @@ export function createStationsItem(
     stations: Array.from({ length: stationCount }, emptyStationDraft),
     name: "Estaciones",
     category: "stations",
-    durationMinutes: 0,
-    overrideDuration: null,
+    durationMinutes: durationMinutes ?? DEFAULT_TEXT_DURATION,
+    overrideDuration: durationMinutes,
     notes: "",
     phase,
     intensity: null,
@@ -148,7 +150,8 @@ export function textItemsFromBlocks(
         const stationsItem = createStationsItem(
           phase,
           item.stations?.length || 1,
-          item.freeText ?? ""
+          item.freeText ?? "",
+          item.durationMinutes ?? null
         );
         if (item.stations?.length) stationsItem.stations = item.stations;
         return [stationsItem];
@@ -214,7 +217,7 @@ export function buildBlocksPayload(
         kind: "stations",
         freeText: item.freeText?.trim() || null,
         stations: item.stations ?? [],
-        durationMinutes: null,
+        durationMinutes: item.overrideDuration ?? null,
         notes: item.notes.trim() || null,
       });
     } else if (isTextItem(item)) {
@@ -296,6 +299,7 @@ type PlanItemLike =
         freeText: string | null;
         durationMinutes: number | null;
       }>;
+      durationMinutes: number | null;
       notes: string | null;
       phase: TrainingPhase;
     };
@@ -325,7 +329,8 @@ export function planItemsToWizard(items: PlanItemLike[]): WizardExercise[] {
       const stationsItem = createStationsItem(
         item.phase,
         draftStations.length || 1,
-        item.introText ?? ""
+        item.introText ?? "",
+        item.durationMinutes
       );
       if (draftStations.length) stationsItem.stations = draftStations;
       stationsItem.notes = item.notes ?? "";

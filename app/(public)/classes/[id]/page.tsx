@@ -277,11 +277,6 @@ export default async function ClassDetailPage({ params }: PageProps) {
                                         ) : (
                                           (st.freeText ?? "-")
                                         )}
-                                        {st.durationMinutes && (
-                                          <span className="text-muted-foreground ml-1.5">
-                                            · {st.durationMinutes} min
-                                          </span>
-                                        )}
                                       </li>
                                     ))}
                                   </ul>
@@ -296,12 +291,12 @@ export default async function ClassDetailPage({ params }: PageProps) {
                               ) : (
                                 (item.freeText ?? "-")
                               )}
-                              {itemKind !== "stations" &&
-                                item.durationMinutes && (
-                                  <span className="text-muted-foreground ml-2 text-xs">
-                                    · {item.durationMinutes} min
-                                  </span>
-                                )}
+                              {item.durationMinutes && (
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  · {item.durationMinutes} min
+                                  {itemKind === "stations" ? "/estación" : ""}
+                                </span>
+                              )}
                               {itemKind === "exercise" &&
                                 item.exerciseDescription && (
                                   <span className="mt-1 block text-xs leading-5 text-muted-foreground line-clamp-2">

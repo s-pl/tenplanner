@@ -75,7 +75,13 @@ type BlockItem =
     }
   | { kind: "text"; freeText: string; durationMinutes: number | null }
   | { kind: "warmup"; durationMinutes: number | null }
-  | { kind: "stations"; introText: string; stations: StationDraftItem[] };
+  | {
+      kind: "stations";
+      introText: string;
+      stations: StationDraftItem[];
+      /** Duración por estación (la misma para todas), no la suma. */
+      durationMinutes: number | null;
+    };
 
 interface BlockState {
   orderIndex: number;
@@ -268,6 +274,7 @@ export function ClassForm({
                   kind: "stations" as const,
                   introText: "",
                   stations: Array.from({ length: n }, emptyStationDraft),
+                  durationMinutes: 5,
                 },
               ],
             }
@@ -303,12 +310,12 @@ export function ClassForm({
     );
   }
 
-  const [stationPickerOpen, setStationPickerOpen] = useState<{
+  /** Estación para la que se está eligiendo un ejercicio desde la Biblioteca. */
+  const [stationPickerTarget, setStationPickerTarget] = useState<{
     blockIdx: number;
     itemIdx: number;
     stationIdx: number;
   } | null>(null);
-  const [stationSearch, setStationSearch] = useState("");
 
   function setStationExercise(
     blockIdx: number,
@@ -321,8 +328,8 @@ export function ClassForm({
       exerciseId: ex.id,
       name: ex.name,
     });
-    setStationPickerOpen(null);
-    setStationSearch("");
+    setStationPickerTarget(null);
+    setSearch("");
   }
 
   function removeItem(blockIdx: number, itemIdx: number) {
@@ -488,7 +495,7 @@ export function ClassForm({
                 kind: "stations" as const,
                 exerciseId: null,
                 freeText: item.introText.trim() || null,
-                durationMinutes: null,
+                durationMinutes: item.durationMinutes,
                 stations: item.stations.map((s) =>
                   s.kind === "exercise"
                     ? {
@@ -943,13 +950,14 @@ export function ClassForm({
                                     <div className="flex gap-1.5">
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          setStationPickerOpen({
+                                        onClick={() => {
+                                          setStationPickerTarget({
                                             blockIdx,
                                             itemIdx,
                                             stationIdx,
-                                          })
-                                        }
+                                          });
+                                          setSearch("");
+                                        }}
                                         className={cn(
                                           "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
                                           station.kind === "exercise"
@@ -982,107 +990,43 @@ export function ClassForm({
                                       >
                                         Texto libre
                                       </button>
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        max={300}
-                                        placeholder="min"
-                                        value={station.durationMinutes ?? ""}
-                                        onChange={(e) =>
-                                          updateStation(
+                                    </div>
+                                    {station.kind === "exercise" ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setStationPickerTarget({
                                             blockIdx,
                                             itemIdx,
                                             stationIdx,
-                                            {
-                                              durationMinutes: e.target.value
-                                                ? Number(e.target.value)
-                                                : null,
-                                            }
-                                          )
-                                        }
-                                        className="ml-auto h-6 w-14 rounded-lg border border-foreground/15 bg-background/70 px-1.5 text-[11px] tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
-                                      />
-                                    </div>
-                                    {station.kind === "exercise" ? (
-                                      stationPickerOpen?.blockIdx ===
-                                        blockIdx &&
-                                      stationPickerOpen?.itemIdx === itemIdx &&
-                                      stationPickerOpen?.stationIdx ===
-                                        stationIdx ? (
-                                        <div className="space-y-1.5 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-2">
-                                          <div className="flex items-center gap-1.5">
-                                            <input
-                                              type="text"
-                                              value={stationSearch}
-                                              onChange={(e) =>
-                                                setStationSearch(
-                                                  e.target.value
-                                                )
-                                              }
-                                              autoFocus
-                                              placeholder="Buscar ejercicio…"
-                                              className="h-7 flex-1 rounded-lg border border-foreground/15 bg-background/80 px-2 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setStationPickerOpen(null);
-                                                setStationSearch("");
-                                              }}
-                                              className="size-6 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
-                                              aria-label="Cerrar"
-                                            >
-                                              <X className="size-3.5" />
-                                            </button>
-                                          </div>
-                                          <ul className="max-h-40 overflow-y-auto space-y-0.5">
-                                            {filteredExercises(stationSearch)
-                                              .slice(0, 20)
-                                              .map((ex) => (
-                                                <li key={ex.id}>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      setStationExercise(
-                                                        blockIdx,
-                                                        itemIdx,
-                                                        stationIdx,
-                                                        ex
-                                                      )
-                                                    }
-                                                    className="w-full truncate rounded px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-brand/10 hover:text-brand"
-                                                  >
-                                                    {ex.name}
-                                                  </button>
-                                                </li>
-                                              ))}
-                                            {filteredExercises(stationSearch)
-                                              .length === 0 && (
-                                              <li className="px-2 py-1 text-xs italic text-muted-foreground">
-                                                Sin resultados.
-                                              </li>
-                                            )}
-                                          </ul>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setStationPickerOpen({
-                                              blockIdx,
-                                              itemIdx,
-                                              stationIdx,
-                                            })
-                                          }
-                                          className="truncate text-left text-xs text-foreground hover:text-brand"
-                                        >
-                                          {station.name || (
-                                            <span className="italic text-muted-foreground">
-                                              Elige un ejercicio…
-                                            </span>
-                                          )}
-                                        </button>
-                                      )
+                                          });
+                                          setSearch("");
+                                        }}
+                                        className={cn(
+                                          "truncate text-left text-xs hover:text-brand",
+                                          stationPickerTarget?.blockIdx ===
+                                            blockIdx &&
+                                            stationPickerTarget?.itemIdx ===
+                                              itemIdx &&
+                                            stationPickerTarget?.stationIdx ===
+                                              stationIdx
+                                            ? "font-semibold text-brand"
+                                            : "text-foreground"
+                                        )}
+                                      >
+                                        {stationPickerTarget?.blockIdx ===
+                                          blockIdx &&
+                                        stationPickerTarget?.itemIdx ===
+                                          itemIdx &&
+                                        stationPickerTarget?.stationIdx ===
+                                          stationIdx
+                                          ? "Elige en la Biblioteca ↓"
+                                          : (station.name || (
+                                              <span className="italic text-muted-foreground">
+                                                Elige un ejercicio…
+                                              </span>
+                                            ))}
+                                      </button>
                                     ) : (
                                       <textarea
                                         rows={1}
@@ -1106,12 +1050,17 @@ export function ClassForm({
                           </div>
                         )}
                       </div>
-                      {item.kind !== "stations" && (
+                      <div className="flex shrink-0 flex-col items-center gap-0.5">
                         <input
                           type="number"
                           min={1}
                           max={300}
                           placeholder="min"
+                          title={
+                            item.kind === "stations"
+                              ? "Duración de cada estación"
+                              : undefined
+                          }
                           value={item.durationMinutes ?? ""}
                           onChange={(e) =>
                             updateItem(blockIdx, itemIdx, {
@@ -1122,7 +1071,12 @@ export function ClassForm({
                           }
                           className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/70 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
                         />
-                      )}
+                        {item.kind === "stations" && (
+                          <span className="text-[9px] text-muted-foreground">
+                            por estación
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeItem(blockIdx, itemIdx)}
@@ -1148,7 +1102,82 @@ export function ClassForm({
               </div>
             )}
 
-            {pickerOpen === blockIdx ? (
+            {stationPickerTarget?.blockIdx === blockIdx ? (
+              <div className="space-y-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    Elige un ejercicio para la estación{" "}
+                    {stationPickerTarget.stationIdx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStationPickerTarget(null);
+                      setSearch("");
+                    }}
+                    className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+                    aria-label="Cerrar"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                  placeholder="Buscar ejercicio…"
+                  className="h-9 w-full rounded-lg border border-foreground/15 bg-background/80 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+                />
+                <ul className="max-h-64 overflow-y-auto space-y-1">
+                  {filteredExercises(search)
+                    .slice(0, 30)
+                    .map((ex) => (
+                      <li
+                        key={ex.id}
+                        className="flex items-start gap-1 rounded-lg hover:bg-brand/10"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStationExercise(
+                              stationPickerTarget.blockIdx,
+                              stationPickerTarget.itemIdx,
+                              stationPickerTarget.stationIdx,
+                              ex
+                            )
+                          }
+                          className="min-w-0 flex-1 text-left px-3 py-2 text-sm transition-colors hover:text-brand text-foreground/80"
+                        >
+                          <span className="block truncate font-medium">
+                            {ex.name}
+                          </span>
+                          {ex.description && (
+                            <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
+                              {ex.description}
+                            </span>
+                          )}
+                        </button>
+                        <NextLink
+                          href={`/exercises/${ex.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Ver ficha completa del ejercicio"
+                          className="mt-2 mr-2 shrink-0 text-muted-foreground hover:text-brand"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </NextLink>
+                      </li>
+                    ))}
+                  {filteredExercises(search).length === 0 && (
+                    <li className="text-xs text-muted-foreground italic px-3 py-2">
+                      Sin resultados.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ) : pickerOpen === blockIdx ? (
               <div className="space-y-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <input
