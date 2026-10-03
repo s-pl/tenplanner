@@ -25,11 +25,14 @@ interface ExerciseListWithItems {
 interface SessionExerciseListsProps {
   selectedExerciseIds: string[];
   onApplyList: (items: ExerciseListItem[]) => void;
+  /** Cómo referirse al destino en los mensajes, p.ej. "la sesión" o "la clase". */
+  contextLabel?: string;
 }
 
 export function SessionExerciseLists({
   selectedExerciseIds,
   onApplyList,
+  contextLabel = "la sesión",
 }: SessionExerciseListsProps) {
   const [lists, setLists] = useState<ExerciseListWithItems[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +101,7 @@ export function SessionExerciseLists({
                       {list.itemsCount} ejercicio
                       {list.itemsCount !== 1 ? "s" : ""}
                       {alreadyAdded > 0
-                        ? ` · ${alreadyAdded} ya en la sesión`
+                        ? ` · ${alreadyAdded} ya en ${contextLabel}`
                         : ""}
                     </p>
                   </div>
