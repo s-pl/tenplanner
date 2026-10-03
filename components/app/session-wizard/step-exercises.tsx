@@ -82,6 +82,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   stations: "Estaciones",
 };
 
+/** Orden fijo de los 3 bloques predefinidos de la sesión. */
+const PHASE_ORDER: TrainingPhase[] = ["activation", "main", "cooldown"];
+
 interface StepExercisesProps {
   state: WizardState;
   update: (patch: Partial<WizardState>) => void;
@@ -93,6 +96,29 @@ function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+/** Fase efectiva de un item: los items sin fase (sesiones antiguas) se
+ * muestran en "Bloque principal", igual que ya hace `phaseToBlockOrder`
+ * al guardar. */
+function effectivePhase(ex: WizardExercise): TrainingPhase {
+  return ex.phase ?? "main";
+}
+
+type IndexedExercise = { ex: WizardExercise; flatIdx: number };
+
+function groupByPhase(
+  items: WizardExercise[]
+): Record<TrainingPhase, IndexedExercise[]> {
+  const groups: Record<TrainingPhase, IndexedExercise[]> = {
+    activation: [],
+    main: [],
+    cooldown: [],
+  };
+  items.forEach((ex, flatIdx) => {
+    groups[effectivePhase(ex)].push({ ex, flatIdx });
+  });
+  return groups;
 }
 
 export function StepExercises({
@@ -114,12 +140,15 @@ export function StepExercises({
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
-  const [isDropZoneActive, setIsDropZoneActive] = useState(false);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [refreshingLibrary, setRefreshingLibrary] = useState(false);
-  const dragCounter = useRef(0);
 
-  const [stationsDraftActive, setStationsDraftActive] = useState(false);
+  /** A qué bloque se añade lo siguiente desde el panel derecho (Biblioteca/Listas). */
+  const [addPhaseOverride, setAddPhaseOverride] =
+    useState<TrainingPhase | null>(null);
+
+  const [stationsDraftPhase, setStationsDraftPhase] =
+    useState<TrainingPhase | null>(null);
   const [stationsDraftCount, setStationsDraftCount] = useState(4);
   /** Estación para la que se está eligiendo un ejercicio desde la Biblioteca. */
   const [pickingStation, setPickingStation] = useState<{
@@ -128,6 +157,23 @@ export function StepExercises({
   } | null>(null);
 
   const selected = state.exercises;
+
+  // Las sesiones creadas antes de que los 3 bloques fueran explícitos tienen
+  // items con phase=null; al cargarlos aquí se normalizan a "main" (igual que
+  // `phaseToBlockOrder` ya los trataba al guardar), para que nada quede fuera
+  // de los 3 bloques visibles.
+  useEffect(() => {
+    if (state.exercises.some((ex) => ex.phase === null)) {
+      update({
+        exercises: state.exercises.map((ex) =>
+          ex.phase === null ? { ...ex, phase: "main" } : ex
+        ),
+      });
+    }
+    // Solo al montar: normaliza una vez los datos cargados inicialmente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const textCount = selected.filter(isTextItem).length;
   const exerciseCount = selected.length - textCount;
   const totalDuration = selected.reduce(
@@ -138,6 +184,12 @@ export function StepExercises({
   const availableCategories = Array.from(
     new Set(libraryExercises.map((e) => e.category))
   );
+
+  const grouped = groupByPhase(selected);
+  const activeAddPhase: TrainingPhase =
+    addPhaseOverride ??
+    PHASE_ORDER.find((p) => grouped[p].length === 0) ??
+    "activation";
 
   const filteredAvailable = libraryExercises.filter((ex) => {
     const notSelected = !selectedIds.has(ex.id);
@@ -155,7 +207,7 @@ export function StepExercises({
     update({ exercises: next });
   }
 
-  function addExercise(ex: AvailableExercise, atIndex?: number) {
+  function addExercise(ex: AvailableExercise, phase: TrainingPhase) {
     const item: WizardExercise = {
       exerciseId: ex.id,
       name: ex.name,
@@ -163,16 +215,10 @@ export function StepExercises({
       durationMinutes: ex.durationMinutes,
       overrideDuration: null,
       notes: "",
-      phase: null,
+      phase,
       intensity: null,
     };
-    if (atIndex !== undefined) {
-      const next = [...selected];
-      next.splice(atIndex, 0, item);
-      setExercises(next);
-    } else {
-      setExercises([...selected, item]);
-    }
+    setExercises([...selected, item]);
   }
 
   function addExercisesFromList(
@@ -182,7 +228,8 @@ export function StepExercises({
       category: string;
       difficulty: string;
       durationMinutes: number;
-    }>
+    }>,
+    phase: TrainingPhase
   ) {
     if (items.length === 0) return;
 
@@ -195,7 +242,7 @@ export function StepExercises({
         durationMinutes: item.durationMinutes,
         overrideDuration: null,
         notes: "",
-        phase: null,
+        phase,
         intensity: null,
       }));
 
@@ -203,21 +250,25 @@ export function StepExercises({
     setExercises([...selected, ...nextItems]);
   }
 
-  function addTextItem() {
-    setExercises([...selected, createTextItem()]);
+  function addTextItem(phase: TrainingPhase) {
+    setExercises([...selected, createTextItem("", phase)]);
   }
 
-  function addWarmupItem() {
-    setExercises([...selected, createWarmupItem()]);
+  function addWarmupItem(phase: TrainingPhase) {
+    setExercises([...selected, createWarmupItem(phase)]);
   }
 
   function confirmStationsDraft() {
+    if (!stationsDraftPhase) return;
     const n = Math.min(
       STATION_COUNT_MAX,
       Math.max(STATION_COUNT_MIN, stationsDraftCount || STATION_COUNT_MIN)
     );
-    setExercises([...selected, createStationsItem(null, n, "")]);
-    setStationsDraftActive(false);
+    setExercises([
+      ...selected,
+      createStationsItem(stationsDraftPhase, n, ""),
+    ]);
+    setStationsDraftPhase(null);
     setStationsDraftCount(4);
   }
 
@@ -256,11 +307,56 @@ export function StepExercises({
     setExercises(selected.filter((e) => e.exerciseId !== id));
   }
 
-  function reorder(from: number, to: number) {
-    const next = [...selected];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    setExercises(next);
+  /**
+   * Mueve el item en `sourceFlatIdx` al bloque `targetPhase`, en la posición
+   * `targetLocalIdx` dentro de ese bloque. Reconstruye la línea de tiempo
+   * agrupando por bloque (en el orden fijo de los 3 bloques) para que el
+   * orden dentro de cada bloque sea el que ve el monitor, y actualiza la
+   * `phase` del item si cambia de bloque.
+   */
+  function relocateItem(
+    sourceFlatIdx: number,
+    targetPhase: TrainingPhase,
+    targetLocalIdx: number
+  ) {
+    const item = selected[sourceFlatIdx];
+    if (!item) return;
+    const groups = groupByPhase(selected);
+    // Mapa mutable fase -> array de ejercicios, para hacer el splice/insert
+    // y luego aplanar en el orden fijo de los 3 bloques.
+    const byPhase: Record<TrainingPhase, WizardExercise[]> = {
+      activation: groups.activation.map((entry) => entry.ex),
+      main: groups.main.map((entry) => entry.ex),
+      cooldown: groups.cooldown.map((entry) => entry.ex),
+    };
+
+    const sourcePhase = effectivePhase(item);
+    const sourceGroup = byPhase[sourcePhase];
+    const sourceLocalIdx = sourceGroup.indexOf(item);
+    if (sourceLocalIdx === -1) return;
+    if (sourcePhase === targetPhase && sourceLocalIdx === targetLocalIdx)
+      return;
+
+    sourceGroup.splice(sourceLocalIdx, 1);
+    let insertIdx = targetLocalIdx;
+    if (sourcePhase === targetPhase && sourceLocalIdx < targetLocalIdx) {
+      insertIdx = targetLocalIdx - 1;
+    }
+
+    const targetGroup = byPhase[targetPhase];
+    insertIdx = Math.max(0, Math.min(insertIdx, targetGroup.length));
+
+    const updatedItem: WizardExercise =
+      sourcePhase === targetPhase ? item : { ...item, phase: targetPhase };
+    targetGroup.splice(insertIdx, 0, updatedItem);
+
+    setExercises(PHASE_ORDER.flatMap((p) => byPhase[p]));
+  }
+
+  function moveItemToPhase(flatIdx: number, targetPhase: TrainingPhase) {
+    const item = selected[flatIdx];
+    if (!item || effectivePhase(item) === targetPhase) return;
+    relocateItem(flatIdx, targetPhase, grouped[targetPhase].length);
   }
 
   function patchItem(idx: number, patch: Partial<WizardExercise>) {
@@ -294,7 +390,11 @@ export function StepExercises({
     setDragSrcIdx(index);
   }
 
-  function onTimelineItemDrop(e: DragEvent, toIndex: number) {
+  function onBlockItemDrop(
+    e: DragEvent,
+    phase: TrainingPhase,
+    localIdx: number
+  ) {
     e.preventDefault();
     e.stopPropagation();
     setDragOverIdx(null);
@@ -302,28 +402,28 @@ export function StepExercises({
     if (type === "library") {
       const id = e.dataTransfer.getData("exercise-id");
       const ex = libraryExercises.find((a) => a.id === id);
-      if (ex && !selectedIds.has(id)) addExercise(ex, toIndex);
+      if (ex && !selectedIds.has(id)) addExercise(ex, phase);
     } else if (type === "reorder") {
       const from = parseInt(e.dataTransfer.getData("src-index"), 10);
-      if (from !== toIndex) reorder(from, toIndex);
+      if (!isNaN(from)) relocateItem(from, phase, localIdx);
     }
     setDragSrcIdx(null);
   }
 
-  function onDropZoneDrop(e: DragEvent) {
+  function onBlockEndDrop(e: DragEvent, phase: TrainingPhase) {
     e.preventDefault();
-    dragCounter.current = 0;
-    setIsDropZoneActive(false);
+    e.stopPropagation();
     const type = e.dataTransfer.getData("dnd-type");
     if (type === "library") {
       const id = e.dataTransfer.getData("exercise-id");
       const ex = libraryExercises.find((a) => a.id === id);
-      if (ex && !selectedIds.has(id)) addExercise(ex);
+      if (ex && !selectedIds.has(id)) addExercise(ex, phase);
     } else if (type === "reorder") {
       const from = parseInt(e.dataTransfer.getData("src-index"), 10);
-      reorder(from, selected.length - 1);
+      if (!isNaN(from)) relocateItem(from, phase, grouped[phase].length);
     }
     setDragSrcIdx(null);
+    setDragOverIdx(null);
   }
 
   async function refreshLibrary(createdExercise?: ExerciseFormResult) {
@@ -350,7 +450,7 @@ export function StepExercises({
             );
             return [fallbackExercise, ...next];
           });
-          addExercise(fallbackExercise);
+          addExercise(fallbackExercise, activeAddPhase);
         }
         return;
       }
@@ -405,7 +505,7 @@ export function StepExercises({
           ) ?? fallbackExercise;
 
         if (createdFromList) {
-          addExercise(createdFromList);
+          addExercise(createdFromList, activeAddPhase);
         }
       }
     } catch {
@@ -424,7 +524,7 @@ export function StepExercises({
           );
           return [fallbackExercise, ...next];
         });
-        addExercise(fallbackExercise);
+        addExercise(fallbackExercise, activeAddPhase);
       }
     } finally {
       setRefreshingLibrary(false);
@@ -475,510 +575,506 @@ export function StepExercises({
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 min-h-[440px]">
-          {/* LEFT: timeline */}
-          <div className="flex flex-col rounded-2xl border border-border overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
-              <CalendarDays className="size-4 text-brand" />
-              <span className="text-sm font-bold text-foreground uppercase tracking-wide">
-                Plan de entrenamiento
-              </span>
-              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                {totalDuration > 0 && (
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
-                    <Clock className="size-3" />
-                    {formatMinutes(totalDuration)}
-                  </span>
-                )}
-                {stationsDraftActive ? (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-2 py-1">
-                    <span className="text-[10px] font-semibold text-foreground whitespace-nowrap">
-                      ¿Cuántas?
-                    </span>
-                    <input
-                      type="number"
-                      min={STATION_COUNT_MIN}
-                      max={STATION_COUNT_MAX}
-                      value={stationsDraftCount}
-                      onChange={(e) =>
-                        setStationsDraftCount(Number(e.target.value))
-                      }
-                      className="h-6 w-12 rounded-md border border-border bg-background px-1 text-xs text-center tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-brand/40"
-                    />
-                    <button
-                      type="button"
-                      onClick={confirmStationsDraft}
-                      className="rounded-md bg-foreground px-2 py-1 text-[10px] font-bold text-background transition-colors hover:bg-foreground/90"
-                    >
-                      Crear
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStationsDraftActive(false)}
-                      className="text-[10px] text-muted-foreground hover:text-foreground"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={addTextItem}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
-                    >
-                      <Plus className="size-3" />
-                      Texto libre
-                    </button>
-                    <button
-                      type="button"
-                      onClick={addWarmupItem}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
-                    >
-                      <Coffee className="size-3" />
-                      Descanso
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStationsDraftActive(true);
-                        setStationsDraftCount(4);
-                      }}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
-                    >
-                      <LayoutGrid className="size-3" />
-                      Estaciones
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+          {/* LEFT: los 3 bloques predefinidos */}
+          <div className="flex flex-col gap-3">
+            {PHASE_ORDER.map((phase) => {
+              const blockEntries = grouped[phase];
+              const blockDuration = blockEntries.reduce(
+                (sum, { ex }) => sum + (ex.overrideDuration ?? ex.durationMinutes),
+                0
+              );
 
-            <div
-              className={cn(
-                "flex-1 p-3 transition-colors overflow-y-auto",
-                isDropZoneActive && selected.length === 0 && "bg-brand/5",
-                selected.length === 0 && "flex items-center justify-center"
-              )}
-              onDragOver={(e) => e.preventDefault()}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                dragCounter.current++;
-                setIsDropZoneActive(true);
-              }}
-              onDragLeave={() => {
-                dragCounter.current--;
-                if (dragCounter.current <= 0) {
-                  dragCounter.current = 0;
-                  setIsDropZoneActive(false);
-                }
-              }}
-              onDrop={onDropZoneDrop}
-            >
-              {selected.length === 0 ? (
+              return (
                 <div
-                  className={cn(
-                    "w-full max-w-xs mx-auto flex flex-col items-center text-center py-10 rounded-xl border-2 border-dashed transition-colors",
-                    isDropZoneActive
-                      ? "border-brand bg-brand/5"
-                      : "border-border"
-                  )}
+                  key={phase}
+                  className="flex flex-col rounded-2xl border border-border overflow-hidden"
                 >
-                  <Dumbbell
-                    className={cn(
-                      "size-8 mb-3",
-                      isDropZoneActive ? "text-brand" : "text-muted-foreground"
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+                    <CalendarDays className="size-4 text-brand" />
+                    <span className="text-sm font-bold text-foreground uppercase tracking-wide">
+                      {PHASE_LABELS[phase]}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {blockEntries.length}{" "}
+                      {blockEntries.length === 1 ? "item" : "items"}
+                    </span>
+                    {blockDuration > 0 && (
+                      <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
+                        <Clock className="size-3" />
+                        {formatMinutes(blockDuration)}
+                      </span>
                     )}
-                  />
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {isDropZoneActive ? "¡Suelta aquí!" : "Sin ejercicios aún"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Arrastra ejercicios desde la biblioteca o pulsa{" "}
-                    <Plus className="size-3 inline" />
-                  </p>
-                  <button
-                    type="button"
-                    onClick={addTextItem}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                  </div>
+
+                  <div
+                    className="p-3"
+                    onDragOver={(e) => {
+                      if (dragSrcIdx !== null) e.preventDefault();
+                    }}
+                    onDrop={(e) => onBlockEndDrop(e, phase)}
                   >
-                    <Type className="size-3.5" />
-                    Escribir texto libre
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {selected.map((ex, idx) => {
-                    const effectiveDuration =
-                      ex.overrideDuration ?? ex.durationMinutes;
-                    const isEditingDuration = editingDurationIdx === idx;
-                    const isExpanded = expandedIdx === idx;
-                    const isDragging = dragSrcIdx === idx;
+                    {blockEntries.length === 0 ? (
+                      <div
+                        className={cn(
+                          "w-full flex flex-col items-center text-center py-6 rounded-xl border-2 border-dashed transition-colors",
+                          dragSrcIdx !== null
+                            ? "border-brand bg-brand/5"
+                            : "border-border"
+                        )}
+                      >
+                        <p className="text-xs text-muted-foreground">
+                          Sin items en este bloque. Arrastra desde la
+                          biblioteca o usa los botones de abajo.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {blockEntries.map(({ ex, flatIdx }, localIdx) => {
+                          const effectiveDuration =
+                            ex.overrideDuration ?? ex.durationMinutes;
+                          const isEditingDuration =
+                            editingDurationIdx === flatIdx;
+                          const isExpanded = expandedIdx === flatIdx;
+                          const isDragging = dragSrcIdx === flatIdx;
 
-                    return (
-                      <div key={`${ex.exerciseId}-${idx}`}>
-                        <div
-                          className={cn(
-                            "h-0.5 rounded-full transition-all mb-1",
-                            dragOverIdx === idx ? "bg-brand" : "bg-transparent"
-                          )}
-                        />
-                        <div
-                          draggable={
-                            !isEditingDuration && focusedTextIdx !== idx
-                          }
-                          onDragStart={(e) =>
-                            !isEditingDuration &&
-                            focusedTextIdx !== idx &&
-                            onTimelineDragStart(e, idx)
-                          }
-                          onDragEnd={() => {
-                            setDragSrcIdx(null);
-                            setDragOverIdx(null);
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDragOverIdx(idx);
-                          }}
-                          onDragLeave={() => setDragOverIdx(null)}
-                          onDrop={(e) => onTimelineItemDrop(e, idx)}
-                          className={cn(
-                            "group bg-card border rounded-xl transition-all",
-                            isDragging
-                              ? "opacity-40 border-dashed border-border cursor-grabbing"
-                              : "border-border hover:border-brand/30 cursor-grab active:cursor-grabbing"
-                          )}
-                        >
-                          <div className="flex items-center gap-2 px-3 py-2.5">
-                            <div
-                              className={cn(
-                                "w-0.5 h-8 rounded-full shrink-0",
-                                CATEGORY_BAR[ex.category] ?? "bg-muted"
-                              )}
-                            />
-                            <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
-                            <div className="flex-1 min-w-0">
-                              {isTextItem(ex) ? (
-                                <textarea
-                                  value={ex.freeText ?? ""}
-                                  onChange={(e) =>
-                                    patchItem(idx, {
-                                      freeText: e.target.value,
-                                      name: e.target.value,
-                                    })
-                                  }
-                                  onFocus={() => setFocusedTextIdx(idx)}
-                                  onBlur={() => setFocusedTextIdx(null)}
-                                  autoFocus={!ex.freeText}
-                                  rows={2}
-                                  maxLength={2000}
-                                  placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
-                                  className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
-                                />
-                              ) : isWarmupItem(ex) ? (
-                                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
-                                  <Coffee className="size-3.5 text-sky-400 shrink-0" />
-                                  Descanso
-                                </p>
-                              ) : isStationsItem(ex) ? (
-                                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
-                                  <LayoutGrid className="size-3.5 text-emerald-500 shrink-0" />
-                                  Estaciones ({ex.stations?.length ?? 0})
-                                </p>
-                              ) : (
-                                <p className="text-sm font-medium text-foreground truncate leading-snug">
-                                  {ex.name}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span
-                                  className={cn(
-                                    "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                                    isTextItem(ex)
-                                      ? "text-foreground/70 bg-muted"
-                                      : (CATEGORY_COLORS[ex.category] ??
-                                          "text-muted-foreground bg-muted")
-                                  )}
-                                >
-                                  {isTextItem(ex)
-                                    ? "Texto libre"
-                                    : (CATEGORY_LABELS[ex.category] ??
-                                      ex.category)}
-                                </span>
-                                {ex.phase && (
-                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
-                                    {PHASE_LABELS[ex.phase]}
-                                  </span>
+                          return (
+                            <div key={`${ex.exerciseId}-${flatIdx}`}>
+                              <div
+                                className={cn(
+                                  "h-0.5 rounded-full transition-all mb-1",
+                                  dragOverIdx === flatIdx
+                                    ? "bg-brand"
+                                    : "bg-transparent"
                                 )}
-                              </div>
-                            </div>
-
-                            {isEditingDuration ? (
-                              <div className="flex items-center gap-1 shrink-0">
-                                <input
-                                  ref={durationInputRef}
-                                  type="number"
-                                  min={1}
-                                  max={300}
-                                  value={durationEditValue}
-                                  onChange={(e) =>
-                                    setDurationEditValue(e.target.value)
-                                  }
-                                  onBlur={() => commitDurationEdit(idx)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      commitDurationEdit(idx);
-                                    }
-                                    if (e.key === "Escape")
-                                      setEditingDurationIdx(null);
-                                  }}
-                                  className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
-                                />
-                                <span className="text-xs text-muted-foreground">
-                                  min
-                                </span>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => startEditDuration(idx)}
-                                title={
-                                  isStationsItem(ex)
-                                    ? "Duración de cada estación"
-                                    : "Editar duración"
-                                }
-                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
-                              >
-                                <Clock className="size-3" />
-                                <span>
-                                  {effectiveDuration} min
-                                  {isStationsItem(ex) ? "/estación" : ""}
-                                </span>
-                                <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedIdx(isExpanded ? null : idx)
-                              }
-                              title="Ajustes"
-                              className={cn(
-                                "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
-                                isExpanded || ex.notes || ex.phase
-                                  ? "text-brand bg-brand/10"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
-                              )}
-                            >
-                              <StickyNote className="size-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => removeExercise(ex.exerciseId)}
-                              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
-                            >
-                              <X className="size-3.5" />
-                            </button>
-                          </div>
-
-                          {isStationsItem(ex) && (
-                            <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-2.5">
-                              <textarea
-                                rows={1}
-                                value={ex.freeText ?? ""}
-                                onChange={(e) =>
-                                  patchItem(idx, { freeText: e.target.value })
-                                }
-                                placeholder="Explica el ejercicio de estaciones (opcional)…"
-                                className="field-sizing-content w-full resize-none rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
                               />
-                              <ul className="space-y-2">
-                                {(ex.stations ?? []).map(
-                                  (station, stationIdx) => (
-                                    <li
-                                      key={stationIdx}
-                                      className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2"
-                                    >
-                                      <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
-                                        {String(stationIdx + 1).padStart(
-                                          2,
-                                          "0"
-                                        )}
-                                      </span>
-                                      <div className="flex-1 min-w-0 space-y-1.5">
-                                        <div className="flex gap-1.5">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setPickingStation({
-                                                itemIdx: idx,
-                                                stationIdx,
-                                              });
-                                              setSourceTab("library");
-                                            }}
-                                            className={cn(
-                                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
-                                              station.kind === "exercise"
-                                                ? "border-brand/40 bg-brand/10 text-brand"
-                                                : "border-border text-muted-foreground hover:border-brand/40"
-                                            )}
-                                          >
-                                            Ejercicio
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              updateStation(idx, stationIdx, {
-                                                kind: "text",
-                                                exerciseId: null,
-                                                name: "",
-                                              })
-                                            }
-                                            className={cn(
-                                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
-                                              station.kind === "text"
-                                                ? "border-brand/40 bg-brand/10 text-brand"
-                                                : "border-border text-muted-foreground hover:border-brand/40"
-                                            )}
-                                          >
-                                            Texto libre
-                                          </button>
-                                        </div>
-                                        {station.kind === "exercise" ? (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setPickingStation({
-                                                itemIdx: idx,
-                                                stationIdx,
-                                              });
-                                              setSourceTab("library");
-                                            }}
-                                            className={cn(
-                                              "truncate text-left text-xs hover:text-brand",
-                                              pickingStation?.itemIdx === idx &&
-                                                pickingStation?.stationIdx ===
-                                                  stationIdx
-                                                ? "font-semibold text-brand"
-                                                : "text-foreground"
-                                            )}
-                                          >
-                                            {pickingStation?.itemIdx === idx &&
-                                            pickingStation?.stationIdx ===
-                                              stationIdx
-                                              ? "Elige en la Biblioteca →"
-                                              : (station.name || (
-                                                  <span className="italic text-muted-foreground">
-                                                    Elige un ejercicio…
-                                                  </span>
-                                                ))}
-                                          </button>
-                                        ) : (
-                                          <textarea
-                                            rows={1}
-                                            value={station.freeText}
-                                            onChange={(e) =>
-                                              updateStation(idx, stationIdx, {
-                                                freeText: e.target.value,
-                                              })
-                                            }
-                                            placeholder="Describe la estación…"
-                                            className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
-                                          />
-                                        )}
-                                      </div>
-                                    </li>
-                                  )
+                              <div
+                                draggable={
+                                  !isEditingDuration &&
+                                  focusedTextIdx !== flatIdx
+                                }
+                                onDragStart={(e) =>
+                                  !isEditingDuration &&
+                                  focusedTextIdx !== flatIdx &&
+                                  onTimelineDragStart(e, flatIdx)
+                                }
+                                onDragEnd={() => {
+                                  setDragSrcIdx(null);
+                                  setDragOverIdx(null);
+                                }}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setDragOverIdx(flatIdx);
+                                }}
+                                onDragLeave={() => setDragOverIdx(null)}
+                                onDrop={(e) =>
+                                  onBlockItemDrop(e, phase, localIdx)
+                                }
+                                className={cn(
+                                  "group bg-card border rounded-xl transition-all",
+                                  isDragging
+                                    ? "opacity-40 border-dashed border-border cursor-grabbing"
+                                    : "border-border hover:border-brand/30 cursor-grab active:cursor-grabbing"
                                 )}
-                              </ul>
-                            </div>
-                          )}
+                              >
+                                <div className="flex items-center gap-2 px-3 py-2.5">
+                                  <div
+                                    className={cn(
+                                      "w-0.5 h-8 rounded-full shrink-0",
+                                      CATEGORY_BAR[ex.category] ?? "bg-muted"
+                                    )}
+                                  />
+                                  <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                                  <div className="flex-1 min-w-0">
+                                    {isTextItem(ex) ? (
+                                      <textarea
+                                        value={ex.freeText ?? ""}
+                                        onChange={(e) =>
+                                          patchItem(flatIdx, {
+                                            freeText: e.target.value,
+                                            name: e.target.value,
+                                          })
+                                        }
+                                        onFocus={() =>
+                                          setFocusedTextIdx(flatIdx)
+                                        }
+                                        onBlur={() => setFocusedTextIdx(null)}
+                                        autoFocus={!ex.freeText}
+                                        rows={2}
+                                        maxLength={2000}
+                                        placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
+                                        className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                      />
+                                    ) : isWarmupItem(ex) ? (
+                                      <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
+                                        <Coffee className="size-3.5 text-sky-400 shrink-0" />
+                                        Descanso
+                                      </p>
+                                    ) : isStationsItem(ex) ? (
+                                      <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
+                                        <LayoutGrid className="size-3.5 text-emerald-500 shrink-0" />
+                                        Estaciones ({ex.stations?.length ?? 0})
+                                      </p>
+                                    ) : (
+                                      <p className="text-sm font-medium text-foreground truncate leading-snug">
+                                        {ex.name}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span
+                                        className={cn(
+                                          "inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                                          isTextItem(ex)
+                                            ? "text-foreground/70 bg-muted"
+                                            : (CATEGORY_COLORS[ex.category] ??
+                                                "text-muted-foreground bg-muted")
+                                        )}
+                                      >
+                                        {isTextItem(ex)
+                                          ? "Texto libre"
+                                          : (CATEGORY_LABELS[ex.category] ??
+                                            ex.category)}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                          {isExpanded && (
-                            <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                  Bloque
-                                </label>
-                                <div className="flex flex-wrap gap-1.5">
+                                  {isEditingDuration ? (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <input
+                                        ref={durationInputRef}
+                                        type="number"
+                                        min={1}
+                                        max={300}
+                                        value={durationEditValue}
+                                        onChange={(e) =>
+                                          setDurationEditValue(e.target.value)
+                                        }
+                                        onBlur={() =>
+                                          commitDurationEdit(flatIdx)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            commitDurationEdit(flatIdx);
+                                          }
+                                          if (e.key === "Escape")
+                                            setEditingDurationIdx(null);
+                                        }}
+                                        className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                      />
+                                      <span className="text-xs text-muted-foreground">
+                                        min
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        startEditDuration(flatIdx)
+                                      }
+                                      title={
+                                        isStationsItem(ex)
+                                          ? "Duración de cada estación"
+                                          : "Editar duración"
+                                      }
+                                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
+                                    >
+                                      <Clock className="size-3" />
+                                      <span>
+                                        {effectiveDuration} min
+                                        {isStationsItem(ex) ? "/estación" : ""}
+                                      </span>
+                                      <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
+                                    </button>
+                                  )}
+
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      patchItem(idx, { phase: null })
+                                      setExpandedIdx(
+                                        isExpanded ? null : flatIdx
+                                      )
                                     }
+                                    title="Ajustes"
                                     className={cn(
-                                      "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                      ex.phase === null
-                                        ? "bg-muted border-border text-foreground"
-                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                      "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
+                                      isExpanded || ex.notes
+                                        ? "text-brand bg-brand/10"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
                                     )}
                                   >
-                                    Auto
+                                    <StickyNote className="size-3.5" />
                                   </button>
-                                  {(
-                                    Object.keys(PHASE_LABELS) as TrainingPhase[]
-                                  ).map((p) => (
-                                    <button
-                                      key={p}
-                                      type="button"
-                                      onClick={() =>
-                                        patchItem(idx, { phase: p })
-                                      }
-                                      className={cn(
-                                        "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
-                                        ex.phase === p
-                                          ? "bg-brand text-brand-foreground border-brand"
-                                          : "bg-background border-border text-muted-foreground hover:text-foreground"
-                                      )}
-                                    >
-                                      {PHASE_LABELS[p]}
-                                    </button>
-                                  ))}
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeExercise(ex.exerciseId)
+                                    }
+                                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
                                 </div>
+
+                                {isStationsItem(ex) && (
+                                  <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-2.5">
+                                    <textarea
+                                      rows={1}
+                                      value={ex.freeText ?? ""}
+                                      onChange={(e) =>
+                                        patchItem(flatIdx, {
+                                          freeText: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Explica el ejercicio de estaciones (opcional)…"
+                                      className="field-sizing-content w-full resize-none rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                    />
+                                    <ul className="space-y-2">
+                                      {(ex.stations ?? []).map(
+                                        (station, stationIdx) => (
+                                          <li
+                                            key={stationIdx}
+                                            className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2"
+                                          >
+                                            <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
+                                              {String(
+                                                stationIdx + 1
+                                              ).padStart(2, "0")}
+                                            </span>
+                                            <div className="flex-1 min-w-0 space-y-1.5">
+                                              <div className="flex gap-1.5">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setPickingStation({
+                                                      itemIdx: flatIdx,
+                                                      stationIdx,
+                                                    });
+                                                    setSourceTab("library");
+                                                  }}
+                                                  className={cn(
+                                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                                    station.kind === "exercise"
+                                                      ? "border-brand/40 bg-brand/10 text-brand"
+                                                      : "border-border text-muted-foreground hover:border-brand/40"
+                                                  )}
+                                                >
+                                                  Ejercicio
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() =>
+                                                    updateStation(
+                                                      flatIdx,
+                                                      stationIdx,
+                                                      {
+                                                        kind: "text",
+                                                        exerciseId: null,
+                                                        name: "",
+                                                      }
+                                                    )
+                                                  }
+                                                  className={cn(
+                                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                                    station.kind === "text"
+                                                      ? "border-brand/40 bg-brand/10 text-brand"
+                                                      : "border-border text-muted-foreground hover:border-brand/40"
+                                                  )}
+                                                >
+                                                  Texto libre
+                                                </button>
+                                              </div>
+                                              {station.kind === "exercise" ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setPickingStation({
+                                                      itemIdx: flatIdx,
+                                                      stationIdx,
+                                                    });
+                                                    setSourceTab("library");
+                                                  }}
+                                                  className={cn(
+                                                    "truncate text-left text-xs hover:text-brand",
+                                                    pickingStation?.itemIdx ===
+                                                      flatIdx &&
+                                                      pickingStation?.stationIdx ===
+                                                        stationIdx
+                                                      ? "font-semibold text-brand"
+                                                      : "text-foreground"
+                                                  )}
+                                                >
+                                                  {pickingStation?.itemIdx ===
+                                                    flatIdx &&
+                                                  pickingStation?.stationIdx ===
+                                                    stationIdx
+                                                    ? "Elige en la Biblioteca →"
+                                                    : (station.name || (
+                                                        <span className="italic text-muted-foreground">
+                                                          Elige un ejercicio…
+                                                        </span>
+                                                      ))}
+                                                </button>
+                                              ) : (
+                                                <textarea
+                                                  rows={1}
+                                                  value={station.freeText}
+                                                  onChange={(e) =>
+                                                    updateStation(
+                                                      flatIdx,
+                                                      stationIdx,
+                                                      {
+                                                        freeText:
+                                                          e.target.value,
+                                                      }
+                                                    )
+                                                  }
+                                                  placeholder="Describe la estación…"
+                                                  className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
+                                                />
+                                              )}
+                                            </div>
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {isExpanded && (
+                                  <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                        Bloque
+                                      </label>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {PHASE_ORDER.map((p) => (
+                                          <button
+                                            key={p}
+                                            type="button"
+                                            onClick={() =>
+                                              moveItemToPhase(flatIdx, p)
+                                            }
+                                            className={cn(
+                                              "h-7 px-2.5 text-[10px] font-semibold rounded-full border transition-colors",
+                                              phase === p
+                                                ? "bg-brand text-brand-foreground border-brand"
+                                                : "bg-background border-border text-muted-foreground hover:text-foreground"
+                                            )}
+                                          >
+                                            {PHASE_LABELS[p]}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    <textarea
+                                      value={ex.notes}
+                                      onChange={(e) =>
+                                        patchItem(flatIdx, {
+                                          notes: e.target.value,
+                                        })
+                                      }
+                                      placeholder={
+                                        isTextItem(ex)
+                                          ? "Notas…"
+                                          : "Notas para este ejercicio…"
+                                      }
+                                      rows={2}
+                                      className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
+                                    />
+                                  </div>
+                                )}
                               </div>
-
-                              <textarea
-                                value={ex.notes}
-                                onChange={(e) =>
-                                  patchItem(idx, { notes: e.target.value })
-                                }
-                                placeholder={
-                                  isTextItem(ex)
-                                    ? "Notas…"
-                                    : "Notas para este ejercicio…"
-                                }
-                                rows={2}
-                                className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
-                              />
                             </div>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-
-                  <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={onDropZoneDrop}
-                    className={cn(
-                      "h-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-colors mt-2",
-                      isDropZoneActive
-                        ? "border-brand bg-brand/5"
-                        : "border-border/40"
                     )}
-                  >
-                    <p className="text-xs text-muted-foreground">
-                      {isDropZoneActive
-                        ? "Suelta aquí"
-                        : "Arrastra más ejercicios aquí"}
-                    </p>
+
+                    {/* Acciones para añadir directamente a este bloque */}
+                    {stationsDraftPhase === phase ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-2 py-1.5">
+                        <span className="text-[10px] font-semibold text-foreground whitespace-nowrap">
+                          ¿Cuántas?
+                        </span>
+                        <input
+                          type="number"
+                          min={STATION_COUNT_MIN}
+                          max={STATION_COUNT_MAX}
+                          value={stationsDraftCount}
+                          onChange={(e) =>
+                            setStationsDraftCount(Number(e.target.value))
+                          }
+                          className="h-6 w-12 rounded-md border border-border bg-background px-1 text-xs text-center tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-brand/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={confirmStationsDraft}
+                          className="rounded-md bg-foreground px-2 py-1 text-[10px] font-bold text-background transition-colors hover:bg-foreground/90"
+                        >
+                          Crear
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStationsDraftPhase(null)}
+                          className="text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddPhaseOverride(phase);
+                            setSourceTab("library");
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors",
+                            activeAddPhase === phase && sourceTab === "library"
+                              ? "border-brand/60 bg-brand/10 text-brand"
+                              : "border-border bg-background text-foreground hover:border-brand/50 hover:bg-brand/10"
+                          )}
+                        >
+                          <Dumbbell className="size-3" />
+                          Añadir ejercicio
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addTextItem(phase)}
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                        >
+                          <Type className="size-3" />
+                          Texto libre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addWarmupItem(phase)}
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                        >
+                          <Coffee className="size-3" />
+                          Descanso
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStationsDraftPhase(phase);
+                            setStationsDraftCount(4);
+                          }}
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                        >
+                          <LayoutGrid className="size-3" />
+                          Estaciones
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
 
           {/* RIGHT: sources */}
@@ -1029,6 +1125,31 @@ export function StepExercises({
               </div>
             </div>
 
+            {!pickingStation && (
+              <div className="flex items-center gap-1.5 border-b border-border bg-background px-3 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+                  Añadiendo a
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {PHASE_ORDER.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAddPhaseOverride(p)}
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                        activeAddPhase === p
+                          ? "border-brand/50 bg-brand/10 text-brand"
+                          : "border-border text-muted-foreground hover:border-brand/40"
+                      )}
+                    >
+                      {PHASE_LABELS[p]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {pickingStation && (
               <div className="flex items-center gap-2 border-b border-brand/30 bg-brand/10 px-3 py-2">
                 <LayoutGrid className="size-3.5 text-brand shrink-0" />
@@ -1050,7 +1171,9 @@ export function StepExercises({
               <div className="flex-1 overflow-y-auto max-h-[360px] lg:max-h-none">
                 <SessionExerciseLists
                   selectedExerciseIds={Array.from(selectedIds)}
-                  onApplyList={addExercisesFromList}
+                  onApplyList={(items) =>
+                    addExercisesFromList(items, activeAddPhase)
+                  }
                 />
               </div>
             ) : (
@@ -1171,12 +1294,12 @@ export function StepExercises({
                                   pickingStation.stationIdx,
                                   ex
                                 )
-                              : addExercise(ex)
+                              : addExercise(ex, activeAddPhase)
                           }
                           title={
                             pickingStation
                               ? "Añadir a esta estación"
-                              : "Añadir a la sesión"
+                              : `Añadir a ${PHASE_LABELS[activeAddPhase]}`
                           }
                           className={cn(
                             "flex size-6 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand transition-colors hover:bg-brand/20",
