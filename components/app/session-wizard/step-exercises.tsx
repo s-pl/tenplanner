@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
+  emptyStationDraft,
   STATION_COUNT_MAX,
   STATION_COUNT_MIN,
   type StationDraftItem,
@@ -140,6 +141,11 @@ export function StepExercises({
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
+  /** Estación sobre la que se arrastra un ejercicio de la Biblioteca, para resaltarla. */
+  const [dragOverStation, setDragOverStation] = useState<{
+    itemIdx: number;
+    stationIdx: number;
+  } | null>(null);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [refreshingLibrary, setRefreshingLibrary] = useState(false);
 
@@ -290,6 +296,36 @@ export function StepExercises({
     );
   }
 
+  function addStation(itemIdx: number) {
+    setExercises(
+      selected.map((ex, i) => {
+        if (i !== itemIdx || !isStationsItem(ex)) return ex;
+        const stations = ex.stations ?? [];
+        if (stations.length >= STATION_COUNT_MAX) return ex;
+        return { ...ex, stations: [...stations, emptyStationDraft()] };
+      })
+    );
+  }
+
+  function removeStation(itemIdx: number, stationIdx: number) {
+    setExercises(
+      selected.map((ex, i) => {
+        if (i !== itemIdx || !isStationsItem(ex)) return ex;
+        const stations = ex.stations ?? [];
+        if (stations.length <= STATION_COUNT_MIN) return ex;
+        return {
+          ...ex,
+          stations: stations.filter((_, k) => k !== stationIdx),
+        };
+      })
+    );
+    setPickingStation((current) =>
+      current?.itemIdx === itemIdx && current.stationIdx === stationIdx
+        ? null
+        : current
+    );
+  }
+
   function setStationExercise(
     itemIdx: number,
     stationIdx: number,
@@ -424,6 +460,19 @@ export function StepExercises({
     }
     setDragSrcIdx(null);
     setDragOverIdx(null);
+  }
+
+  /** Suelta un ejercicio de la Biblioteca directamente sobre una estación concreta. */
+  function onStationDrop(e: DragEvent, itemIdx: number, stationIdx: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    const type = e.dataTransfer.getData("dnd-type");
+    if (type === "library") {
+      const id = e.dataTransfer.getData("exercise-id");
+      const ex = libraryExercises.find((a) => a.id === id);
+      if (ex) setStationExercise(itemIdx, stationIdx, ex);
+    }
+    setDragOverStation(null);
   }
 
   async function refreshLibrary(createdExercise?: ExerciseFormResult) {
@@ -832,10 +881,52 @@ export function StepExercises({
                                     />
                                     <ul className="space-y-2">
                                       {(ex.stations ?? []).map(
-                                        (station, stationIdx) => (
+                                        (station, stationIdx) => {
+                                          const stationsCount =
+                                            ex.stations?.length ?? 0;
+                                          const isStationDragOver =
+                                            dragOverStation?.itemIdx ===
+                                              flatIdx &&
+                                            dragOverStation?.stationIdx ===
+                                              stationIdx;
+                                          return (
                                           <li
                                             key={stationIdx}
-                                            className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2"
+                                            onDragOver={(e) => {
+                                              if (
+                                                e.dataTransfer.types.includes(
+                                                  "exercise-id"
+                                                )
+                                              ) {
+                                                e.preventDefault();
+                                                setDragOverStation({
+                                                  itemIdx: flatIdx,
+                                                  stationIdx,
+                                                });
+                                              }
+                                            }}
+                                            onDragLeave={() =>
+                                              setDragOverStation((current) =>
+                                                current?.itemIdx === flatIdx &&
+                                                current.stationIdx ===
+                                                  stationIdx
+                                                  ? null
+                                                  : current
+                                              )
+                                            }
+                                            onDrop={(e) =>
+                                              onStationDrop(
+                                                e,
+                                                flatIdx,
+                                                stationIdx
+                                              )
+                                            }
+                                            className={cn(
+                                              "flex items-start gap-2 rounded-lg border p-2 transition-colors",
+                                              isStationDragOver
+                                                ? "border-brand bg-brand/10"
+                                                : "border-border/60 bg-muted/20"
+                                            )}
                                           >
                                             <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
                                               {String(
@@ -886,36 +977,52 @@ export function StepExercises({
                                                 </button>
                                               </div>
                                               {station.kind === "exercise" ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setPickingStation({
-                                                      itemIdx: flatIdx,
-                                                      stationIdx,
-                                                    });
-                                                    setSourceTab("library");
-                                                  }}
-                                                  className={cn(
-                                                    "truncate text-left text-xs hover:text-brand",
-                                                    pickingStation?.itemIdx ===
+                                                <div className="flex items-center gap-1">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setPickingStation({
+                                                        itemIdx: flatIdx,
+                                                        stationIdx,
+                                                      });
+                                                      setSourceTab("library");
+                                                    }}
+                                                    className={cn(
+                                                      "min-w-0 flex-1 truncate text-left text-xs hover:text-brand",
+                                                      pickingStation?.itemIdx ===
+                                                        flatIdx &&
+                                                        pickingStation?.stationIdx ===
+                                                          stationIdx
+                                                        ? "font-semibold text-brand"
+                                                        : "text-foreground"
+                                                    )}
+                                                  >
+                                                    {pickingStation?.itemIdx ===
                                                       flatIdx &&
-                                                      pickingStation?.stationIdx ===
-                                                        stationIdx
-                                                      ? "font-semibold text-brand"
-                                                      : "text-foreground"
+                                                    pickingStation?.stationIdx ===
+                                                      stationIdx
+                                                      ? "Elige en la Biblioteca →"
+                                                      : (station.name || (
+                                                          <span className="italic text-muted-foreground">
+                                                            Elige un ejercicio…
+                                                          </span>
+                                                        ))}
+                                                  </button>
+                                                  {station.exerciseId && (
+                                                    <NextLink
+                                                      href={`/exercises/${station.exerciseId}`}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      onClick={(e) =>
+                                                        e.stopPropagation()
+                                                      }
+                                                      title="Ver ficha completa del ejercicio"
+                                                      className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                    >
+                                                      <ExternalLink className="size-3" />
+                                                    </NextLink>
                                                   )}
-                                                >
-                                                  {pickingStation?.itemIdx ===
-                                                    flatIdx &&
-                                                  pickingStation?.stationIdx ===
-                                                    stationIdx
-                                                    ? "Elige en la Biblioteca →"
-                                                    : (station.name || (
-                                                        <span className="italic text-muted-foreground">
-                                                          Elige un ejercicio…
-                                                        </span>
-                                                      ))}
-                                                </button>
+                                                </div>
                                               ) : (
                                                 <textarea
                                                   rows={1}
@@ -935,10 +1042,48 @@ export function StepExercises({
                                                 />
                                               )}
                                             </div>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                removeStation(
+                                                  flatIdx,
+                                                  stationIdx
+                                                )
+                                              }
+                                              disabled={
+                                                stationsCount <=
+                                                STATION_COUNT_MIN
+                                              }
+                                              title={
+                                                stationsCount <=
+                                                STATION_COUNT_MIN
+                                                  ? `Mínimo ${STATION_COUNT_MIN} estaciones`
+                                                  : "Quitar estación"
+                                              }
+                                              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                                            >
+                                              <X className="size-3.5" />
+                                            </button>
                                           </li>
-                                        )
+                                          );
+                                        }
                                       )}
                                     </ul>
+                                    <button
+                                      type="button"
+                                      onClick={() => addStation(flatIdx)}
+                                      disabled={
+                                        (ex.stations?.length ?? 0) >=
+                                        STATION_COUNT_MAX
+                                      }
+                                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand hover:text-brand/80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand"
+                                    >
+                                      <Plus className="size-3" />
+                                      Añadir estación
+                                      {(ex.stations?.length ?? 0) >=
+                                        STATION_COUNT_MAX &&
+                                        ` (máximo ${STATION_COUNT_MAX})`}
+                                    </button>
                                   </div>
                                 )}
 

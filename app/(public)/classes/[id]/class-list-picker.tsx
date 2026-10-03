@@ -23,7 +23,7 @@ export function ClassListPicker({ classId }: { classId: string }) {
   async function loadLists() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/class-listsíclassId=${classId}`, {
+      const res = await fetch(`/api/class-lists?classId=${classId}`, {
         cache: "no-store",
       });
       const data = await res.json();

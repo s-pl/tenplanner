@@ -43,7 +43,7 @@ export function SessionExerciseLists({
     async function loadLists() {
       setLoading(true);
       try {
-        const res = await fetch("/api/exercise-listsíincludeExercises=true", {
+        const res = await fetch("/api/exercise-lists?includeExercises=true", {
           cache: "no-store",
         });
         const payload = (await res.json().catch(() => ({}))) as {
