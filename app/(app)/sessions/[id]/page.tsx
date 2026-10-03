@@ -31,7 +31,7 @@ import {
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ filter?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; sort?: string }>;
 }
 
 export default async function SessionPage({ params, searchParams }: PageProps) {

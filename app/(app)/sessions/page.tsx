@@ -12,7 +12,6 @@ import {
 } from "@/db/schema";
 import {
   and,
-  asc,
   count,
   eq,
   ilike,
@@ -33,15 +32,29 @@ import { SessionDraftsPanel } from "@/components/app/session-drafts-panel";
 import { SessionsSearchInput } from "@/components/app/sessions-search-input";
 import { getAppSettings } from "@/lib/app-settings";
 import { cn } from "@/lib/utils";
-import { sessionNavQueryString } from "@/lib/nav/session-nav";
+import {
+  parseSessionSort,
+  sessionNavQueryString,
+  sessionOrderBy,
+  SESSION_SORTS,
+  type SessionSort,
+} from "@/lib/nav/session-nav";
 type Filter = "upcoming" | "past" | "all" | "drafts";
 const PAGE_SIZE = 20;
+
+const SORT_LABELS: Record<SessionSort, string> = {
+  alpha: "Alfabético",
+  popular: "Más populares",
+  recent: "Más recientes",
+  oldest: "Más antiguos",
+};
 
 interface PageProps {
   searchParams: Promise<{
     filter?: string;
     page?: string;
     q?: string;
+    sort?: string;
   }>;
 }
 
@@ -88,7 +101,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const sessionCreationEnabled =
     settings.get("feature.session_creation_enabled") !== false;
 
-  const { filter, page, q } = await searchParams;
+  const { filter, page, q, sort } = await searchParams;
   const activeFilter: Filter =
     filter === "past" ||
     filter === "upcoming" ||
@@ -97,6 +110,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
       ? filter
       : "all";
   const searchTerm = q?.trim() ?? "";
+  const activeSort = parseSessionSort({ sort });
 
   const parsedPage = Number(page ?? "1");
   const currentPage =
@@ -172,7 +186,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     })
     .from(sessionsTable)
     .where(whereClause)
-    .orderBy(asc(sessionsTable.scheduledAt))
+    .orderBy(...sessionOrderBy(activeSort))
     .limit(PAGE_SIZE)
     .offset(offset);
 
@@ -182,7 +196,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
       .select({ id: sessionsTable.id })
       .from(sessionsTable)
       .where(whereClause)
-      .orderBy(asc(sessionsTable.scheduledAt))
+      .orderBy(...sessionOrderBy(activeSort))
       .limit(500)
   ).map((r) => r.id);
 
@@ -203,7 +217,12 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   const now = new Date();
 
-  function sessionsHref(opts: { filter?: Filter; page?: number; q?: string }) {
+  function sessionsHref(opts: {
+    filter?: Filter;
+    page?: number;
+    q?: string;
+    sort?: SessionSort;
+  }) {
     const p = new URLSearchParams();
     const f = opts.filter ?? activeFilter;
     if (f !== "all") p.set("filter", f);
@@ -213,6 +232,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     if (nextQuery) p.set("q", nextQuery);
     const nextPage = opts.page ?? safePage;
     if (nextPage > 1) p.set("page", String(nextPage));
+    const nextSort = opts.sort ?? activeSort;
+    if (nextSort !== "oldest") p.set("sort", nextSort);
     const qs = p.toString();
     return qs ? `/sessions?${qs}` : "/sessions";
   }
@@ -332,6 +353,29 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                 ) : null}
               </div>
 
+              <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[#050505]/10 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.045]">
+                <span className="shrink-0 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/40">
+                  Ordenar por:
+                </span>
+                {SESSION_SORTS.map((s) => {
+                  const isActive = activeSort === s;
+                  return (
+                    <Link
+                      key={s}
+                      href={sessionsHref({ sort: s, page: 1 })}
+                      className={cn(
+                        "whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[0.04em] transition-colors",
+                        isActive
+                          ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                          : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
+                      )}
+                    >
+                      {SORT_LABELS[s]}
+                    </Link>
+                  );
+                })}
+              </div>
+
               {sessionRows.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[#050505]/15 bg-white px-6 py-16 text-center shadow-[0_18px_50px_rgba(5,5,5,0.04)] dark:border-white/15 dark:bg-white/[0.035]">
                   <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border border-[#D6FF38]/35 bg-[#D6FF38]/10">
@@ -415,6 +459,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                   navQuery={sessionNavQueryString({
                     filter: activeFilter,
                     q: searchTerm || undefined,
+                    sort: activeSort,
                   })}
                 />
               )}

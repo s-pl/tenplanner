@@ -4,7 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { classes, classFavorites, classDrafts } from "@/db/schema";
 import { Plus, Search, FileText, Heart } from "lucide-react";
-import { classNavQueryString } from "@/lib/nav/class-nav";
+import {
+  classNavQueryString,
+  classOrderBy,
+  CLASS_SORTS,
+  parseClassSort,
+  type ClassSort,
+} from "@/lib/nav/class-nav";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -55,6 +61,13 @@ const GOLPES_FILTERS = [
   { id: "globo", label: "Globo" },
 ];
 
+const SORT_LABELS: Record<ClassSort, string> = {
+  alpha: "Alfabético",
+  popular: "Más populares",
+  recent: "Más recientes",
+  oldest: "Más antiguos",
+};
+
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -93,6 +106,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   const duracion = typeof params.duracion === "string" ? params.duracion : "";
   const aspectoList = paramList(params.aspecto);
   const golpeList = paramList(params.golpe);
+  const activeSort = parseClassSort(params);
 
   // For drafts tab we don't query classes
   let rows: Array<{
@@ -204,7 +218,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       })
       .from(classes)
       .where(and(...conds))
-      .orderBy(desc(classes.createdAt))
+      .orderBy(...classOrderBy(activeSort))
       .limit(60);
   }
 
@@ -217,6 +231,18 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     : [];
   const favorites = new Set(favRows.map((f) => f.classId));
   const navQs = classNavQueryString(params);
+
+  function buildSortHref(sort: ClassSort) {
+    const sp = new URLSearchParams();
+    if (tab !== "all") sp.set("tab", tab);
+    if (q) sp.set("q", q);
+    if (nivel) sp.set("nivel", nivel);
+    if (duracion) sp.set("duracion", duracion);
+    aspectoList.forEach((a) => sp.append("aspecto", a));
+    golpeList.forEach((g) => sp.append("golpe", g));
+    if (sort !== "alpha") sp.set("sort", sort);
+    return sp.toString() ? `/classes?${sp.toString()}` : "/classes";
+  }
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
@@ -282,6 +308,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
             if (duracion) sp.set("duracion", duracion);
             aspectoList.forEach((a) => sp.append("aspecto", a));
             golpeList.forEach((g) => sp.append("golpe", g));
+            if (activeSort !== "alpha") sp.set("sort", activeSort);
             return (
               <Link
                 key={t}
@@ -369,6 +396,9 @@ export default async function ClassesPage({ searchParams }: PageProps) {
               action="/classes"
             >
               {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
+              {activeSort !== "alpha" && (
+                <input type="hidden" name="sort" value={activeSort} />
+              )}
               <div className="flex-1 min-w-[200px]">
                 <label
                   htmlFor="q"
@@ -504,6 +534,29 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 Filtrar
               </button>
             </form>
+
+            {/* Orden */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+                Ordenar por:
+              </span>
+              {CLASS_SORTS.map((s) => {
+                const isActive = activeSort === s;
+                return (
+                  <Link
+                    key={s}
+                    href={buildSortHref(s)}
+                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-sans font-semibold tracking-[0.08em] transition-colors ${
+                      isActive
+                        ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
+                        : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
+                    }`}
+                  >
+                    {SORT_LABELS[s]}
+                  </Link>
+                );
+              })}
+            </div>
 
             {/* Listado */}
             {rows.length === 0 ? (

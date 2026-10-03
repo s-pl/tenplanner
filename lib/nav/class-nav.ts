@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { classes } from "@/db/schema";
-import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
 export type ClassNavParams = Record<string, string | string[] | undefined>;
 
@@ -10,6 +10,38 @@ function paramList(value: string | string[] | undefined): string[] {
   if (Array.isArray(value)) return value.map((v) => v.trim()).filter(Boolean);
   if (typeof value === "string" && value.trim()) return [value.trim()];
   return [];
+}
+
+export const CLASS_SORTS = ["alpha", "popular", "recent", "oldest"] as const;
+export type ClassSort = (typeof CLASS_SORTS)[number];
+
+export function parseClassSort(params: ClassNavParams): ClassSort {
+  const v = typeof params.sort === "string" ? params.sort : "";
+  return (CLASS_SORTS as readonly string[]).includes(v)
+    ? (v as ClassSort)
+    : "alpha";
+}
+
+/** Times a session has been created from this class — used to rank "más populares". */
+const CLASS_POPULARITY_SQL = sql`(select count(*)::int from sessions s where s.source_class_id = ${classes.id})`;
+
+/**
+ * Returns the ORDER BY clauses for a given sort mode. Shared by the list
+ * page's display query and the nav-ids query so pagination and Next/Previous
+ * always reflect the same order the coach sees on screen.
+ */
+export function classOrderBy(sort: ClassSort) {
+  switch (sort) {
+    case "popular":
+      return [sql`${CLASS_POPULARITY_SQL} desc`, desc(classes.createdAt)];
+    case "recent":
+      return [desc(classes.createdAt)];
+    case "oldest":
+      return [asc(classes.createdAt)];
+    case "alpha":
+    default:
+      return [asc(classes.name)];
+  }
 }
 
 /**
@@ -98,7 +130,7 @@ export async function getFilteredClassIds(
     .select({ id: classes.id })
     .from(classes)
     .where(and(...conds))
-    .orderBy(desc(classes.createdAt))
+    .orderBy(...classOrderBy(parseClassSort(params)))
     .limit(2000);
 
   return rows.map((r) => r.id);
@@ -113,5 +145,7 @@ export function classNavQueryString(params: ClassNavParams): string {
   if (params.duracion) p.set("duracion", params.duracion as string);
   for (const v of paramList(params.aspecto)) p.append("aspecto", v);
   for (const v of paramList(params.golpe)) p.append("golpe", v);
+  const sort = parseClassSort(params);
+  if (sort !== "alpha") p.set("sort", sort);
   return p.toString();
 }
