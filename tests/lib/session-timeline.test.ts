@@ -40,18 +40,29 @@ describe("session timeline", () => {
     expect(blocks.map((b) => b.orderIndex)).toEqual([1, 2, 3]);
     expect(blocks[0].items).toEqual([
       {
+        kind: "exercise",
         exerciseId: "11111111-1111-1111-1111-111111111111",
         durationMinutes: null,
         notes: null,
       },
-      { freeText: "Explicación inicial", durationMinutes: 3, notes: null },
+      {
+        kind: "text",
+        freeText: "Explicación inicial",
+        durationMinutes: 3,
+        notes: null,
+      },
     ]);
     expect(blocks[1].items.map((i) => i.exerciseId ?? i.freeText)).toEqual([
       "22222222-2222-2222-2222-222222222222",
       "Descanso y agua",
     ]);
     expect(blocks[2].items).toEqual([
-      { freeText: "Estiramientos", durationMinutes: 5, notes: "suave" },
+      {
+        kind: "text",
+        freeText: "Estiramientos",
+        durationMinutes: 5,
+        notes: "suave",
+      },
     ]);
   });
 
