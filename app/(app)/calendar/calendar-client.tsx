@@ -9,12 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  Clock,
-  Copy,
-  Loader2,
-  Pencil,
   Plus,
-  Trash2,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -31,7 +26,7 @@ import {
   EventDialog,
   type CalendarEventData,
 } from "@/components/app/event-dialog";
-import { DayPdfButton } from "@/components/app/day-pdf-dialog";
+import { DayAgenda } from "@/components/app/day-agenda";
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +45,15 @@ interface CalendarClientProps {
 type DayItem =
   | { kind: "session"; time: Date; session: SessionData }
   | { kind: "event"; time: Date; event: CalendarEventData };
+
+type ViewMode = "day" | "week" | "month" | "year";
+
+const VIEW_LABELS: Record<ViewMode, string> = {
+  day: "Día",
+  week: "Semana",
+  month: "Mes",
+  year: "Año",
+};
 
 const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS = [
@@ -77,12 +81,56 @@ function getFirstDayOfMonth(year: number, month: number) {
   return (day + 6) % 7;
 }
 
+function pad2(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function addDays(d: Date, n: number) {
+  const copy = new Date(d);
+  copy.setDate(copy.getDate() + n);
+  return copy;
+}
+
+function startOfWeek(d: Date) {
+  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = (copy.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  copy.setDate(copy.getDate() - dow);
+  return copy;
+}
+
+function isSameDate(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDayTitle(d: Date) {
+  const s = new Intl.DateTimeFormat("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function CalendarClient({
   sessions: initialSessions,
   events: initialEvents = [],
 }: CalendarClientProps) {
   const router = useRouter();
   const today = new Date();
+  const todayMidnight = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
   const [sessions, setSessions] = useState(initialSessions);
   const [events, setEvents] = useState(initialEvents);
   const [toDelete, setToDelete] = useState<SessionData | null>(null);
@@ -92,11 +140,13 @@ export function CalendarClient({
     mode: "move" | "duplicate";
     session: SessionData;
   } | null>(null);
-  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>("month");
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [focusDate, setFocusDate] = useState<Date>(todayMidnight);
 
   // Eventos (zona azul del calendario, distintos de las sesiones)
   const [eventDialog, setEventDialog] = useState<{
@@ -112,7 +162,75 @@ export function CalendarClient({
   const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 
+  // Índices por día (clave AAAA-MM-DD) — cubren toda la ventana cargada,
+  // no solo el mes visible, para poder alimentar las vistas de semana y
+  // año sin volver a pedir datos al servidor.
+  const sessionsByDateKey = new Map<string, SessionData[]>();
+  for (const s of sessions) {
+    const k = dateKey(new Date(s.scheduledAt));
+    if (!sessionsByDateKey.has(k)) sessionsByDateKey.set(k, []);
+    sessionsByDateKey.get(k)!.push(s);
+  }
+  const eventsByDateKey = new Map<string, CalendarEventData[]>();
+  for (const e of events) {
+    const k = dateKey(new Date(e.startAt));
+    if (!eventsByDateKey.has(k)) eventsByDateKey.set(k, []);
+    eventsByDateKey.get(k)!.push(e);
+  }
+
+  function itemsForDate(d: Date): DayItem[] {
+    const k = dateKey(d);
+    const daySessions = sessionsByDateKey.get(k) ?? [];
+    const dayEvents = eventsByDateKey.get(k) ?? [];
+    return [
+      ...daySessions.map((session) => ({
+        kind: "session" as const,
+        time: new Date(session.scheduledAt),
+        session,
+      })),
+      ...dayEvents.map((event) => ({
+        kind: "event" as const,
+        time: new Date(event.startAt),
+        event,
+      })),
+    ].sort((a, b) => a.time.getTime() - b.time.getTime());
+  }
+
+  function switchView(next: ViewMode) {
+    if (next === view) return;
+    if ((next === "day" || next === "week") && view === "month") {
+      setFocusDate(
+        selectedDay !== null
+          ? new Date(viewYear, viewMonth, selectedDay)
+          : focusDate
+      );
+    }
+    if (next === "month" && (view === "day" || view === "week")) {
+      setViewYear(focusDate.getFullYear());
+      setViewMonth(focusDate.getMonth());
+      setSelectedDay(focusDate.getDate());
+    }
+    if (next === "year") {
+      setViewYear(
+        view === "day" || view === "week" ? focusDate.getFullYear() : viewYear
+      );
+    }
+    setView(next);
+  }
+
   function goToPrev() {
+    if (view === "day") {
+      setFocusDate((d) => addDays(d, -1));
+      return;
+    }
+    if (view === "week") {
+      setFocusDate((d) => addDays(d, -7));
+      return;
+    }
+    if (view === "year") {
+      setViewYear((y) => y - 1);
+      return;
+    }
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear((y) => y - 1);
@@ -123,6 +241,18 @@ export function CalendarClient({
   }
 
   function goToNext() {
+    if (view === "day") {
+      setFocusDate((d) => addDays(d, 1));
+      return;
+    }
+    if (view === "week") {
+      setFocusDate((d) => addDays(d, 7));
+      return;
+    }
+    if (view === "year") {
+      setViewYear((y) => y + 1);
+      return;
+    }
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear((y) => y + 1);
@@ -133,31 +263,25 @@ export function CalendarClient({
   }
 
   function goToToday() {
+    setFocusDate(todayMidnight);
     setViewYear(today.getFullYear());
     setViewMonth(today.getMonth());
-    setSelectedDay(today.getDate());
+    if (view === "month") setSelectedDay(today.getDate());
   }
 
-  // Group sessions by day
-  const sessionsByDay = new Map<number, SessionData[]>();
-  for (const s of sessions) {
-    const d = new Date(s.scheduledAt);
-    if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
-      const day = d.getDate();
-      if (!sessionsByDay.has(day)) sessionsByDay.set(day, []);
-      sessionsByDay.get(day)!.push(s);
+  function headerLabel() {
+    if (view === "day") return formatDayTitle(focusDate);
+    if (view === "week") {
+      const start = startOfWeek(focusDate);
+      const end = addDays(start, 6);
+      const sameMonth = start.getMonth() === end.getMonth();
+      const startLabel = sameMonth
+        ? `${start.getDate()}`
+        : `${start.getDate()} ${MONTHS[start.getMonth()].slice(0, 3)}`;
+      return `${startLabel} – ${end.getDate()} ${MONTHS[end.getMonth()].slice(0, 3)} ${end.getFullYear()}`;
     }
-  }
-
-  // Group events by day
-  const eventsByDay = new Map<number, CalendarEventData[]>();
-  for (const e of events) {
-    const d = new Date(e.startAt);
-    if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
-      const day = d.getDate();
-      if (!eventsByDay.has(day)) eventsByDay.set(day, []);
-      eventsByDay.get(day)!.push(e);
-    }
+    if (view === "year") return `${viewYear}`;
+    return `${MONTHS[viewMonth]} ${viewYear}`;
   }
 
   function handleEventSaved(saved: CalendarEventData) {
@@ -171,6 +295,7 @@ export function CalendarClient({
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
     setSelectedDay(d.getDate());
+    setFocusDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
     setEventError(null);
     router.refresh();
   }
@@ -217,24 +342,19 @@ export function CalendarClient({
 
   // Arrastrar una sesión a otro día: conserva la hora y, si el nombre es un
   // código AAMMDD_Grupo, actualiza la fecha del nombre.
-  async function moveSessionToDay(sessionId: string, day: number) {
+  async function moveSessionToDate(sessionId: string, target: Date) {
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
     const old = new Date(session.scheduledAt);
-    if (
-      old.getFullYear() === viewYear &&
-      old.getMonth() === viewMonth &&
-      old.getDate() === day
-    )
-      return;
-    const target = new Date(
-      viewYear,
-      viewMonth,
-      day,
+    if (isSameDate(old, target)) return;
+    const withTime = new Date(
+      target.getFullYear(),
+      target.getMonth(),
+      target.getDate(),
       old.getHours(),
       old.getMinutes()
     );
-    const newTitle = retitleForDate(session.title, old, target);
+    const newTitle = retitleForDate(session.title, old, withTime);
     const previous = sessions;
     setActionError(null);
     setSessions((prev) =>
@@ -242,7 +362,7 @@ export function CalendarClient({
         s.id === sessionId
           ? {
               ...s,
-              scheduledAt: target.toISOString(),
+              scheduledAt: withTime.toISOString(),
               title: newTitle ?? s.title,
             }
           : s
@@ -253,7 +373,7 @@ export function CalendarClient({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scheduledAt: target.toISOString(),
+          scheduledAt: withTime.toISOString(),
           ...(newTitle ? { title: newTitle } : {}),
         }),
       });
@@ -295,29 +415,103 @@ export function CalendarClient({
     router.refresh();
   }
 
-  const selectedSessions = selectedDay
-    ? (sessionsByDay.get(selectedDay) ?? [])
-    : [];
-  const selectedEvents = selectedDay
-    ? (eventsByDay.get(selectedDay) ?? [])
-    : [];
-  const selectedDayItems: DayItem[] = [
-    ...selectedSessions.map((session) => ({
-      kind: "session" as const,
-      time: new Date(session.scheduledAt),
-      session,
-    })),
-    ...selectedEvents.map((event) => ({
-      kind: "event" as const,
-      time: new Date(event.startAt),
-      event,
-    })),
-  ].sort((a, b) => a.time.getTime() - b.time.getTime());
+  const selectedSessions =
+    selectedDay !== null
+      ? (sessionsByDateKey.get(dateKey(new Date(viewYear, viewMonth, selectedDay))) ??
+        [])
+      : [];
+  const selectedDayItems: DayItem[] =
+    selectedDay !== null
+      ? itemsForDate(new Date(viewYear, viewMonth, selectedDay))
+      : [];
+
+  const focusDaySessions = sessionsByDateKey.get(dateKey(focusDate)) ?? [];
+  const focusDayItems = itemsForDate(focusDate);
+
+  const weekStart = startOfWeek(focusDate);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   function defaultDateForNewEvent() {
+    if (view === "day" || view === "week") {
+      return new Date(
+        focusDate.getFullYear(),
+        focusDate.getMonth(),
+        focusDate.getDate(),
+        9,
+        0
+      );
+    }
     if (selectedDay !== null)
       return new Date(viewYear, viewMonth, selectedDay, 9, 0);
     return new Date();
+  }
+
+  function pdfLabelFor(d: Date) {
+    return `${MONTHS[d.getMonth()].toLowerCase()}-${d.getDate()}-${d.getFullYear()}`;
+  }
+
+  function renderMiniMonth(month: number) {
+    const dim = getDaysInMonth(viewYear, month);
+    const fd = getFirstDayOfMonth(viewYear, month);
+    const cells = Math.ceil((fd + dim) / 7) * 7;
+    return (
+      <div
+        key={month}
+        className="rounded-2xl border border-[#050505]/10 bg-white p-3 dark:border-white/10 dark:bg-[#10100e]"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setViewMonth(month);
+            setSelectedDay(null);
+            setView("month");
+          }}
+          className="mb-2 block w-full text-center text-xs font-black uppercase text-foreground/70 hover:text-brand"
+        >
+          {MONTHS[month]}
+        </button>
+        <div className="grid grid-cols-7 gap-y-1">
+          {Array.from({ length: cells }).map((_, idx) => {
+            const dayNum = idx - fd + 1;
+            const isValid = dayNum >= 1 && dayNum <= dim;
+            if (!isValid) return <div key={idx} />;
+            const d = new Date(viewYear, month, dayNum);
+            const key = dateKey(d);
+            const hasItems =
+              sessionsByDateKey.has(key) || eventsByDateKey.has(key);
+            const isToday = isSameDate(d, todayMidnight);
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setFocusDate(d);
+                  setView("day");
+                }}
+                className="mx-auto flex flex-col items-center justify-center py-0.5"
+              >
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full text-[10px] font-bold",
+                    isToday
+                      ? "bg-brand text-brand-foreground"
+                      : "text-foreground/70 hover:bg-muted"
+                  )}
+                >
+                  {dayNum}
+                </span>
+                <span
+                  className={cn(
+                    "mt-0.5 size-1 rounded-full",
+                    hasItems && !isToday ? "bg-brand" : "bg-transparent"
+                  )}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -328,22 +522,39 @@ export function CalendarClient({
           <button
             onClick={goToPrev}
             className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
-            aria-label="Mes anterior"
+            aria-label="Anterior"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h2 className="min-w-0 flex-1 text-center text-xl font-black text-foreground sm:min-w-[180px] sm:flex-none">
-            {MONTHS[viewMonth]} {viewYear}
+          <h2 className="min-w-0 flex-1 text-center text-xl font-black capitalize text-foreground sm:min-w-[220px] sm:flex-none">
+            {headerLabel()}
           </h2>
           <button
             onClick={goToNext}
             className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
-            aria-label="Mes siguiente"
+            aria-label="Siguiente"
           >
             <ChevronRight className="size-4" />
           </button>
         </div>
-        <div className="flex items-center gap-2 sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="inline-flex rounded-full border border-[#050505]/10 bg-[#F4F4F1] p-1 dark:border-white/10 dark:bg-white/[0.04]">
+            {(["day", "week", "month", "year"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => switchView(v)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-black transition-colors",
+                  view === v
+                    ? "bg-brand text-brand-foreground"
+                    : "text-foreground/60 hover:text-foreground"
+                )}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            ))}
+          </div>
           <button
             onClick={goToToday}
             className="h-10 rounded-full border border-[#050505]/10 bg-white px-4 text-sm font-black text-foreground/62 transition-colors hover:bg-muted hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
@@ -377,353 +588,299 @@ export function CalendarClient({
         </div>
       </div>
 
-      {/* Calendar grid */}
-      <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
-        {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
-          {DAYS.map((d) => (
-            <div
-              key={d}
-              className="py-3 text-center text-xs font-black uppercase text-foreground/52"
-            >
-              {d}
+      {/* Vista mensual */}
+      {view === "month" && (
+        <>
+          <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+            <div className="grid grid-cols-7 border-b border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
+              {DAYS.map((d) => (
+                <div
+                  key={d}
+                  className="py-3 text-center text-xs font-black uppercase text-foreground/52"
+                >
+                  {d}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Day cells */}
-        <div className="grid grid-cols-7">
-          {Array.from({ length: totalCells }).map((_, idx) => {
-            const dayNum = idx - firstDay + 1;
-            const isValid = dayNum >= 1 && dayNum <= daysInMonth;
-            const isToday =
-              isValid &&
-              today.getDate() === dayNum &&
-              today.getMonth() === viewMonth &&
-              today.getFullYear() === viewYear;
-            const isPast =
-              isValid &&
-              new Date(viewYear, viewMonth, dayNum) <
-                new Date(
-                  today.getFullYear(),
-                  today.getMonth(),
-                  today.getDate()
-                );
-            const isSelected = isValid && selectedDay === dayNum;
-            const daySessions = isValid
-              ? (sessionsByDay.get(dayNum) ?? [])
-              : [];
-            const dayEvents = isValid ? (eventsByDay.get(dayNum) ?? []) : [];
-            const hasSessions = daySessions.length > 0;
-            const dayItems: DayItem[] = [
-              ...daySessions.map((session) => ({
-                kind: "session" as const,
-                time: new Date(session.scheduledAt),
-                session,
-              })),
-              ...dayEvents.map((event) => ({
-                kind: "event" as const,
-                time: new Date(event.startAt),
-                event,
-              })),
-            ].sort((a, b) => a.time.getTime() - b.time.getTime());
-            const hasItems = dayItems.length > 0;
+            <div className="grid grid-cols-7">
+              {Array.from({ length: totalCells }).map((_, idx) => {
+                const dayNum = idx - firstDay + 1;
+                const isValid = dayNum >= 1 && dayNum <= daysInMonth;
+                const cellDate = isValid
+                  ? new Date(viewYear, viewMonth, dayNum)
+                  : null;
+                const cellKey = cellDate ? dateKey(cellDate) : null;
+                const isToday = isValid && cellDate && isSameDate(cellDate, todayMidnight);
+                const isPast =
+                  isValid && cellDate !== null && cellDate < todayMidnight;
+                const isSelected = isValid && selectedDay === dayNum;
+                const daySessions =
+                  isValid && cellKey ? (sessionsByDateKey.get(cellKey) ?? []) : [];
+                const dayItems: DayItem[] = cellDate ? itemsForDate(cellDate) : [];
+                const hasSessions = daySessions.length > 0;
+                const hasItems = dayItems.length > 0;
 
-            return (
-              <div
-                key={idx}
-                onClick={() =>
-                  isValid &&
-                  setSelectedDay(dayNum === selectedDay ? null : dayNum)
-                }
-                onDragOver={(e) => {
-                  if (!isValid) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                  if (dragOverDay !== dayNum) setDragOverDay(dayNum);
-                }}
-                onDragLeave={() => {
-                  if (dragOverDay === dayNum) setDragOverDay(null);
-                }}
-                onDrop={(e) => {
-                  if (!isValid) return;
-                  e.preventDefault();
-                  setDragOverDay(null);
-                  const id = e.dataTransfer.getData("text/plain");
-                  if (id) void moveSessionToDay(id, dayNum);
-                }}
-                className={cn(
-                  isValid &&
-                    dragOverDay === dayNum &&
-                    "ring-2 ring-inset ring-brand bg-brand/15",
-                  "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
-                  isValid ? "cursor-pointer" : "cursor-default",
-                  !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
-                  isValid && isPast && !isSelected && "opacity-50",
-                  isSelected && "bg-brand/15",
-                  isValid &&
-                    !isSelected &&
-                    "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
-                  // Remove border on last row
-                  idx >= totalCells - 7 && "border-b-0"
-                )}
-              >
-                {isValid && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "flex size-8 items-center justify-center rounded-full text-sm font-black",
-                          isToday && "bg-brand text-brand-foreground",
-                          !isToday && isSelected && "text-foreground",
-                          !isToday && !isSelected && "text-foreground"
-                        )}
-                      >
-                        {dayNum}
-                      </span>
-                      {hasItems && !isToday && (
-                        <span
-                          className={cn(
-                            "size-1.5 rounded-full",
-                            hasSessions ? "bg-brand" : "bg-[#2563eb]"
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (!isValid) return;
+                      const next = dayNum === selectedDay ? null : dayNum;
+                      setSelectedDay(next);
+                      if (next !== null)
+                        setFocusDate(new Date(viewYear, viewMonth, next));
+                    }}
+                    onDragOver={(e) => {
+                      if (!isValid || !cellKey) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverDate !== cellKey) setDragOverDate(cellKey);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverDate === cellKey) setDragOverDate(null);
+                    }}
+                    onDrop={(e) => {
+                      if (!isValid || !cellDate) return;
+                      e.preventDefault();
+                      setDragOverDate(null);
+                      const id = e.dataTransfer.getData("text/plain");
+                      if (id) void moveSessionToDate(id, cellDate);
+                    }}
+                    className={cn(
+                      isValid &&
+                        dragOverDate === cellKey &&
+                        "ring-2 ring-inset ring-brand bg-brand/15",
+                      "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
+                      isValid ? "cursor-pointer" : "cursor-default",
+                      !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
+                      isValid && isPast && !isSelected && "opacity-50",
+                      isSelected && "bg-brand/15",
+                      isValid &&
+                        !isSelected &&
+                        "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
+                      idx >= totalCells - 7 && "border-b-0"
+                    )}
+                  >
+                    {isValid && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={cn(
+                              "flex size-8 items-center justify-center rounded-full text-sm font-black",
+                              isToday && "bg-brand text-brand-foreground",
+                              !isToday && "text-foreground"
+                            )}
+                          >
+                            {dayNum}
+                          </span>
+                          {hasItems && !isToday && (
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                hasSessions ? "bg-brand" : "bg-[#2563eb]"
+                              )}
+                            />
                           )}
-                        />
-                      )}
-                    </div>
-                    {hasItems && (
-                      <div className="mt-1 space-y-0.5">
-                        {dayItems.slice(0, 2).map((item) =>
-                          item.kind === "session" ? (
-                            <Link
-                              key={`s-${item.session.id}`}
-                              href={`/sessions/${item.session.id}`}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData(
-                                  "text/plain",
-                                  item.session.id
-                                );
-                                e.dataTransfer.effectAllowed = "move";
-                              }}
-                              onDragEnd={() => setDragOverDay(null)}
-                              onClick={(e) => e.stopPropagation()}
-                              title={item.session.title}
-                              className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
-                            >
-                              {item.session.title}
-                            </Link>
-                          ) : (
-                            <button
-                              key={`e-${item.event.id}`}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEventDialog({ event: item.event });
-                              }}
-                              title={item.event.title}
-                              className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
-                            >
-                              {item.event.title}
-                            </button>
-                          )
-                        )}
-                        {dayItems.length > 2 && (
-                          <div className="text-[10px] text-muted-foreground px-1.5">
-                            +{dayItems.length - 2} más
+                        </div>
+                        {hasItems && (
+                          <div className="mt-1 space-y-0.5">
+                            {dayItems.slice(0, 2).map((item) =>
+                              item.kind === "session" ? (
+                                <Link
+                                  key={`s-${item.session.id}`}
+                                  href={`/sessions/${item.session.id}`}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData(
+                                      "text/plain",
+                                      item.session.id
+                                    );
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragEnd={() => setDragOverDate(null)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={item.session.title}
+                                  className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
+                                >
+                                  {item.session.title}
+                                </Link>
+                              ) : (
+                                <button
+                                  key={`e-${item.event.id}`}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEventDialog({ event: item.event });
+                                  }}
+                                  title={item.event.title}
+                                  className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
+                                >
+                                  {item.event.title}
+                                </button>
+                              )
+                            )}
+                            {dayItems.length > 2 && (
+                              <div className="text-[10px] text-muted-foreground px-1.5">
+                                +{dayItems.length - 2} más
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
+                      </>
                     )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected day: sessions + events */}
-      {selectedDay !== null && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-black text-foreground">
-              {MONTHS[viewMonth]} {selectedDay}
-              {selectedDayItems.length === 0 && (
-                <span className="ml-2 text-sm font-semibold text-muted-foreground">
-                  — Sin planes
-                </span>
-              )}
-            </h3>
-            <div className="flex items-center gap-2">
-              <DayPdfButton
-                sessions={selectedSessions}
-                dayLabel={`${MONTHS[viewMonth].toLowerCase()}-${selectedDay}-${viewYear}`}
-              />
-              <button
-                type="button"
-                onClick={() => setEventDialog({ event: null })}
-                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#2563eb]/30 px-3 text-xs font-black text-[#2563eb] transition-colors hover:bg-[#2563eb] hover:text-white"
-              >
-                <Plus className="size-3.5" />
-                Evento
-              </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          {selectedDayItems.length === 0 ? (
-            <div className="tp-panel border-dashed p-6 text-center">
-              <p className="mb-3 text-sm text-muted-foreground">
-                No hay sesiones ni eventos este día.
-              </p>
-              <Link
-                href="/sessions/new"
-                className="inline-flex items-center gap-1.5 text-sm font-black text-brand transition-colors hover:text-brand/80"
-              >
-                <Plus className="size-4" />
-                Planificar una sesión
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {selectedDayItems.map((item) =>
-                item.kind === "session" ? (
-                  <div
-                    key={`s-${item.session.id}`}
-                    className="tp-panel flex items-center gap-4 p-4"
+
+          {selectedDay !== null && (
+            <DayAgenda
+              title={`${MONTHS[viewMonth]} ${selectedDay}`}
+              items={selectedDayItems}
+              sessionsForPdf={selectedSessions}
+              pdfDayLabel={pdfLabelFor(new Date(viewYear, viewMonth, selectedDay))}
+              onAddEvent={() => setEventDialog({ event: null })}
+              onMoveSession={(s) => setDialog({ mode: "move", session: s })}
+              onDuplicateSession={(s) =>
+                setDialog({ mode: "duplicate", session: s })
+              }
+              onDeleteSession={(s) => setToDelete(s)}
+              deletingSessionId={deletingId}
+              onEditEvent={(e) => setEventDialog({ event: e })}
+              onDeleteEvent={(e) => setEventToDelete(e)}
+              deletingEventId={deletingEventId}
+              deleteError={deleteError}
+              eventError={eventError}
+            />
+          )}
+        </>
+      )}
+
+      {/* Vista diaria */}
+      {view === "day" && (
+        <DayAgenda
+          title={formatDayTitle(focusDate)}
+          items={focusDayItems}
+          sessionsForPdf={focusDaySessions}
+          pdfDayLabel={pdfLabelFor(focusDate)}
+          onAddEvent={() => setEventDialog({ event: null })}
+          onMoveSession={(s) => setDialog({ mode: "move", session: s })}
+          onDuplicateSession={(s) =>
+            setDialog({ mode: "duplicate", session: s })
+          }
+          onDeleteSession={(s) => setToDelete(s)}
+          deletingSessionId={deletingId}
+          onEditEvent={(e) => setEventDialog({ event: e })}
+          onDeleteEvent={(e) => setEventToDelete(e)}
+          deletingEventId={deletingEventId}
+          deleteError={deleteError}
+          eventError={eventError}
+        />
+      )}
+
+      {/* Vista semanal */}
+      {view === "week" && (
+        <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+          <div className="grid grid-cols-1 divide-y divide-[#050505]/10 sm:grid-cols-7 sm:divide-x sm:divide-y-0 dark:divide-white/10">
+            {weekDays.map((d) => {
+              const key = dateKey(d);
+              const items = itemsForDate(d);
+              const isToday = isSameDate(d, todayMidnight);
+              return (
+                <div
+                  key={key}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (dragOverDate !== key) setDragOverDate(key);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverDate === key) setDragOverDate(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverDate(null);
+                    const id = e.dataTransfer.getData("text/plain");
+                    if (id) void moveSessionToDate(id, d);
+                  }}
+                  className={cn(
+                    "min-h-[160px] p-2 transition-colors",
+                    dragOverDate === key && "ring-2 ring-inset ring-brand bg-brand/15"
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFocusDate(d);
+                      setView("day");
+                    }}
+                    className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left hover:bg-muted"
                   >
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand/12">
-                      <span className="text-brand font-bold text-sm">
-                        {new Date(item.session.scheduledAt)
-                          .getHours()
-                          .toString()
-                          .padStart(2, "0")}
-                        <span className="text-brand/60 text-xs">h</span>
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/sessions/${item.session.id}`}
-                        className="block truncate text-sm font-medium text-foreground hover:text-brand"
-                      >
-                        {item.session.title}
-                      </Link>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Clock className="size-3" />
-                        {item.session.durationMinutes} min
-                      </p>
-                    </div>
-                    <Link
-                      href={`/sessions/${item.session.id}`}
-                      className="rounded-full border border-brand/30 px-3 py-1.5 text-xs font-black text-brand transition-colors hover:bg-brand hover:text-brand-foreground"
-                    >
-                      Ver
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDialog({ mode: "move", session: item.session })
-                      }
-                      aria-label={`Mover ${item.session.title}`}
-                      title="Mover a otro día"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <CalendarDays className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDialog({ mode: "duplicate", session: item.session })
-                      }
-                      aria-label={`Duplicar ${item.session.title}`}
-                      title="Duplicar sesión"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <Copy className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToDelete(item.session)}
-                      disabled={deletingId === item.session.id}
-                      aria-label={`Eliminar ${item.session.title}`}
-                      title="Eliminar sesión"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                    >
-                      {deletingId === item.session.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    key={`e-${item.event.id}`}
-                    className="tp-panel flex items-center gap-4 border-[#2563eb]/25 bg-[#2563eb]/[0.04] p-4"
-                  >
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#2563eb]/15">
-                      <span className="text-[#1d4ed8] font-bold text-sm dark:text-[#93b9ff]">
-                        {new Date(item.event.startAt)
-                          .getHours()
-                          .toString()
-                          .padStart(2, "0")}
-                        <span className="text-[#2563eb]/60 text-xs">h</span>
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {item.event.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Clock className="size-3" />
-                        {new Date(item.event.startAt).toLocaleTimeString(
-                          "es-ES",
-                          { hour: "2-digit", minute: "2-digit" }
-                        )}
-                        {" – "}
-                        {new Date(item.event.endAt).toLocaleTimeString(
-                          "es-ES",
-                          { hour: "2-digit", minute: "2-digit" }
-                        )}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-[#2563eb]/15 px-3 py-1.5 text-xs font-black text-[#1d4ed8] dark:text-[#93b9ff]">
-                      Evento
+                    <span className="text-[11px] font-black uppercase text-foreground/52">
+                      {DAYS[(d.getDay() + 6) % 7]}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setEventDialog({ event: item.event })}
-                      aria-label={`Editar ${item.event.title}`}
-                      title="Editar evento"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEventToDelete(item.event)}
-                      disabled={deletingEventId === item.event.id}
-                      aria-label={`Eliminar ${item.event.title}`}
-                      title="Eliminar evento"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                    >
-                      {deletingEventId === item.event.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
+                    <span
+                      className={cn(
+                        "flex size-7 items-center justify-center rounded-full text-xs font-black",
+                        isToday
+                          ? "bg-brand text-brand-foreground"
+                          : "text-foreground"
                       )}
-                    </button>
+                    >
+                      {d.getDate()}
+                    </span>
+                  </button>
+                  <div className="space-y-1">
+                    {items.map((item) =>
+                      item.kind === "session" ? (
+                        <Link
+                          key={`s-${item.session.id}`}
+                          href={`/sessions/${item.session.id}`}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              item.session.id
+                            );
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={() => setDragOverDate(null)}
+                          title={item.session.title}
+                          className="block truncate rounded-full bg-brand/20 px-2 py-1 text-[11px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
+                        >
+                          {item.session.title}
+                        </Link>
+                      ) : (
+                        <button
+                          key={`e-${item.event.id}`}
+                          type="button"
+                          onClick={() => setEventDialog({ event: item.event })}
+                          title={item.event.title}
+                          className="block w-full truncate rounded-full bg-[#2563eb]/15 px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
+                        >
+                          {item.event.title}
+                        </button>
+                      )
+                    )}
+                    {items.length === 0 && (
+                      <p className="px-1 text-[11px] text-muted-foreground">
+                        —
+                      </p>
+                    )}
                   </div>
-                )
-              )}
-            </div>
-          )}
-          {deleteError && (
-            <p className="text-sm font-medium text-destructive">
-              {deleteError}
-            </p>
-          )}
-          {eventError && (
-            <p className="text-sm font-medium text-destructive">{eventError}</p>
-          )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Vista anual */}
+      {view === "year" && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 12 }).map((_, m) => renderMiniMonth(m))}
         </div>
       )}
 
