@@ -3,6 +3,7 @@ import { Fraunces, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
 import { CookieBanner } from "@/components/app/cookie-banner";
+import { ServiceWorkerRegister } from "@/components/app/sw-register";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -66,7 +67,19 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
-  icons: { icon: "/favicon.ico" },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TenPlanner",
+  },
+};
+
+export const viewport = {
+  themeColor: "#050505",
 };
 
 export default async function RootLayout({
@@ -121,6 +134,7 @@ export default async function RootLayout({
         {children}
         <CookieBanner />
         <Toaster />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
