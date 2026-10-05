@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TenPlannerMark } from "./ten-planner-mark";
+import { InstallAppButton } from "./install-app-button";
 
 const navItems = [
   { label: "Cómo funciona", href: "#como-funciona" },
@@ -47,6 +48,7 @@ export function LandingNav() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <InstallAppButton className="hidden md:inline-flex" />
           <Link
             href="/register"
             className="hidden min-h-11 items-center rounded-full bg-[#050505] px-6 text-sm font-bold text-white transition hover:bg-[#d6ff38] hover:text-[#050505] md:inline-flex"
@@ -94,6 +96,7 @@ export function LandingNav() {
             >
               Empieza gratis →
             </Link>
+            <InstallAppButton className="mt-1 w-full justify-center" />
           </div>
         </div>
       </div>
