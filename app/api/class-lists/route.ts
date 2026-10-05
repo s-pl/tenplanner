@@ -77,7 +77,9 @@ export async function GET(request: NextRequest) {
         ),
   ]);
 
-  const countMap = new Map(counts.map((row) => [row.listId, Number(row.total)]));
+  const countMap = new Map(
+    counts.map((row) => [row.listId, Number(row.total)])
+  );
   const membershipSet = new Set(memberships.map((row) => row.listId));
   const itemsMap = new Map<
     string,

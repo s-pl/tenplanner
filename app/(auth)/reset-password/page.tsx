@@ -114,19 +114,19 @@ export default function ResetPasswordPage() {
     return (
       <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 text-center shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
         <div className="space-y-5">
-        <h1 className="text-3xl font-black leading-tight text-foreground">
-          Enlace no válido
-        </h1>
-        <p className="text-sm leading-6 text-foreground/62">
-          Este enlace de recuperación ha caducado o ya se ha utilizado. Solicita
-          uno nuevo y vuelve a intentarlo.
-        </p>
-        <Link
-          href="/forgot-password"
-          className="inline-flex h-11 items-center justify-center rounded-full bg-brand px-5 text-sm font-black text-brand-foreground transition-colors hover:bg-brand/90"
-        >
-          Pedir enlace nuevo
-        </Link>
+          <h1 className="text-3xl font-black leading-tight text-foreground">
+            Enlace no válido
+          </h1>
+          <p className="text-sm leading-6 text-foreground/62">
+            Este enlace de recuperación ha caducado o ya se ha utilizado.
+            Solicita uno nuevo y vuelve a intentarlo.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-brand px-5 text-sm font-black text-brand-foreground transition-colors hover:bg-brand/90"
+          >
+            Pedir enlace nuevo
+          </Link>
         </div>
       </div>
     );
@@ -136,17 +136,17 @@ export default function ResetPasswordPage() {
     return (
       <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 text-center shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
         <div className="space-y-4">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground">
-            <CheckCircle2 className="size-8" />
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground">
+              <CheckCircle2 className="size-8" />
+            </div>
+            <h1 className="text-3xl font-black leading-tight text-foreground">
+              Contraseña actualizada
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Redirigiendo a tu dashboard…
+            </p>
           </div>
-          <h1 className="text-3xl font-black leading-tight text-foreground">
-            Contraseña actualizada
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Redirigiendo a tu dashboard…
-          </p>
-        </div>
         </div>
       </div>
     );
@@ -155,143 +155,145 @@ export default function ResetPasswordPage() {
   return (
     <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
       <div className="space-y-6">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit transition-colors"
-        >
-          <ArrowLeft className="size-3.5" /> Cancelar
-        </Link>
-        <div>
-          <p className="tp-kicker">Seguridad</p>
-          <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
-            Nueva contraseña
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-foreground/62">
-            Elige una nueva contraseña para tu cuenta.
-          </p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="password">Nueva contraseña</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Mín. 8 caracteres"
-              autoComplete="new-password"
-              className="h-10 pr-10"
-              aria-invalid={!!errors.password}
-              {...register("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              tabIndex={-1}
-              aria-label={
-                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-              }
-            >
-              {showPassword ? (
-                <EyeOff className="size-4" />
-              ) : (
-                <Eye className="size-4" />
-              )}
-            </button>
-          </div>
-          {errors.password && (
-            <p className="text-xs text-destructive">
-              {errors.password.message}
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit transition-colors"
+          >
+            <ArrowLeft className="size-3.5" /> Cancelar
+          </Link>
+          <div>
+            <p className="tp-kicker">Seguridad</p>
+            <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
+              Nueva contraseña
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-foreground/62">
+              Elige una nueva contraseña para tu cuenta.
             </p>
-          )}
+          </div>
+        </div>
 
-          {passwordValue.length > 0 && (
-            <div className="space-y-1.5 pt-0.5">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((bar) => (
-                  <div
-                    key={bar}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Nueva contraseña</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Mín. 8 caracteres"
+                autoComplete="new-password"
+                className="h-10 pr-10"
+                aria-invalid={!!errors.password}
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                tabIndex={-1}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-xs text-destructive">
+                {errors.password.message}
+              </p>
+            )}
+
+            {passwordValue.length > 0 && (
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((bar) => (
+                    <div
+                      key={bar}
+                      className={cn(
+                        "h-1 flex-1 rounded-full transition-all duration-300",
+                        bar <= strengthCfg.bars ? strengthCfg.color : "bg-muted"
+                      )}
+                    />
+                  ))}
+                </div>
+                {strengthCfg.label && (
+                  <p
                     className={cn(
-                      "h-1 flex-1 rounded-full transition-all duration-300",
-                      bar <= strengthCfg.bars ? strengthCfg.color : "bg-muted"
+                      "text-xs font-medium",
+                      strength === 1 && "text-red-500",
+                      strength === 2 && "text-orange-400",
+                      strength === 3 && "text-yellow-500",
+                      strength === 4 && "text-brand"
                     )}
-                  />
-                ))}
+                  >
+                    {strengthCfg.label}
+                  </p>
+                )}
               </div>
-              {strengthCfg.label && (
-                <p
-                  className={cn(
-                    "text-xs font-medium",
-                    strength === 1 && "text-red-500",
-                    strength === 2 && "text-orange-400",
-                    strength === 3 && "text-yellow-500",
-                    strength === 4 && "text-brand"
-                  )}
-                >
-                  {strengthCfg.label}
-                </p>
-              )}
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm">Confirmar contraseña</Label>
+            <div className="relative">
+              <Input
+                id="confirm"
+                type={showConfirm ? "text" : "password"}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                className="h-10 pr-10"
+                aria-invalid={!!errors.confirm}
+                {...register("confirm")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                tabIndex={-1}
+                aria-label={
+                  showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showConfirm ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
+            {errors.confirm && (
+              <p className="text-xs text-destructive">
+                {errors.confirm.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <div className="rounded-[22px] border border-destructive/20 bg-destructive/10 px-4 py-3">
+              <p className="text-sm text-destructive">{serverError}</p>
             </div>
           )}
-        </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="confirm">Confirmar contraseña</Label>
-          <div className="relative">
-            <Input
-              id="confirm"
-              type={showConfirm ? "text" : "password"}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="h-10 pr-10"
-              aria-invalid={!!errors.confirm}
-              {...register("confirm")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              tabIndex={-1}
-              aria-label={
-                showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
-              }
-            >
-              {showConfirm ? (
-                <EyeOff className="size-4" />
-              ) : (
-                <Eye className="size-4" />
-              )}
-            </button>
-          </div>
-          {errors.confirm && (
-            <p className="text-xs text-destructive">{errors.confirm.message}</p>
-          )}
-        </div>
-
-        {serverError && (
-          <div className="rounded-[22px] border border-destructive/20 bg-destructive/10 px-4 py-3">
-            <p className="text-sm text-destructive">{serverError}</p>
-          </div>
-        )}
-
-        <Button
-          type="submit"
-          className="h-11 w-full rounded-full bg-brand font-black text-brand-foreground hover:bg-brand/90"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="size-4 animate-spin mr-2" />
-              Actualizando…
-            </>
-          ) : (
-            "Cambiar contraseña"
-          )}
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-full bg-brand font-black text-brand-foreground hover:bg-brand/90"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-2" />
+                Actualizando…
+              </>
+            ) : (
+              "Cambiar contraseña"
+            )}
+          </Button>
+        </form>
       </div>
     </div>
   );

@@ -68,7 +68,10 @@ function stringOrNull(value: unknown) {
   return String(value);
 }
 
-function formatDate(value: string | null, options?: Intl.DateTimeFormatOptions) {
+function formatDate(
+  value: string | null,
+  options?: Intl.DateTimeFormatOptions
+) {
   if (!value) return "Sin datos";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Sin datos";
@@ -550,7 +553,6 @@ export function PlacesClient({ initialPlaces }: PlacesClientProps) {
             </ul>
           )}
         </div>
-
       </section>
 
       {selected && (

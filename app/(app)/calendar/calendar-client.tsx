@@ -417,8 +417,9 @@ export function CalendarClient({
 
   const selectedSessions =
     selectedDay !== null
-      ? (sessionsByDateKey.get(dateKey(new Date(viewYear, viewMonth, selectedDay))) ??
-        [])
+      ? (sessionsByDateKey.get(
+          dateKey(new Date(viewYear, viewMonth, selectedDay))
+        ) ?? [])
       : [];
   const selectedDayItems: DayItem[] =
     selectedDay !== null
@@ -611,13 +612,18 @@ export function CalendarClient({
                   ? new Date(viewYear, viewMonth, dayNum)
                   : null;
                 const cellKey = cellDate ? dateKey(cellDate) : null;
-                const isToday = isValid && cellDate && isSameDate(cellDate, todayMidnight);
+                const isToday =
+                  isValid && cellDate && isSameDate(cellDate, todayMidnight);
                 const isPast =
                   isValid && cellDate !== null && cellDate < todayMidnight;
                 const isSelected = isValid && selectedDay === dayNum;
                 const daySessions =
-                  isValid && cellKey ? (sessionsByDateKey.get(cellKey) ?? []) : [];
-                const dayItems: DayItem[] = cellDate ? itemsForDate(cellDate) : [];
+                  isValid && cellKey
+                    ? (sessionsByDateKey.get(cellKey) ?? [])
+                    : [];
+                const dayItems: DayItem[] = cellDate
+                  ? itemsForDate(cellDate)
+                  : [];
                 const hasSessions = daySessions.length > 0;
                 const hasItems = dayItems.length > 0;
 
@@ -740,7 +746,9 @@ export function CalendarClient({
               title={`${MONTHS[viewMonth]} ${selectedDay}`}
               items={selectedDayItems}
               sessionsForPdf={selectedSessions}
-              pdfDayLabel={pdfLabelFor(new Date(viewYear, viewMonth, selectedDay))}
+              pdfDayLabel={pdfLabelFor(
+                new Date(viewYear, viewMonth, selectedDay)
+              )}
               onAddEvent={() => setEventDialog({ event: null })}
               onMoveSession={(s) => setDialog({ mode: "move", session: s })}
               onDuplicateSession={(s) =>
@@ -807,7 +815,8 @@ export function CalendarClient({
                   }}
                   className={cn(
                     "min-h-[160px] p-2 transition-colors",
-                    dragOverDate === key && "ring-2 ring-inset ring-brand bg-brand/15"
+                    dragOverDate === key &&
+                      "ring-2 ring-inset ring-brand bg-brand/15"
                   )}
                 >
                   <button

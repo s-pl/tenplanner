@@ -10,16 +10,7 @@ import {
   sessionExercises,
   sessionDrafts,
 } from "@/db/schema";
-import {
-  and,
-  count,
-  eq,
-  ilike,
-  inArray,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
   Plus,
   ArrowLeft,
@@ -95,9 +86,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
-  const settings = await getAppSettings([
-    "feature.session_creation_enabled",
-  ]);
+  const settings = await getAppSettings(["feature.session_creation_enabled"]);
   const sessionCreationEnabled =
     settings.get("feature.session_creation_enabled") !== false;
 
@@ -253,34 +242,34 @@ export default async function SessionsPage({ searchParams }: PageProps) {
             className="court-grid pointer-events-none absolute inset-0 opacity-40 dark:opacity-25"
           />
           <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
-              <CalendarClock className="size-3.5 text-brand" />
-              Plan operativo
-            </p>
-            <h1 className="font-heading text-3xl font-semibold text-foreground md:text-4xl">
-              Sesiones
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-[14px] text-foreground/60">
-              Entrenamientos agendados con fecha, hora, lugar y alumnos.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {sessionCreationEnabled ? (
-              <Link
-                href="/sessions/new"
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
-              >
-                <Plus className="size-4" />
-                Nueva sesión
-              </Link>
-            ) : (
-              <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
-                <Lock className="size-4" />
-                Bloqueado
-              </span>
-            )}
-          </div>
+            <div>
+              <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
+                <CalendarClock className="size-3.5 text-brand" />
+                Plan operativo
+              </p>
+              <h1 className="font-heading text-3xl font-semibold text-foreground md:text-4xl">
+                Sesiones
+              </h1>
+              <p className="mt-1.5 max-w-2xl text-[14px] text-foreground/60">
+                Entrenamientos agendados con fecha, hora, lugar y alumnos.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {sessionCreationEnabled ? (
+                <Link
+                  href="/sessions/new"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
+                >
+                  <Plus className="size-4" />
+                  Nueva sesión
+                </Link>
+              ) : (
+                <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
+                  <Lock className="size-4" />
+                  Bloqueado
+                </span>
+              )}
+            </div>
           </div>
         </header>
 
@@ -467,7 +456,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               {totalFiltered > 0 && totalPages > 1 && (
                 <footer className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#050505]/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.045]">
                   <p className="text-[12px] text-foreground/50 tabular-nums">
-                    {offset + 1}–{offset + sessionRows.length} de {totalFiltered}
+                    {offset + 1}–{offset + sessionRows.length} de{" "}
+                    {totalFiltered}
                   </p>
                   <div className="flex items-center gap-3">
                     {safePage > 1 ? (

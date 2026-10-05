@@ -41,8 +41,8 @@ export default function AuthLayout({
                 Planifica mejor. Entrena con método.
               </h2>
               <p className="mt-5 max-w-md text-sm font-semibold leading-7 text-white/66">
-                Ejercicios, clases, sesiones, alumnos y grupos organizados en
-                un sistema operativo para entrenadores.
+                Ejercicios, clases, sesiones, alumnos y grupos organizados en un
+                sistema operativo para entrenadores.
               </p>
             </div>
           </div>

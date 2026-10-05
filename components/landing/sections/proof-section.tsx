@@ -199,8 +199,12 @@ function TrustChecklistItem({
         <Icon className="size-5" />
       </span>
       <span>
-        <span className="block text-sm font-semibold text-foreground">{item.label}</span>
-        <span className="mt-2 block text-sm leading-6 text-muted-foreground">{item.detail}</span>
+        <span className="block text-sm font-semibold text-foreground">
+          {item.label}
+        </span>
+        <span className="mt-2 block text-sm leading-6 text-muted-foreground">
+          {item.detail}
+        </span>
       </span>
     </motion.li>
   );
@@ -250,7 +254,10 @@ export function ProofSection({ className }: { className?: string }) {
         <div className="mt-6 grid gap-6 lg:mt-10 lg:grid-cols-[0.85fr_1.15fr]">
           <Reveal>
             <div className="relative h-full overflow-hidden border border-border bg-foreground p-6 text-background shadow-[0_30px_90px_color-mix(in_oklab,var(--foreground)_18%,transparent)] sm:p-8">
-              <div aria-hidden className="court-plate absolute inset-4 opacity-[0.16]" />
+              <div
+                aria-hidden
+                className="court-plate absolute inset-4 opacity-[0.16]"
+              />
               <div className="relative">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-background/72">
                   Panel de validación
@@ -265,7 +272,11 @@ export function ProofSection({ className }: { className?: string }) {
                       initial={{ opacity: 0, y: 18 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
-                      transition={{ duration: 0.62, delay: 0.12 + index * 0.07, ease: premiumEase }}
+                      transition={{
+                        duration: 0.62,
+                        delay: 0.12 + index * 0.07,
+                        ease: premiumEase,
+                      }}
                       className="border border-background/10 bg-background/7 p-4"
                     >
                       <p className="landing-display text-4xl font-semibold leading-none text-brand-muted">
@@ -274,7 +285,9 @@ export function ProofSection({ className }: { className?: string }) {
                       <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-background/52">
                         {signal.unit}
                       </p>
-                      <p className="mt-3 text-sm leading-5 text-background/78">{signal.label}</p>
+                      <p className="mt-3 text-sm leading-5 text-background/78">
+                        {signal.label}
+                      </p>
                     </motion.div>
                   ))}
                 </div>
@@ -306,7 +319,11 @@ export function ProofSection({ className }: { className?: string }) {
 
               <ul className="mt-2">
                 {trustChecklist.map((item, index) => (
-                  <TrustChecklistItem key={item.label} item={item} index={index} />
+                  <TrustChecklistItem
+                    key={item.label}
+                    item={item}
+                    index={index}
+                  />
                 ))}
               </ul>
             </div>

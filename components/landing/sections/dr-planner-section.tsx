@@ -102,9 +102,18 @@ function Reveal({
 function CourtSketch() {
   return (
     <div className="relative min-h-[160px] overflow-hidden rounded-lg border border-border bg-accent/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.4)]">
-      <div aria-hidden className="absolute inset-4 border border-foreground/15" />
-      <div aria-hidden className="absolute left-1/2 top-4 bottom-4 w-px bg-foreground/15" />
-      <div aria-hidden className="absolute left-4 right-4 top-1/2 h-px bg-foreground/15" />
+      <div
+        aria-hidden
+        className="absolute inset-4 border border-foreground/15"
+      />
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-4 bottom-4 w-px bg-foreground/15"
+      />
+      <div
+        aria-hidden
+        className="absolute left-4 right-4 top-1/2 h-px bg-foreground/15"
+      />
       <motion.div
         aria-hidden
         initial={{ opacity: 0 }}
@@ -113,7 +122,12 @@ function CourtSketch() {
         transition={{ duration: 1.1, delay: 0.28, ease: premiumEase }}
         className="absolute inset-0"
       >
-        <svg viewBox="0 0 420 180" className="h-full w-full" fill="none" preserveAspectRatio="none">
+        <svg
+          viewBox="0 0 420 180"
+          className="h-full w-full"
+          fill="none"
+          preserveAspectRatio="none"
+        >
           <motion.path
             d="M82 128 C138 82, 177 70, 220 94 S300 135, 344 60"
             stroke="currentColor"
@@ -169,12 +183,18 @@ function SessionProposalVisual() {
                 <Bot className="size-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-foreground">Dr. Planner</p>
-                <p className="text-xs text-muted-foreground">borrador con contexto de TenPlanner</p>
+                <p className="text-sm font-semibold text-foreground">
+                  Dr. Planner
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  borrador con contexto de TenPlanner
+                </p>
               </div>
             </div>
             <motion.span
-              animate={reducedMotion ? { opacity: 1 } : { opacity: [0.55, 1, 0.55] }}
+              animate={
+                reducedMotion ? { opacity: 1 } : { opacity: [0.55, 1, 0.55] }
+              }
               transition={
                 reducedMotion
                   ? { duration: 0 }
@@ -208,7 +228,11 @@ function SessionProposalVisual() {
                     initial={{ opacity: 0, x: -16 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.18 + index * 0.08, ease: premiumEase }}
+                    transition={{
+                      duration: 0.6,
+                      delay: 0.18 + index * 0.08,
+                      ease: premiumEase,
+                    }}
                     className="grid grid-cols-[2.25rem_1fr] gap-3 border-t border-border pt-3"
                   >
                     <span className="grid size-9 place-items-center rounded-lg bg-brand/10 text-brand">
@@ -218,8 +242,12 @@ function SessionProposalVisual() {
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                         {item.label}
                       </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-foreground">{item.value}</p>
-                      <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{item.note}</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                        {item.value}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                        {item.note}
+                      </p>
                     </div>
                   </motion.div>
                 );
@@ -254,13 +282,23 @@ function SessionProposalVisual() {
                   initial={{ opacity: 0, y: 14 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.62, delay: 0.26 + index * 0.07, ease: premiumEase }}
+                  transition={{
+                    duration: 0.62,
+                    delay: 0.26 + index * 0.07,
+                    ease: premiumEase,
+                  }}
                   className={`${block.tone} grid grid-cols-[4.2rem_1fr] gap-3 rounded-lg border border-border p-3 shadow-sm`}
                 >
-                  <span className="text-sm font-semibold text-brand">{block.time}</span>
+                  <span className="text-sm font-semibold text-brand">
+                    {block.time}
+                  </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{block.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{block.detail}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {block.title}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {block.detail}
+                    </p>
                   </div>
                 </motion.div>
               ))}
@@ -273,7 +311,10 @@ function SessionProposalVisual() {
               </p>
               <ul className="mt-3 space-y-2">
                 {guardrails.map((item) => (
-                  <li key={item} className="flex gap-2 text-xs leading-5 text-muted-foreground">
+                  <li
+                    key={item}
+                    className="flex gap-2 text-xs leading-5 text-muted-foreground"
+                  >
                     <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-chart-2" />
                     {item}
                   </li>
@@ -350,8 +391,12 @@ export function DrPlannerSection() {
                 <Reveal key={item.title} delay={0.08 + index * 0.04}>
                   <div className="border-t border-border pt-4">
                     <Icon className="size-5 text-brand" />
-                    <h3 className="mt-3 text-base font-semibold text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
+                    <h3 className="mt-3 text-base font-semibold text-foreground">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {item.text}
+                    </p>
                   </div>
                 </Reveal>
               );

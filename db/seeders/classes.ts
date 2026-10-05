@@ -66,9 +66,15 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque inicial · activación",
         notes: "Activar sin pala primero, luego con pala.",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 5 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 5,
+          },
           { exerciseName: "Escalera de coordinación", durationMinutes: 8 },
-          { exerciseName: "Adultos · sensibilidad de bola", durationMinutes: 5 },
+          {
+            exerciseName: "Adultos · sensibilidad de bola",
+            durationMinutes: 5,
+          },
         ],
       },
       {
@@ -117,7 +123,10 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial",
         items: [
-          { exerciseName: "Frontón cara a cara con la pared", durationMinutes: 6 },
+          {
+            exerciseName: "Frontón cara a cara con la pared",
+            durationMinutes: 6,
+          },
           { exerciseName: "Splits step y split jump", durationMinutes: 6 },
         ],
       },
@@ -174,7 +183,10 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque principal · construcción",
         notes: "Bloque clave de la sesión. 35 minutos de trabajo táctico.",
         items: [
-          { exerciseName: "Punto a tres golpes obligados", durationMinutes: 18 },
+          {
+            exerciseName: "Punto a tres golpes obligados",
+            durationMinutes: 18,
+          },
           {
             exerciseName: "Diana puntuable: cuatro zonas",
             durationMinutes: 17,
@@ -189,7 +201,10 @@ const seedClasses: ClassSeed[] = [
             exerciseName: "Mini-tenis: el rey de la pista",
             durationMinutes: 18,
           },
-          { freeText: "Reflexión: ¿qué patrón te ha funcionado?", durationMinutes: 5 },
+          {
+            freeText: "Reflexión: ¿qué patrón te ha funcionado?",
+            durationMinutes: 5,
+          },
         ],
       },
     ],
@@ -214,7 +229,10 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial · preparación específica",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 5 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 5,
+          },
           { exerciseName: "Escalera de coordinación", durationMinutes: 8 },
           { exerciseName: "Mini-tenis con bote y golpe", durationMinutes: 5 },
         ],
@@ -226,7 +244,10 @@ const seedClasses: ClassSeed[] = [
           "Trabajar primero por carga (lanzamiento) y luego por progresión a peloteo libre.",
         items: [
           { exerciseName: "Derecha cruzada profunda", durationMinutes: 18 },
-          { exerciseName: "Peloteo cruzado a tres cuartos", durationMinutes: 15 },
+          {
+            exerciseName: "Peloteo cruzado a tres cuartos",
+            durationMinutes: 15,
+          },
         ],
       },
       {
@@ -260,7 +281,10 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 5 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 5,
+          },
           {
             freeText: "Lanzamientos del saque sin raqueta · 3 series de 8",
             durationMinutes: 8,
@@ -271,7 +295,10 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 2,
         title: "Bloque principal · saque",
         items: [
-          { exerciseName: "Saque plano al cuadro de derecha", durationMinutes: 20 },
+          {
+            exerciseName: "Saque plano al cuadro de derecha",
+            durationMinutes: 20,
+          },
           {
             freeText:
               "Saques a cuadro de revés con misma técnica · 15 saques por lado",
@@ -310,7 +337,10 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque inicial · activación física",
         items: [
           { exerciseName: "Comba doble salto", durationMinutes: 10 },
-          { exerciseName: "Peloteo cruzado a tres cuartos", durationMinutes: 10 },
+          {
+            exerciseName: "Peloteo cruzado a tres cuartos",
+            durationMinutes: 10,
+          },
         ],
       },
       {
@@ -318,7 +348,10 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque principal · cambios de ritmo",
         items: [
           { exerciseName: "Globo defensivo profundo", durationMinutes: 12 },
-          { exerciseName: "Dejada disimulada con cortado", durationMinutes: 12 },
+          {
+            exerciseName: "Dejada disimulada con cortado",
+            durationMinutes: 12,
+          },
           {
             exerciseName: "Defensa con globo y contraataque",
             durationMinutes: 18,
@@ -357,18 +390,30 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 5 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 5,
+          },
           { exerciseName: "Splits step y split jump", durationMinutes: 8 },
-          { exerciseName: "Peloteo cruzado a tres cuartos", durationMinutes: 10 },
+          {
+            exerciseName: "Peloteo cruzado a tres cuartos",
+            durationMinutes: 10,
+          },
         ],
       },
       {
         orderIndex: 2,
         title: "Bloque principal · patrones tácticos",
         items: [
-          { exerciseName: "Patrón 1+1: derecha cruzada y subida", durationMinutes: 18 },
+          {
+            exerciseName: "Patrón 1+1: derecha cruzada y subida",
+            durationMinutes: 18,
+          },
           { exerciseName: "Ataque de segundo saque", durationMinutes: 18 },
-          { exerciseName: "Volea de derecha cerca de la red", durationMinutes: 12 },
+          {
+            exerciseName: "Volea de derecha cerca de la red",
+            durationMinutes: 12,
+          },
         ],
       },
       {
@@ -406,15 +451,24 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 5 },
-          { exerciseName: "Adultos · sensibilidad de bola", durationMinutes: 8 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 5,
+          },
+          {
+            exerciseName: "Adultos · sensibilidad de bola",
+            durationMinutes: 8,
+          },
         ],
       },
       {
         orderIndex: 2,
         title: "Bloque principal · primera derecha",
         items: [
-          { exerciseName: "Adultos · primera derecha cruzada", durationMinutes: 20 },
+          {
+            exerciseName: "Adultos · primera derecha cruzada",
+            durationMinutes: 20,
+          },
           {
             freeText:
               "Mini-tenis 1v1 con bote obligatorio · 4 juegos a 4 puntos",
@@ -452,15 +506,24 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque inicial",
         items: [
           { exerciseName: "Mini-tenis con bote y golpe", durationMinutes: 8 },
-          { exerciseName: "Peloteo cruzado a tres cuartos", durationMinutes: 12 },
+          {
+            exerciseName: "Peloteo cruzado a tres cuartos",
+            durationMinutes: 12,
+          },
         ],
       },
       {
         orderIndex: 2,
         title: "Bloque principal",
         items: [
-          { exerciseName: "Adultos medio-alto · peloteo a 2 toques", durationMinutes: 18 },
-          { exerciseName: "Diana puntuable: cuatro zonas", durationMinutes: 18 },
+          {
+            exerciseName: "Adultos medio-alto · peloteo a 2 toques",
+            durationMinutes: 18,
+          },
+          {
+            exerciseName: "Diana puntuable: cuatro zonas",
+            durationMinutes: 18,
+          },
         ],
       },
       {
@@ -497,7 +560,10 @@ const seedClasses: ClassSeed[] = [
         orderIndex: 1,
         title: "Bloque inicial · activación",
         items: [
-          { exerciseName: "Movilidad articular y activación", durationMinutes: 6 },
+          {
+            exerciseName: "Movilidad articular y activación",
+            durationMinutes: 6,
+          },
           { exerciseName: "Escalera de coordinación", durationMinutes: 10 },
         ],
       },
@@ -506,7 +572,10 @@ const seedClasses: ClassSeed[] = [
         title: "Bloque principal · capacidad y fuerza",
         items: [
           { exerciseName: "Sprints en estrella", durationMinutes: 12 },
-          { exerciseName: "Circuito de fuerza con líneas de goma", durationMinutes: 18 },
+          {
+            exerciseName: "Circuito de fuerza con líneas de goma",
+            durationMinutes: 18,
+          },
         ],
       },
       {

@@ -142,9 +142,7 @@ export function AdminMetricCard({
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
           {label}
         </p>
-        {Icon && (
-          <Icon className="size-4 shrink-0 text-brand" />
-        )}
+        {Icon && <Icon className="size-4 shrink-0 text-brand" />}
       </div>
       <p
         className={cn(

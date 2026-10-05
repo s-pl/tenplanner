@@ -75,55 +75,55 @@ export default async function GroupDetailPage({ params }: PageProps) {
   return (
     <div className="tp-page">
       <div className="tp-page-pad space-y-6">
-      {/* Header */}
-      <header className="tp-hero-panel p-6 text-white sm:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <Link
-            href="/groups"
-            className="flex size-10 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/70 transition-colors hover:bg-white/12 hover:text-white"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <p className="text-xs font-black uppercase text-white/45">Grupos</p>
-        </div>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex items-center gap-3">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505]">
-                <Users className="size-5" />
-              </div>
-              <h1 className="min-w-0 break-words text-4xl font-black leading-tight text-white md:text-5xl">
-                {group.name}
-              </h1>
-            </div>
-            {group.description && (
-              <p className="ml-[60px] mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/62">
-                {group.description}
-              </p>
-            )}
-            <p className="ml-[60px] mt-2 text-xs font-semibold tabular-nums text-white/50">
-              <span className="font-black text-[#D6FF38]">
-                {memberRows.length}
-              </span>{" "}
-              {memberRows.length === 1 ? "alumno" : "alumnos"}
-            </p>
+        {/* Header */}
+        <header className="tp-hero-panel p-6 text-white sm:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <Link
+              href="/groups"
+              className="flex size-10 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/70 transition-colors hover:bg-white/12 hover:text-white"
+            >
+              <ArrowLeft className="size-4" />
+            </Link>
+            <p className="text-xs font-black uppercase text-white/45">Grupos</p>
           </div>
-          <GroupEditDetails
-            key={`${group.name}|${group.description ?? ""}`}
-            groupId={id}
-            name={group.name}
-            description={group.description}
-          />
-        </div>
-      </header>
 
-      <GroupDetailClient
-        groupId={id}
-        groupName={group.name}
-        members={memberRows}
-        availableStudents={availableStudents}
-      />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="mb-2 flex items-center gap-3">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505]">
+                  <Users className="size-5" />
+                </div>
+                <h1 className="min-w-0 break-words text-4xl font-black leading-tight text-white md:text-5xl">
+                  {group.name}
+                </h1>
+              </div>
+              {group.description && (
+                <p className="ml-[60px] mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/62">
+                  {group.description}
+                </p>
+              )}
+              <p className="ml-[60px] mt-2 text-xs font-semibold tabular-nums text-white/50">
+                <span className="font-black text-[#D6FF38]">
+                  {memberRows.length}
+                </span>{" "}
+                {memberRows.length === 1 ? "alumno" : "alumnos"}
+              </p>
+            </div>
+            <GroupEditDetails
+              key={`${group.name}|${group.description ?? ""}`}
+              groupId={id}
+              name={group.name}
+              description={group.description}
+            />
+          </div>
+        </header>
+
+        <GroupDetailClient
+          groupId={id}
+          groupName={group.name}
+          members={memberRows}
+          availableStudents={availableStudents}
+        />
       </div>
     </div>
   );

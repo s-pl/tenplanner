@@ -16,7 +16,10 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function ExercisePage({ params, searchParams }: PageProps) {
+export default async function ExercisePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
   const navParams = await searchParams;
 

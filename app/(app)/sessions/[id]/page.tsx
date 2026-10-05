@@ -46,89 +46,98 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const navParams = await searchParams;
 
-  const [[sessionRow], exerciseRows, allExercises, studentRows, favRows, blockRows] =
-    await Promise.all([
-      db.select().from(sessions).where(eq(sessions.id, id)).limit(1),
-      db
-        .select({
-          exerciseId: exercises.id,
-          name: exercises.name,
-          category: exercises.category,
-          difficulty: exercises.difficulty,
-          orderIndex: sessionExercises.orderIndex,
-          durationMinutes: sessionExercises.durationMinutes,
-          defaultDurationMinutes: exercises.durationMinutes,
-          notes: sessionExercises.notes,
-          overridePhase: sessionExercises.phase,
-          overrideIntensity: sessionExercises.intensity,
-          exercisePhase: exercises.phase,
-          exerciseIntensity: exercises.intensity,
-          coachRating: sessionExercises.coachRating,
-          actualDurationSeconds: sessionExercises.actualDurationSeconds,
-          completedAt: sessionExercises.completedAt,
-          executionNotes: sessionExercises.executionNotes,
-          wasSkipped: sessionExercises.wasSkipped,
-          materials: exercises.materials,
-        })
-        .from(sessionExercises)
-        .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
-        .where(eq(sessionExercises.sessionId, id))
-        .orderBy(asc(sessionExercises.orderIndex)),
-      db
-        .select({
-          id: exercises.id,
-          name: exercises.name,
-          category: exercises.category,
-          difficulty: exercises.difficulty,
-          durationMinutes: exercises.durationMinutes,
-        })
-        .from(exercises)
-        .where(exerciseVisibleToUserCondition(user.id))
-        .orderBy(exercises.name)
-        .limit(200),
-      db
-        .select({
-          id: students.id,
-          name: students.name,
-          imageUrl: students.imageUrl,
-          attended: sessionStudents.attended,
-          rating: sessionStudents.rating,
-          feedback: sessionStudents.feedback,
-        })
-        .from(sessionStudents)
-        .innerJoin(students, eq(sessionStudents.studentId, students.id))
-        .where(eq(sessionStudents.sessionId, id))
-        .orderBy(asc(students.name)),
-      db
-        .select({ exerciseId: exerciseListItems.exerciseId })
-        .from(exerciseListItems)
-        .innerJoin(
-          exerciseLists,
-          eq(exerciseLists.id, exerciseListItems.listId)
-        )
-        .where(eq(exerciseLists.userId, user.id)),
-      db
-        .select({
-          blockId: sessionBlocks.id,
-          blockOrderIndex: sessionBlocks.orderIndex,
-          blockTitle: sessionBlocks.title,
-          blockNotes: sessionBlocks.notes,
-          itemId: sessionBlockItems.id,
-          itemOrderIndex: sessionBlockItems.orderIndex,
-          itemExerciseId: sessionBlockItems.exerciseId,
-          itemExerciseName: sessionBlockItems.exerciseName,
-          itemExerciseDescription: sessionBlockItems.exerciseDescription,
-          itemFreeText: sessionBlockItems.freeText,
-          itemDurationMinutes: sessionBlockItems.durationMinutes,
-          itemNotes: sessionBlockItems.notes,
-          itemKind: sessionBlockItems.kind,
-          itemStations: sessionBlockItems.stations,
-        })
-        .from(sessionBlocks)
-        .leftJoin(sessionBlockItems, eq(sessionBlockItems.blockId, sessionBlocks.id))
-        .where(eq(sessionBlocks.sessionId, id))
-        .orderBy(asc(sessionBlocks.orderIndex), asc(sessionBlockItems.orderIndex)),
-    ]);
+  const [
+    [sessionRow],
+    exerciseRows,
+    allExercises,
+    studentRows,
+    favRows,
+    blockRows,
+  ] = await Promise.all([
+    db.select().from(sessions).where(eq(sessions.id, id)).limit(1),
+    db
+      .select({
+        exerciseId: exercises.id,
+        name: exercises.name,
+        category: exercises.category,
+        difficulty: exercises.difficulty,
+        orderIndex: sessionExercises.orderIndex,
+        durationMinutes: sessionExercises.durationMinutes,
+        defaultDurationMinutes: exercises.durationMinutes,
+        notes: sessionExercises.notes,
+        overridePhase: sessionExercises.phase,
+        overrideIntensity: sessionExercises.intensity,
+        exercisePhase: exercises.phase,
+        exerciseIntensity: exercises.intensity,
+        coachRating: sessionExercises.coachRating,
+        actualDurationSeconds: sessionExercises.actualDurationSeconds,
+        completedAt: sessionExercises.completedAt,
+        executionNotes: sessionExercises.executionNotes,
+        wasSkipped: sessionExercises.wasSkipped,
+        materials: exercises.materials,
+      })
+      .from(sessionExercises)
+      .innerJoin(exercises, eq(sessionExercises.exerciseId, exercises.id))
+      .where(eq(sessionExercises.sessionId, id))
+      .orderBy(asc(sessionExercises.orderIndex)),
+    db
+      .select({
+        id: exercises.id,
+        name: exercises.name,
+        category: exercises.category,
+        difficulty: exercises.difficulty,
+        durationMinutes: exercises.durationMinutes,
+      })
+      .from(exercises)
+      .where(exerciseVisibleToUserCondition(user.id))
+      .orderBy(exercises.name)
+      .limit(200),
+    db
+      .select({
+        id: students.id,
+        name: students.name,
+        imageUrl: students.imageUrl,
+        attended: sessionStudents.attended,
+        rating: sessionStudents.rating,
+        feedback: sessionStudents.feedback,
+      })
+      .from(sessionStudents)
+      .innerJoin(students, eq(sessionStudents.studentId, students.id))
+      .where(eq(sessionStudents.sessionId, id))
+      .orderBy(asc(students.name)),
+    db
+      .select({ exerciseId: exerciseListItems.exerciseId })
+      .from(exerciseListItems)
+      .innerJoin(exerciseLists, eq(exerciseLists.id, exerciseListItems.listId))
+      .where(eq(exerciseLists.userId, user.id)),
+    db
+      .select({
+        blockId: sessionBlocks.id,
+        blockOrderIndex: sessionBlocks.orderIndex,
+        blockTitle: sessionBlocks.title,
+        blockNotes: sessionBlocks.notes,
+        itemId: sessionBlockItems.id,
+        itemOrderIndex: sessionBlockItems.orderIndex,
+        itemExerciseId: sessionBlockItems.exerciseId,
+        itemExerciseName: sessionBlockItems.exerciseName,
+        itemExerciseDescription: sessionBlockItems.exerciseDescription,
+        itemFreeText: sessionBlockItems.freeText,
+        itemDurationMinutes: sessionBlockItems.durationMinutes,
+        itemNotes: sessionBlockItems.notes,
+        itemKind: sessionBlockItems.kind,
+        itemStations: sessionBlockItems.stations,
+      })
+      .from(sessionBlocks)
+      .leftJoin(
+        sessionBlockItems,
+        eq(sessionBlockItems.blockId, sessionBlocks.id)
+      )
+      .where(eq(sessionBlocks.sessionId, id))
+      .orderBy(
+        asc(sessionBlocks.orderIndex),
+        asc(sessionBlockItems.orderIndex)
+      ),
+  ]);
 
   const session = sessionRow;
   if (!session) notFound();

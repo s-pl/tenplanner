@@ -20,8 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TenPlanner",
-    description:
-      "Sistema digital para entrenadores de deportes de raqueta.",
+    description: "Sistema digital para entrenadores de deportes de raqueta.",
   },
 };
 
@@ -57,9 +56,6 @@ export default async function LandingPage() {
   ]);
 
   return (
-    <TenPlannerLanding
-      exerciseCards={exerciseCards}
-      classCards={classCards}
-    />
+    <TenPlannerLanding exerciseCards={exerciseCards} classCards={classCards} />
   );
 }

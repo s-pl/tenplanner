@@ -117,7 +117,9 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
       }}
       exercises={resolvedExercises}
       diagrams={getExerciseDiagrams(
-        resolvedExercises.map((e) => e.exerciseId).filter((x): x is string => !!x)
+        resolvedExercises
+          .map((e) => e.exerciseId)
+          .filter((x): x is string => !!x)
       )}
     />
   );

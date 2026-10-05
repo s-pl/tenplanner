@@ -68,8 +68,7 @@ export async function buildPdfSession(
           category: item.category as PdfExercise["category"],
           difficulty: item.difficulty as PdfExercise["difficulty"],
           orderIndex,
-          durationMinutes:
-            item.durationMinutes ?? item.defaultDurationMinutes,
+          durationMinutes: item.durationMinutes ?? item.defaultDurationMinutes,
           notes: item.notes,
           phase: item.phase,
           intensity: null,

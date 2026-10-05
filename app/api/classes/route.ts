@@ -24,8 +24,7 @@ const stationItemSchema = z
     durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
   })
   .refine(
-    (v) =>
-      v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim(),
+    (v) => (v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim()),
     { message: "Cada estación necesita un ejercicio o un texto." }
   );
 
@@ -227,7 +226,9 @@ export async function POST(request: Request) {
     for (const ex of accessible) exerciseNameMap.set(ex.id, ex.name);
   }
 
-  function buildStations(stations: typeof d.blocks[number]["items"][number]["stations"]) {
+  function buildStations(
+    stations: (typeof d.blocks)[number]["items"][number]["stations"]
+  ) {
     return (stations ?? []).map((s) => ({
       kind: s.kind,
       exerciseId: s.exerciseId ?? null,

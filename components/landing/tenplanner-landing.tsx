@@ -181,10 +181,7 @@ function PhoneMock() {
     <div className="relative mx-auto h-[560px] w-[282px] overflow-hidden rounded-[38px] bg-[#050505] p-4 text-white shadow-[0_45px_100px_rgba(5,5,5,0.22)] ring-1 ring-black/10">
       <div className="flex items-center justify-between px-4 pt-3 text-xs font-bold text-white/85">
         <span>9:41</span>
-        <span
-          aria-hidden
-          className="flex items-center gap-1.5 text-white/55"
-        >
+        <span aria-hidden className="flex items-center gap-1.5 text-white/55">
           <Signal className="size-3" strokeWidth={2.5} />
           <Wifi className="size-3" strokeWidth={2.5} />
           <BatteryFull className="size-3.5" strokeWidth={2.5} />

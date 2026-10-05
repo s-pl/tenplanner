@@ -60,13 +60,7 @@ function formatLongDate(date: Date) {
   }).format(date);
 }
 
-function SectionTitle({
-  title,
-  id,
-}: {
-  title: string;
-  id?: string;
-}) {
+function SectionTitle({ title, id }: { title: string; id?: string }) {
   return (
     <h2
       id={id}
@@ -151,70 +145,70 @@ async function DashboardBody({
     lastWeekMinutes,
     mostUsedExercise,
   ] = await Promise.all([
-      db
-        .select({
-          id: sessionsTable.id,
-          title: sessionsTable.title,
-          scheduledAt: sessionsTable.scheduledAt,
-          durationMinutes: sessionsTable.durationMinutes,
-          location: sessionsTable.location,
-        })
-        .from(sessionsTable)
-        .where(
-          and(
-            eq(sessionsTable.userId, userId),
-            gte(sessionsTable.scheduledAt, now)
-          )
+    db
+      .select({
+        id: sessionsTable.id,
+        title: sessionsTable.title,
+        scheduledAt: sessionsTable.scheduledAt,
+        durationMinutes: sessionsTable.durationMinutes,
+        location: sessionsTable.location,
+      })
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.userId, userId),
+          gte(sessionsTable.scheduledAt, now)
         )
-        .orderBy(asc(sessionsTable.scheduledAt))
-        .limit(4),
-      db
-        .select({
-          total: sql<number>`count(*)`,
-          totalMinutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
-          thisWeekCount: sql<number>`count(*) filter (where ${sessionsTable.scheduledAt} >= ${weekStart.toISOString()})`,
-        })
-        .from(sessionsTable)
-        .where(eq(sessionsTable.userId, userId)),
-      db
-        .select({ count: count() })
-        .from(exercisesTable)
-        .where(exerciseVisibleToUserCondition(userId)),
-      db
-        .select({ count: count() })
-        .from(studentsTable)
-        .where(eq(studentsTable.coachId, userId)),
-      db
-        .select({
-          minutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
-        })
-        .from(sessionsTable)
-        .where(
-          and(
-            eq(sessionsTable.userId, userId),
-            gte(sessionsTable.scheduledAt, lastWeekStart),
-            lt(sessionsTable.scheduledAt, now)
-          )
-        ),
-      db
-        .select({
-          name: exercisesTable.name,
-          uses: sql<number>`count(${sessionExercises.id})`,
-        })
-        .from(sessionExercises)
-        .innerJoin(
-          sessionsTable,
-          eq(sessionsTable.id, sessionExercises.sessionId)
+      )
+      .orderBy(asc(sessionsTable.scheduledAt))
+      .limit(4),
+    db
+      .select({
+        total: sql<number>`count(*)`,
+        totalMinutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
+        thisWeekCount: sql<number>`count(*) filter (where ${sessionsTable.scheduledAt} >= ${weekStart.toISOString()})`,
+      })
+      .from(sessionsTable)
+      .where(eq(sessionsTable.userId, userId)),
+    db
+      .select({ count: count() })
+      .from(exercisesTable)
+      .where(exerciseVisibleToUserCondition(userId)),
+    db
+      .select({ count: count() })
+      .from(studentsTable)
+      .where(eq(studentsTable.coachId, userId)),
+    db
+      .select({
+        minutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
+      })
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.userId, userId),
+          gte(sessionsTable.scheduledAt, lastWeekStart),
+          lt(sessionsTable.scheduledAt, now)
         )
-        .innerJoin(
-          exercisesTable,
-          eq(exercisesTable.id, sessionExercises.exerciseId)
-        )
-        .where(eq(sessionsTable.userId, userId))
-        .groupBy(exercisesTable.id, exercisesTable.name)
-        .orderBy(desc(sql`count(${sessionExercises.id})`))
-        .limit(1),
-    ]);
+      ),
+    db
+      .select({
+        name: exercisesTable.name,
+        uses: sql<number>`count(${sessionExercises.id})`,
+      })
+      .from(sessionExercises)
+      .innerJoin(
+        sessionsTable,
+        eq(sessionsTable.id, sessionExercises.sessionId)
+      )
+      .innerJoin(
+        exercisesTable,
+        eq(exercisesTable.id, sessionExercises.exerciseId)
+      )
+      .where(eq(sessionsTable.userId, userId))
+      .groupBy(exercisesTable.id, exercisesTable.name)
+      .orderBy(desc(sql`count(${sessionExercises.id})`))
+      .limit(1),
+  ]);
 
   const totalSessions = Number(sessionStats[0]?.total ?? 0);
   const totalMinutes = Number(sessionStats[0]?.totalMinutes ?? 0);
@@ -357,10 +351,7 @@ async function DashboardBody({
       </section>
 
       {/* Estadísticas */}
-      <section
-        aria-labelledby="stats-heading"
-        className="flex flex-col gap-4"
-      >
+      <section aria-labelledby="stats-heading" className="flex flex-col gap-4">
         <SectionTitle id="stats-heading" title="Estadísticas" />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map(({ label, value, unit, icon: Icon }) => (
@@ -438,8 +429,7 @@ async function DashboardBody({
                             {formatDayMonth(date)}
                           </p>
                           <p className="mt-1 text-[11px] uppercase text-foreground/50 tabular-nums">
-                            {formatWeekday(date).slice(0, 3)}{" "}
-                            {formatTime(date)}
+                            {formatWeekday(date).slice(0, 3)} {formatTime(date)}
                           </p>
                         </div>
                         <div className="min-w-0 flex-1">
@@ -537,29 +527,29 @@ export default async function DashboardPage() {
             className="court-grid pointer-events-none absolute inset-0 opacity-45 dark:opacity-25"
           />
           <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 inline-flex rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[12px] font-semibold text-foreground/60 dark:bg-[#050505]/70">
-              {formatLongDate(now)}
-            </p>
-            <TimeGreeting
-              name={displayName}
-              initialGreeting={greetingForHour(now.getHours())}
-            />
-          </div>
-          {sessionCreationEnabled ? (
-            <Link
-              href="/sessions/new"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
-            >
-              <Plus className="size-4" />
-              Nueva sesión
-            </Link>
-          ) : (
-            <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
-              <Lock className="size-4" />
-              Sesiones bloqueadas
-            </span>
-          )}
+            <div>
+              <p className="mb-2 inline-flex rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[12px] font-semibold text-foreground/60 dark:bg-[#050505]/70">
+                {formatLongDate(now)}
+              </p>
+              <TimeGreeting
+                name={displayName}
+                initialGreeting={greetingForHour(now.getHours())}
+              />
+            </div>
+            {sessionCreationEnabled ? (
+              <Link
+                href="/sessions/new"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#D6FF38] px-4 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
+              >
+                <Plus className="size-4" />
+                Nueva sesión
+              </Link>
+            ) : (
+              <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-muted/30 px-4 text-[13px] text-foreground/45">
+                <Lock className="size-4" />
+                Sesiones bloqueadas
+              </span>
+            )}
           </div>
         </header>
 

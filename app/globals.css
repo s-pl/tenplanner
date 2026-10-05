@@ -235,7 +235,8 @@
     border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
     border-radius: calc(var(--radius) * 1.8);
     background: color-mix(in oklab, var(--card) 92%, transparent);
-    box-shadow: 0 18px 55px color-mix(in oklab, var(--foreground) 5%, transparent);
+    box-shadow: 0 18px 55px
+      color-mix(in oklab, var(--foreground) 5%, transparent);
   }
   .dark .tp-panel {
     background: color-mix(in oklab, var(--card) 84%, transparent);
@@ -320,10 +321,7 @@
   }
   :root:not(.dark) .app-shell .tp-hero-panel .text-\[\#D6FF38\],
   :root:not(.dark) .app-shell .bg-\[\#050505\] .text-\[\#D6FF38\],
-  :root:not(.dark)
-    .app-shell
-    .bg-\[\#050505\]
-    .hover\:text-\[\#D6FF38\]:hover {
+  :root:not(.dark) .app-shell .bg-\[\#050505\] .hover\:text-\[\#D6FF38\]:hover {
     color: var(--brand) !important;
   }
   :root:not(.dark) .admin-shell .text-violet-400 {

@@ -8,7 +8,11 @@ import { db } from "@/db";
 import { sessions } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { MultiSessionPdf } from "@/lib/sessions/pdf";
-import { buildPdfSession, getCoachName, slugify } from "@/lib/sessions/pdf-data";
+import {
+  buildPdfSession,
+  getCoachName,
+  slugify,
+} from "@/lib/sessions/pdf-data";
 import { zodValidationErrorResponse } from "../validation";
 
 const MAX_SESSIONS = 20;
@@ -91,9 +95,7 @@ export async function GET(request: Request) {
     const element = createElement(MultiSessionPdf, {
       sessions: sessionsData,
       title:
-        rows.length === 1
-          ? sessionsData[0].title
-          : `Sesiones del ${dateStr}`,
+        rows.length === 1 ? sessionsData[0].title : `Sesiones del ${dateStr}`,
     }) as unknown as ReactElement<DocumentProps>;
     const stream = await renderToStream(element);
     const buffer = await streamToBuffer(

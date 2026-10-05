@@ -110,9 +110,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
         {/* Body */}
         {chats.length === 0 ? (
           <div className="tp-panel border-dashed px-6 py-20 text-center">
-            <p className="tp-kicker mb-4">
-              Archivo vacío
-            </p>
+            <p className="tp-kicker mb-4">Archivo vacío</p>
             <h2 className="mb-3 text-3xl font-black text-foreground">
               Aún no has hablado con Dr. Planner.
             </h2>
@@ -195,9 +193,7 @@ export function ChatListClient({ chats: initialChats }: { chats: ChatItem[] }) {
           <p className="max-w-md text-[13px] font-semibold text-foreground/55">
             &ldquo;La mejor sesión empieza con una buena pregunta.&rdquo;
           </p>
-          <p className="font-black uppercase tabular-nums">
-            /tenplanner · IA
-          </p>
+          <p className="font-black uppercase tabular-nums">/tenplanner · IA</p>
         </footer>
       </div>
     </div>

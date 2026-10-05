@@ -1,7 +1,4 @@
-import {
-  emptyStationDraft,
-  type StationDraftItem,
-} from "@/lib/block-items";
+import { emptyStationDraft, type StationDraftItem } from "@/lib/block-items";
 import type {
   TrainingPhase,
   WizardExercise,

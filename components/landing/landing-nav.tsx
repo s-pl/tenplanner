@@ -68,7 +68,9 @@ export function LandingNav() {
         id="landing-mobile-nav"
         className={cn(
           "mx-auto mt-4 max-w-[1710px] origin-top overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-out md:hidden",
-          open ? "grid grid-rows-[1fr] opacity-100" : "grid grid-rows-[0fr] opacity-0"
+          open
+            ? "grid grid-rows-[1fr] opacity-100"
+            : "grid grid-rows-[0fr] opacity-0"
         )}
       >
         <div className="min-h-0 overflow-hidden">

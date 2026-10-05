@@ -190,9 +190,9 @@ export function ClassForm({
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [pickerSourceTab, setPickerSourceTab] = useState<
-    "search" | "lists"
-  >("search");
+  const [pickerSourceTab, setPickerSourceTab] = useState<"search" | "lists">(
+    "search"
+  );
 
   function updateBlock(idx: number, patch: Partial<BlockState>) {
     setBlocks((prev) =>
@@ -1047,11 +1047,11 @@ export function ClassForm({
                                         stationPickerTarget?.stationIdx ===
                                           stationIdx
                                           ? "Elige en la Biblioteca ↓"
-                                          : (station.name || (
+                                          : station.name || (
                                               <span className="italic text-muted-foreground">
                                                 Elige un ejercicio…
                                               </span>
-                                            ))}
+                                            )}
                                       </button>
                                     ) : (
                                       <textarea
@@ -1251,7 +1251,9 @@ export function ClassForm({
                     <SessionExerciseLists
                       selectedExerciseIds={block.items
                         .filter(
-                          (item): item is Extract<BlockItem, { kind: "exercise" }> =>
+                          (
+                            item
+                          ): item is Extract<BlockItem, { kind: "exercise" }> =>
                             item.kind === "exercise"
                         )
                         .map((item) => item.exerciseId)}

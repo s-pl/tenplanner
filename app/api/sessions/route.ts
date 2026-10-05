@@ -1,4 +1,14 @@
-import { and, asc, count, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  inArray,
+  lt,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -151,7 +161,9 @@ function normalizeBlocks(
   }[]
 ) {
   const source =
-    blocks && blocks.length > 0 ? blocks : buildBlocksFromExercises(exerciseItems);
+    blocks && blocks.length > 0
+      ? blocks
+      : buildBlocksFromExercises(exerciseItems);
   const byOrder = new Map<number, SessionBlockInput>();
 
   for (const block of source) {
@@ -187,7 +199,9 @@ function exerciseIdsFromBlocks(blocks: SessionBlockInput[]) {
   return blocks.flatMap((block) =>
     block.items.flatMap((item) => [
       ...(item.exerciseId ? [item.exerciseId] : []),
-      ...(item.stations ?? []).flatMap((s) => (s.exerciseId ? [s.exerciseId] : [])),
+      ...(item.stations ?? []).flatMap((s) =>
+        s.exerciseId ? [s.exerciseId] : []
+      ),
     ])
   );
 }
@@ -240,7 +254,10 @@ async function getAccessibleExerciseSnapshots(
 ) {
   const uniqueIds = Array.from(new Set(exerciseIds));
   if (uniqueIds.length === 0) {
-    return { snapshots: new Map<string, ExerciseSnapshot>(), inaccessibleIds: [] };
+    return {
+      snapshots: new Map<string, ExerciseSnapshot>(),
+      inaccessibleIds: [],
+    };
   }
 
   const rows = await db
@@ -252,7 +269,10 @@ async function getAccessibleExerciseSnapshots(
     })
     .from(exercises)
     .where(
-      and(inArray(exercises.id, uniqueIds), exerciseVisibleToUserCondition(userId))
+      and(
+        inArray(exercises.id, uniqueIds),
+        exerciseVisibleToUserCondition(userId)
+      )
     );
 
   const snapshots = new Map(rows.map((row) => [row.id, row]));

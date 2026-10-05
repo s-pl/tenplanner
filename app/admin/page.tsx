@@ -212,10 +212,7 @@ async function QuickStatsSection() {
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
           {userStats.map((s) => (
-            <div
-              key={s.label}
-              className={metricCardClass}
-            >
+            <div key={s.label} className={metricCardClass}>
               <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
                 {s.label}
               </p>
@@ -242,10 +239,7 @@ async function QuickStatsSection() {
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
           {contentStats.map((s) => (
-            <div
-              key={s.label}
-              className={metricCardClass}
-            >
+            <div key={s.label} className={metricCardClass}>
               <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40 mb-2">
                 {s.label}
               </p>
@@ -660,10 +654,7 @@ function StatsSkeleton() {
         <div className="h-3 w-16 rounded bg-foreground/8 mb-3" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className={`${metricCardClass} space-y-2`}
-            >
+            <div key={i} className={`${metricCardClass} space-y-2`}>
               <div className="h-2 w-20 rounded bg-foreground/8 animate-pulse" />
               <div className="h-8 w-12 rounded bg-foreground/8 animate-pulse" />
             </div>
@@ -674,10 +665,7 @@ function StatsSkeleton() {
         <div className="h-3 w-16 rounded bg-foreground/8 mb-3" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className={`${metricCardClass} space-y-2`}
-            >
+            <div key={i} className={`${metricCardClass} space-y-2`}>
               <div className="h-2 w-16 rounded bg-foreground/8 animate-pulse" />
               <div className="h-8 w-10 rounded bg-foreground/8 animate-pulse" />
             </div>
@@ -693,10 +681,7 @@ function ChartsSkeleton() {
     <section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div
-            key={i}
-            className={`${sectionCardClass} space-y-3`}
-          >
+          <div key={i} className={`${sectionCardClass} space-y-3`}>
             <div className="h-4 w-32 rounded bg-foreground/8 animate-pulse" />
             {Array.from({ length: 8 }).map((_, j) => (
               <div key={j} className="flex items-center gap-3">

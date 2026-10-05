@@ -219,7 +219,9 @@ export async function getFilteredExerciseIds(
     conditions.push(
       inArray(
         exercisesTable.formato,
-        activeFormato as Array<"individual" | "parejas" | "grupal" | "multigrupo">
+        activeFormato as Array<
+          "individual" | "parejas" | "grupal" | "multigrupo"
+        >
       )
     );
   if (activeNivel.length > 0) {

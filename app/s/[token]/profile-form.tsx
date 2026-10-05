@@ -184,7 +184,9 @@ export function ProfileForm({ token, initialName, coachName }: Props) {
       </div>
 
       <div>
-        <label className={labelCls}>Años de experiencia en deportes de raqueta</label>
+        <label className={labelCls}>
+          Años de experiencia en deportes de raqueta
+        </label>
         <input
           type="number"
           min={0}

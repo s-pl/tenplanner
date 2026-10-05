@@ -4,7 +4,11 @@ import { db } from "@/db";
 import { aiUsageEvents, aiUserRestrictions, users } from "@/db/schema";
 import { getAppSettings } from "@/lib/app-settings";
 import { AI_MODEL_OPTIONS } from "@/lib/ai/model-options";
-import { AdminMetricCard, AdminPageHeader, adminPageShell } from "../_components/admin-ui";
+import {
+  AdminMetricCard,
+  AdminPageHeader,
+  adminPageShell,
+} from "../_components/admin-ui";
 import { AdminAiOperationsClient } from "./ai-operations-client";
 
 type TopUserRow = {

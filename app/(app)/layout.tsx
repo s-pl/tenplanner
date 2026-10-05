@@ -18,7 +18,11 @@ const APP_LAYOUT_SETTING_KEYS = [
 
 type SettingsMap = Awaited<ReturnType<typeof getAppSettings>>;
 
-function booleanSetting(settings: SettingsMap, key: SettingKey, fallback = false) {
+function booleanSetting(
+  settings: SettingsMap,
+  key: SettingKey,
+  fallback = false
+) {
   const value = settings.get(key);
   return typeof value === "boolean" ? value : fallback;
 }

@@ -209,7 +209,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
 
         if (itemKind === "warmup") {
           fromClassExercises.push(
-            createWarmupItem(phaseFromBlock(orderIndex), row.itemDuration ?? null)
+            createWarmupItem(
+              phaseFromBlock(orderIndex),
+              row.itemDuration ?? null
+            )
           );
           continue;
         }

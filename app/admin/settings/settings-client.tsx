@@ -354,10 +354,7 @@ export function AdminSettingsClient({ settings: initialSettings }: Props) {
       {grouped.map(([category, items]) => {
         const Icon = categoryIcon[category] ?? Settings2;
         return (
-          <section
-            key={category}
-            className={adminPanelClass}
-          >
+          <section key={category} className={adminPanelClass}>
             <div className="flex items-center justify-between gap-4 border-b border-foreground/10 px-4 py-3 sm:px-5">
               <div className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-md border border-[#D6FF38]/35 bg-[#D6FF38]/14 text-[#6F8500] dark:text-[#D6FF38]">

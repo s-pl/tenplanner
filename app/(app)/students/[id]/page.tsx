@@ -514,9 +514,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
         {/* Próximas */}
         <section className="tp-panel p-5 sm:p-6">
           <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
-            <p className="text-[10px] font-black tabular-nums text-brand">
-              06
-            </p>
+            <p className="text-[10px] font-black tabular-nums text-brand">06</p>
             <p className="text-[10px] font-black uppercase text-foreground/50">
               Próximas sesiones
             </p>
@@ -540,9 +538,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
         {/* Historial */}
         <section className="tp-panel p-5 sm:p-6">
           <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[#050505]/10 pb-3 dark:border-white/10">
-            <p className="text-[10px] font-black tabular-nums text-brand">
-              07
-            </p>
+            <p className="text-[10px] font-black tabular-nums text-brand">07</p>
             <p className="text-[10px] font-black uppercase text-foreground/50">
               Historial y feedback
             </p>

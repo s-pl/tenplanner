@@ -170,7 +170,9 @@ function exerciseIdsFromBlocks(blocks: SessionBlockInput[]) {
   return blocks.flatMap((block) =>
     block.items.flatMap((item) => [
       ...(item.exerciseId ? [item.exerciseId] : []),
-      ...(item.stations ?? []).flatMap((s) => (s.exerciseId ? [s.exerciseId] : [])),
+      ...(item.stations ?? []).flatMap((s) =>
+        s.exerciseId ? [s.exerciseId] : []
+      ),
     ])
   );
 }

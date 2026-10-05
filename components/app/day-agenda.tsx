@@ -186,10 +186,10 @@ export function DayAgenda({
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                     <Clock className="size-3" />
-                    {new Date(item.event.startAt).toLocaleTimeString(
-                      "es-ES",
-                      { hour: "2-digit", minute: "2-digit" }
-                    )}
+                    {new Date(item.event.startAt).toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                     {" – "}
                     {new Date(item.event.endAt).toLocaleTimeString("es-ES", {
                       hour: "2-digit",

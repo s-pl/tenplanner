@@ -270,10 +270,7 @@ export function StepExercises({
       STATION_COUNT_MAX,
       Math.max(STATION_COUNT_MIN, stationsDraftCount || STATION_COUNT_MIN)
     );
-    setExercises([
-      ...selected,
-      createStationsItem(stationsDraftPhase, n, ""),
-    ]);
+    setExercises([...selected, createStationsItem(stationsDraftPhase, n, "")]);
     setStationsDraftPhase(null);
     setStationsDraftCount(4);
   }
@@ -629,7 +626,8 @@ export function StepExercises({
             {PHASE_ORDER.map((phase) => {
               const blockEntries = grouped[phase];
               const blockDuration = blockEntries.reduce(
-                (sum, { ex }) => sum + (ex.overrideDuration ?? ex.durationMinutes),
+                (sum, { ex }) =>
+                  sum + (ex.overrideDuration ?? ex.durationMinutes),
                 0
               );
 
@@ -672,8 +670,8 @@ export function StepExercises({
                         )}
                       >
                         <p className="text-xs text-muted-foreground">
-                          Sin items en este bloque. Arrastra desde la
-                          biblioteca o usa los botones de abajo.
+                          Sin items en este bloque. Arrastra desde la biblioteca
+                          o usa los botones de abajo.
                         </p>
                       </div>
                     ) : (
@@ -818,9 +816,7 @@ export function StepExercises({
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        startEditDuration(flatIdx)
-                                      }
+                                      onClick={() => startEditDuration(flatIdx)}
                                       title={
                                         isStationsItem(ex)
                                           ? "Duración de cada estación"
@@ -890,94 +886,52 @@ export function StepExercises({
                                             dragOverStation?.stationIdx ===
                                               stationIdx;
                                           return (
-                                          <li
-                                            key={stationIdx}
-                                            onDragOver={(e) => {
-                                              if (
-                                                e.dataTransfer.types.includes(
-                                                  "exercise-id"
+                                            <li
+                                              key={stationIdx}
+                                              onDragOver={(e) => {
+                                                if (
+                                                  e.dataTransfer.types.includes(
+                                                    "exercise-id"
+                                                  )
+                                                ) {
+                                                  e.preventDefault();
+                                                  setDragOverStation({
+                                                    itemIdx: flatIdx,
+                                                    stationIdx,
+                                                  });
+                                                }
+                                              }}
+                                              onDragLeave={() =>
+                                                setDragOverStation((current) =>
+                                                  current?.itemIdx ===
+                                                    flatIdx &&
+                                                  current.stationIdx ===
+                                                    stationIdx
+                                                    ? null
+                                                    : current
                                                 )
-                                              ) {
-                                                e.preventDefault();
-                                                setDragOverStation({
-                                                  itemIdx: flatIdx,
-                                                  stationIdx,
-                                                });
                                               }
-                                            }}
-                                            onDragLeave={() =>
-                                              setDragOverStation((current) =>
-                                                current?.itemIdx === flatIdx &&
-                                                current.stationIdx ===
+                                              onDrop={(e) =>
+                                                onStationDrop(
+                                                  e,
+                                                  flatIdx,
                                                   stationIdx
-                                                  ? null
-                                                  : current
-                                              )
-                                            }
-                                            onDrop={(e) =>
-                                              onStationDrop(
-                                                e,
-                                                flatIdx,
-                                                stationIdx
-                                              )
-                                            }
-                                            className={cn(
-                                              "flex items-start gap-2 rounded-lg border p-2 transition-colors",
-                                              isStationDragOver
-                                                ? "border-brand bg-brand/10"
-                                                : "border-border/60 bg-muted/20"
-                                            )}
-                                          >
-                                            <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
-                                              {String(
-                                                stationIdx + 1
-                                              ).padStart(2, "0")}
-                                            </span>
-                                            <div className="flex-1 min-w-0 space-y-1.5">
-                                              <div className="flex gap-1.5">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setPickingStation({
-                                                      itemIdx: flatIdx,
-                                                      stationIdx,
-                                                    });
-                                                    setSourceTab("library");
-                                                  }}
-                                                  className={cn(
-                                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
-                                                    station.kind === "exercise"
-                                                      ? "border-brand/40 bg-brand/10 text-brand"
-                                                      : "border-border text-muted-foreground hover:border-brand/40"
-                                                  )}
-                                                >
-                                                  Ejercicio
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    updateStation(
-                                                      flatIdx,
-                                                      stationIdx,
-                                                      {
-                                                        kind: "text",
-                                                        exerciseId: null,
-                                                        name: "",
-                                                      }
-                                                    )
-                                                  }
-                                                  className={cn(
-                                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
-                                                    station.kind === "text"
-                                                      ? "border-brand/40 bg-brand/10 text-brand"
-                                                      : "border-border text-muted-foreground hover:border-brand/40"
-                                                  )}
-                                                >
-                                                  Texto libre
-                                                </button>
-                                              </div>
-                                              {station.kind === "exercise" ? (
-                                                <div className="flex items-center gap-1">
+                                                )
+                                              }
+                                              className={cn(
+                                                "flex items-start gap-2 rounded-lg border p-2 transition-colors",
+                                                isStationDragOver
+                                                  ? "border-brand bg-brand/10"
+                                                  : "border-border/60 bg-muted/20"
+                                              )}
+                                            >
+                                              <span className="pt-1.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground tabular-nums">
+                                                {String(
+                                                  stationIdx + 1
+                                                ).padStart(2, "0")}
+                                              </span>
+                                              <div className="flex-1 min-w-0 space-y-1.5">
+                                                <div className="flex gap-1.5">
                                                   <button
                                                     type="button"
                                                     onClick={() => {
@@ -988,83 +942,128 @@ export function StepExercises({
                                                       setSourceTab("library");
                                                     }}
                                                     className={cn(
-                                                      "min-w-0 flex-1 truncate text-left text-xs hover:text-brand",
-                                                      pickingStation?.itemIdx ===
-                                                        flatIdx &&
-                                                        pickingStation?.stationIdx ===
-                                                          stationIdx
-                                                        ? "font-semibold text-brand"
-                                                        : "text-foreground"
+                                                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                                      station.kind ===
+                                                        "exercise"
+                                                        ? "border-brand/40 bg-brand/10 text-brand"
+                                                        : "border-border text-muted-foreground hover:border-brand/40"
                                                     )}
                                                   >
-                                                    {pickingStation?.itemIdx ===
-                                                      flatIdx &&
-                                                    pickingStation?.stationIdx ===
-                                                      stationIdx
-                                                      ? "Elige en la Biblioteca →"
-                                                      : (station.name || (
-                                                          <span className="italic text-muted-foreground">
-                                                            Elige un ejercicio…
-                                                          </span>
-                                                        ))}
+                                                    Ejercicio
                                                   </button>
-                                                  {station.exerciseId && (
-                                                    <NextLink
-                                                      href={`/exercises/${station.exerciseId}`}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      onClick={(e) =>
-                                                        e.stopPropagation()
-                                                      }
-                                                      title="Ver ficha completa del ejercicio"
-                                                      className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                                    >
-                                                      <ExternalLink className="size-3" />
-                                                    </NextLink>
-                                                  )}
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      updateStation(
+                                                        flatIdx,
+                                                        stationIdx,
+                                                        {
+                                                          kind: "text",
+                                                          exerciseId: null,
+                                                          name: "",
+                                                        }
+                                                      )
+                                                    }
+                                                    className={cn(
+                                                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                                                      station.kind === "text"
+                                                        ? "border-brand/40 bg-brand/10 text-brand"
+                                                        : "border-border text-muted-foreground hover:border-brand/40"
+                                                    )}
+                                                  >
+                                                    Texto libre
+                                                  </button>
                                                 </div>
-                                              ) : (
-                                                <textarea
-                                                  rows={1}
-                                                  value={station.freeText}
-                                                  onChange={(e) =>
-                                                    updateStation(
-                                                      flatIdx,
-                                                      stationIdx,
-                                                      {
-                                                        freeText:
-                                                          e.target.value,
-                                                      }
-                                                    )
-                                                  }
-                                                  placeholder="Describe la estación…"
-                                                  className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
-                                                />
-                                              )}
-                                            </div>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                removeStation(
-                                                  flatIdx,
-                                                  stationIdx
-                                                )
-                                              }
-                                              disabled={
-                                                stationsCount <=
-                                                STATION_COUNT_MIN
-                                              }
-                                              title={
-                                                stationsCount <=
-                                                STATION_COUNT_MIN
-                                                  ? `Mínimo ${STATION_COUNT_MIN} estaciones`
-                                                  : "Quitar estación"
-                                              }
-                                              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                                            >
-                                              <X className="size-3.5" />
-                                            </button>
-                                          </li>
+                                                {station.kind === "exercise" ? (
+                                                  <div className="flex items-center gap-1">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setPickingStation({
+                                                          itemIdx: flatIdx,
+                                                          stationIdx,
+                                                        });
+                                                        setSourceTab("library");
+                                                      }}
+                                                      className={cn(
+                                                        "min-w-0 flex-1 truncate text-left text-xs hover:text-brand",
+                                                        pickingStation?.itemIdx ===
+                                                          flatIdx &&
+                                                          pickingStation?.stationIdx ===
+                                                            stationIdx
+                                                          ? "font-semibold text-brand"
+                                                          : "text-foreground"
+                                                      )}
+                                                    >
+                                                      {pickingStation?.itemIdx ===
+                                                        flatIdx &&
+                                                      pickingStation?.stationIdx ===
+                                                        stationIdx
+                                                        ? "Elige en la Biblioteca →"
+                                                        : station.name || (
+                                                            <span className="italic text-muted-foreground">
+                                                              Elige un
+                                                              ejercicio…
+                                                            </span>
+                                                          )}
+                                                    </button>
+                                                    {station.exerciseId && (
+                                                      <NextLink
+                                                        href={`/exercises/${station.exerciseId}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) =>
+                                                          e.stopPropagation()
+                                                        }
+                                                        title="Ver ficha completa del ejercicio"
+                                                        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                      >
+                                                        <ExternalLink className="size-3" />
+                                                      </NextLink>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <textarea
+                                                    rows={1}
+                                                    value={station.freeText}
+                                                    onChange={(e) =>
+                                                      updateStation(
+                                                        flatIdx,
+                                                        stationIdx,
+                                                        {
+                                                          freeText:
+                                                            e.target.value,
+                                                        }
+                                                      )
+                                                    }
+                                                    placeholder="Describe la estación…"
+                                                    className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
+                                                  />
+                                                )}
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  removeStation(
+                                                    flatIdx,
+                                                    stationIdx
+                                                  )
+                                                }
+                                                disabled={
+                                                  stationsCount <=
+                                                  STATION_COUNT_MIN
+                                                }
+                                                title={
+                                                  stationsCount <=
+                                                  STATION_COUNT_MIN
+                                                    ? `Mínimo ${STATION_COUNT_MIN} estaciones`
+                                                    : "Quitar estación"
+                                                }
+                                                className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                                              >
+                                                <X className="size-3.5" />
+                                              </button>
+                                            </li>
                                           );
                                         }
                                       )}

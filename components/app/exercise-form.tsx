@@ -1366,8 +1366,7 @@ export function ExerciseForm({
                     Autoría
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    De quién es este ejercicio dentro de la biblioteca
-                    pública.
+                    De quién es este ejercicio dentro de la biblioteca pública.
                   </p>
                   <Controller
                     name="autoria"

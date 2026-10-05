@@ -38,7 +38,9 @@ const initialForm: RegisterForm = {
 
 function isAlreadyRegisteredMessage(message: string) {
   const lower = message.toLowerCase();
-  return lower.includes("already registered") || lower.includes("already exists");
+  return (
+    lower.includes("already registered") || lower.includes("already exists")
+  );
 }
 
 export default function RegisterPage() {
@@ -48,12 +50,17 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(
+    null
+  );
   const [resending, setResending] = useState(false);
   const [resendSent, setResendSent] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
 
-  function update<K extends keyof RegisterForm>(key: K, value: RegisterForm[K]) {
+  function update<K extends keyof RegisterForm>(
+    key: K,
+    value: RegisterForm[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError(null);
     setFieldErrors((prev) => {
@@ -309,7 +316,9 @@ export default function RegisterPage() {
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              aria-label={
+                showPassword ? "Ocultar contraseña" : "Ver contraseña"
+              }
             >
               {showPassword ? (
                 <EyeOff className="size-4" />

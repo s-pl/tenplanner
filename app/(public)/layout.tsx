@@ -22,7 +22,9 @@ export default async function PublicLayout({
           .from(users)
           .where(eq(users.id, user.id))
           .limit(1)
-      : Promise.resolve([] as { isAdmin: boolean | null; image: string | null }[]),
+      : Promise.resolve(
+          [] as { isAdmin: boolean | null; image: string | null }[]
+        ),
     getAppSettings(["system.maintenance_banner", "feature.dr_planner_enabled"]),
   ]);
 

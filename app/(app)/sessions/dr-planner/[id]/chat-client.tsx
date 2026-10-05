@@ -2027,9 +2027,7 @@ export function DrPlannerChat({
         )}
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-8 max-w-xl mx-auto text-center pb-4">
-            <p className="tp-kicker">
-              Consulta · Dr. Planner
-            </p>
+            <p className="tp-kicker">Consulta · Dr. Planner</p>
             <h2 className="text-4xl font-black leading-tight text-foreground md:text-5xl">
               ¿Qué sesión necesitas hoy?
             </h2>

@@ -92,8 +92,12 @@ function MiniToolbar() {
           <NotebookPen className="size-4" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">TenPlanner OS</p>
-          <p className="truncate text-xs text-muted-foreground">Semana 18 - Academia Norte</p>
+          <p className="truncate text-sm font-semibold text-foreground">
+            TenPlanner OS
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            Semana 18 - Academia Norte
+          </p>
         </div>
       </div>
       <div className="hidden items-center gap-1 md:flex">
@@ -136,7 +140,10 @@ function CourtDiagram() {
       </div>
 
       <div className="relative aspect-[1.42] overflow-hidden rounded-md border border-border bg-accent/60">
-        <div aria-hidden className="absolute inset-3 rounded-sm border border-background/80" />
+        <div
+          aria-hidden
+          className="absolute inset-3 rounded-sm border border-background/80"
+        />
         <div
           aria-hidden
           className="absolute left-1/2 top-3 h-[calc(100%-1.5rem)] w-px -translate-x-1/2 bg-background/80"
@@ -145,8 +152,14 @@ function CourtDiagram() {
           aria-hidden
           className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-foreground/30"
         />
-        <div aria-hidden className="absolute bottom-3 left-[25%] top-3 w-px bg-background/70" />
-        <div aria-hidden className="absolute bottom-3 right-[25%] top-3 w-px bg-background/70" />
+        <div
+          aria-hidden
+          className="absolute bottom-3 left-[25%] top-3 w-px bg-background/70"
+        />
+        <div
+          aria-hidden
+          className="absolute bottom-3 right-[25%] top-3 w-px bg-background/70"
+        />
         <motion.span
           aria-hidden
           animate={prefersReducedMotion ? undefined : { x: [0, 18, 0] }}
@@ -158,7 +171,12 @@ function CourtDiagram() {
         <motion.span
           aria-hidden
           animate={prefersReducedMotion ? undefined : { x: [0, -16, 0] }}
-          transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+          transition={{
+            duration: 4.8,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.4,
+          }}
           className="absolute bottom-[22%] right-[19%] grid size-7 place-items-center rounded-full bg-chart-2 text-xs font-bold text-foreground shadow-sm ring-2 ring-background/65"
         >
           N
@@ -191,7 +209,9 @@ function SchedulePanel() {
           >
             <span className="text-xs font-semibold text-brand">{time}</span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground">{group}</p>
+              <p className="truncate text-xs font-semibold text-foreground">
+                {group}
+              </p>
               <p className="truncate text-xs text-muted-foreground">{court}</p>
             </div>
           </div>
@@ -205,7 +225,9 @@ function SessionPlanPanel() {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">Bloques de sesión</p>
+        <p className="text-sm font-semibold text-foreground">
+          Bloques de sesión
+        </p>
         <Goal className="size-4 text-brand" aria-hidden />
       </div>
       <div className="space-y-2">
@@ -215,15 +237,23 @@ function SessionPlanPanel() {
             initial={{ opacity: 0, x: -10 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: index * 0.06, ease: smoothEase }}
+            transition={{
+              duration: 0.5,
+              delay: index * 0.06,
+              ease: smoothEase,
+            }}
             className="grid grid-cols-[38px_1fr] gap-2 rounded-md bg-muted/50 p-2"
           >
             <span className="rounded-md bg-card px-1.5 py-1 text-center text-xs font-bold text-brand shadow-sm">
               {block.time}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground">{block.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{block.detail}</p>
+              <p className="truncate text-xs font-semibold text-foreground">
+                {block.title}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {block.detail}
+              </p>
             </div>
           </motion.div>
         ))}
@@ -237,8 +267,12 @@ function PlayerPanel() {
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">Laura M.</p>
-          <p className="truncate text-xs text-muted-foreground">Perfil: táctica + pared</p>
+          <p className="truncate text-sm font-semibold text-foreground">
+            Laura M.
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            Perfil: táctica + pared
+          </p>
         </div>
         <span className="grid size-9 shrink-0 place-items-center rounded-md bg-chart-2 text-xs font-bold text-foreground">
           82
@@ -251,7 +285,9 @@ function PlayerPanel() {
             className="flex items-center justify-between gap-3 border-t border-border pt-2 first:border-t-0 first:pt-0"
           >
             <span className="text-xs text-muted-foreground">{label}</span>
-            <span className="text-xs font-semibold text-foreground">{value}</span>
+            <span className="text-xs font-semibold text-foreground">
+              {value}
+            </span>
           </div>
         ))}
       </div>
@@ -324,7 +360,9 @@ function ProductDashboard() {
                   className="rounded-lg border border-border bg-card/82 p-3"
                 >
                   <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -354,13 +392,12 @@ export function ProductSystemSection({ className }: { className?: string }) {
         className
       )}
     >
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-border"
-      />
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-border" />
       <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
         <Reveal>
-          <p className="text-sm font-semibold text-brand">Sistema de producto</p>
+          <p className="text-sm font-semibold text-brand">
+            Sistema de producto
+          </p>
           <h2 className="mt-4 max-w-3xl font-heading text-4xl font-semibold leading-[1.02] sm:text-5xl lg:text-6xl">
             Del cuaderno de pista a un sistema operativo para entrenar.
           </h2>
@@ -381,7 +418,11 @@ export function ProductSystemSection({ className }: { className?: string }) {
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.58, delay: 0.08 + index * 0.05, ease: smoothEase }}
+                  transition={{
+                    duration: 0.58,
+                    delay: 0.08 + index * 0.05,
+                    ease: smoothEase,
+                  }}
                   className="rounded-lg border border-border bg-card/72 p-4 backdrop-blur"
                 >
                   <div className="flex items-start gap-3">
@@ -389,8 +430,12 @@ export function ProductSystemSection({ className }: { className?: string }) {
                       <Icon className="size-4" aria-hidden />
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">{pillar.label}</h3>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{pillar.text}</p>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        {pillar.label}
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        {pillar.text}
+                      </p>
                     </div>
                   </div>
                 </motion.div>

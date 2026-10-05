@@ -76,11 +76,23 @@ interface SessionSeed {
 }
 
 const PLACES: PlaceSeed[] = [
-  { name: "Pista 1", description: "Pista central, tierra batida, iluminación nocturna." },
-  { name: "Pista 2", description: "Pista lateral, dura, con pared de frontón." },
+  {
+    name: "Pista 1",
+    description: "Pista central, tierra batida, iluminación nocturna.",
+  },
+  {
+    name: "Pista 2",
+    description: "Pista lateral, dura, con pared de frontón.",
+  },
   { name: "Pista 3", description: "Pista cubierta, moqueta rápida." },
-  { name: "Gimnasio", description: "Sala de fuerza y movilidad junto a vestuarios." },
-  { name: "Pared", description: "Pared exterior para entrenamientos individuales." },
+  {
+    name: "Gimnasio",
+    description: "Sala de fuerza y movilidad junto a vestuarios.",
+  },
+  {
+    name: "Pared",
+    description: "Pared exterior para entrenamientos individuales.",
+  },
 ];
 
 const STUDENTS: StudentSeed[] = [
@@ -211,7 +223,8 @@ const STUDENTS: StudentSeed[] = [
     yearsExperience: 10,
     yearStartedTennis: 2015,
     preferredSchedule: "Miércoles 20:00",
-    notes: "Jugó en juveniles. Vuelve tras pausa de 3 años. Disfruta peloteando.",
+    notes:
+      "Jugó en juveniles. Vuelve tras pausa de 3 años. Disfruta peloteando.",
   },
   {
     name: "Sergio Lara",
@@ -590,7 +603,10 @@ async function seed() {
       await db
         .insert(groupStudents)
         .values(
-          memberIds.map((studentId) => ({ groupId: createdGroup.id, studentId }))
+          memberIds.map((studentId) => ({
+            groupId: createdGroup.id,
+            studentId,
+          }))
         )
         .onConflictDoNothing();
     }
@@ -614,13 +630,20 @@ async function seed() {
           .where(inArray(exercises.name, allReferencedExerciseNames))
       : [];
   const exerciseByName = new Map(
-    exerciseRows.map((r) => [r.name, { id: r.id, durationMinutes: r.durationMinutes }])
+    exerciseRows.map((r) => [
+      r.name,
+      { id: r.id, durationMinutes: r.durationMinutes },
+    ])
   );
 
   let createdSessions = 0;
   let skippedSessions = 0;
   for (const sess of SESSIONS) {
-    const scheduledAt = buildScheduledAt(sess.offsetDays, sess.hour, sess.minute);
+    const scheduledAt = buildScheduledAt(
+      sess.offsetDays,
+      sess.hour,
+      sess.minute
+    );
 
     // Idempotencia: mismo title + scheduledAt + coach
     const [existing] = await db

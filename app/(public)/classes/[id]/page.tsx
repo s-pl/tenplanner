@@ -21,10 +21,7 @@ import {
 import { ClassActions } from "./class-actions";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { PrevNextNav } from "@/components/app/prev-next-nav";
-import {
-  classNavQueryString,
-  getFilteredClassIds,
-} from "@/lib/nav/class-nav";
+import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -288,8 +285,7 @@ export default async function ClassDetailPage({
                                   )}
                                   <ul className="mt-1.5 space-y-1 pl-4">
                                     {(
-                                      (item.stations as StationItemJson[]) ??
-                                      []
+                                      (item.stations as StationItemJson[]) ?? []
                                     ).map((st, si) => (
                                       <li
                                         key={si}

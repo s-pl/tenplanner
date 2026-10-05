@@ -33,19 +33,36 @@ const revealItem = {
 };
 
 const proofPoints = [
-  { value: "137+", label: "Ejercicios", detail: "listos para adaptar por nivel" },
-  { value: "75 min", label: "Sesión", detail: "estructurada en bloques y fases" },
+  {
+    value: "137+",
+    label: "Ejercicios",
+    detail: "listos para adaptar por nivel",
+  },
+  {
+    value: "75 min",
+    label: "Sesión",
+    detail: "estructurada en bloques y fases",
+  },
   { value: "3 bloques", label: "Método", detail: "inicio, principal y cierre" },
 ];
 
 const sessionBlocks = [
-  { time: "18:00", title: "Activación", detail: "patrones de pies", minutes: 8 },
+  {
+    time: "18:00",
+    title: "Activación",
+    detail: "patrones de pies",
+    minutes: 8,
+  },
   { time: "18:10", title: "Técnica", detail: "salida de pared", minutes: 22 },
   { time: "18:35", title: "Decisión", detail: "subida o globo", minutes: 25 },
   { time: "19:00", title: "Cierre", detail: "punto condicionado", minutes: 15 },
 ];
 
-const fieldChecks = ["Grupo confirmado", "Variantes por nivel", "Asistencia preparada"];
+const fieldChecks = [
+  "Grupo confirmado",
+  "Variantes por nivel",
+  "Asistencia preparada",
+];
 
 function HeroCta({
   children,
@@ -118,10 +135,16 @@ function SessionRow({
     >
       <span className="text-xs font-semibold text-brand">{time}</span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold text-foreground">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+        <span className="block truncate text-sm font-semibold text-foreground">
+          {title}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {detail}
+        </span>
       </span>
-      <span className="justify-self-end text-xs tabular-nums text-foreground/55">{minutes}m</span>
+      <span className="justify-self-end text-xs tabular-nums text-foreground/55">
+        {minutes}m
+      </span>
     </motion.li>
   );
 }
@@ -154,7 +177,9 @@ function HeroWorkbench() {
               />
               <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--card)_0%,rgba(255,255,255,0.24)_42%,transparent_100%)]" />
               <div className="absolute left-4 top-4 max-w-[240px] border-l-2 border-brand bg-card/86 px-3 py-2 backdrop-blur">
-                <p className="text-xs font-semibold uppercase text-brand">Jueves · pista 2</p>
+                <p className="text-xs font-semibold uppercase text-brand">
+                  Jueves · pista 2
+                </p>
                 <p className="mt-1 text-sm font-semibold leading-5 text-foreground">
                   Sub-16 competición · salida de pared
                 </p>
@@ -164,8 +189,12 @@ function HeroWorkbench() {
             <div className="ledger-surface p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase text-brand">Pizarra viva</p>
-                  <h2 className="mt-1 font-heading text-xl text-foreground">Objetivo y ocupación</h2>
+                  <p className="text-xs font-semibold uppercase text-brand">
+                    Pizarra viva
+                  </p>
+                  <h2 className="mt-1 font-heading text-xl text-foreground">
+                    Objetivo y ocupación
+                  </h2>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-md border border-brand/25 bg-brand/8 px-2.5 py-1 text-xs font-semibold text-brand">
                   <Clock3 className="size-3.5" />
@@ -179,7 +208,12 @@ function HeroWorkbench() {
                 <div className="absolute inset-y-4 left-1/2 w-px bg-brand/55" />
                 <div className="absolute left-[18%] top-4 bottom-4 w-px bg-foreground/14" />
                 <div className="absolute right-[18%] top-4 bottom-4 w-px bg-foreground/14" />
-                <CourtMarker className="left-[20%] top-[18%]" label="L" delay={0} reducedMotion={reducedMotion} />
+                <CourtMarker
+                  className="left-[20%] top-[18%]"
+                  label="L"
+                  delay={0}
+                  reducedMotion={reducedMotion}
+                />
                 <CourtMarker
                   className="right-[23%] top-[30%] bg-chart-2 text-foreground"
                   label="N"
@@ -194,8 +228,16 @@ function HeroWorkbench() {
                 />
                 <motion.span
                   aria-hidden
-                  animate={reducedMotion ? { x: 0, y: 0 } : { x: [0, 70, 22, 112], y: [0, 30, 92, 120] }}
-                  transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+                  animate={
+                    reducedMotion
+                      ? { x: 0, y: 0 }
+                      : { x: [0, 70, 22, 112], y: [0, 30, 92, 120] }
+                  }
+                  transition={{
+                    duration: 5.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
                   className="absolute left-[28%] top-[24%] size-2 rounded-sm bg-chart-5"
                 />
               </div>
@@ -206,8 +248,12 @@ function HeroWorkbench() {
             <div className="border-b border-border px-4 py-4 sm:px-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase text-brand">Plan de sesión</p>
-                  <h3 className="mt-1 font-heading text-2xl leading-none text-foreground">Método en pista</h3>
+                  <p className="text-xs font-semibold uppercase text-brand">
+                    Plan de sesión
+                  </p>
+                  <h3 className="mt-1 font-heading text-2xl leading-none text-foreground">
+                    Método en pista
+                  </h3>
                 </div>
                 <Brain className="size-5 text-brand" strokeWidth={1.7} />
               </div>
@@ -233,8 +279,14 @@ function HeroWorkbench() {
 
               <ul className="mt-4 grid gap-2">
                 {fieldChecks.map((check) => (
-                  <li key={check} className="flex items-center gap-2 text-xs font-medium text-foreground/75">
-                    <CheckCircle2 className="size-3.5 text-brand" strokeWidth={2} />
+                  <li
+                    key={check}
+                    className="flex items-center gap-2 text-xs font-medium text-foreground/75"
+                  >
+                    <CheckCircle2
+                      className="size-3.5 text-brand"
+                      strokeWidth={2}
+                    />
                     {check}
                   </li>
                 ))}
@@ -249,7 +301,10 @@ function HeroWorkbench() {
 
 export function HeroSection() {
   return (
-    <section id="hero" className="relative isolate overflow-hidden bg-background text-foreground">
+    <section
+      id="hero"
+      className="relative isolate overflow-hidden bg-background text-foreground"
+    >
       {/* Subtle radial gradient replaces the noisy court-grid + polygon */}
       <div
         aria-hidden
@@ -314,9 +369,15 @@ export function HeroSection() {
                     "border-b border-border sm:border-b-0 sm:border-r"
                 )}
               >
-                <dt className="font-heading text-4xl leading-none text-foreground">{point.value}</dt>
-                <dd className="mt-2 text-sm font-semibold text-foreground">{point.label}</dd>
-                <dd className="mt-1 text-xs leading-5 text-muted-foreground">{point.detail}</dd>
+                <dt className="font-heading text-4xl leading-none text-foreground">
+                  {point.value}
+                </dt>
+                <dd className="mt-2 text-sm font-semibold text-foreground">
+                  {point.label}
+                </dd>
+                <dd className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {point.detail}
+                </dd>
               </motion.div>
             ))}
           </motion.dl>

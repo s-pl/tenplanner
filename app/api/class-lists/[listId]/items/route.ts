@@ -48,7 +48,8 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   const list = await ensureOwnedList(parsedParams.data.listId, user.id);
-  if (!list) return NextResponse.json({ error: "List not found" }, { status: 404 });
+  if (!list)
+    return NextResponse.json({ error: "List not found" }, { status: 404 });
 
   const [cls] = await db
     .select({ id: classes.id })
@@ -60,11 +61,15 @@ export async function POST(request: Request, context: RouteContext) {
       )
     )
     .limit(1);
-  if (!cls) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+  if (!cls)
+    return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
   const [item] = await db
     .insert(classListItems)
-    .values({ listId: parsedParams.data.listId, classId: parsedBody.data.classId })
+    .values({
+      listId: parsedParams.data.listId,
+      classId: parsedBody.data.classId,
+    })
     .onConflictDoNothing()
     .returning();
 
@@ -83,12 +88,15 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (!parsedParams.success)
     return NextResponse.json({ error: "Invalid list id" }, { status: 400 });
 
-  const parsedBody = itemSchema.safeParse(await request.json().catch(() => ({})));
+  const parsedBody = itemSchema.safeParse(
+    await request.json().catch(() => ({}))
+  );
   if (!parsedBody.success)
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
   const list = await ensureOwnedList(parsedParams.data.listId, user.id);
-  if (!list) return NextResponse.json({ error: "List not found" }, { status: 404 });
+  if (!list)
+    return NextResponse.json({ error: "List not found" }, { status: 404 });
 
   await db
     .delete(classListItems)

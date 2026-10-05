@@ -367,7 +367,10 @@ export function AdminContentClient({
                 <button
                   onClick={() => void bulkToggleGlobal(true)}
                   disabled={busy === "bulk"}
-                  className={cn(adminPrimaryActionClass, "h-7 px-2.5 text-[11px]")}
+                  className={cn(
+                    adminPrimaryActionClass,
+                    "h-7 px-2.5 text-[11px]"
+                  )}
                 >
                   <Globe className="size-3" /> Publicar todos
                 </button>
@@ -475,7 +478,10 @@ export function AdminContentClient({
                   <button
                     onClick={() => void toggleGlobal(e.id, !e.isGlobal)}
                     disabled={busy === e.id || busy === "bulk"}
-                    className={cn(adminPrimaryActionClass, "disabled:opacity-40")}
+                    className={cn(
+                      adminPrimaryActionClass,
+                      "disabled:opacity-40"
+                    )}
                   >
                     {busy === e.id ? (
                       <Loader2 className="size-3.5 animate-spin" />

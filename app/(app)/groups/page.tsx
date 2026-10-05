@@ -79,97 +79,97 @@ export default async function GroupsPage() {
           </div>
         </header>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Groups grid */}
-        <div>
-          {rows.length === 0 ? (
-            <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
-              <div className="flex size-16 items-center justify-center rounded-full border border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
-                <Shield className="size-7 text-foreground/25" />
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Groups grid */}
+          <div>
+            {rows.length === 0 ? (
+              <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
+                <div className="flex size-16 items-center justify-center rounded-full border border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
+                  <Shield className="size-7 text-foreground/25" />
+                </div>
+                <div>
+                  <p className="text-base font-black text-foreground/58">
+                    Sin grupos todavía
+                  </p>
+                  <p className="mt-1 text-sm text-foreground/42">
+                    Crea tu primer grupo para empezar.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-base font-black text-foreground/58">
-                  Sin grupos todavía
-                </p>
-                <p className="mt-1 text-sm text-foreground/42">
-                  Crea tu primer grupo para empezar.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {rows.map((g, i) => (
-                <Link
-                  key={g.id}
-                  href={`/groups/${g.id}`}
-                  className="group relative flex min-h-[220px] flex-col gap-4 rounded-[28px] border border-[#050505]/10 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] transition-all hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_28px_90px_-60px_rgba(5,5,5,0.75)] dark:border-white/10 dark:bg-[#10100e]"
-                >
-                  {/* Index badge */}
-                  <span className="absolute top-4 right-4 font-mono text-[10px] text-foreground/20 tabular-nums">
-                    {(i + 1).toString().padStart(2, "0")}
-                  </span>
-
-                  {/* Icon + count */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex size-12 items-center justify-center rounded-full border border-brand/20 bg-brand/15">
-                      <Users className="size-5 text-foreground" />
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1.5 rounded-full bg-[#F4F4F1] px-3 py-1 dark:bg-white/[0.06]">
-                      <span className="text-[11px] font-black tabular-nums text-foreground/70">
-                        {g.memberCount}
-                      </span>
-                      <span className="text-[10px] text-foreground/35">
-                        {Number(g.memberCount) === 1 ? "alumno" : "alumnos"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Name + description */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[18px] font-black leading-tight text-foreground transition-colors group-hover:text-brand">
-                      {g.name}
-                    </p>
-                    {g.description ? (
-                      <p className="text-[12px] text-foreground/45 mt-1.5 line-clamp-2 leading-relaxed">
-                        {g.description}
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-[12px] italic text-foreground/30">
-                        Sin descripción
-                      </p>
-                    )}
-                  </div>
-
-                  {/* CTA arrow */}
-                  <div className="flex items-center justify-between border-t border-[#050505]/10 pt-3 dark:border-white/10">
-                    <span className="text-[11px] font-black uppercase text-foreground/40">
-                      Ver grupo
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {rows.map((g, i) => (
+                  <Link
+                    key={g.id}
+                    href={`/groups/${g.id}`}
+                    className="group relative flex min-h-[220px] flex-col gap-4 rounded-[28px] border border-[#050505]/10 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] transition-all hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_28px_90px_-60px_rgba(5,5,5,0.75)] dark:border-white/10 dark:bg-[#10100e]"
+                  >
+                    {/* Index badge */}
+                    <span className="absolute top-4 right-4 font-mono text-[10px] text-foreground/20 tabular-nums">
+                      {(i + 1).toString().padStart(2, "0")}
                     </span>
-                    <ChevronRight className="size-4 text-foreground/25 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Create form sidebar */}
-        <div className="lg:sticky lg:top-6">
-          <div className="tp-panel overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
-              <div className="flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
-                <Plus className="size-4" />
+                    {/* Icon + count */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex size-12 items-center justify-center rounded-full border border-brand/20 bg-brand/15">
+                        <Users className="size-5 text-foreground" />
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5 rounded-full bg-[#F4F4F1] px-3 py-1 dark:bg-white/[0.06]">
+                        <span className="text-[11px] font-black tabular-nums text-foreground/70">
+                          {g.memberCount}
+                        </span>
+                        <span className="text-[10px] text-foreground/35">
+                          {Number(g.memberCount) === 1 ? "alumno" : "alumnos"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Name + description */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[18px] font-black leading-tight text-foreground transition-colors group-hover:text-brand">
+                        {g.name}
+                      </p>
+                      {g.description ? (
+                        <p className="text-[12px] text-foreground/45 mt-1.5 line-clamp-2 leading-relaxed">
+                          {g.description}
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 text-[12px] italic text-foreground/30">
+                          Sin descripción
+                        </p>
+                      )}
+                    </div>
+
+                    {/* CTA arrow */}
+                    <div className="flex items-center justify-between border-t border-[#050505]/10 pt-3 dark:border-white/10">
+                      <span className="text-[11px] font-black uppercase text-foreground/40">
+                        Ver grupo
+                      </span>
+                      <ChevronRight className="size-4 text-foreground/25 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <h2 className="text-[13px] font-black uppercase text-foreground">
-                Nuevo grupo
-              </h2>
-            </div>
-            <div className="p-5">
-              <GroupCreateForm />
+            )}
+          </div>
+
+          {/* Create form sidebar */}
+          <div className="lg:sticky lg:top-6">
+            <div className="tp-panel overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
+                <div className="flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                  <Plus className="size-4" />
+                </div>
+                <h2 className="text-[13px] font-black uppercase text-foreground">
+                  Nuevo grupo
+                </h2>
+              </div>
+              <div className="p-5">
+                <GroupCreateForm />
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

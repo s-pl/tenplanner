@@ -25,7 +25,7 @@ export default async function AdminBrandingPage() {
         appName={String(values.get("brand.app_name") ?? "TenPlanner")}
         appTagline={String(
           values.get("brand.app_tagline") ??
-          "Planificador de deportes de raqueta"
+            "Planificador de deportes de raqueta"
         )}
         supportEmail={String(values.get("brand.support_email") ?? "")}
         defaultAccent={String(values.get("brand.default_accent") ?? "blue")}

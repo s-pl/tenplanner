@@ -396,7 +396,10 @@ export function AdminLandingClient({
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {specValues.map((item) => (
-                <div key={item.k} className="rounded-lg border border-foreground/12 bg-card/80 p-3">
+                <div
+                  key={item.k}
+                  className="rounded-lg border border-foreground/12 bg-card/80 p-3"
+                >
                   <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                     {item.k}
                   </p>

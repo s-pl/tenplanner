@@ -4,7 +4,10 @@ import { useState } from "react";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { adminPanelClass, adminPrimaryActionClass } from "../_components/admin-ui";
+import {
+  adminPanelClass,
+  adminPrimaryActionClass,
+} from "../_components/admin-ui";
 
 interface Stats {
   exercises: { total: number; embedded: number };
@@ -155,7 +158,10 @@ export function EmbeddingsClient({ stats: initial }: { stats: Stats }) {
             <button
               onClick={runBackfill}
               disabled={loading}
-              className={cn(adminPrimaryActionClass, "h-9 px-4 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40")}
+              className={cn(
+                adminPrimaryActionClass,
+                "h-9 px-4 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40"
+              )}
             >
               {loading ? (
                 <Loader2 className="size-3.5 animate-spin" />

@@ -26,8 +26,7 @@ const stationItemSchema = z
     durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
   })
   .refine(
-    (v) =>
-      v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim(),
+    (v) => (v.kind === "exercise" ? !!v.exerciseId : !!v.freeText?.trim()),
     { message: "Cada estación necesita un ejercicio o un texto." }
   );
 
@@ -235,7 +234,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 
   function buildStations(
-    stations: NonNullable<(typeof d.blocks)>[number]["items"][number]["stations"]
+    stations: NonNullable<typeof d.blocks>[number]["items"][number]["stations"]
   ) {
     return (stations ?? []).map((s) => ({
       kind: s.kind,

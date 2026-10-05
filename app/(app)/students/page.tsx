@@ -154,9 +154,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
         {/* Search rail */}
         {totalStudents > 0 && (
           <section className="tp-panel grid grid-cols-[auto_1fr_auto] items-center gap-4 p-4">
-            <p className="text-[10px] font-black tabular-nums text-brand">
-              01
-            </p>
+            <p className="text-[10px] font-black tabular-nums text-brand">01</p>
             <form className="relative" action="/students" method="get">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/40" />
               <input
@@ -176,9 +174,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
         {/* Empty */}
         {totalStudents === 0 ? (
           <div className="tp-panel border-dashed px-6 py-20 text-center">
-            <p className="tp-kicker mb-4">
-              Estantería vacía
-            </p>
+            <p className="tp-kicker mb-4">Estantería vacía</p>
             <h2 className="mb-3 text-3xl font-black text-foreground">
               Todavía no tienes alumnos.
             </h2>
@@ -196,9 +192,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           </div>
         ) : filtered.length === 0 ? (
           <div className="tp-panel border-dashed px-6 py-16 text-center">
-            <p className="tp-kicker mb-2">
-              Sin resultados
-            </p>
+            <p className="tp-kicker mb-2">Sin resultados</p>
             <p className="mb-3 text-2xl font-black text-foreground">
               Ningún alumno coincide con &ldquo;
               <span className="text-brand">{searchTerm}</span>&rdquo;.
