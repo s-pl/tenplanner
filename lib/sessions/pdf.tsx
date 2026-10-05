@@ -332,7 +332,9 @@ function groupByPhase(exercises: PdfExercise[]) {
     .map((k) => ({ phase: k, items: groups.get(k)! }));
 }
 
-export function SessionPdf({ session }: { session: PdfSession }) {
+/** Contenido de una sesión como página A4. Reutilizable para combinar
+ * varias sesiones en un único PDF (ver `MultiSessionPdf`). */
+export function SessionPdfPage({ session }: { session: PdfSession }) {
   const phases = groupByPhase(session.exercises);
   const totalMinutes =
     session.exercises.reduce((s, e) => s + (e.durationMinutes ?? 0), 0) ||
@@ -347,12 +349,6 @@ export function SessionPdf({ session }: { session: PdfSession }) {
   );
 
   return (
-    <Document
-      title={session.title}
-      author={session.coachName}
-      creator="TenPlanner"
-      producer="TenPlanner"
-    >
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
@@ -609,6 +605,44 @@ export function SessionPdf({ session }: { session: PdfSession }) {
           {session.coachName}
         </Text>
       </Page>
+  );
+}
+
+/** PDF de una única sesión. */
+export function SessionPdf({ session }: { session: PdfSession }) {
+  return (
+    <Document
+      title={session.title}
+      author={session.coachName}
+      creator="TenPlanner"
+      producer="TenPlanner"
+    >
+      <SessionPdfPage session={session} />
+    </Document>
+  );
+}
+
+/** PDF combinado: una página (o más, si la sesión no cabe en una) por
+ * cada sesión, en el orden recibido. Pensado para "todas las sesiones
+ * de un día" o una selección de varias. */
+export function MultiSessionPdf({
+  sessions,
+  title,
+}: {
+  sessions: PdfSession[];
+  title?: string;
+}) {
+  const coachName = sessions[0]?.coachName ?? "Entrenador";
+  return (
+    <Document
+      title={title ?? "Sesiones de entrenamiento"}
+      author={coachName}
+      creator="TenPlanner"
+      producer="TenPlanner"
+    >
+      {sessions.map((session, idx) => (
+        <SessionPdfPage key={`${session.title}-${idx}`} session={session} />
+      ))}
     </Document>
   );
 }

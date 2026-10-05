@@ -31,6 +31,7 @@ import {
   EventDialog,
   type CalendarEventData,
 } from "@/components/app/event-dialog";
+import { DayPdfButton } from "@/components/app/day-pdf-dialog";
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
 
@@ -553,14 +554,20 @@ export function CalendarClient({
                 </span>
               )}
             </h3>
-            <button
-              type="button"
-              onClick={() => setEventDialog({ event: null })}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#2563eb]/30 px-3 text-xs font-black text-[#2563eb] transition-colors hover:bg-[#2563eb] hover:text-white"
-            >
-              <Plus className="size-3.5" />
-              Evento
-            </button>
+            <div className="flex items-center gap-2">
+              <DayPdfButton
+                sessions={selectedSessions}
+                dayLabel={`${MONTHS[viewMonth].toLowerCase()}-${selectedDay}-${viewYear}`}
+              />
+              <button
+                type="button"
+                onClick={() => setEventDialog({ event: null })}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#2563eb]/30 px-3 text-xs font-black text-[#2563eb] transition-colors hover:bg-[#2563eb] hover:text-white"
+              >
+                <Plus className="size-3.5" />
+                Evento
+              </button>
+            </div>
           </div>
           {selectedDayItems.length === 0 ? (
             <div className="tp-panel border-dashed p-6 text-center">
