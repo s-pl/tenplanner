@@ -22,7 +22,10 @@ self.addEventListener("activate", (event) => {
         Promise.all(
           keys
             .filter(
-              (key) => key.startsWith("tenplanner-") && key !== STATIC_CACHE && key !== RUNTIME_CACHE
+              (key) =>
+                key.startsWith("tenplanner-") &&
+                key !== STATIC_CACHE &&
+                key !== RUNTIME_CACHE
             )
             .map((key) => caches.delete(key))
         )
@@ -44,7 +47,10 @@ self.addEventListener("fetch", (event) => {
 
   // Only handle same-origin GET requests; let everything else (POST/PUT,
   // auth, external origins) pass straight through to the network.
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) {
+  if (
+    request.method !== "GET" ||
+    new URL(request.url).origin !== self.location.origin
+  ) {
     return;
   }
 
@@ -77,7 +83,11 @@ self.addEventListener("fetch", (event) => {
           caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/dashboard")))
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match("/dashboard"))
+        )
     );
     return;
   }
