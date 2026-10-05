@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LandingNav } from "./landing-nav";
 import { Reveal, RevealItem, RevealStagger } from "./landing-reveal";
+import { TenPlannerMark } from "./ten-planner-mark";
 import {
   type LandingClassCard,
   type LandingExerciseCard,
@@ -517,8 +518,9 @@ function Footer() {
         <div>
           <Link
             href="/"
-            className="font-heading text-[22px] font-bold text-white"
+            className="flex items-center gap-2.5 font-heading text-[22px] font-bold text-white"
           >
+            <TenPlannerMark className="size-9 rounded-[10px]" />
             Ten<span className="text-[#d6ff38]">·</span>Planner
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/58">

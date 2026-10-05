@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TenPlannerMark } from "./ten-planner-mark";
 
 const navItems = [
   { label: "Cómo funciona", href: "#como-funciona" },
@@ -28,9 +29,10 @@ export function LandingNav() {
       <div className="mx-auto flex max-w-[1710px] items-center justify-between gap-4">
         <Link
           href="/"
-          className="font-heading text-[22px] font-bold text-[#050505]"
+          className="flex items-center gap-2.5 font-heading text-[22px] font-bold text-[#050505]"
           onClick={() => setOpen(false)}
         >
+          <TenPlannerMark className="size-9 rounded-[10px] shadow-sm" />
           Ten<span className="text-[#5f7000]">·</span>Planner
         </Link>
         <nav className="hidden items-center gap-10 md:flex">
