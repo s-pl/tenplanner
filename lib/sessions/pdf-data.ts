@@ -120,7 +120,7 @@ export async function buildPdfSession(
       }
       return {
         kind: "text" as const,
-        name: item.text,
+        name: item.title || item.text || "Anotación",
         category: "technique" as const,
         difficulty: "beginner" as const,
         orderIndex,
@@ -129,7 +129,8 @@ export async function buildPdfSession(
         phase: item.phase,
         intensity: null,
         materials: [],
-        description: item.description,
+        description:
+          item.title && item.text ? item.text : item.description,
         blockTitle: blockTitles.get(item.blockOrder) ?? null,
       };
     }),

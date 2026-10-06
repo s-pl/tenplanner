@@ -31,6 +31,12 @@ export interface WizardExercise {
    */
   kind?: "exercise" | "text" | "warmup" | "stations";
   freeText?: string;
+  /**
+   * Título corto del item (solo kind "text"), mostrado en negrita igual
+   * que el nombre de un ejercicio de biblioteca. Opcional: una anotación
+   * puede ir sin título.
+   */
+  title?: string;
   /** Solo para kind "stations". */
   stations?: StationDraftItem[];
   name: string;
@@ -46,6 +52,7 @@ export interface WizardBlockItem {
   kind?: "exercise" | "text" | "warmup" | "stations";
   exerciseId?: string | null;
   freeText?: string | null;
+  title?: string | null;
   durationMinutes?: number | null;
   notes?: string | null;
   stations?: StationDraftItem[] | null;

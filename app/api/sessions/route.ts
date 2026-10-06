@@ -29,14 +29,11 @@ import {
   sessionsListQuerySchema,
   zodValidationErrorResponse,
 } from "./validation";
-import {
-  calculateExercisePlanDuration,
-  exerciseVisibleToUserCondition,
-} from "@/lib/exercise-access";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
 import { canTagWithClub } from "@/lib/clubs";
 import { embedSession } from "@/lib/ai/semantic-search";
-import type { StationItemJson } from "@/lib/block-items";
+import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -64,6 +61,7 @@ type SessionBlockInputItem = {
   kind?: "exercise" | "text" | "warmup" | "stations";
   exerciseId?: string | null;
   freeText?: string | null;
+  title?: string | null;
   durationMinutes?: number | null;
   notes?: string | null;
   stations?: Array<{
@@ -137,18 +135,6 @@ function buildBlocksFromExercises(
         notes: null,
         items: [],
       }
-  );
-}
-
-function sumBlockDuration(blocks: SessionBlockInput[]) {
-  return blocks.reduce(
-    (sum, block) =>
-      sum +
-      block.items.reduce(
-        (blockSum, item) => blockSum + (item.durationMinutes ?? 0),
-        0
-      ),
-    0
   );
 }
 
@@ -554,17 +540,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const computedDuration =
-      calculateExercisePlanDuration(
-        compatibilityExercises,
-        new Map(
-          Array.from(snapshots.values()).map((row) => [
-            row.id,
-            row.durationMinutes,
-          ])
-        )
-      ) || sumBlockDuration(normalizedBlocks);
-    const durationMinutes = providedDuration ?? computedDuration ?? 60;
+    // La duración real de la sesión es la suma de sus items (ejercicios,
+    // textos libres, descansos, estaciones), no el número que el monitor
+    // haya dejado en el campo "Duración" del paso 1 — ese campo puede
+    // quedar desactualizado según se construye el plan. Solo cuando no hay
+    // contenido (p. ej. sesión rápida) usamos el valor enviado o 60 min.
+    const exerciseDurationById = new Map(
+      Array.from(snapshots.values()).map((row) => [row.id, row.durationMinutes])
+    );
+    const computedDuration = sumBlocksDuration(
+      normalizedBlocks,
+      exerciseDurationById
+    );
+    const durationMinutes =
+      computedDuration > 0 ? computedDuration : (providedDuration ?? 60);
 
     const normalizedTags =
       tags && tags.length > 0
@@ -643,6 +632,7 @@ export async function POST(request: Request) {
                 exerciseName: snapshot?.name ?? null,
                 exerciseDescription: snapshot?.description ?? null,
                 freeText: item.freeText?.trim() || null,
+                title: item.title?.trim() || null,
                 orderIndex: idx,
                 durationMinutes:
                   item.durationMinutes ?? snapshot?.durationMinutes ?? null,

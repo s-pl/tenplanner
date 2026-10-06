@@ -37,6 +37,7 @@ export type SessionPlanItem =
       phase: SessionPlanPhase;
       blockOrder: 1 | 2 | 3;
       text: string;
+      title: string | null;
       /** Descripción guardada (p. ej. de un ejercicio que ya no existe). */
       description: string | null;
       durationMinutes: number | null;
@@ -127,6 +128,7 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       itemExerciseName: sessionBlockItems.exerciseName,
       itemExerciseDescription: sessionBlockItems.exerciseDescription,
       itemFreeText: sessionBlockItems.freeText,
+      itemTitle: sessionBlockItems.title,
       itemDuration: sessionBlockItems.durationMinutes,
       itemNotes: sessionBlockItems.notes,
       itemKind: sessionBlockItems.kind,
@@ -228,13 +230,15 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
         continue;
       }
       const text = row.itemFreeText?.trim() || row.itemExerciseName?.trim();
-      if (!text) continue;
+      const title = row.itemTitle?.trim() || null;
+      if (!text && !title) continue;
       items.push({
         kind: "text",
         key: row.itemId,
         phase,
         blockOrder: order,
-        text,
+        text: text ?? "",
+        title,
         description: row.itemFreeText
           ? null
           : (row.itemExerciseDescription ?? null),

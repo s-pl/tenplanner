@@ -54,6 +54,7 @@ const sessionBlockItemSchema = z
       .optional()
       .nullable(),
     freeText: z.string().trim().max(2000).optional().nullable(),
+    title: z.string().trim().max(120).optional().nullable(),
     durationMinutes: z.number().int().min(1).max(300).optional().nullable(),
     notes: z.string().trim().max(1000).optional().nullable(),
     stations: z
@@ -67,9 +68,14 @@ const sessionBlockItemSchema = z
     (item) => {
       if (item.kind === "stations") return (item.stations?.length ?? 0) > 0;
       if (item.kind === "warmup") return true;
-      return !!item.exerciseId || !!item.freeText?.trim();
+      return (
+        !!item.exerciseId || !!item.freeText?.trim() || !!item.title?.trim()
+      );
     },
-    { message: "Cada item de bloque necesita ejercicio, texto o estaciones" }
+    {
+      message:
+        "Cada item de bloque necesita ejercicio, texto, título o estaciones",
+    }
   );
 
 const sessionBlockSchema = z.object({

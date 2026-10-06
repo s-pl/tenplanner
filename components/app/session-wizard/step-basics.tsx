@@ -5,6 +5,7 @@ import { DateTimePicker } from "@/components/app/date-time-picker";
 import { cn } from "@/lib/utils";
 import { LOCATION_OPTIONS, type WizardState } from "./types";
 import { sessionCode } from "./recurrence";
+import { hasPlanContent } from "./timeline";
 
 interface StepBasicsProps {
   state: WizardState;
@@ -186,6 +187,11 @@ export function StepBasics({
           {errors.durationMinutes && (
             <p className="text-xs text-destructive font-medium">
               {errors.durationMinutes}
+            </p>
+          )}
+          {hasPlanContent(state) && (
+            <p className="text-[11px] text-muted-foreground">
+              Se recalcula sola a partir de los ejercicios y textos del plan.
             </p>
           )}
         </div>

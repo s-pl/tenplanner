@@ -18,13 +18,10 @@ import {
   updateSessionSchema,
   zodValidationErrorResponse,
 } from "../validation";
-import {
-  calculateExercisePlanDuration,
-  exerciseVisibleToUserCondition,
-} from "@/lib/exercise-access";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
 import { canTagWithClub } from "@/lib/clubs";
-import type { StationItemJson } from "@/lib/block-items";
+import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -34,6 +31,7 @@ type SessionBlockInputItem = {
   kind?: "exercise" | "text" | "warmup" | "stations";
   exerciseId?: string | null;
   freeText?: string | null;
+  title?: string | null;
   durationMinutes?: number | null;
   notes?: string | null;
   stations?: Array<{
@@ -204,18 +202,6 @@ function buildCompatibilityExercises(
           ]
         : []
     )
-  );
-}
-
-function sumBlockDuration(blocks: SessionBlockInput[]) {
-  return blocks.reduce(
-    (sum, block) =>
-      sum +
-      block.items.reduce(
-        (blockSum, item) => blockSum + (item.durationMinutes ?? 0),
-        0
-      ),
-    0
   );
 }
 
@@ -609,19 +595,28 @@ export async function PUT(request: Request, context: RouteContext) {
           : null;
     }
 
-    if (sessionFields.durationMinutes !== undefined) {
+    // Igual que al crear: si el plan se está reemplazando, la duración real
+    // se recalcula a partir de su contenido en vez de fiarse de un número
+    // que puede haber quedado desactualizado. Un valor enviado explícito
+    // solo se respeta cuando no hay contenido del que calcularla.
+    if (replacesPlan) {
+      const exerciseDurationById = new Map(
+        Array.from(snapshots.values()).map((row) => [
+          row.id,
+          row.durationMinutes,
+        ])
+      );
+      const computedDuration = sumBlocksDuration(
+        normalizedBlocks,
+        exerciseDurationById
+      );
+      if (computedDuration > 0) {
+        updateValues.durationMinutes = computedDuration;
+      } else if (sessionFields.durationMinutes !== undefined) {
+        updateValues.durationMinutes = sessionFields.durationMinutes;
+      }
+    } else if (sessionFields.durationMinutes !== undefined) {
       updateValues.durationMinutes = sessionFields.durationMinutes;
-    } else if (replacesPlan) {
-      updateValues.durationMinutes =
-        calculateExercisePlanDuration(
-          compatibilityExercises,
-          new Map(
-            Array.from(snapshots.values()).map((row) => [
-              row.id,
-              row.durationMinutes,
-            ])
-          )
-        ) || sumBlockDuration(normalizedBlocks);
     }
 
     const updatedSession = await db.transaction(async (tx) => {
@@ -722,6 +717,7 @@ export async function PUT(request: Request, context: RouteContext) {
                   exerciseName: snapshot?.name ?? null,
                   exerciseDescription: snapshot?.description ?? null,
                   freeText: item.freeText?.trim() || null,
+                  title: item.title?.trim() || null,
                   orderIndex: idx,
                   durationMinutes:
                     item.durationMinutes ?? snapshot?.durationMinutes ?? null,

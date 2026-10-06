@@ -328,6 +328,10 @@ export const sessionBlockItems = pgTable(
     exerciseName: varchar("exercise_name", { length: 255 }),
     exerciseDescription: text("exercise_description"),
     freeText: text("free_text"),
+    // Título corto para items de texto libre (kind="text"), mostrado en
+    // negrita igual que el nombre de un ejercicio de biblioteca. Opcional:
+    // una anotación o actividad libre puede no llevar título.
+    title: varchar("title", { length: 120 }),
     orderIndex: integer("order_index").notNull(),
     durationMinutes: integer("duration_minutes"),
     notes: text("notes"),
@@ -785,6 +789,10 @@ export const classBlockExercises = pgTable(
       onDelete: "set null",
     }),
     freeText: text("free_text"), // si exerciseId es null, contenido manual
+    // Título corto para items de texto libre (kind="text"), mostrado en
+    // negrita igual que el nombre de un ejercicio de biblioteca. Opcional:
+    // una anotación o actividad libre puede no llevar título.
+    title: varchar("title", { length: 120 }),
     orderIndex: integer("order_index").notNull(),
     durationMinutes: integer("duration_minutes"),
     // "exercise"|"text"|"warmup"|"stations"; null = legacy (infer from

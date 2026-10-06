@@ -1,4 +1,8 @@
-import { emptyStationDraft, type StationDraftItem } from "@/lib/block-items";
+import {
+  DEFAULT_BLOCK_ITEM_DURATION,
+  emptyStationDraft,
+  type StationDraftItem,
+} from "@/lib/block-items";
 import type {
   TrainingPhase,
   WizardExercise,
@@ -9,7 +13,8 @@ import type {
 export const TEXT_ITEM_PREFIX = "text-";
 export const WARMUP_ITEM_PREFIX = "warmup-";
 export const STATIONS_ITEM_PREFIX = "stations-";
-export const DEFAULT_TEXT_DURATION = 5;
+/** Misma duración por defecto que usa el servidor al calcular el total. */
+export const DEFAULT_TEXT_DURATION = DEFAULT_BLOCK_ITEM_DURATION;
 
 export const BLOCK_DEFAULTS: Array<{ orderIndex: 1 | 2 | 3; title: string }> = [
   { orderIndex: 1, title: "Bloque inicial" },
@@ -44,12 +49,14 @@ export function createTextItem(
   text = "",
   phase: TrainingPhase | null = null,
   durationMinutes: number | null = null,
-  notes = ""
+  notes = "",
+  title = ""
 ): WizardExercise {
   return {
     exerciseId: `${TEXT_ITEM_PREFIX}${randomKey()}`,
     kind: "text",
     freeText: text,
+    title,
     name: text,
     category: "text",
     durationMinutes: durationMinutes ?? DEFAULT_TEXT_DURATION,
@@ -153,13 +160,14 @@ export function textItemsFromBlocks(
         if (item.stations?.length) stationsItem.stations = item.stations;
         return [stationsItem];
       }
-      if (!item.exerciseId && item.freeText?.trim()) {
+      if (!item.exerciseId && (item.freeText?.trim() || item.title?.trim())) {
         return [
           createTextItem(
-            item.freeText.trim(),
+            item.freeText?.trim() ?? "",
             phase,
             item.durationMinutes ?? null,
-            item.notes ?? ""
+            item.notes ?? "",
+            item.title?.trim() ?? ""
           ),
         ];
       }
@@ -172,6 +180,7 @@ export type BlockPayloadItem = {
   kind?: "exercise" | "text" | "warmup" | "stations";
   exerciseId?: string;
   freeText?: string | null;
+  title?: string | null;
   durationMinutes: number | null;
   notes: string | null;
   stations?: StationDraftItem[];
@@ -218,11 +227,13 @@ export function buildBlocksPayload(
         notes: item.notes.trim() || null,
       });
     } else if (isTextItem(item)) {
-      const text = item.freeText?.trim();
-      if (!text) continue;
+      const text = item.freeText?.trim() || null;
+      const title = item.title?.trim() || null;
+      if (!text && !title) continue;
       block.items.push({
         kind: "text",
         freeText: text,
+        title,
         durationMinutes: item.overrideDuration ?? null,
         notes: item.notes.trim() || null,
       });
@@ -252,13 +263,30 @@ export function buildExercisesPayload(state: Pick<WizardState, "exercises">) {
     }));
 }
 
+/**
+ * Duración total real de la línea de tiempo: la suma de cada item tal y
+ * como la ve el monitor (duración editada a mano, o la de por defecto si
+ * no la ha tocado). Esta es la duración "de verdad" de la sesión — el
+ * campo "Duración" del paso 1 se mantiene sincronizado con este valor en
+ * cuanto hay contenido, para que nunca se quede desactualizado.
+ */
+export function computeTimelineDuration(
+  state: Pick<WizardState, "exercises">
+): number {
+  return state.exercises.reduce(
+    (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
+    0
+  );
+}
+
 export function hasPlanContent(state: Pick<WizardState, "exercises">) {
   return state.exercises.some(
     (item) =>
       isLibraryExerciseItem(item) ||
       isWarmupItem(item) ||
       isStationsItem(item) ||
-      !!item.freeText?.trim()
+      !!item.freeText?.trim() ||
+      !!item.title?.trim()
   );
 }
 
@@ -276,6 +304,7 @@ type PlanItemLike =
   | {
       kind: "text";
       text: string;
+      title: string | null;
       durationMinutes: number | null;
       notes: string | null;
       phase: TrainingPhase;
@@ -309,7 +338,8 @@ export function planItemsToWizard(items: PlanItemLike[]): WizardExercise[] {
         item.text,
         item.phase,
         item.durationMinutes,
-        item.notes ?? ""
+        item.notes ?? "",
+        item.title ?? ""
       );
     }
     if (item.kind === "warmup") {

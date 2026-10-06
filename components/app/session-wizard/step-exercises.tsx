@@ -734,24 +734,38 @@ export function StepExercises({
                                   <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
                                   <div className="flex-1 min-w-0">
                                     {isTextItem(ex) ? (
-                                      <textarea
-                                        value={ex.freeText ?? ""}
-                                        onChange={(e) =>
-                                          patchItem(flatIdx, {
-                                            freeText: e.target.value,
-                                            name: e.target.value,
-                                          })
-                                        }
-                                        onFocus={() =>
-                                          setFocusedTextIdx(flatIdx)
-                                        }
-                                        onBlur={() => setFocusedTextIdx(null)}
-                                        autoFocus={!ex.freeText}
-                                        rows={2}
-                                        maxLength={2000}
-                                        placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
-                                        className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
-                                      />
+                                      <div className="space-y-1">
+                                        <input
+                                          type="text"
+                                          value={ex.title ?? ""}
+                                          onChange={(e) =>
+                                            patchItem(flatIdx, {
+                                              title: e.target.value,
+                                            })
+                                          }
+                                          maxLength={120}
+                                          placeholder="Título (opcional)"
+                                          className="w-full cursor-text rounded-lg border border-transparent bg-transparent px-0.5 text-sm font-semibold leading-snug text-foreground placeholder:font-normal placeholder:text-muted-foreground/60 focus:border-brand/50 focus:bg-background focus:px-2 focus:py-1 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                        />
+                                        <textarea
+                                          value={ex.freeText ?? ""}
+                                          onChange={(e) =>
+                                            patchItem(flatIdx, {
+                                              freeText: e.target.value,
+                                              name: e.target.value,
+                                            })
+                                          }
+                                          onFocus={() =>
+                                            setFocusedTextIdx(flatIdx)
+                                          }
+                                          onBlur={() => setFocusedTextIdx(null)}
+                                          autoFocus={!ex.freeText && !ex.title}
+                                          rows={2}
+                                          maxLength={2000}
+                                          placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
+                                          className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                        />
+                                      </div>
                                     ) : isWarmupItem(ex) ? (
                                       <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
                                         <Coffee className="size-3.5 text-sky-400 shrink-0" />
@@ -778,7 +792,9 @@ export function StepExercises({
                                         )}
                                       >
                                         {isTextItem(ex)
-                                          ? "Texto libre"
+                                          ? ex.overrideDuration === null
+                                            ? "Anotación"
+                                            : "Actividad"
                                           : (CATEGORY_LABELS[ex.category] ??
                                             ex.category)}
                                       </span>
@@ -813,24 +829,53 @@ export function StepExercises({
                                         min
                                       </span>
                                     </div>
-                                  ) : (
+                                  ) : isTextItem(ex) &&
+                                    ex.overrideDuration === null ? (
                                     <button
                                       type="button"
                                       onClick={() => startEditDuration(flatIdx)}
-                                      title={
-                                        isStationsItem(ex)
-                                          ? "Duración de cada estación"
-                                          : "Editar duración"
-                                      }
-                                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
+                                      title="Poner duración (se convierte en actividad)"
+                                      className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted"
                                     >
                                       <Clock className="size-3" />
-                                      <span>
-                                        {effectiveDuration} min
-                                        {isStationsItem(ex) ? "/estación" : ""}
-                                      </span>
-                                      <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
+                                      <span>Sin duración</span>
                                     </button>
+                                  ) : (
+                                    <div className="flex items-center gap-0.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => startEditDuration(flatIdx)}
+                                        title={
+                                          isStationsItem(ex)
+                                            ? "Duración de cada estación"
+                                            : "Editar duración"
+                                        }
+                                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
+                                      >
+                                        <Clock className="size-3" />
+                                        <span>
+                                          {effectiveDuration} min
+                                          {isStationsItem(ex)
+                                            ? "/estación"
+                                            : ""}
+                                        </span>
+                                        <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
+                                      </button>
+                                      {isTextItem(ex) && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            patchItem(flatIdx, {
+                                              overrideDuration: null,
+                                            })
+                                          }
+                                          title="Quitar duración (queda como anotación)"
+                                          className="flex size-5 items-center justify-center rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                        >
+                                          <X className="size-3" />
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
 
                                   <button

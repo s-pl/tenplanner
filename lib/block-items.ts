@@ -66,3 +66,64 @@ export function resolveItemKind(item: {
   if (item.exerciseId) return "exercise";
   return "text";
 }
+
+// Duración por defecto para un item sin duración explícita y sin ejercicio
+// de biblioteca del que heredarla (texto libre, descanso, o estaciones).
+// Compartida por el creador de sesiones (línea de tiempo) y por el cálculo
+// de la duración total en el servidor, para que ambos coincidan siempre.
+export const DEFAULT_BLOCK_ITEM_DURATION = 5;
+
+/**
+ * Duración efectiva de un item de bloque: su propia duración si la tiene,
+ * si no la del ejercicio de biblioteca (cuando aplica), si no el valor por
+ * defecto. Usado para calcular la duración total real de una sesión/clase
+ * a partir de su contenido, en vez de depender de un número introducido a
+ * mano que puede quedar desactualizado.
+ */
+export function resolveBlockItemDuration(
+  item: {
+    kind?: string | null;
+    exerciseId?: string | null;
+    freeText?: string | null;
+    durationMinutes?: number | null;
+  },
+  exerciseDurationById: Map<string, number>
+): number {
+  if (typeof item.durationMinutes === "number") return item.durationMinutes;
+  const kind = resolveItemKind(item);
+  if (kind === "exercise") {
+    return item.exerciseId
+      ? (exerciseDurationById.get(item.exerciseId) ?? 0)
+      : 0;
+  }
+  return DEFAULT_BLOCK_ITEM_DURATION;
+}
+
+/**
+ * Suma la duración real de todos los items de una lista de bloques
+ * (ejercicios, textos libres, descansos y estaciones), resolviendo
+ * duraciones por defecto donde falten. Esta es la duración "de verdad" de
+ * la sesión/clase: la que ve el monitor al construir el plan.
+ */
+export function sumBlocksDuration(
+  blocks: Array<{
+    items: Array<{
+      kind?: string | null;
+      exerciseId?: string | null;
+      freeText?: string | null;
+      durationMinutes?: number | null;
+    }>;
+  }>,
+  exerciseDurationById: Map<string, number>
+): number {
+  return blocks.reduce(
+    (sum, block) =>
+      sum +
+      block.items.reduce(
+        (blockSum, item) =>
+          blockSum + resolveBlockItemDuration(item, exerciseDurationById),
+        0
+      ),
+    0
+  );
+}
