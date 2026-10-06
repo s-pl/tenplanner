@@ -7,6 +7,7 @@ import {
   classBlocks,
   classBlockExercises,
   exercises,
+  users,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { isPublicHttpUrl } from "@/lib/url-safety";
@@ -15,6 +16,7 @@ import {
   STATION_COUNT_MAX,
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
+import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -83,6 +85,7 @@ const updateSchema = z.object({
   aspectosJuego: z.array(z.string().trim().max(16)).nullable().optional(),
   golpes: z.array(z.string().max(32)).nullable().optional(),
   isLibrary: z.boolean().optional(),
+  autoria: z.enum(AUTORIA_VALUES).nullable().optional(),
   blocks: z.array(blockSchema).max(3).optional(),
 });
 
@@ -194,6 +197,13 @@ export async function PATCH(request: Request, ctx: Ctx) {
   if (existing.createdBy !== user.id)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const [dbUser] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const isAdmin = !!dbUser?.isAdmin;
+
   const d = parsed.data;
 
   // Verify exercises referenced (top-level items and stations) belong to
@@ -274,7 +284,10 @@ export async function PATCH(request: Request, ctx: Ctx) {
         updateValues.aspectoJuego = aspectosJuego?.[0] ?? null;
       }
       if (d.golpes !== undefined) updateValues.golpes = d.golpes;
-      if (d.isLibrary !== undefined) updateValues.isLibrary = d.isLibrary;
+      if (d.isLibrary !== undefined)
+        updateValues.isLibrary = isAdmin && d.isLibrary === true;
+      if (isAdmin && d.autoria !== undefined)
+        updateValues.autoria = d.autoria ?? "libre";
 
       if (Object.keys(updateValues).length > 0) {
         await tx.update(classes).set(updateValues).where(eq(classes.id, id));

@@ -6496,5 +6496,1058 @@
       }
     ],
     "caption": "A la señal, los dos intentan coger antes el cono central"
+  },
+  "0dd5933d-9956-4c5f-948c-173e967f208b": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "player",
+        "at": [20, 70],
+        "role": "alumno",
+        "label": "1"
+      },
+      {
+        "t": "player",
+        "at": [40, 70],
+        "role": "alumno",
+        "label": "2"
+      },
+      {
+        "t": "player",
+        "at": [60, 70],
+        "role": "alumno",
+        "label": "3"
+      },
+      {
+        "t": "player",
+        "at": [80, 70],
+        "role": "alumno",
+        "label": "4"
+      },
+      {
+        "t": "move",
+        "points": [
+          [10, 90],
+          [90, 90],
+          [90, 10],
+          [10, 10]
+        ]
+      },
+      {
+        "t": "text",
+        "at": [45, 95],
+        "text": "3 vueltas"
+      }
+    ],
+    "caption": "Carrera continua por la pista con ejercicios de movilidad indicados por el profesor."
+  },
+  "ae7cf4c3-505a-49c7-a124-ffa03e9a953c": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 85],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [50, 15],
+        "role": "alumno",
+        "label": "B"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 80],
+          [50, 20]
+        ]
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 20],
+          [50, 80]
+        ]
+      }
+    ],
+    "caption": "Peloteo libre con raqueta para activar el golpeo antes de la sesión."
+  },
+  "c119a940-9592-4440-8c76-19a20dd4b8b6": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 50],
+        "role": "alumno"
+      },
+      {
+        "t": "text",
+        "at": [50, 75],
+        "text": "Estiramientos"
+      }
+    ],
+    "caption": "Estiramientos de cuello, brazos, pecho, piernas y gemelos para finalizar."
+  },
+  "3fc8d68f-97e0-4d18-b0bb-a0b1583456c9": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [35, 75],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [65, 90],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [65, 100],
+        "role": "alumno",
+        "label": "B"
+      },
+      {
+        "t": "cone",
+        "at": [65, 60]
+      },
+      {
+        "t": "ladder",
+        "from": [20, 95],
+        "to": [20, 70]
+      },
+      {
+        "t": "shot",
+        "points": [
+          [35, 75],
+          [65, 85]
+        ]
+      },
+      {
+        "t": "text",
+        "at": [65, 55],
+        "text": "Preparo"
+      }
+    ],
+    "caption": "Por parejas: uno golpea de derecha/revés, el otro hace la sombra del mismo gesto detrás."
+  },
+  "c653fb7b-f8c1-4bf6-9ded-306c17d7b884": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 70],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [50, 90],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "text",
+        "at": [50, 50],
+        "text": "15 golpes"
+      }
+    ],
+    "caption": "El profesor guía con la mano la preparación del golpe antes de cada impacto."
+  },
+  "65709b29-b9a4-44b9-941c-42aa20119b37": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "player",
+        "at": [30, 95],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "cone",
+        "at": [30, 77]
+      },
+      {
+        "t": "cone",
+        "at": [40, 77]
+      },
+      {
+        "t": "cone",
+        "at": [50, 77]
+      },
+      {
+        "t": "zone",
+        "from": [50, 23],
+        "to": [75, 50],
+        "label": "Cuadro"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [30, 95],
+          [62, 36]
+        ]
+      }
+    ],
+    "caption": "Saque progresivo: cada cono superado permite sacar un poco más cerca de la red."
+  },
+  "8e4cea28-1b82-4ea1-a52b-982594e7de7f": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "cone",
+        "at": [20, 20]
+      },
+      {
+        "t": "cone",
+        "at": [35, 35]
+      },
+      {
+        "t": "cone",
+        "at": [20, 50]
+      },
+      {
+        "t": "cone",
+        "at": [35, 65]
+      },
+      {
+        "t": "ladder",
+        "from": [55, 20],
+        "to": [55, 55]
+      },
+      {
+        "t": "cone",
+        "at": [75, 30]
+      },
+      {
+        "t": "cone",
+        "at": [80, 60]
+      },
+      {
+        "t": "text",
+        "at": [75, 75],
+        "text": "Bosu/vallas"
+      }
+    ],
+    "caption": "Zig-zag entre conos, equilibrio en el bosu, escalera y saltos sobre minivallas."
+  },
+  "45c9a8af-8db0-4c46-bd68-422e7aa4f80e": {
+    "court": "mini",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 90],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [50, 70],
+        "role": "alumno",
+        "label": "B"
+      },
+      {
+        "t": "zone",
+        "from": [42, 8],
+        "to": [58, 18],
+        "label": "Portería"
+      },
+      {
+        "t": "move",
+        "points": [
+          [50, 85],
+          [50, 20]
+        ]
+      }
+    ],
+    "caption": "Empuja la pelota con la raqueta buscando marcar gol en la mini portería."
+  },
+  "1426c2f0-35f4-4d1f-975e-9f792b554e89": {
+    "court": "mini",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 90],
+        "role": "alumno"
+      },
+      {
+        "t": "move",
+        "points": [
+          [20, 90],
+          [40, 70],
+          [60, 90],
+          [80, 70]
+        ]
+      },
+      {
+        "t": "zone",
+        "from": [42, 8],
+        "to": [58, 18],
+        "label": "Portería"
+      },
+      {
+        "t": "text",
+        "at": [85, 40],
+        "text": "Malla"
+      }
+    ],
+    "caption": "Zig-zag con la pelota en la raqueta, toques arriba y remate a la mini portería."
+  },
+  "df43d014-ac7f-489f-a025-ff94d9efaf1a": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "zone",
+        "from": [25, 46],
+        "to": [50, 100],
+        "label": "Cuadro"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 95],
+          [37, 55]
+        ]
+      }
+    ],
+    "caption": "Lanzar la pelota delante y buscar meterla dentro del cuadro de saque."
+  },
+  "f8b06115-f43b-45cc-8ce7-5e86f97d4e36": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 15],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [25, 95],
+        "role": "alumno",
+        "label": "1"
+      },
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno",
+        "label": "2"
+      },
+      {
+        "t": "player",
+        "at": [75, 95],
+        "role": "alumno",
+        "label": "3"
+      },
+      {
+        "t": "cone",
+        "at": [25, 85]
+      },
+      {
+        "t": "cone",
+        "at": [50, 85]
+      },
+      {
+        "t": "cone",
+        "at": [75, 85]
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 15],
+          [30, 90]
+        ]
+      }
+    ],
+    "caption": "3 vidas por alumno: si la pelota entra, se salva; si no, pierde una vida."
+  },
+  "592b2143-3fa7-46d9-bd33-7b72d33bb8d8": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "hoop",
+        "at": [30, 30]
+      },
+      {
+        "t": "hoop",
+        "at": [50, 30]
+      },
+      {
+        "t": "hoop",
+        "at": [70, 30]
+      },
+      {
+        "t": "hoop",
+        "at": [30, 50]
+      },
+      {
+        "t": "hoop",
+        "at": [50, 50]
+      },
+      {
+        "t": "hoop",
+        "at": [70, 50]
+      },
+      {
+        "t": "hoop",
+        "at": [30, 70]
+      },
+      {
+        "t": "hoop",
+        "at": [50, 70]
+      },
+      {
+        "t": "hoop",
+        "at": [70, 70]
+      },
+      {
+        "t": "player",
+        "at": [15, 95],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [85, 95],
+        "role": "alumno",
+        "label": "B"
+      },
+      {
+        "t": "cone",
+        "at": [15, 85]
+      },
+      {
+        "t": "cone",
+        "at": [85, 85]
+      }
+    ],
+    "caption": "Dos equipos compiten por colocar 3 objetos en raya dentro de los aros."
+  },
+  "d8cc3d0b-18cd-4b5a-be62-2abc09fecec9": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "player",
+        "at": [20, 90],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [35, 90],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [20, 10],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [35, 10],
+        "role": "alumno"
+      },
+      {
+        "t": "ball",
+        "at": [20, 85]
+      },
+      {
+        "t": "ball",
+        "at": [28, 85]
+      },
+      {
+        "t": "ball",
+        "at": [36, 85]
+      },
+      {
+        "t": "ball",
+        "at": [20, 15]
+      },
+      {
+        "t": "ball",
+        "at": [28, 15]
+      },
+      {
+        "t": "ball",
+        "at": [36, 15]
+      },
+      {
+        "t": "text",
+        "at": [50, 50],
+        "text": "¡YA!"
+      }
+    ],
+    "caption": "Dos equipos lanzan pelotas al campo contrario; gana quien menos pelotas conserve."
+  },
+  "772b7407-347c-454a-b6af-17e6681e46f3": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "zone",
+        "from": [10, 85],
+        "to": [40, 100],
+        "label": "1: bote"
+      },
+      {
+        "t": "zone",
+        "from": [60, 45],
+        "to": [100, 65],
+        "label": "2: lanzar"
+      },
+      {
+        "t": "zone",
+        "from": [10, 10],
+        "to": [40, 30],
+        "label": "3: toques"
+      },
+      {
+        "t": "player",
+        "at": [25, 92],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [80, 55],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [25, 20],
+        "role": "alumno"
+      },
+      {
+        "t": "ladder",
+        "from": [45, 85],
+        "to": [45, 100]
+      }
+    ],
+    "caption": "3 estaciones rotativas: bote con escalera, lanzamiento contando botes y toques seguidos."
+  },
+  "640da80b-e9d5-446a-b810-23494853ce30": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "zone",
+        "from": [40, 5],
+        "to": [60, 25],
+        "label": "1: profesor"
+      },
+      {
+        "t": "zone",
+        "from": [10, 40],
+        "to": [35, 60],
+        "label": "2: revés"
+      },
+      {
+        "t": "zone",
+        "from": [65, 75],
+        "to": [90, 95],
+        "label": "3: fondo"
+      },
+      {
+        "t": "player",
+        "at": [50, 15],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [22, 50],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [77, 85],
+        "role": "alumno"
+      },
+      {
+        "t": "ladder",
+        "from": [65, 80],
+        "to": [90, 80]
+      }
+    ],
+    "caption": "Circuito continuo sin parar: golpeo con el profesor, zig-zag de revés y escalera final."
+  },
+  "2789d939-2494-4566-b19a-b68481da7bc2": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "cone",
+        "at": [25, 95]
+      },
+      {
+        "t": "cone",
+        "at": [25, 85]
+      },
+      {
+        "t": "cone",
+        "at": [25, 75]
+      },
+      {
+        "t": "cone",
+        "at": [25, 65]
+      },
+      {
+        "t": "cone",
+        "at": [75, 95]
+      },
+      {
+        "t": "cone",
+        "at": [75, 85]
+      },
+      {
+        "t": "cone",
+        "at": [75, 75]
+      },
+      {
+        "t": "cone",
+        "at": [75, 65]
+      },
+      {
+        "t": "player",
+        "at": [25, 100],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [25, 95],
+          [65, 36]
+        ]
+      }
+    ],
+    "caption": "4 niveles de conos: cada saque cruzado dentro del cuadro sube un nivel."
+  },
+  "53a067e5-bf08-4529-a918-23f8aaafde21": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 10],
+        "role": "rival",
+        "label": "P"
+      },
+      {
+        "t": "zone",
+        "from": [44, 2],
+        "to": [56, 10],
+        "label": "Portería"
+      },
+      {
+        "t": "player",
+        "at": [20, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [35, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [65, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [80, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [50, 85],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 85],
+          [50, 10]
+        ]
+      }
+    ],
+    "caption": "El profesor lanza y los alumnos intentan marcar gol al portero."
+  },
+  "daa2b3f2-01c2-455c-bfd4-ad791f96132d": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [30, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [70, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [50, 10],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 10],
+          [50, 90]
+        ]
+      },
+      {
+        "t": "text",
+        "at": [50, 50],
+        "text": "Gusano"
+      }
+    ],
+    "caption": "El profesor lanza rasas o botadas; los alumnos esquivan o dejan pasar según la orden."
+  },
+  "47cb2bdc-9176-418f-ba2c-0f5000826714": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [30, 10],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [30, 90],
+        "role": "alumno",
+        "label": "1"
+      },
+      {
+        "t": "player",
+        "at": [70, 50],
+        "role": "alumno",
+        "label": "2"
+      },
+      {
+        "t": "player",
+        "at": [75, 60],
+        "role": "alumno",
+        "label": "3"
+      },
+      {
+        "t": "move",
+        "points": [
+          [30, 95],
+          [20, 70]
+        ]
+      },
+      {
+        "t": "shot",
+        "points": [
+          [30, 10],
+          [25, 75]
+        ]
+      }
+    ],
+    "caption": "Desplazamientos laterales, split step y entrada diagonal; mini tenis cooperativo."
+  },
+  "0ce77e07-4a66-4808-b508-2ccb5ed22c04": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "ladder",
+        "from": [50, 85],
+        "to": [50, 100]
+      },
+      {
+        "t": "player",
+        "at": [50, 100],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [50, 10],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 10],
+          [70, 70]
+        ]
+      }
+    ],
+    "caption": "Escalador, split step y golpe lateral tras el lanzamiento del profesor."
+  },
+  "5f7a4390-6206-4358-9b15-1bbb66bb50c3": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [30, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "player",
+        "at": [70, 95],
+        "role": "alumno"
+      },
+      {
+        "t": "cone",
+        "at": [30, 85]
+      },
+      {
+        "t": "cone",
+        "at": [50, 85]
+      },
+      {
+        "t": "cone",
+        "at": [70, 85]
+      },
+      {
+        "t": "player",
+        "at": [50, 10],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [50, 10],
+          [40, 88]
+        ]
+      },
+      {
+        "t": "text",
+        "at": [50, 102],
+        "text": "Hospital"
+      }
+    ],
+    "caption": "3 vidas por alumno: quien las pierde pasa al lado del hospital sin raqueta."
+  },
+  "73fe007d-3709-417e-9165-888df2d83934": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "zone",
+        "from": [20, 60],
+        "to": [80, 72],
+        "label": "Verde"
+      },
+      {
+        "t": "zone",
+        "from": [20, 72],
+        "to": [80, 84],
+        "label": "Amarillo"
+      },
+      {
+        "t": "zone",
+        "from": [20, 84],
+        "to": [80, 96],
+        "label": "Rojo"
+      },
+      {
+        "t": "player",
+        "at": [50, 100],
+        "role": "alumno"
+      },
+      {
+        "t": "ladder",
+        "from": [10, 90],
+        "to": [10, 70]
+      },
+      {
+        "t": "cone",
+        "at": [30, 90]
+      },
+      {
+        "t": "cone",
+        "at": [30, 80]
+      }
+    ],
+    "caption": "Recorrido de escalera y conos, y golpe hacia la zona de color sorteada."
+  },
+  "d844c267-3712-4d95-ad91-648eb0720479": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "player",
+        "at": [50, 10],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "player",
+        "at": [50, 95],
+        "role": "alumno",
+        "label": "1"
+      },
+      {
+        "t": "player",
+        "at": [20, 50],
+        "role": "alumno",
+        "label": "2"
+      },
+      {
+        "t": "player",
+        "at": [80, 50],
+        "role": "alumno",
+        "label": "3"
+      },
+      {
+        "t": "basket",
+        "at": [20, 20]
+      }
+    ],
+    "caption": "4 estaciones: parar y golpear con el profesor, peloteo en progresión y recogida."
+  },
+  "22cbdf49-934f-4658-994e-18d75021283d": {
+    "court": "medio",
+    "elements": [
+      {
+        "t": "ladder",
+        "from": [30, 60],
+        "to": [30, 90]
+      },
+      {
+        "t": "player",
+        "at": [30, 95],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [70, 20],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [30, 60],
+          [70, 25]
+        ]
+      }
+    ],
+    "caption": "Pasa de lado por la escalera y entrega la pelota al profesor con la mano."
+  },
+  "60fc9bd2-f039-47c9-afb3-7805a0d7b9ac": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "zone",
+        "from": [0, 55],
+        "to": [50, 100],
+        "label": "Derecha"
+      },
+      {
+        "t": "zone",
+        "from": [50, 55],
+        "to": [100, 100],
+        "label": "Revés"
+      },
+      {
+        "t": "player",
+        "at": [25, 90],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [75, 90],
+        "role": "alumno",
+        "label": "B"
+      },
+      {
+        "t": "player",
+        "at": [40, 20],
+        "role": "monitor",
+        "label": "M"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [40, 20],
+          [25, 85]
+        ]
+      }
+    ],
+    "caption": "Por parejas: coger la pelota con la mano no dominante, dejarla caer y golpear."
+  },
+  "263e17c6-648d-4b63-8696-5c0df299b03f": {
+    "court": "tenis",
+    "elements": [
+      {
+        "t": "player",
+        "at": [15, 90],
+        "role": "alumno",
+        "label": "1"
+      },
+      {
+        "t": "player",
+        "at": [15, 80],
+        "role": "alumno",
+        "label": "2"
+      },
+      {
+        "t": "player",
+        "at": [85, 90],
+        "role": "alumno",
+        "label": "3"
+      },
+      {
+        "t": "player",
+        "at": [85, 80],
+        "role": "alumno",
+        "label": "4"
+      },
+      {
+        "t": "player",
+        "at": [30, 85],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "player",
+        "at": [70, 85],
+        "role": "rival",
+        "label": "B"
+      },
+      {
+        "t": "shot",
+        "points": [
+          [30, 85],
+          [70, 85]
+        ]
+      },
+      {
+        "t": "text",
+        "at": [50, 50],
+        "text": "Grand Slam"
+      }
+    ],
+    "caption": "Se juega el punto; quien gana se queda, quien pierde espera su turno en el poste."
   }
 }

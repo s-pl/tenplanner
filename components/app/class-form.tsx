@@ -23,6 +23,7 @@ import {
   STATION_COUNT_MIN,
   type StationDraftItem,
 } from "@/lib/block-items";
+import { AUTORIAS } from "@/lib/exercise-taxonomy";
 import { SessionExerciseLists } from "@/components/app/session-exercise-lists";
 
 const NIVELES = [
@@ -106,6 +107,7 @@ export interface ClassInitialData {
   videoUrl: string | null;
   aspectosImportantes: string | null;
   isLibrary: boolean;
+  autoria?: string | null;
   blocks: {
     orderIndex: number;
     title: string | null;
@@ -162,6 +164,7 @@ export function ClassForm({
     initialData?.aspectosImportantes ?? ""
   );
   const [isLibrary, setIsLibrary] = useState(initialData?.isLibrary ?? false);
+  const [autoria, setAutoria] = useState(initialData?.autoria ?? "libre");
 
   const [blocks, setBlocks] = useState<BlockState[]>(() => {
     const base = BLOCK_TITLES.map((b) => ({
@@ -493,6 +496,7 @@ export function ClassForm({
       aspectosJuego: aspectosJuego.length > 0 ? aspectosJuego : null,
       golpes: golpes.length > 0 ? golpes : null,
       isLibrary: isAdmin ? isLibrary : false,
+      autoria: isAdmin ? autoria : undefined,
       blocks: blocks
         .filter((b) => b.items.length > 0 || b.notes.trim())
         .map((b) => ({
@@ -1438,6 +1442,37 @@ export function ClassForm({
               Marcar como Biblioteca Ten Planner (visible para todos)
             </span>
           </label>
+        )}
+
+        {isAdmin && (
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-sm font-semibold text-foreground">
+              Autoría
+            </label>
+            <p className="text-xs text-muted-foreground">
+              De quién es esta clase dentro de la biblioteca pública.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {AUTORIAS.map(({ id, label }) => {
+                const isSelected = (autoria ?? "libre") === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setAutoria(id)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-150",
+                      isSelected
+                        ? "border-[#D6FF38] bg-[#D6FF38]/10 text-[#6D7F00]"
+                        : "border-foreground/15 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
       </section>
 

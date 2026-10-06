@@ -743,6 +743,10 @@ export const classes = pgTable(
     aspectosJuego: jsonb("aspectos_juego").$type<string[]>(),
     golpes: json("golpes").$type<string[]>(),
     isLibrary: boolean("is_library").default(false).notNull(),
+    // Autoría de la clase: "ten_planner" | "libre" | el id de un
+    // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
+    // Mismo campo/semántica que exercises.autoria (ver comentario allí).
+    autoria: varchar("autoria", { length: 64 }).default("libre"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -758,6 +762,7 @@ export const classes = pgTable(
     index("classes_name_idx").on(t.name),
     index("classes_niveles_gin_idx").using("gin", t.niveles),
     index("classes_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
+    index("classes_autoria_idx").on(t.autoria),
   ]
 );
 

@@ -7,6 +7,7 @@ import {
   classBlocks,
   classBlockExercises,
   exercises,
+  users,
 } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { isPublicHttpUrl } from "@/lib/url-safety";
@@ -15,6 +16,7 @@ import {
   STATION_COUNT_MAX,
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
+import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
 
 const stationItemSchema = z
   .object({
@@ -81,6 +83,7 @@ const createSchema = z.object({
   aspectosJuego: z.array(z.string().trim().max(16)).optional().nullable(),
   golpes: z.array(z.string().max(32)).optional().nullable(),
   isLibrary: z.boolean().optional().default(false),
+  autoria: z.enum(AUTORIA_VALUES).optional().nullable(),
   blocks: z.array(blockSchema).max(3).default([]),
 });
 
@@ -154,6 +157,7 @@ export async function GET(request: Request) {
       aspectoJuego: classes.aspectoJuego,
       aspectosJuego: classes.aspectosJuego,
       isLibrary: classes.isLibrary,
+      autoria: classes.autoria,
       createdBy: classes.createdBy,
       createdAt: classes.createdAt,
     })
@@ -188,6 +192,13 @@ export async function POST(request: Request) {
     );
 
   const d = parsed.data;
+
+  const [dbUser] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const isAdmin = !!dbUser?.isAdmin;
   const niveles = normalizeMultiValue(d.niveles, d.nivel);
   const aspectosJuego = normalizeMultiValue(d.aspectosJuego, d.aspectoJuego);
 
@@ -259,7 +270,8 @@ export async function POST(request: Request) {
           aspectoJuego: aspectosJuego?.[0] ?? null,
           aspectosJuego,
           golpes: d.golpes ?? null,
-          isLibrary: d.isLibrary ?? false,
+          isLibrary: isAdmin && d.isLibrary === true,
+          autoria: isAdmin && d.autoria ? d.autoria : "libre",
         })
         .returning();
 
