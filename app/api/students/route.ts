@@ -4,8 +4,8 @@ import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import {
-  canTagWithClub,
   getActiveClubIds,
+  getActiveWorkClubId,
   sharedWithClubCondition,
 } from "@/lib/clubs";
 import { createStudentSchema, zodValidationErrorResponse } from "./validation";
@@ -84,15 +84,13 @@ export async function POST(request: Request) {
   }
 
   const d = parsed.data;
-  if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
 
   try {
     await ensureUser(user);
+
+    // El club ya no se elige por elemento: se etiqueta automáticamente con
+    // el modo de trabajo activo del usuario (ver /api/account/work-mode).
+    const clubId = await getActiveWorkClubId(user.id);
 
     const [created] = await db
       .insert(students)
@@ -115,7 +113,7 @@ export async function POST(request: Request) {
         preferredSchedule: d.preferredSchedule ?? null,
         notes: d.notes ?? null,
         imageUrl: d.imageUrl ?? null,
-        clubId: d.clubId ?? null,
+        clubId,
       })
       .returning();
 

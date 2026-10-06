@@ -13,7 +13,6 @@ import {
 } from "@/db/schema";
 import { ClassForm } from "@/components/app/class-form";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
-import { getCoachClubOptions } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,8 +32,6 @@ export default async function EditClassPage({ params }: PageProps) {
     .where(and(eq(classes.id, id), eq(classes.createdBy, user.id)))
     .limit(1);
   if (!cls) notFound();
-
-  const coachClubs = await getCoachClubOptions(user.id);
 
   const [adminRow] = await db
     .select({ isAdmin: users.isAdmin })
@@ -107,7 +104,6 @@ export default async function EditClassPage({ params }: PageProps) {
     aspectosImportantes: cls.aspectosImportantes,
     isLibrary: cls.isLibrary,
     autoria: cls.autoria,
-    clubId: cls.clubId,
     blocks: blocks.map((b) => ({
       orderIndex: b.orderIndex,
       title: b.title,
@@ -181,7 +177,6 @@ export default async function EditClassPage({ params }: PageProps) {
         availableExercises={availableExercises}
         isAdmin={adminRow?.isAdmin ?? false}
         initialData={initialData}
-        coachClubs={coachClubs}
       />
     </div>
   );

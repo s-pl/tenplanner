@@ -9,11 +9,7 @@ import { GroupDetailClient } from "./group-detail-client";
 import { GroupEditDetails } from "./group-edit-details";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import {
-  getActiveClubIds,
-  getCoachClubOptions,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -65,8 +61,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
           .where(eq(users.id, group.coachId))
           .limit(1)
       )[0]?.name ?? null);
-
-  const coachClubs = await getCoachClubOptions(user.id);
 
   const memberRows = await db
     .select({
@@ -137,12 +131,10 @@ export default async function GroupDetailPage({ params }: PageProps) {
             </div>
             {isOwner && (
               <GroupEditDetails
-                key={`${group.name}|${group.description ?? ""}|${group.clubId ?? ""}`}
+                key={`${group.name}|${group.description ?? ""}`}
                 groupId={id}
                 name={group.name}
                 description={group.description}
-                clubId={group.clubId}
-                coachClubs={coachClubs}
               />
             )}
           </div>

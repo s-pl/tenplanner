@@ -14,7 +14,6 @@ import { getBooleanSetting } from "@/lib/app-settings";
 import {
   getActiveClubIds,
   getClubMembersDirectory,
-  getCoachClubOptions,
   sharedWithClubCondition,
 } from "@/lib/clubs";
 import { CalendarDays, Download, Plus } from "lucide-react";
@@ -57,7 +56,6 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const windowEnd = new Date(now);
   windowEnd.setDate(now.getDate() + WINDOW_FUTURE_DAYS);
 
-  const coachClubs = await getCoachClubOptions(user.id);
   const clubIds = await getActiveClubIds(user.id);
   const clubMembers =
     clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
@@ -233,7 +231,6 @@ export default async function CalendarPage({ searchParams }: PageProps) {
           <CalendarClient
             sessions={serialized}
             events={serializedEvents}
-            coachClubs={coachClubs}
             currentUserId={user.id}
           />
         )}

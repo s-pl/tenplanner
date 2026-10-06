@@ -21,7 +21,7 @@ import type {
   WizardSessionBlock,
 } from "@/components/app/session-wizard/types";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getActiveClubIds, getCoachClubOptions } from "@/lib/clubs";
+import { getActiveClubIds } from "@/lib/clubs";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import {
   createTextItem,
@@ -71,7 +71,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     );
   }
 
-  const [coachPlaces, userRow, coachClubs] = await Promise.all([
+  const [coachPlaces, userRow] = await Promise.all([
     db
       .select({ id: places.id, name: places.name })
       .from(places)
@@ -82,7 +82,6 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
-    getCoachClubOptions(user.id),
   ]);
   const monitorName =
     userRow[0]?.name ||
@@ -472,7 +471,6 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               initialBlocks={fromClassBlocks}
               initialLocation={fromSession?.location ?? undefined}
               places={coachPlaces}
-              coachClubs={coachClubs}
               monitorName={monitorName}
               allowDraftRestore={allowDraftRestore}
             />

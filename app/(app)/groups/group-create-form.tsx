@@ -3,20 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Users } from "lucide-react";
-import {
-  ClubContextSelect,
-  type ClubOption,
-} from "@/components/app/club-context-select";
 
-export function GroupCreateForm({
-  coachClubs = [],
-}: {
-  coachClubs?: ClubOption[];
-}) {
+export function GroupCreateForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [clubId, setClubId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +22,6 @@ export function GroupCreateForm({
       body: JSON.stringify({
         name: name.trim(),
         description: description.trim() || undefined,
-        clubId,
       }),
     });
     setSaving(false);
@@ -74,11 +64,6 @@ export function GroupCreateForm({
           className="tp-field h-11 w-full px-4 text-sm font-medium placeholder:text-foreground/30"
         />
       </div>
-      <ClubContextSelect
-        value={clubId}
-        onChange={setClubId}
-        clubs={coachClubs}
-      />
       {error && (
         <p className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
           {error}

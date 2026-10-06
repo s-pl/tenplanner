@@ -14,6 +14,7 @@ import {
   vector,
   uniqueIndex,
   jsonb,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { StationItemJson } from "@/lib/block-items";
@@ -105,26 +106,39 @@ export const clubInviteStatusEnum = pgEnum("club_invite_status", [
 ]);
 
 // Users — id references auth.users(id) managed by Supabase Auth
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  image: text("image"),
-  city: varchar("city", { length: 255 }),
-  role: varchar("role", { length: 20 }), // "player" | "coach" | "both"
-  playerLevel: varchar("player_level", { length: 30 }), // "beginner" | "amateur" | "intermediate" | "advanced" | "competitive"
-  yearsExperience: integer("years_experience"),
-  surfacePreference: varchar("surface_preference", { length: 30 }), // "crystal" | "turf" | "cement" | "any"
-  goals: text("goals"),
-  isAdmin: boolean("is_admin").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    image: text("image"),
+    city: varchar("city", { length: 255 }),
+    role: varchar("role", { length: 20 }), // "player" | "coach" | "both"
+    playerLevel: varchar("player_level", { length: 30 }), // "beginner" | "amateur" | "intermediate" | "advanced" | "competitive"
+    yearsExperience: integer("years_experience"),
+    surfacePreference: varchar("surface_preference", { length: 30 }), // "crystal" | "turf" | "cement" | "any"
+    goals: text("goals"),
+    isAdmin: boolean("is_admin").default(false).notNull(),
+    // Modo de trabajo activo: null = particular/individual; si tiene valor,
+    // todo lo que el usuario cree (sesiones, alumnos, clases, grupos,
+    // eventos) se etiqueta automáticamente con este club y es visible para
+    // el resto de miembros activos del club. Se elige y cambia desde el
+    // perfil, no por elemento.
+    activeClubId: uuid("active_club_id").references(
+      (): AnyPgColumn => clubs.id,
+      { onDelete: "set null" }
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("users_active_club_id_idx").on(t.activeClubId)]
+);
 
 // Exercises
 export const exercises = pgTable(

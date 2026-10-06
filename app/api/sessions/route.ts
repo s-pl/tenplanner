@@ -31,7 +31,11 @@ import {
 } from "./validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
-import { canTagWithClub, getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import {
+  getActiveClubIds,
+  getActiveWorkClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { embedSession } from "@/lib/ai/semantic-search";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
@@ -447,18 +451,14 @@ export async function POST(request: Request) {
     tags,
     location,
     placeId,
-    clubId,
     studentIds,
     exercises: exerciseItems,
     blocks,
   } = parsedBody.data;
 
-  if (clubId && !(await canTagWithClub(user.id, clubId))) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
+  // El club ya no se elige por elemento: se etiqueta automáticamente con
+  // el modo de trabajo activo del usuario (ver /api/account/work-mode).
+  const clubId = await getActiveWorkClubId(user.id);
 
   try {
     await ensureUser(user);

@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { ClassForm } from "@/components/app/class-form";
-import { getCoachClubOptions } from "@/lib/clubs";
 
 export default async function NewClassPage() {
   const supabase = await createClient();
@@ -20,8 +19,6 @@ export default async function NewClassPage() {
     .from(users)
     .where(eq(users.id, user.id))
     .limit(1);
-
-  const coachClubs = await getCoachClubOptions(user.id);
 
   const availableExercises = await db
     .select({
@@ -64,7 +61,6 @@ export default async function NewClassPage() {
         mode="create"
         availableExercises={availableExercises}
         isAdmin={adminRow?.isAdmin ?? false}
-        coachClubs={coachClubs}
       />
     </div>
   );

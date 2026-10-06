@@ -1,10 +1,14 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, gte, lte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { canTagWithClub } from "@/lib/clubs";
+import {
+  getActiveClubIds,
+  getActiveWorkClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 
 const createSchema = z
   .object({
@@ -12,7 +16,6 @@ const createSchema = z
     description: z.string().trim().max(4000).optional().nullable(),
     startAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
     endAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
-    clubId: z.string().uuid().optional().nullable(),
   })
   .refine((v) => new Date(v.endAt) >= new Date(v.startAt), {
     message: "La fecha de finalización debe ser posterior a la de inicio",
@@ -30,7 +33,15 @@ export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get("from");
   const to = request.nextUrl.searchParams.get("to");
 
-  const conditions = [eq(calendarEvents.userId, user.id)];
+  const clubIds = await getActiveClubIds(user.id);
+  const conditions = [
+    sharedWithClubCondition(
+      calendarEvents.userId,
+      calendarEvents.clubId,
+      user.id,
+      clubIds
+    ),
+  ];
   if (from) conditions.push(gte(calendarEvents.startAt, new Date(from)));
   if (to) conditions.push(lte(calendarEvents.startAt, new Date(to)));
 
@@ -65,15 +76,7 @@ export async function POST(request: Request) {
       { status: 422 }
     );
 
-  if (
-    parsed.data.clubId &&
-    !(await canTagWithClub(user.id, parsed.data.clubId))
-  ) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
+  const clubId = await getActiveWorkClubId(user.id);
 
   const [created] = await db
     .insert(calendarEvents)
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
       description: parsed.data.description ?? null,
       startAt: new Date(parsed.data.startAt),
       endAt: new Date(parsed.data.endAt),
-      clubId: parsed.data.clubId ?? null,
+      clubId,
     })
     .returning();
 

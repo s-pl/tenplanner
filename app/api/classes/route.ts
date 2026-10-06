@@ -18,8 +18,8 @@ import {
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
 import {
-  canTagWithClub,
   getActiveClubIds,
+  getActiveWorkClubId,
   sharedWithClubCondition,
 } from "@/lib/clubs";
 
@@ -89,7 +89,6 @@ const createSchema = z.object({
   golpes: z.array(z.string().max(32)).optional().nullable(),
   isLibrary: z.boolean().optional().default(false),
   autoria: z.enum(AUTORIA_VALUES).optional().nullable(),
-  clubId: z.string().uuid().optional().nullable(),
   blocks: z.array(blockSchema).max(3).default([]),
 });
 
@@ -223,12 +222,9 @@ export async function POST(request: Request) {
   const niveles = normalizeMultiValue(d.niveles, d.nivel);
   const aspectosJuego = normalizeMultiValue(d.aspectosJuego, d.aspectoJuego);
 
-  if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
+  // El club ya no se elige por elemento: se etiqueta automáticamente con
+  // el modo de trabajo activo del usuario (ver /api/account/work-mode).
+  const clubId = await getActiveWorkClubId(user.id);
 
   // Verify exercises referenced (top-level items and stations) belong to
   // the user or are library exercises.
@@ -300,7 +296,7 @@ export async function POST(request: Request) {
           golpes: d.golpes ?? null,
           isLibrary: isAdmin && d.isLibrary === true,
           autoria: isAdmin && d.autoria ? d.autoria : "libre",
-          clubId: d.clubId ?? null,
+          clubId,
         })
         .returning();
 

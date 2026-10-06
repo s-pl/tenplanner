@@ -26,7 +26,6 @@ import {
   EventDialog,
   type CalendarEventData,
 } from "@/components/app/event-dialog";
-import { type ClubOption } from "@/components/app/club-context-select";
 import { DayAgenda } from "@/components/app/day-agenda";
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
@@ -45,7 +44,6 @@ interface SessionData {
 interface CalendarClientProps {
   sessions: SessionData[];
   events?: CalendarEventData[];
-  coachClubs?: ClubOption[];
   /** Id del usuario actual — una sesión/evento de otro monitor (compartido
    * vía club) no se puede arrastrar ni editar desde aquí, solo abrir. */
   currentUserId?: string;
@@ -132,7 +130,6 @@ function formatDayTitle(d: Date) {
 export function CalendarClient({
   sessions: initialSessions,
   events: initialEvents = [],
-  coachClubs = [],
   currentUserId,
 }: CalendarClientProps) {
   const router = useRouter();
@@ -1003,7 +1000,6 @@ export function CalendarClient({
             if (!open) setEventDialog(null);
           }}
           onSaved={handleEventSaved}
-          coachClubs={coachClubs}
         />
       )}
 

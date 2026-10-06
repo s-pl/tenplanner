@@ -6,15 +6,14 @@ import { groups, groupStudents, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
-  canTagWithClub,
   getActiveClubIds,
+  getActiveWorkClubId,
   sharedWithClubCondition,
 } from "@/lib/clubs";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
-  clubId: z.string().uuid().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -165,15 +164,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (
-    parsed.data.clubId &&
-    !(await canTagWithClub(user.id, parsed.data.clubId))
-  ) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
+  const clubId = await getActiveWorkClubId(user.id);
 
   const [group] = await db
     .insert(groups)
@@ -181,7 +172,7 @@ export async function POST(request: Request) {
       coachId: user.id,
       name: parsed.data.name,
       description: parsed.data.description ?? null,
-      clubId: parsed.data.clubId ?? null,
+      clubId,
     })
     .returning();
 

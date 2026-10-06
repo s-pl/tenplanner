@@ -20,11 +20,7 @@ import {
 } from "../validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
-import {
-  canTagWithClub,
-  getActiveClubIds,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
@@ -496,16 +492,6 @@ export async function PUT(request: Request, context: RouteContext) {
       ...sessionFields
     } = parsedBody.data;
 
-    if (
-      sessionFields.clubId &&
-      !(await canTagWithClub(user.id, sessionFields.clubId))
-    ) {
-      return NextResponse.json(
-        { error: "No perteneces a ese club." },
-        { status: 403 }
-      );
-    }
-
     if (studentIds !== undefined) {
       const unique = Array.from(new Set(studentIds));
       if (unique.length > 0) {
@@ -599,8 +585,6 @@ export async function PUT(request: Request, context: RouteContext) {
       updateValues.location = sessionFields.location;
     if (sessionFields.placeId !== undefined)
       updateValues.placeId = sessionFields.placeId;
-    if (sessionFields.clubId !== undefined)
-      updateValues.clubId = sessionFields.clubId;
     if (tags !== undefined) {
       updateValues.tags =
         tags && tags.length > 0

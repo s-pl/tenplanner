@@ -106,7 +106,6 @@ export const createStudentSchema = z.object({
     .optional()
     .nullable(),
   imageUrl: optionalImageUrlSchema.optional().nullable(),
-  clubId: z.string().uuid("ID de club inválido").optional().nullable(),
 });
 
 export const updateStudentSchema = createStudentSchema

@@ -11,7 +11,6 @@ import { getBooleanSetting } from "@/lib/app-settings";
 import {
   getActiveClubIds,
   getClubMembersDirectory,
-  getCoachClubOptions,
   sharedWithClubCondition,
 } from "@/lib/clubs";
 import { cn } from "@/lib/utils";
@@ -40,7 +39,6 @@ export default async function GroupsPage({ searchParams }: PageProps) {
     );
   }
 
-  const coachClubs = await getCoachClubOptions(user.id);
   const clubIds = await getActiveClubIds(user.id);
   const clubMembers =
     clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
@@ -237,7 +235,7 @@ export default async function GroupsPage({ searchParams }: PageProps) {
                 </h2>
               </div>
               <div className="p-5">
-                <GroupCreateForm coachClubs={coachClubs} />
+                <GroupCreateForm />
               </div>
             </div>
           </div>
