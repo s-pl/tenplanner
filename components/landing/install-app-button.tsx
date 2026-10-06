@@ -9,26 +9,84 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+type Platform = "ios" | "android" | "mac-safari" | "firefox" | "other";
+
+function detectPlatform(): Platform {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua) && !("MSStream" in window);
+  if (isIOS) return "ios";
+  if (/android/i.test(ua)) return "android";
+  if (/firefox/i.test(ua)) return "firefox";
+  const isMac = /macintosh|mac os x/i.test(ua) && !("ontouchend" in document);
+  const isSafari = /safari/i.test(ua) && !/chrome|chromium|edg/i.test(ua);
+  if (isMac && isSafari) return "mac-safari";
+  return "other";
+}
+
+const INSTRUCTIONS: Record<
+  Exclude<Platform, "android">,
+  { label: string; body: React.ReactNode }
+> = {
+  ios: {
+    label: "Añadir a inicio",
+    body: (
+      <>
+        Toca <span className="font-semibold">Compartir</span> en Safari y luego{" "}
+        <span className="font-semibold">Añadir a pantalla de inicio</span>.
+      </>
+    ),
+  },
+  "mac-safari": {
+    label: "Añadir al Dock",
+    body: (
+      <>
+        En el menú <span className="font-semibold">Archivo</span> de Safari,
+        elige <span className="font-semibold">Añadir al Dock</span>.
+      </>
+    ),
+  },
+  firefox: {
+    label: "Instalar app",
+    body: (
+      <>
+        Firefox de escritorio no permite instalar TenPlanner como app. Abre esta
+        página con <span className="font-semibold">Chrome</span> o{" "}
+        <span className="font-semibold">Edge</span> para instalarla.
+      </>
+    ),
+  },
+  other: {
+    label: "Instalar app",
+    body: (
+      <>
+        Busca el icono de instalación <span className="font-semibold">⊕</span>{" "}
+        en la barra de direcciones, o el menú del navegador &rsaquo;{" "}
+        <span className="font-semibold">Instalar TenPlanner</span>.
+      </>
+    ),
+  },
+};
+
 /**
- * Shows an "Instalar app" button once the browser has signaled the PWA is
- * installable (Android/Chrome/Edge via `beforeinstallprompt`), or an
- * "Añadir a inicio" button with manual instructions on iOS Safari, which
- * never fires that event. Renders nothing once the app is already
- * installed, or on browsers that give us neither signal.
+ * Always shows a way to add TenPlanner to the device: a native "Instalar
+ * app" button wherever the browser offers `beforeinstallprompt` (Android
+ * Chrome/Edge, and sometimes desktop Chrome/Edge), and otherwise a button
+ * that reveals manual steps for the detected platform (iOS Safari, macOS
+ * Safari, Firefox desktop, or a generic fallback). Renders nothing only
+ * once the app is already installed.
  *
- * All browser checks start `false` to match the server-rendered output
- * (there is no `window` on the server) and are resolved on mount. Reading
- * them into state during the initializer instead would make the client's
- * first render disagree with the SSR'd HTML and trigger a hydration
- * mismatch, most noticeably on iOS where `isIOS` would flip from false to
- * true the instant the component mounts.
+ * All browser checks start from safe SSR defaults (`other`, no prompt) and
+ * are resolved on mount — reading them during the initializer instead
+ * would make the client's first render disagree with the SSR'd HTML and
+ * trigger a hydration mismatch.
  */
 export function InstallAppButton({ className }: { className?: string }) {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("other");
   const [isStandalone, setIsStandalone] = useState(false);
-  const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     // Synchronizing with browser-only capabilities (display mode, user
@@ -38,9 +96,7 @@ export function InstallAppButton({ className }: { className?: string }) {
       window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as { standalone?: boolean }).standalone === true
     );
-
-    const ua = window.navigator.userAgent;
-    setIsIOS(/iphone|ipad|ipod/i.test(ua) && !("MSStream" in window));
+    setPlatform(detectPlatform());
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -59,9 +115,14 @@ export function InstallAppButton({ className }: { className?: string }) {
     };
   }, []);
 
-  if (isStandalone || (!deferredPrompt && !isIOS)) {
+  if (isStandalone) {
     return null;
   }
+
+  const instructions = platform === "android" ? null : INSTRUCTIONS[platform];
+  const label = deferredPrompt
+    ? "Instalar app"
+    : (instructions?.label ?? "Instalar app");
 
   const handleClick = async () => {
     if (deferredPrompt) {
@@ -70,7 +131,7 @@ export function InstallAppButton({ className }: { className?: string }) {
       setDeferredPrompt(null);
       return;
     }
-    setShowIOSHelp((value) => !value);
+    setShowHelp((value) => !value);
   };
 
   return (
@@ -84,13 +145,13 @@ export function InstallAppButton({ className }: { className?: string }) {
         )}
       >
         <Download className="size-4" />
-        {deferredPrompt ? "Instalar app" : "Añadir a inicio"}
+        {label}
       </button>
-      {showIOSHelp && (
+      {showHelp && !deferredPrompt && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-[#050505]/10 bg-white p-4 text-sm leading-6 text-[#050505] shadow-[0_24px_55px_rgba(5,5,5,0.12)]">
-          Toca <span className="font-semibold">Compartir</span> en Safari y
-          luego{" "}
-          <span className="font-semibold">Añadir a pantalla de inicio</span>.
+          {platform === "android"
+            ? "Abre el menú del navegador y elige Instalar app o Añadir a pantalla de inicio."
+            : instructions?.body}
         </div>
       )}
     </div>
