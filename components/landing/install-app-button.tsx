@@ -15,6 +15,13 @@ interface BeforeInstallPromptEvent extends Event {
  * "Añadir a inicio" button with manual instructions on iOS Safari, which
  * never fires that event. Renders nothing once the app is already
  * installed, or on browsers that give us neither signal.
+ *
+ * All browser checks start `false` to match the server-rendered output
+ * (there is no `window` on the server) and are resolved on mount. Reading
+ * them into state during the initializer instead would make the client's
+ * first render disagree with the SSR'd HTML and trigger a hydration
+ * mismatch, most noticeably on iOS where `isIOS` would flip from false to
+ * true the instant the component mounts.
  */
 export function InstallAppButton({ className }: { className?: string }) {
   const [deferredPrompt, setDeferredPrompt] =
@@ -24,10 +31,13 @@ export function InstallAppButton({ className }: { className?: string }) {
   const [showIOSHelp, setShowIOSHelp] = useState(false);
 
   useEffect(() => {
-    const standalone =
+    // Synchronizing with browser-only capabilities (display mode, user
+    // agent, install events) has no equivalent outside an effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsStandalone(
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as { standalone?: boolean }).standalone === true;
-    setIsStandalone(standalone);
+        (window.navigator as { standalone?: boolean }).standalone === true
+    );
 
     const ua = window.navigator.userAgent;
     setIsIOS(/iphone|ipad|ipod/i.test(ua) && !("MSStream" in window));
