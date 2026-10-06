@@ -161,6 +161,7 @@ export interface SessionBlockData {
     exerciseName: string | null;
     exerciseDescription: string | null;
     freeText: string | null;
+    title: string | null;
     durationMinutes: number | null;
     notes: string | null;
     kind?: "exercise" | "text" | "warmup" | "stations";
@@ -1012,12 +1013,20 @@ export function SessionDetailClient({
                                 {item.exerciseName}
                               </Link>
                             ) : (
-                              (item.exerciseName ?? item.freeText ?? "Item")
+                              (item.title ||
+                                item.exerciseName ||
+                                item.freeText ||
+                                "Item")
                             )}
                           </p>
                           {item.exerciseDescription && (
                             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                               {item.exerciseDescription}
+                            </p>
+                          )}
+                          {!item.exerciseId && item.title && item.freeText && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {item.freeText}
                             </p>
                           )}
                           <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">

@@ -23,6 +23,7 @@ import { computeSessionDates, sessionCode } from "./recurrence";
 import {
   buildBlocksPayload,
   buildExercisesPayload,
+  computeTimelineDuration,
   hasPlanContent,
   isTextItem,
   normalizeBlocks,
@@ -339,6 +340,23 @@ export function SessionWizard({
 
   const [state, setState] = useState<WizardState>(baselineState);
 
+  // La "Duración" del paso 1 refleja el contenido real del plan: en cuanto
+  // hay ejercicios/textos en la línea de tiempo, se recalcula a partir de
+  // ellos (igual que hace el servidor al guardar), para que el resumen de
+  // la sesión nunca muestre un número desactualizado. Sin contenido (p.
+  // ej. antes de llegar al paso 2, o una sesión por recurrencia sin plan
+  // propio) se deja el valor manual tal cual.
+  useEffect(() => {
+    if (!hasPlanContent(state)) return;
+    const computed = computeTimelineDuration(state);
+    if (computed > 0 && computed !== state.durationMinutes) {
+      setState((prev) => ({ ...prev, durationMinutes: computed }));
+    }
+    // Solo debe reaccionar a cambios en el contenido del plan, no a cada
+    // cambio de estado (evita un bucle con la propia escritura de arriba).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.exercises]);
+
   // En edición la fecha llega en ISO (UTC); se pasa a la hora local del
   // navegador para el campo fecha/hora.
   useEffect(() => {
@@ -535,6 +553,12 @@ export function SessionWizard({
 
       const exercisesPayload = buildExercisesPayload(state);
       const blocksPayload = buildBlocksPayload(state);
+      // Por si el efecto de sincronización aún no ha corrido (p. ej. se
+      // envía justo tras el último cambio): recalcula aquí también, para
+      // que lo guardado siempre sea el contenido real del plan.
+      const durationMinutes = hasPlanContent(state)
+        ? computeTimelineDuration(state)
+        : state.durationMinutes;
 
       if (edit) {
         const res = await fetch(`/api/sessions/${edit.sessionId}`, {
@@ -543,7 +567,7 @@ export function SessionWizard({
           body: JSON.stringify({
             title: state.title.trim(),
             scheduledAt: scheduledIso,
-            durationMinutes: state.durationMinutes,
+            durationMinutes,
             objective: state.objective.trim() || null,
             material: state.material.trim() || null,
             observations: state.observations.trim() || null,
@@ -588,7 +612,7 @@ export function SessionWizard({
             title: titleFor(date),
             description: null,
             scheduledAt: date.toISOString(),
-            durationMinutes: state.durationMinutes,
+            durationMinutes,
             objective: state.objective.trim() || null,
             material: state.material.trim() || null,
             observations: state.observations.trim() || null,

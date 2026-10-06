@@ -122,6 +122,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         itemExerciseName: sessionBlockItems.exerciseName,
         itemExerciseDescription: sessionBlockItems.exerciseDescription,
         itemFreeText: sessionBlockItems.freeText,
+        itemTitle: sessionBlockItems.title,
         itemDurationMinutes: sessionBlockItems.durationMinutes,
         itemNotes: sessionBlockItems.notes,
         itemKind: sessionBlockItems.kind,
@@ -189,6 +190,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         exerciseName: string | null;
         exerciseDescription: string | null;
         freeText: string | null;
+        title: string | null;
         durationMinutes: number | null;
         notes: string | null;
         kind: "exercise" | "text" | "warmup" | "stations";
@@ -215,6 +217,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         exerciseName: row.itemExerciseName,
         exerciseDescription: row.itemExerciseDescription,
         freeText: row.itemFreeText,
+        title: row.itemTitle,
         durationMinutes: row.itemDurationMinutes,
         notes: row.itemNotes,
         kind: resolveItemKind({

@@ -155,6 +155,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           blockNotes: classBlocks.notes,
           itemExerciseId: classBlockExercises.exerciseId,
           freeText: classBlockExercises.freeText,
+          itemTitle: classBlockExercises.title,
           itemDuration: classBlockExercises.durationMinutes,
           itemOrderIndex: classBlockExercises.orderIndex,
           itemKind: classBlockExercises.kind,
@@ -241,12 +242,14 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         }
 
         // Textos libres de la clase: van a la línea de tiempo en su sitio.
-        if (!row.itemExerciseId && row.freeText?.trim()) {
+        if (!row.itemExerciseId && (row.freeText?.trim() || row.itemTitle?.trim())) {
           fromClassExercises.push(
             createTextItem(
-              row.freeText.trim(),
+              row.freeText?.trim() ?? "",
               phaseFromBlock(orderIndex),
-              row.itemDuration ?? null
+              row.itemDuration ?? null,
+              "",
+              row.itemTitle?.trim() ?? ""
             )
           );
         }
