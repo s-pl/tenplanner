@@ -139,9 +139,9 @@ export default async function ClassDetailPage({
 
       <div className="relative mt-6 overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
         <div className="p-5 sm:p-7 lg:p-8">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 {cls.isLibrary && (
                   <span className="rounded-full bg-[#D6FF38] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#050505]">
                     Biblioteca
