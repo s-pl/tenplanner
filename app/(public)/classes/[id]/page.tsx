@@ -303,6 +303,8 @@ export default async function ClassDetailPage({
                                         st.exerciseName ? (
                                           <Link
                                             href={`/exercises/${st.exerciseId}?fromClass=${cls.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="font-medium text-foreground hover:text-brand"
                                           >
                                             {st.exerciseName}
@@ -317,6 +319,8 @@ export default async function ClassDetailPage({
                               ) : item.exerciseId && item.exerciseName ? (
                                 <Link
                                   href={`/exercises/${item.exerciseId}?fromClass=${cls.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   className="font-medium text-foreground hover:text-brand"
                                 >
                                   {item.exerciseName}
