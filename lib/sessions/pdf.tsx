@@ -38,14 +38,14 @@ export type PdfSession = {
   coachName: string;
 };
 
-const BRAND = "#2563EB";
-const BRAND_LIGHT = "#EFF6FF";
-const BRAND_MUTED = "#93C5FD";
-const GRAY = "#6B7280";
-const LIGHT_GRAY = "#F3F4F6";
-const BORDER = "#E5E7EB";
+export const BRAND = "#2563EB";
+export const BRAND_LIGHT = "#EFF6FF";
+export const BRAND_MUTED = "#93C5FD";
+export const GRAY = "#6B7280";
+export const LIGHT_GRAY = "#F3F4F6";
+export const BORDER = "#E5E7EB";
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   page: {
     padding: 44,
     paddingBottom: 60,
@@ -271,22 +271,24 @@ const styles = StyleSheet.create({
   },
 });
 
-const PHASE_LABEL: Record<NonNullable<PdfExercise["phase"]> | "none", string> =
-  {
-    activation: "Bloque inicial",
-    main: "Bloque principal",
-    cooldown: "Bloque final",
-    none: "Sin bloque asignado",
-  };
+export const PHASE_LABEL: Record<
+  NonNullable<PdfExercise["phase"]> | "none",
+  string
+> = {
+  activation: "Bloque inicial",
+  main: "Bloque principal",
+  cooldown: "Bloque final",
+  none: "Sin bloque asignado",
+};
 
-const CATEGORY_LABEL: Record<string, string> = {
+export const CATEGORY_LABEL: Record<string, string> = {
   technique: "Técnica",
   tactics: "Táctica",
   fitness: "Físico",
   "warm-up": "Calentamiento",
 };
 
-const INTENSITY_LABEL = [
+export const INTENSITY_LABEL = [
   "",
   "Muy suave",
   "Suave",
@@ -306,7 +308,7 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
-function groupByPhase(exercises: PdfExercise[]) {
+export function groupByPhase(exercises: PdfExercise[]) {
   const order: Array<"activation" | "main" | "cooldown" | "none"> = [
     "activation",
     "main",
@@ -332,142 +334,25 @@ function groupByPhase(exercises: PdfExercise[]) {
     .map((k) => ({ phase: k, items: groups.get(k)! }));
 }
 
-/** Contenido de una sesión como página A4. Reutilizable para combinar
- * varias sesiones en un único PDF (ver `MultiSessionPdf`). */
-export function SessionPdfPage({ session }: { session: PdfSession }) {
-  const phases = groupByPhase(session.exercises);
-  const totalMinutes =
-    session.exercises.reduce((s, e) => s + (e.durationMinutes ?? 0), 0) ||
-    session.durationMinutes;
-
-  const allMaterials = Array.from(
-    new Set(
-      session.exercises.flatMap((e) =>
-        Array.isArray(e.materials) ? e.materials : []
-      )
-    )
-  );
-
+/** Lista de ejercicios/textos agrupada por bloque, con su título de sección
+ * ("Plan de entrenamiento"). Compartida por el PDF de sesión y el de clase
+ * (plantilla de biblioteca), que tienen idéntico contenido de bloques. */
+export function TrainingItemsSection({
+  exercises,
+  sectionTitle = "Plan de entrenamiento",
+}: {
+  exercises: PdfExercise[];
+  sectionTitle?: string;
+}) {
+  const phases = groupByPhase(exercises);
   return (
-    <Page size="A4" style={styles.page}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.brandLabel}>
-          TenPlanner · Sesión de entrenamiento
-        </Text>
-        <Text style={styles.title}>{session.title}</Text>
-        <Text style={styles.subtitle}>{formatDate(session.scheduledAt)}</Text>
-        <Text style={styles.coachLine}>Entrenador: {session.coachName}</Text>
-      </View>
-
-      {/* Meta chips */}
-      <View style={styles.metaGrid}>
-        <View style={styles.metaItem}>
-          <Text style={styles.metaLabel}>Duración</Text>
-          <Text style={styles.metaValue}>{totalMinutes} min</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Text style={styles.metaLabel}>Ejercicios</Text>
-          <Text style={styles.metaValue}>
-            {session.exercises.filter((e) => e.kind !== "text").length}
-          </Text>
-        </View>
-        {session.intensity != null && (
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Intensidad</Text>
-            <Text style={styles.metaValue}>
-              {session.intensity}/5 — {INTENSITY_LABEL[session.intensity]}
-            </Text>
-          </View>
-        )}
-        {session.location && (
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Ubicación</Text>
-            <Text style={styles.metaValue}>{session.location}</Text>
-          </View>
-        )}
-        {session.tags && session.tags.length > 0 && (
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Etiquetas</Text>
-            <Text style={styles.metaValue}>{session.tags.join(", ")}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Objective */}
-      {session.objective && (
-        <>
-          <Text style={styles.sectionTitle}>Objetivo</Text>
-          <Text style={styles.bodyText}>{session.objective}</Text>
-        </>
-      )}
-
-      {/* Description */}
-      {session.description && (
-        <>
-          <Text style={styles.sectionTitle}>Descripción</Text>
-          <Text style={styles.bodyText}>{session.description}</Text>
-        </>
-      )}
-
-      {session.material && (
-        <>
-          <Text style={styles.sectionTitle}>Material</Text>
-          <Text style={styles.bodyText}>{session.material}</Text>
-        </>
-      )}
-
-      {session.observations && (
-        <>
-          <Text style={styles.sectionTitle}>Observaciones</Text>
-          <Text style={styles.bodyText}>{session.observations}</Text>
-        </>
-      )}
-
-      {/* Students */}
-      {session.students.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>
-            Alumnos ({session.students.length})
-          </Text>
-          <Text style={styles.studentsRow}>
-            {session.students
-              .map((s) =>
-                s.playerLevel ? `${s.name} (${s.playerLevel})` : s.name
-              )
-              .join("  ·  ")}
-          </Text>
-        </>
-      )}
-
-      {/* Materials summary */}
-      {allMaterials.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Material necesario</Text>
-          <View style={styles.materialsContainer}>
-            <Text style={styles.materialsTitle}>
-              Prepara antes de comenzar — {allMaterials.length} elemento
-              {allMaterials.length !== 1 ? "s" : ""}
-            </Text>
-            <View style={styles.materialsList}>
-              {allMaterials.map((m) => (
-                <View key={m} style={styles.materialChip}>
-                  <Text>{m}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </>
-      )}
-
-      {/* Exercises */}
-
+    <>
       {phases.map(({ phase, items }, phaseIdx) => (
         <View key={phase} style={styles.phaseBlock}>
           {/* El título va dentro del primer bloque para no quedarse
                 solo al final de una página. */}
           {phaseIdx === 0 && (
-            <Text style={styles.sectionTitle}>Plan de entrenamiento</Text>
+            <Text style={styles.sectionTitle}>{sectionTitle}</Text>
           )}
           <Text style={styles.phaseTitle} minPresenceAhead={80}>
             {items[0]?.blockTitle || PHASE_LABEL[phase]}
@@ -594,6 +479,139 @@ export function SessionPdfPage({ session }: { session: PdfSession }) {
           )}
         </View>
       ))}
+    </>
+  );
+}
+
+/** Contenido de una sesión como página A4. Reutilizable para combinar
+ * varias sesiones en un único PDF (ver `MultiSessionPdf`). */
+export function SessionPdfPage({ session }: { session: PdfSession }) {
+  const totalMinutes =
+    session.exercises.reduce((s, e) => s + (e.durationMinutes ?? 0), 0) ||
+    session.durationMinutes;
+
+  const allMaterials = Array.from(
+    new Set(
+      session.exercises.flatMap((e) =>
+        Array.isArray(e.materials) ? e.materials : []
+      )
+    )
+  );
+
+  return (
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.brandLabel}>
+          TenPlanner · Sesión de entrenamiento
+        </Text>
+        <Text style={styles.title}>{session.title}</Text>
+        <Text style={styles.subtitle}>{formatDate(session.scheduledAt)}</Text>
+        <Text style={styles.coachLine}>Entrenador: {session.coachName}</Text>
+      </View>
+
+      {/* Meta chips */}
+      <View style={styles.metaGrid}>
+        <View style={styles.metaItem}>
+          <Text style={styles.metaLabel}>Duración</Text>
+          <Text style={styles.metaValue}>{totalMinutes} min</Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Text style={styles.metaLabel}>Ejercicios</Text>
+          <Text style={styles.metaValue}>
+            {session.exercises.filter((e) => e.kind !== "text").length}
+          </Text>
+        </View>
+        {session.intensity != null && (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Intensidad</Text>
+            <Text style={styles.metaValue}>
+              {session.intensity}/5 — {INTENSITY_LABEL[session.intensity]}
+            </Text>
+          </View>
+        )}
+        {session.location && (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Ubicación</Text>
+            <Text style={styles.metaValue}>{session.location}</Text>
+          </View>
+        )}
+        {session.tags && session.tags.length > 0 && (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Etiquetas</Text>
+            <Text style={styles.metaValue}>{session.tags.join(", ")}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Objective */}
+      {session.objective && (
+        <>
+          <Text style={styles.sectionTitle}>Objetivo</Text>
+          <Text style={styles.bodyText}>{session.objective}</Text>
+        </>
+      )}
+
+      {/* Description */}
+      {session.description && (
+        <>
+          <Text style={styles.sectionTitle}>Descripción</Text>
+          <Text style={styles.bodyText}>{session.description}</Text>
+        </>
+      )}
+
+      {session.material && (
+        <>
+          <Text style={styles.sectionTitle}>Material</Text>
+          <Text style={styles.bodyText}>{session.material}</Text>
+        </>
+      )}
+
+      {session.observations && (
+        <>
+          <Text style={styles.sectionTitle}>Observaciones</Text>
+          <Text style={styles.bodyText}>{session.observations}</Text>
+        </>
+      )}
+
+      {/* Students */}
+      {session.students.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>
+            Alumnos ({session.students.length})
+          </Text>
+          <Text style={styles.studentsRow}>
+            {session.students
+              .map((s) =>
+                s.playerLevel ? `${s.name} (${s.playerLevel})` : s.name
+              )
+              .join("  ·  ")}
+          </Text>
+        </>
+      )}
+
+      {/* Materials summary */}
+      {allMaterials.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Material necesario</Text>
+          <View style={styles.materialsContainer}>
+            <Text style={styles.materialsTitle}>
+              Prepara antes de comenzar — {allMaterials.length} elemento
+              {allMaterials.length !== 1 ? "s" : ""}
+            </Text>
+            <View style={styles.materialsList}>
+              {allMaterials.map((m) => (
+                <View key={m} style={styles.materialChip}>
+                  <Text>{m}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* Exercises */}
+      <TrainingItemsSection exercises={session.exercises} />
 
       {/* Footer */}
       <Text style={styles.footer} fixed>
