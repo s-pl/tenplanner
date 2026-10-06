@@ -58,5 +58,8 @@ export async function PATCH(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, data: { activeClubId: parsed.data.clubId } });
+  return NextResponse.json({
+    ok: true,
+    data: { activeClubId: parsed.data.clubId },
+  });
 }

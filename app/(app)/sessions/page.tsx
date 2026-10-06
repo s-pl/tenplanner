@@ -124,7 +124,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
   const whereConditions: SQL[] = [mineOrClub];
-  if (monitorFilter) whereConditions.push(eq(sessionsTable.userId, monitorFilter));
+  if (monitorFilter)
+    whereConditions.push(eq(sessionsTable.userId, monitorFilter));
   if (activeFilter === "upcoming")
     whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
   else if (activeFilter === "past")
@@ -146,10 +147,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
 
   const [allCountRows, filteredCountRows, upcomingCountRows, pastCountRows] =
     await Promise.all([
-      db
-        .select({ total: count() })
-        .from(sessionsTable)
-        .where(baseCountClause),
+      db.select({ total: count() }).from(sessionsTable).where(baseCountClause),
       db.select({ total: count() }).from(sessionsTable).where(whereClause),
       db
         .select({ total: count() })

@@ -171,7 +171,9 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       );
     } else {
       conds.push(
-        user ? or(eq(classes.isLibrary, true), mineOrClub!)! : eq(classes.isLibrary, true)
+        user
+          ? or(eq(classes.isLibrary, true), mineOrClub!)!
+          : eq(classes.isLibrary, true)
       );
     }
     if (q) conds.push(ilike(classes.name, `%${q}%`));

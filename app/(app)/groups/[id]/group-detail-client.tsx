@@ -264,117 +264,117 @@ export function GroupDetailClient({
       <div className="space-y-4 lg:sticky lg:top-6">
         {/* Add students */}
         {isOwner && (
-        <div
-          className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onDropAvailable}
-        >
-          <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
-            <UserPlus className="size-4 text-brand" />
-            <h2 className="text-[13px] font-black uppercase text-foreground">
-              Añadir alumno
-            </h2>
-          </div>
-
-          {available.length > 4 && (
-            <div className="px-4 pt-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30 pointer-events-none" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar alumno..."
-                  className="tp-field h-10 w-full pl-8 pr-3 text-[13px] font-medium placeholder:text-foreground/30"
-                />
-              </div>
+          <div
+            className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={onDropAvailable}
+          >
+            <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
+              <UserPlus className="size-4 text-brand" />
+              <h2 className="text-[13px] font-black uppercase text-foreground">
+                Añadir alumno
+              </h2>
             </div>
-          )}
 
-          <div className="mt-2 max-h-72 divide-y divide-[#050505]/10 overflow-y-auto dark:divide-white/10">
-            {filteredAvailable.length === 0 ? (
-              <p className="px-5 py-6 text-[13px] text-muted-foreground italic text-center">
-                {available.length === 0
-                  ? "Todos tus alumnos ya están en este grupo."
-                  : "Sin resultados."}
-              </p>
-            ) : (
-              filteredAvailable.map((s) => (
-                <button
-                  key={s.id}
-                  draggable
-                  onDragStart={() =>
-                    setDragging({ student: s, from: "available" })
-                  }
-                  onDragEnd={() => setDragging(null)}
-                  onClick={() => addStudent(s)}
-                  disabled={loadingId === s.id}
-                  className="flex w-full touch-manipulation items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand/10 disabled:opacity-50"
-                >
-                  <Avatar name={s.name} imageUrl={s.imageUrl} size={30} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {s.name}
-                    </p>
-                    {s.playerLevel && (
-                      <p className="text-[10px] text-muted-foreground">
-                        {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full text-brand">
-                    {loadingId === s.id ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <UserPlus className="size-4" />
-                    )}
-                  </div>
-                </button>
-              ))
+            {available.length > 4 && (
+              <div className="px-4 pt-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30 pointer-events-none" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar alumno..."
+                    className="tp-field h-10 w-full pl-8 pr-3 text-[13px] font-medium placeholder:text-foreground/30"
+                  />
+                </div>
+              </div>
             )}
+
+            <div className="mt-2 max-h-72 divide-y divide-[#050505]/10 overflow-y-auto dark:divide-white/10">
+              {filteredAvailable.length === 0 ? (
+                <p className="px-5 py-6 text-[13px] text-muted-foreground italic text-center">
+                  {available.length === 0
+                    ? "Todos tus alumnos ya están en este grupo."
+                    : "Sin resultados."}
+                </p>
+              ) : (
+                filteredAvailable.map((s) => (
+                  <button
+                    key={s.id}
+                    draggable
+                    onDragStart={() =>
+                      setDragging({ student: s, from: "available" })
+                    }
+                    onDragEnd={() => setDragging(null)}
+                    onClick={() => addStudent(s)}
+                    disabled={loadingId === s.id}
+                    className="flex w-full touch-manipulation items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand/10 disabled:opacity-50"
+                  >
+                    <Avatar name={s.name} imageUrl={s.imageUrl} size={30} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">
+                        {s.name}
+                      </p>
+                      {s.playerLevel && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {LEVEL_LABEL[s.playerLevel] ?? s.playerLevel}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full text-brand">
+                      {loadingId === s.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="size-4" />
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Danger zone */}
         {isOwner && (
-        <div className="rounded-[28px] border border-destructive/20 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:bg-[#10100e]">
-          <h3 className="mb-3 text-[10px] font-black uppercase text-destructive/60">
-            Zona de peligro
-          </h3>
-          {showDeleteConfirm ? (
-            <div className="space-y-3">
-              <p className="text-sm text-foreground leading-relaxed">
-                ¿Eliminar <strong>{groupName}</strong>? Esta acción no se puede
-                deshacer.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 rounded-full border border-[#050505]/10 px-3 py-2 text-[13px] font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={deleteGroup}
-                  disabled={deletingGroup}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[13px] font-black text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-60"
-                >
-                  {deletingGroup && (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  )}
-                  Eliminar
-                </button>
+          <div className="rounded-[28px] border border-destructive/20 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:bg-[#10100e]">
+            <h3 className="mb-3 text-[10px] font-black uppercase text-destructive/60">
+              Zona de peligro
+            </h3>
+            {showDeleteConfirm ? (
+              <div className="space-y-3">
+                <p className="text-sm text-foreground leading-relaxed">
+                  ¿Eliminar <strong>{groupName}</strong>? Esta acción no se
+                  puede deshacer.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 rounded-full border border-[#050505]/10 px-3 py-2 text-[13px] font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={deleteGroup}
+                    disabled={deletingGroup}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[13px] font-black text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-60"
+                  >
+                    {deletingGroup && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    Eliminar
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 px-3 py-2 text-[13px] font-black text-destructive transition-colors hover:bg-destructive/10"
-            >
-              <Trash2 className="size-3.5" /> Eliminar grupo
-            </button>
-          )}
-        </div>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 px-3 py-2 text-[13px] font-black text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <Trash2 className="size-3.5" /> Eliminar grupo
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

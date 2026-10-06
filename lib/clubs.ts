@@ -60,7 +60,8 @@ export async function getClubOptionsForUser(userId: string) {
   ]);
   const options: { id: string; name: string }[] = [];
   if (owned) options.push({ id: owned.id, name: owned.name });
-  for (const { club } of coachOf) options.push({ id: club.id, name: club.name });
+  for (const { club } of coachOf)
+    options.push({ id: club.id, name: club.name });
   return options;
 }
 
@@ -95,7 +96,9 @@ export async function getActiveClubIds(userId: string): Promise<string[]> {
   const rows = await db
     .select({ clubId: clubMembers.clubId })
     .from(clubMembers)
-    .where(and(eq(clubMembers.userId, userId), eq(clubMembers.status, "active")));
+    .where(
+      and(eq(clubMembers.userId, userId), eq(clubMembers.status, "active"))
+    );
   return rows.map((r) => r.clubId);
 }
 
@@ -111,7 +114,10 @@ export async function getClubMembersDirectory(clubIds: string[]) {
     .from(clubMembers)
     .innerJoin(users, eq(users.id, clubMembers.userId))
     .where(
-      and(inArray(clubMembers.clubId, clubIds), eq(clubMembers.status, "active"))
+      and(
+        inArray(clubMembers.clubId, clubIds),
+        eq(clubMembers.status, "active")
+      )
     );
   const byId = new Map<string, string>();
   for (const row of rows) byId.set(row.userId, row.name);
@@ -149,7 +155,10 @@ export async function setActiveWorkClub(userId: string, clubId: string | null) {
   if (clubId && !(await canTagWithClub(userId, clubId))) {
     throw new Error("not_a_member");
   }
-  await db.update(users).set({ activeClubId: clubId }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ activeClubId: clubId })
+    .where(eq(users.id, userId));
 }
 
 /**

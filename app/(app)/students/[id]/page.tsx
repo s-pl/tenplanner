@@ -404,8 +404,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <GenerateProfileLinkButton studentId={student.id} />
             ) : (
               <p className="text-[12px] italic text-foreground/40">
-                Solo {authorName ?? "el entrenador"} puede generar este
-                enlace.
+                Solo {authorName ?? "el entrenador"} puede generar este enlace.
               </p>
             )}
           </aside>

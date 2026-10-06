@@ -420,7 +420,6 @@ export function StudentForm({
               )}
             />
           </div>
-
         </div>
       </section>
 

@@ -52,8 +52,8 @@ export function WorkModeSwitcher({
         </h2>
         <p className="mt-1 text-xs text-foreground/55 leading-relaxed">
           Decide si lo que crees a partir de ahora (sesiones, alumnos, clases,
-          grupos, eventos) es tuyo en particular o del club — se comparte con
-          el resto de monitores del club mientras estés en ese modo. Puedes
+          grupos, eventos) es tuyo en particular o del club — se comparte con el
+          resto de monitores del club mientras estés en ese modo. Puedes
           cambiarlo cuando quieras; lo ya creado no cambia de dueño.
         </p>
       </div>

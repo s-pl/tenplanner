@@ -58,7 +58,9 @@ export function ClassPdfPage({ cls }: { cls: PdfClass }) {
 
   const allMaterials = Array.from(
     new Set(
-      cls.exercises.flatMap((e) => (Array.isArray(e.materials) ? e.materials : []))
+      cls.exercises.flatMap((e) =>
+        Array.isArray(e.materials) ? e.materials : []
+      )
     )
   );
 

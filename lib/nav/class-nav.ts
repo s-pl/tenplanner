@@ -75,7 +75,12 @@ export async function getFilteredClassIds(
 
   const clubIds = userId ? await getActiveClubIds(userId) : [];
   const mineOrClub = userId
-    ? sharedWithClubCondition(classes.createdBy, classes.clubId, userId, clubIds)
+    ? sharedWithClubCondition(
+        classes.createdBy,
+        classes.clubId,
+        userId,
+        clubIds
+      )
     : null;
 
   const conds: SQL[] = [];
@@ -89,7 +94,9 @@ export async function getFilteredClassIds(
     );
   } else {
     conds.push(
-      userId ? or(eq(classes.isLibrary, true), mineOrClub!)! : eq(classes.isLibrary, true)
+      userId
+        ? or(eq(classes.isLibrary, true), mineOrClub!)!
+        : eq(classes.isLibrary, true)
     );
   }
   if (q) conds.push(ilike(classes.name, `%${q}%`));

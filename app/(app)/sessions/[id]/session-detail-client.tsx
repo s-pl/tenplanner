@@ -1045,10 +1045,10 @@ export function SessionDetailClient({
                                 {item.exerciseName}
                               </Link>
                             ) : (
-                              (item.title ||
-                                item.exerciseName ||
-                                item.freeText ||
-                                "Item")
+                              item.title ||
+                              item.exerciseName ||
+                              item.freeText ||
+                              "Item"
                             )}
                           </p>
                           {item.exerciseDescription && (

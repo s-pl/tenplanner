@@ -112,8 +112,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
   const pageRows = hasNextPage ? rowPage.slice(0, PAGE_SIZE) : rowPage;
   const filtered = pageRows.map((r) => ({
     ...r.student,
-    authorName:
-      r.student.coachId !== user.id ? (r.authorName ?? null) : null,
+    authorName: r.student.coachId !== user.id ? (r.authorName ?? null) : null,
   }));
   const totalStudents = Number(totalRows[0]?.total ?? 0);
 

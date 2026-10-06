@@ -248,7 +248,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         }
 
         // Textos libres de la clase: van a la línea de tiempo en su sitio.
-        if (!row.itemExerciseId && (row.freeText?.trim() || row.itemTitle?.trim())) {
+        if (
+          !row.itemExerciseId &&
+          (row.freeText?.trim() || row.itemTitle?.trim())
+        ) {
           fromClassExercises.push(
             createTextItem(
               row.freeText?.trim() ?? "",

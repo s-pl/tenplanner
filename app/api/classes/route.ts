@@ -137,7 +137,9 @@ export async function GET(request: Request) {
   } else {
     // all: biblioteca pública + propias del usuario (+ compartidas por club)
     conds.push(
-      user ? or(eq(classes.isLibrary, true), mineOrClub!)! : eq(classes.isLibrary, true)
+      user
+        ? or(eq(classes.isLibrary, true), mineOrClub!)!
+        : eq(classes.isLibrary, true)
     );
   }
   if (q) conds.push(ilike(classes.name, `%${q}%`));
