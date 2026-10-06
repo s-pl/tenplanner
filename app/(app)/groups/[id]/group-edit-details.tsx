@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Pencil } from "lucide-react";
+import {
+  ClubContextSelect,
+  type ClubOption,
+} from "@/components/app/club-context-select";
 
 /**
  * Botón "Editar grupo" para la cabecera: cambia el nombre y la descripción.
@@ -12,21 +16,27 @@ export function GroupEditDetails({
   groupId,
   name,
   description,
+  clubId: initialClubId = null,
+  coachClubs = [],
 }: {
   groupId: string;
   name: string;
   description: string | null;
+  clubId?: string | null;
+  coachClubs?: ClubOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [nameValue, setNameValue] = useState(name);
   const [descriptionValue, setDescriptionValue] = useState(description ?? "");
+  const [clubId, setClubId] = useState<string | null>(initialClubId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function openForm() {
     setNameValue(name);
     setDescriptionValue(description ?? "");
+    setClubId(initialClubId);
     setError(null);
     setOpen(true);
   }
@@ -44,6 +54,7 @@ export function GroupEditDetails({
         body: JSON.stringify({
           name: trimmedName,
           description: descriptionValue.trim() || null,
+          clubId,
         }),
       });
       if (!res.ok) {
@@ -110,6 +121,11 @@ export function GroupEditDetails({
           className="h-11 w-full rounded-full border border-white/15 bg-black/30 px-4 text-sm font-medium text-white outline-none placeholder:text-white/30 focus:border-[#D6FF38]"
         />
       </div>
+      <ClubContextSelect
+        value={clubId}
+        onChange={setClubId}
+        clubs={coachClubs}
+      />
       {error && <p className="text-xs font-semibold text-red-300">{error}</p>}
       <div className="flex gap-2">
         <button

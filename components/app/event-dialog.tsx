@@ -9,6 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ClubContextSelect,
+  type ClubOption,
+} from "@/components/app/club-context-select";
 
 export interface CalendarEventData {
   id: string;
@@ -16,6 +20,7 @@ export interface CalendarEventData {
   description: string | null;
   startAt: string;
   endAt: string;
+  clubId?: string | null;
 }
 
 function pad(n: number) {
@@ -33,6 +38,7 @@ export function EventDialog({
   event,
   defaultDate,
   onSaved,
+  coachClubs = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,6 +47,7 @@ export function EventDialog({
   /** Día por defecto para un evento nuevo. */
   defaultDate?: Date;
   onSaved: (event: CalendarEventData) => void;
+  coachClubs?: ClubOption[];
 }) {
   const base = defaultDate ?? new Date();
   const initialStart = event ? new Date(event.startAt) : base;
@@ -52,6 +59,7 @@ export function EventDialog({
   const [description, setDescription] = useState(event?.description ?? "");
   const [startValue, setStartValue] = useState(toLocalInput(initialStart));
   const [endValue, setEndValue] = useState(toLocalInput(initialEnd));
+  const [clubId, setClubId] = useState<string | null>(event?.clubId ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +81,7 @@ export function EventDialog({
         description: description.trim() || null,
         startAt: start.toISOString(),
         endAt: end.toISOString(),
+        clubId,
       };
       const res = await fetch(
         event ? `/api/calendar-events/${event.id}` : "/api/calendar-events",
@@ -180,6 +189,13 @@ export function EventDialog({
               className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
             />
           </div>
+
+          <ClubContextSelect
+            value={clubId}
+            onChange={setClubId}
+            clubs={coachClubs}
+            label="¿Para quién es este evento?"
+          />
 
           {error && (
             <p className="text-sm font-medium text-destructive">{error}</p>

@@ -240,6 +240,12 @@ export const sessions = pgTable(
     placeId: uuid("place_id").references(() => places.id, {
       onDelete: "set null",
     }),
+    // null = particular (personal work). Set when the coach creates this
+    // on behalf of a club they're linked to — the club only sees items
+    // tagged with its own id, never the coach's other work.
+    clubId: uuid("club_id").references(() => clubs.id, {
+      onDelete: "set null",
+    }),
     status: sessionStatusEnum("status").notNull().default("scheduled"),
     statusNote: text("status_note"), // notas de completada / motivo de cancelada
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -255,6 +261,7 @@ export const sessions = pgTable(
     index("sessions_scheduled_at_idx").on(t.scheduledAt),
     index("sessions_user_scheduled_at_idx").on(t.userId, t.scheduledAt),
     index("sessions_place_id_idx").on(t.placeId),
+    index("sessions_club_id_idx").on(t.clubId),
   ]
 );
 
@@ -366,6 +373,11 @@ export const students = pgTable(
     }),
     consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),
     consentVersion: varchar("consent_version", { length: 20 }),
+    // null = particular student. Set when the coach adds this student on
+    // behalf of a club they're linked to.
+    clubId: uuid("club_id").references(() => clubs.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -377,6 +389,7 @@ export const students = pgTable(
   (t) => [
     index("students_coach_id_idx").on(t.coachId),
     index("students_coach_name_idx").on(t.coachId, t.name),
+    index("students_club_id_idx").on(t.clubId),
   ]
 );
 
@@ -416,6 +429,11 @@ export const groups = pgTable(
       .notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    // null = particular group. Set when the coach creates this on behalf
+    // of a club they're linked to.
+    clubId: uuid("club_id").references(() => clubs.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -424,7 +442,10 @@ export const groups = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [index("groups_coach_id_idx").on(t.coachId)]
+  (t) => [
+    index("groups_coach_id_idx").on(t.coachId),
+    index("groups_club_id_idx").on(t.clubId),
+  ]
 );
 
 export const groupStudents = pgTable(
@@ -868,6 +889,11 @@ export const calendarEvents = pgTable(
     description: text("description"),
     startAt: timestamp("start_at", { withTimezone: true }).notNull(),
     endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    // null = particular event. Set when the coach creates this on behalf
+    // of a club they're linked to.
+    clubId: uuid("club_id").references(() => clubs.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -880,6 +906,7 @@ export const calendarEvents = pgTable(
     index("calendar_events_user_id_idx").on(t.userId),
     index("calendar_events_start_at_idx").on(t.startAt),
     index("calendar_events_user_start_at_idx").on(t.userId, t.startAt),
+    index("calendar_events_club_id_idx").on(t.clubId),
   ]
 );
 

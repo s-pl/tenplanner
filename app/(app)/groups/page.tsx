@@ -8,6 +8,7 @@ import { Users, ChevronRight, Shield, Plus } from "lucide-react";
 import { GroupCreateForm } from "./group-create-form";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getCoachClubOptions } from "@/lib/clubs";
 
 export default async function GroupsPage() {
   const supabase = await createClient();
@@ -27,6 +28,8 @@ export default async function GroupsPage() {
       />
     );
   }
+
+  const coachClubs = await getCoachClubOptions(user.id);
 
   const rows = await db
     .select({
@@ -165,7 +168,7 @@ export default async function GroupsPage() {
                 </h2>
               </div>
               <div className="p-5">
-                <GroupCreateForm />
+                <GroupCreateForm coachClubs={coachClubs} />
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { canTagWithClub } from "@/lib/clubs";
 
 const createSchema = z
   .object({
@@ -11,6 +12,7 @@ const createSchema = z
     description: z.string().trim().max(4000).optional().nullable(),
     startAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
     endAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
+    clubId: z.string().uuid().optional().nullable(),
   })
   .refine((v) => new Date(v.endAt) >= new Date(v.startAt), {
     message: "La fecha de finalización debe ser posterior a la de inicio",
@@ -63,6 +65,16 @@ export async function POST(request: Request) {
       { status: 422 }
     );
 
+  if (
+    parsed.data.clubId &&
+    !(await canTagWithClub(user.id, parsed.data.clubId))
+  ) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
+
   const [created] = await db
     .insert(calendarEvents)
     .values({
@@ -71,6 +83,7 @@ export async function POST(request: Request) {
       description: parsed.data.description ?? null,
       startAt: new Date(parsed.data.startAt),
       endAt: new Date(parsed.data.endAt),
+      clubId: parsed.data.clubId ?? null,
     })
     .returning();
 

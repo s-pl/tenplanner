@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getCoachClubOptions } from "@/lib/clubs";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
 import { planItemsToWizard } from "@/components/app/session-wizard/timeline";
@@ -43,7 +44,7 @@ export default async function EditSessionPage({ params }: PageProps) {
     "feature.public_exercises_enabled"
   );
 
-  const [plan, studentRows, coachPlaces, userRow, allExercises] =
+  const [plan, studentRows, coachPlaces, userRow, allExercises, coachClubs] =
     await Promise.all([
       loadSessionPlan(id),
       db
@@ -77,6 +78,7 @@ export default async function EditSessionPage({ params }: PageProps) {
         )
         .orderBy(exercises.name)
         .limit(200),
+      getCoachClubOptions(user.id),
     ]);
 
   const monitorName =
@@ -120,6 +122,7 @@ export default async function EditSessionPage({ params }: PageProps) {
             <SessionWizard
               availableExercises={allExercises}
               places={coachPlaces}
+              coachClubs={coachClubs}
               monitorName={monitorName}
               allowDraftRestore={false}
               edit={{
@@ -130,6 +133,7 @@ export default async function EditSessionPage({ params }: PageProps) {
                   durationMinutes: sessionRow.durationMinutes,
                   location: sessionRow.location ?? "",
                   placeId: sessionRow.placeId ?? null,
+                  clubId: sessionRow.clubId ?? null,
                   objective: sessionRow.objective ?? "",
                   material: sessionRow.material ?? "",
                   observations: sessionRow.observations ?? "",

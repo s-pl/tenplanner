@@ -26,6 +26,7 @@ import {
   EventDialog,
   type CalendarEventData,
 } from "@/components/app/event-dialog";
+import { type ClubOption } from "@/components/app/club-context-select";
 import { DayAgenda } from "@/components/app/day-agenda";
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ interface SessionData {
 interface CalendarClientProps {
   sessions: SessionData[];
   events?: CalendarEventData[];
+  coachClubs?: ClubOption[];
 }
 
 type DayItem =
@@ -123,6 +125,7 @@ function formatDayTitle(d: Date) {
 export function CalendarClient({
   sessions: initialSessions,
   events: initialEvents = [],
+  coachClubs = [],
 }: CalendarClientProps) {
   const router = useRouter();
   const today = new Date();
@@ -920,6 +923,7 @@ export function CalendarClient({
             if (!open) setEventDialog(null);
           }}
           onSaved={handleEventSaved}
+          coachClubs={coachClubs}
         />
       )}
 

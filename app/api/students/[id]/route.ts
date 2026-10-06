@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { canTagWithClub } from "@/lib/clubs";
 import {
   studentIdParamsSchema,
   updateStudentSchema,
@@ -80,6 +81,14 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     if (!existing) return notFoundResponse();
 
     const d = parsedBody.data;
+
+    if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
+      return NextResponse.json(
+        { error: "No perteneces a ese club." },
+        { status: 403 }
+      );
+    }
+
     const updateValues: Record<string, unknown> = {};
 
     const fields = [
@@ -96,6 +105,7 @@ export async function PUT(request: Request, context: StudentRouteContext) {
       "preferredSchedule",
       "notes",
       "imageUrl",
+      "clubId",
     ] as const;
 
     for (const field of fields) {

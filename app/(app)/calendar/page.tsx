@@ -10,6 +10,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getCoachClubOptions } from "@/lib/clubs";
 import { CalendarDays, Download, Plus } from "lucide-react";
 
 // Sessions loaded into the calendar are limited to this window to keep
@@ -44,6 +45,8 @@ export default async function CalendarPage() {
   const windowEnd = new Date(now);
   windowEnd.setDate(now.getDate() + WINDOW_FUTURE_DAYS);
 
+  const coachClubs = await getCoachClubOptions(user.id);
+
   const sessions = await db
     .select({
       id: sessionsTable.id,
@@ -70,6 +73,7 @@ export default async function CalendarPage() {
       description: calendarEventsTable.description,
       startAt: calendarEventsTable.startAt,
       endAt: calendarEventsTable.endAt,
+      clubId: calendarEventsTable.clubId,
     })
     .from(calendarEventsTable)
     .where(
@@ -152,7 +156,11 @@ export default async function CalendarPage() {
             </Link>
           </div>
         ) : (
-          <CalendarClient sessions={serialized} events={serializedEvents} />
+          <CalendarClient
+            sessions={serialized}
+            events={serializedEvents}
+            coachClubs={coachClubs}
+          />
         )}
       </div>
     </div>

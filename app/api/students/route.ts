@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { canTagWithClub } from "@/lib/clubs";
 import { createStudentSchema, zodValidationErrorResponse } from "./validation";
 
 function internalServerError() {
@@ -70,10 +71,17 @@ export async function POST(request: Request) {
     return zodValidationErrorResponse(parsed.error);
   }
 
+  const d = parsed.data;
+  if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
+
   try {
     await ensureUser(user);
 
-    const d = parsed.data;
     const [created] = await db
       .insert(students)
       .values({
@@ -95,6 +103,7 @@ export async function POST(request: Request) {
         preferredSchedule: d.preferredSchedule ?? null,
         notes: d.notes ?? null,
         imageUrl: d.imageUrl ?? null,
+        clubId: d.clubId ?? null,
       })
       .returning();
 

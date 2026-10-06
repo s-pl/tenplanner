@@ -45,6 +45,34 @@ export async function getCoachMemberships(userId: string) {
     );
 }
 
+/** {id, name} of every club a user can tag their own work with (active coach membership). */
+export async function getCoachClubOptions(userId: string) {
+  const rows = await getCoachMemberships(userId);
+  return rows.map(({ club }) => ({ id: club.id, name: club.name }));
+}
+
+/**
+ * Whether `userId` may tag an item with `clubId` — only true for a club
+ * they're an active coach member of. Used to validate the club-context
+ * selector server-side on create/update, so a coach can't tag work with a
+ * club they don't belong to.
+ */
+export async function canTagWithClub(userId: string, clubId: string) {
+  const [row] = await db
+    .select({ id: clubMembers.id })
+    .from(clubMembers)
+    .where(
+      and(
+        eq(clubMembers.userId, userId),
+        eq(clubMembers.clubId, clubId),
+        eq(clubMembers.role, "coach"),
+        eq(clubMembers.status, "active")
+      )
+    )
+    .limit(1);
+  return !!row;
+}
+
 /** Active coaches and pending invites for a club the caller owns. */
 export async function listClubRoster(clubId: string) {
   const [members, invites] = await Promise.all([

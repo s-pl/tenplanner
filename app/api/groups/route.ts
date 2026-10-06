@@ -5,10 +5,12 @@ import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { canTagWithClub } from "@/lib/clubs";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
+  clubId: z.string().uuid().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -141,12 +143,23 @@ export async function POST(request: Request) {
     );
   }
 
+  if (
+    parsed.data.clubId &&
+    !(await canTagWithClub(user.id, parsed.data.clubId))
+  ) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
+
   const [group] = await db
     .insert(groups)
     .values({
       coachId: user.id,
       name: parsed.data.name,
       description: parsed.data.description ?? null,
+      clubId: parsed.data.clubId ?? null,
     })
     .returning();
 

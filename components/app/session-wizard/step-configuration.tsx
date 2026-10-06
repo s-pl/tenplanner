@@ -29,6 +29,7 @@ interface StepConfigurationProps {
   update: (patch: Partial<WizardState>) => void;
   errors: Partial<Record<keyof WizardState, string>>;
   places: { id: string; name: string }[];
+  coachClubs?: { id: string; name: string }[];
   monitorName?: string;
   hideRecurrence?: boolean;
 }
@@ -167,6 +168,7 @@ export function StepConfiguration({
   update,
   errors,
   places = [],
+  coachClubs = [],
   monitorName,
   hideRecurrence = false,
 }: StepConfigurationProps) {
@@ -220,6 +222,32 @@ export function StepConfiguration({
             </select>
           )}
         </div>
+
+        {coachClubs.length > 0 && (
+          <div className="space-y-1.5">
+            <label
+              htmlFor="clubId"
+              className="block text-sm font-semibold text-foreground"
+            >
+              ¿Para quién es esta sesión?
+            </label>
+            <select
+              id="clubId"
+              value={state.clubId ?? ""}
+              onChange={(e) =>
+                update({ clubId: e.target.value ? e.target.value : null })
+              }
+              className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50"
+            >
+              <option value="">Particular</option>
+              {coachClubs.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {monitorName && (
           <div className="space-y-1.5">

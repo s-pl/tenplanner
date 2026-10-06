@@ -53,6 +53,7 @@ export interface SessionDraftPayload {
   durationMinutes: number;
   location: string;
   placeId: string | null;
+  clubId: string | null;
   objective: string;
   material: string;
   observations: string;

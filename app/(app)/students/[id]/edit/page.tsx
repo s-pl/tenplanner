@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students } from "@/db/schema";
+import { getCoachClubOptions } from "@/lib/clubs";
 import { StudentForm } from "@/components/app/student-form";
 
 type Gender = "male" | "female" | "other";
@@ -46,6 +47,8 @@ export default async function EditStudentPage({ params }: PageProps) {
 
   if (!student) notFound();
 
+  const coachClubs = await getCoachClubOptions(user.id);
+
   return (
     <div className="w-full px-4 py-8 sm:px-6 md:px-10">
       <div className="mb-6 flex items-start gap-4 border-b border-foreground/10 pb-5">
@@ -70,6 +73,7 @@ export default async function EditStudentPage({ params }: PageProps) {
       <StudentForm
         mode="edit"
         studentId={student.id}
+        coachClubs={coachClubs}
         initialData={{
           name: student.name,
           email: student.email,
@@ -86,6 +90,7 @@ export default async function EditStudentPage({ params }: PageProps) {
           preferredSchedule: student.preferredSchedule,
           notes: student.notes,
           imageUrl: student.imageUrl,
+          clubId: student.clubId,
         }}
       />
     </div>

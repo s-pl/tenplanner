@@ -34,6 +34,7 @@ import {
   exerciseVisibleToUserCondition,
 } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
+import { canTagWithClub } from "@/lib/clubs";
 import { embedSession } from "@/lib/ai/semantic-search";
 import type { StationItemJson } from "@/lib/block-items";
 
@@ -457,10 +458,18 @@ export async function POST(request: Request) {
     tags,
     location,
     placeId,
+    clubId,
     studentIds,
     exercises: exerciseItems,
     blocks,
   } = parsedBody.data;
+
+  if (clubId && !(await canTagWithClub(user.id, clubId))) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
 
   try {
     await ensureUser(user);
@@ -579,6 +588,7 @@ export async function POST(request: Request) {
           tags: normalizedTags,
           location: location ?? null,
           placeId: placeId ?? null,
+          clubId: clubId ?? null,
         })
         .returning();
 

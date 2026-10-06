@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { canTagWithClub } from "@/lib/clubs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -12,6 +13,7 @@ const updateSchema = z.object({
   description: z.string().trim().max(4000).nullable().optional(),
   startAt: z.string().optional(),
   endAt: z.string().optional(),
+  clubId: z.string().uuid().nullable().optional(),
 });
 
 export async function PATCH(request: Request, ctx: Ctx) {
@@ -46,6 +48,16 @@ export async function PATCH(request: Request, ctx: Ctx) {
     );
   }
 
+  if (
+    parsed.data.clubId &&
+    !(await canTagWithClub(user.id, parsed.data.clubId))
+  ) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
+
   const [updated] = await db
     .update(calendarEvents)
     .set({
@@ -55,6 +67,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
         : {}),
       ...(startAt ? { startAt } : {}),
       ...(endAt ? { endAt } : {}),
+      ...(parsed.data.clubId !== undefined
+        ? { clubId: parsed.data.clubId }
+        : {}),
     })
     .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, user.id)))
     .returning();
