@@ -87,6 +87,23 @@ export const devTaskStatusEnum = pgEnum("dev_task_status", [
   "resuelto",
 ]);
 
+export const clubMemberRoleEnum = pgEnum("club_member_role", [
+  "owner",
+  "coach",
+]);
+
+export const clubMemberStatusEnum = pgEnum("club_member_status", [
+  "active",
+  "removed",
+]);
+
+export const clubInviteStatusEnum = pgEnum("club_invite_status", [
+  "pending",
+  "accepted",
+  "revoked",
+  "expired",
+]);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -1394,3 +1411,96 @@ export const devTasks = pgTable(
     index("dev_tasks_created_at_idx").on(t.createdAt),
   ]
 );
+
+// Clubs — an organization account that can link several coaches' spaces
+// under shared management. The registering user becomes the `owner` member.
+export const clubs = pgTable(
+  "clubs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    ownerId: uuid("owner_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Informational only for now — no seat billing/enforcement.
+    plannedCoachSeats: integer("planned_coach_seats"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("clubs_owner_id_idx").on(t.ownerId)]
+);
+
+// Club membership — one row per (club, user). The owner also gets a row
+// here (role "owner") so membership checks don't need a special case.
+export const clubMembers = pgTable(
+  "club_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clubId: uuid("club_id")
+      .references(() => clubs.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    role: clubMemberRoleEnum("role").notNull(),
+    status: clubMemberStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("club_members_club_user_uniq").on(t.clubId, t.userId),
+    index("club_members_club_id_idx").on(t.clubId),
+    index("club_members_user_id_idx").on(t.userId),
+  ]
+);
+
+// Pending invitations to join a club as a coach, by email — works even if
+// the invited address has no TenPlanner account yet.
+export const clubInvites = pgTable(
+  "club_invites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clubId: uuid("club_id")
+      .references(() => clubs.id, { onDelete: "cascade" })
+      .notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    token: varchar("token", { length: 128 }).notNull().unique(),
+    status: clubInviteStatusEnum("status").notNull().default("pending"),
+    invitedByUserId: uuid("invited_by_user_id")
+      .references(() => users.id, { onDelete: "set null" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("club_invites_club_id_idx").on(t.clubId),
+    index("club_invites_email_idx").on(t.email),
+  ]
+);
+
+export const clubsRelations = relations(clubs, ({ many }) => ({
+  members: many(clubMembers),
+  invites: many(clubInvites),
+}));
+
+export const clubMembersRelations = relations(clubMembers, ({ one }) => ({
+  club: one(clubs, { fields: [clubMembers.clubId], references: [clubs.id] }),
+  user: one(users, { fields: [clubMembers.userId], references: [users.id] }),
+}));
+
+export const clubInvitesRelations = relations(clubInvites, ({ one }) => ({
+  club: one(clubs, { fields: [clubInvites.clubId], references: [clubs.id] }),
+}));

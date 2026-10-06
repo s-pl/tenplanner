@@ -18,6 +18,9 @@ const registerSchema = z
     email: z.string().trim().email("Email no válido"),
     password: z.string().min(8, "Mínimo 8 caracteres"),
     confirmPassword: z.string(),
+    isClub: z.boolean(),
+    clubName: z.string().trim().optional(),
+    clubSeats: z.string().optional(),
     accepted: z
       .boolean()
       .refine(Boolean, "Debes aceptar las condiciones para crear la cuenta"),
@@ -25,6 +28,10 @@ const registerSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
     message: "Las contraseñas no coinciden",
+  })
+  .refine((data) => !data.isClub || (data.clubName?.length ?? 0) >= 2, {
+    path: ["clubName"],
+    message: "Escribe el nombre del club",
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -34,6 +41,9 @@ const initialForm: RegisterForm = {
   email: "",
   password: "",
   confirmPassword: "",
+  isClub: false,
+  clubName: "",
+  clubSeats: "",
   accepted: false,
 };
 
@@ -147,6 +157,12 @@ export default function RegisterPage() {
           data: {
             full_name: parsed.data.name,
             role: "coach",
+            ...(parsed.data.isClub && parsed.data.clubName
+              ? {
+                  club_name: parsed.data.clubName,
+                  club_seats: parsed.data.clubSeats || null,
+                }
+              : {}),
           },
         },
       });
@@ -180,7 +196,24 @@ export default function RegisterPage() {
             role: "coach",
           }),
         });
-        router.push("/dashboard");
+
+        if (parsed.data.isClub && parsed.data.clubName) {
+          await fetch("/api/clubs", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.session.access_token}`,
+            },
+            body: JSON.stringify({
+              name: parsed.data.clubName,
+              plannedCoachSeats: parsed.data.clubSeats
+                ? Number(parsed.data.clubSeats)
+                : null,
+            }),
+          });
+        }
+
+        router.push(parsed.data.isClub ? "/club" : "/dashboard");
         router.refresh();
         return;
       }
@@ -328,6 +361,52 @@ export default function RegisterPage() {
             <p className="text-xs text-destructive">{fieldErrors.name}</p>
           )}
         </div>
+
+        <label className="flex items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-[#F4F4F1] p-3 text-sm text-foreground/62 dark:border-white/10 dark:bg-white/[0.04]">
+          <input
+            type="checkbox"
+            checked={form.isClub}
+            onChange={(e) => update("isClub", e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            Me registro como <strong>club</strong>, no como monitor individual.
+          </span>
+        </label>
+
+        {form.isClub && (
+          <div className="grid gap-4 rounded-[22px] border border-brand/30 bg-brand/5 p-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="clubName">Nombre del club</Label>
+              <Input
+                id="clubName"
+                value={form.clubName}
+                onChange={(e) => update("clubName", e.target.value)}
+                aria-invalid={!!fieldErrors.clubName}
+              />
+              {fieldErrors.clubName && (
+                <p className="text-xs text-destructive">
+                  {fieldErrors.clubName}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="clubSeats">
+                Monitores previstos{" "}
+                <span className="font-normal text-foreground/50">
+                  (opcional, solo informativo)
+                </span>
+              </Label>
+              <Input
+                id="clubSeats"
+                type="number"
+                min={0}
+                value={form.clubSeats}
+                onChange={(e) => update("clubSeats", e.target.value)}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>

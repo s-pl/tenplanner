@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { clubMembers, clubs, users } from "@/db/schema";
+import { getOwnedClub } from "@/lib/clubs";
 
 function safeNext(raw: string | null): string {
   const fallback = "/dashboard";
@@ -46,6 +47,44 @@ export async function GET(request: Request) {
             userId: user.id,
             error,
           });
+        }
+
+        // Club sign-up that needed email confirmation: the club couldn't be
+        // created at submit time (no users row yet), so finish it here.
+        const clubName = user.user_metadata?.club_name;
+        if (typeof clubName === "string" && clubName.trim().length >= 2) {
+          try {
+            const existing = await getOwnedClub(user.id);
+            if (!existing) {
+              const seatsRaw = user.user_metadata?.club_seats;
+              const seats =
+                typeof seatsRaw === "string" && seatsRaw.trim()
+                  ? Number(seatsRaw)
+                  : null;
+              await db.transaction(async (tx) => {
+                const [club] = await tx
+                  .insert(clubs)
+                  .values({
+                    name: clubName.trim(),
+                    ownerId: user.id,
+                    plannedCoachSeats:
+                      seats !== null && Number.isFinite(seats) ? seats : null,
+                  })
+                  .returning();
+                await tx.insert(clubMembers).values({
+                  clubId: club.id,
+                  userId: user.id,
+                  role: "owner",
+                  status: "active",
+                });
+              });
+            }
+          } catch (error) {
+            console.error("Error creating club during auth callback", {
+              userId: user.id,
+              error,
+            });
+          }
         }
       }
 

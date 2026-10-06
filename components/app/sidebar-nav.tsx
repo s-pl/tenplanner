@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   BookMarked,
   BookOpen,
+  Building2,
   CalendarDays,
   ChevronRight,
   ClipboardList,
@@ -120,6 +121,7 @@ const navItems: NavItem[] = [
   },
   { href: "/places", label: "Lugares", icon: MapPin },
   { href: "/resources", label: "Mis recursos", icon: BookMarked },
+  { href: "/club", label: "Mi club", icon: Building2 },
   { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
