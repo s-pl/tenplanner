@@ -12,7 +12,13 @@ export function TenPlannerMark({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="ten-planner-mark-gradient" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient
+          id="ten-planner-mark-gradient"
+          x1="0"
+          y1="0"
+          x2="1"
+          y2="1"
+        >
           <stop offset="0" stopColor="#4C6EF5" />
           <stop offset="1" stopColor="#8B5CF6" />
         </linearGradient>

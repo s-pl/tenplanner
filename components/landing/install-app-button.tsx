@@ -54,10 +54,7 @@ export function InstallAppButton({ className }: { className?: string }) {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        onBeforeInstallPrompt
-      );
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, []);
@@ -92,8 +89,8 @@ export function InstallAppButton({ className }: { className?: string }) {
       {showIOSHelp && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-[#050505]/10 bg-white p-4 text-sm leading-6 text-[#050505] shadow-[0_24px_55px_rgba(5,5,5,0.12)]">
           Toca <span className="font-semibold">Compartir</span> en Safari y
-          luego <span className="font-semibold">Añadir a pantalla de
-          inicio</span>.
+          luego{" "}
+          <span className="font-semibold">Añadir a pantalla de inicio</span>.
         </div>
       )}
     </div>
