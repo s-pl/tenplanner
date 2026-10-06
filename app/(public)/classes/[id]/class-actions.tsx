@@ -53,13 +53,15 @@ export function ClassActions({ classId, initialFavorite }: ClassActionsProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 shrink-0">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={addToSession}
-        className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2.5 text-sm font-black text-[#050505] transition hover:bg-white active:scale-95"
+        className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-[#D6FF38] px-4 py-2.5 text-sm font-black text-[#050505] transition hover:bg-white active:scale-95"
       >
-        <Plus className="size-4" /> Añadir a mis sesiones
+        <Plus className="size-4" />
+        <span className="hidden sm:inline">Añadir a mis sesiones</span>
+        <span className="sm:hidden">Añadir</span>
       </button>
       <ClassListPicker classId={classId} />
       <button
