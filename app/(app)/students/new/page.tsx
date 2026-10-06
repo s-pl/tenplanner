@@ -2,7 +2,6 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCoachClubOptions } from "@/lib/clubs";
 import { StudentForm } from "@/components/app/student-form";
 
 export default async function NewStudentPage() {
@@ -12,8 +11,6 @@ export default async function NewStudentPage() {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
-
-  const coachClubs = await getCoachClubOptions(user.id);
 
   return (
     <div className="w-full px-4 py-8 sm:px-6 md:px-10">
@@ -38,7 +35,7 @@ export default async function NewStudentPage() {
         </div>
       </div>
 
-      <StudentForm mode="create" coachClubs={coachClubs} />
+      <StudentForm mode="create" />
     </div>
   );
 }

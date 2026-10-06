@@ -2,7 +2,7 @@ import Link from "next/link";
 import { eq, or, desc, and, ilike, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { classes, classFavorites, classDrafts } from "@/db/schema";
+import { classes, classFavorites, classDrafts, users } from "@/db/schema";
 import { Plus, Search, FileText, Heart } from "lucide-react";
 import {
   classNavQueryString,
@@ -12,6 +12,7 @@ import {
   type ClassSort,
 } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -124,6 +125,8 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     isLibrary: boolean;
     autoria: string | null;
     createdAt: Date;
+    createdBy: string | null;
+    authorName: string | null;
   }> = [];
   let draftCount = 0;
   let draftRows: Array<{
@@ -146,10 +149,20 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     draftCount = draftRows.length;
   }
 
+  const clubIds = user ? await getActiveClubIds(user.id) : [];
+  const mineOrClub = user
+    ? sharedWithClubCondition(
+        classes.createdBy,
+        classes.clubId,
+        user.id,
+        clubIds
+      )
+    : null;
+
   if (activeTab !== "drafts") {
     const conds = [];
     if (activeTab === "mine" && user) {
-      conds.push(eq(classes.createdBy, user.id));
+      conds.push(mineOrClub!);
     } else if (activeTab === "library") {
       conds.push(eq(classes.isLibrary, true));
     } else if (activeTab === "favorites" && user) {
@@ -159,7 +172,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     } else {
       conds.push(
         user
-          ? or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))!
+          ? or(eq(classes.isLibrary, true), mineOrClub!)!
           : eq(classes.isLibrary, true)
       );
     }
@@ -203,7 +216,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       );
     }
 
-    rows = await db
+    const rawRows = await db
       .select({
         id: classes.id,
         name: classes.name,
@@ -218,11 +231,18 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         isLibrary: classes.isLibrary,
         autoria: classes.autoria,
         createdAt: classes.createdAt,
+        createdBy: classes.createdBy,
+        authorName: users.name,
       })
       .from(classes)
+      .leftJoin(users, eq(users.id, classes.createdBy))
       .where(and(...conds))
       .orderBy(...classOrderBy(activeSort))
       .limit(60);
+    rows = rawRows.map((r) => ({
+      ...r,
+      authorName: user && r.createdBy !== user.id ? r.authorName : null,
+    }));
   }
 
   // Favorites set para pintar el corazón si aplica
@@ -616,6 +636,11 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                           <h3 className="line-clamp-3 font-heading text-[19px] font-semibold leading-snug text-foreground transition-colors group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
                             {cls.name}
                           </h3>
+                          {cls.authorName && (
+                            <span className="mt-1.5 inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase text-foreground/50">
+                              {cls.authorName}
+                            </span>
+                          )}
                           {cls.objetivos && (
                             <p className="mt-3 line-clamp-3 text-[13px] leading-5 text-muted-foreground">
                               {cls.objetivos}

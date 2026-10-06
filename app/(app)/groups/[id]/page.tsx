@@ -2,14 +2,14 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { groups, groupStudents, students } from "@/db/schema";
+import { groups, groupStudents, students, users } from "@/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
 import { ArrowLeft, Users } from "lucide-react";
 import { GroupDetailClient } from "./group-detail-client";
 import { GroupEditDetails } from "./group-edit-details";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getCoachClubOptions } from "@/lib/clubs";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,15 +36,31 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
   const { id } = await params;
 
+  const clubIds = await getActiveClubIds(user.id);
+
   const [group] = await db
     .select()
     .from(groups)
-    .where(and(eq(groups.id, id), eq(groups.coachId, user.id)))
+    .where(
+      and(
+        eq(groups.id, id),
+        sharedWithClubCondition(groups.coachId, groups.clubId, user.id, clubIds)
+      )
+    )
     .limit(1);
 
   if (!group) notFound();
 
-  const coachClubs = await getCoachClubOptions(user.id);
+  const isOwner = group.coachId === user.id;
+  const authorName = isOwner
+    ? null
+    : ((
+        await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, group.coachId))
+          .limit(1)
+      )[0]?.name ?? null);
 
   const memberRows = await db
     .select({
@@ -110,16 +126,17 @@ export default async function GroupDetailPage({ params }: PageProps) {
                   {memberRows.length}
                 </span>{" "}
                 {memberRows.length === 1 ? "alumno" : "alumnos"}
+                {!isOwner && authorName && <> · Grupo de {authorName}</>}
               </p>
             </div>
-            <GroupEditDetails
-              key={`${group.name}|${group.description ?? ""}|${group.clubId ?? ""}`}
-              groupId={id}
-              name={group.name}
-              description={group.description}
-              clubId={group.clubId}
-              coachClubs={coachClubs}
-            />
+            {isOwner && (
+              <GroupEditDetails
+                key={`${group.name}|${group.description ?? ""}`}
+                groupId={id}
+                name={group.name}
+                description={group.description}
+              />
+            )}
           </div>
         </header>
 
@@ -128,6 +145,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
           groupName={group.name}
           members={memberRows}
           availableStudents={availableStudents}
+          isOwner={isOwner}
         />
       </div>
     </div>

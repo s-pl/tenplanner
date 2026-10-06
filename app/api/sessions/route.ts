@@ -31,7 +31,11 @@ import {
 } from "./validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
-import { canTagWithClub } from "@/lib/clubs";
+import {
+  getActiveClubIds,
+  getActiveWorkClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { embedSession } from "@/lib/ai/semantic-search";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
@@ -292,7 +296,10 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
   const now = new Date();
 
-  const whereConditions: SQL[] = [eq(sessions.userId, user.id)];
+  const clubIds = await getActiveClubIds(user.id);
+  const whereConditions: SQL[] = [
+    sharedWithClubCondition(sessions.userId, sessions.clubId, user.id, clubIds),
+  ];
 
   if (filter === "upcoming") {
     whereConditions.push(gt(sessions.scheduledAt, now));
@@ -444,18 +451,14 @@ export async function POST(request: Request) {
     tags,
     location,
     placeId,
-    clubId,
     studentIds,
     exercises: exerciseItems,
     blocks,
   } = parsedBody.data;
 
-  if (clubId && !(await canTagWithClub(user.id, clubId))) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
+  // El club ya no se elige por elemento: se etiqueta automáticamente con
+  // el modo de trabajo activo del usuario (ver /api/account/work-mode).
+  const clubId = await getActiveWorkClubId(user.id);
 
   try {
     await ensureUser(user);
@@ -497,13 +500,22 @@ export async function POST(request: Request) {
     }
 
     if (sourceClassId) {
+      const classClubIds = await getActiveClubIds(user.id);
       const [sourceClass] = await db
         .select({ id: classes.id })
         .from(classes)
         .where(
           and(
             eq(classes.id, sourceClassId),
-            or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))
+            or(
+              eq(classes.isLibrary, true),
+              sharedWithClubCondition(
+                classes.createdBy,
+                classes.clubId,
+                user.id,
+                classClubIds
+              )
+            )
           )
         )
         .limit(1);

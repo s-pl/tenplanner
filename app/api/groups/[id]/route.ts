@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { canTagWithClub } from "@/lib/clubs";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 async function ensureGroupsEnabled() {
   const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
@@ -21,7 +21,6 @@ type Ctx = { params: Promise<{ id: string }> };
 const updateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
-  clubId: z.string().uuid().nullable().optional(),
   studentIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -37,10 +36,16 @@ export async function GET(_req: Request, ctx: Ctx) {
 
   const { id } = await ctx.params;
 
+  const clubIds = await getActiveClubIds(user.id);
   const [group] = await db
     .select()
     .from(groups)
-    .where(and(eq(groups.id, id), eq(groups.coachId, user.id)))
+    .where(
+      and(
+        eq(groups.id, id),
+        sharedWithClubCondition(groups.coachId, groups.clubId, user.id, clubIds)
+      )
+    )
     .limit(1);
   if (!group) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -97,19 +102,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   const { studentIds, ...fields } = parsed.data;
 
-  if (fields.clubId && !(await canTagWithClub(user.id, fields.clubId))) {
-    return NextResponse.json(
-      { error: "No perteneces a ese club." },
-      { status: 403 }
-    );
-  }
-
   await db.transaction(async (tx) => {
-    if (
-      fields.name !== undefined ||
-      fields.description !== undefined ||
-      fields.clubId !== undefined
-    ) {
+    if (fields.name !== undefined || fields.description !== undefined) {
       await tx
         .update(groups)
         .set({
@@ -117,7 +111,6 @@ export async function PATCH(request: Request, ctx: Ctx) {
           ...(fields.description !== undefined
             ? { description: fields.description }
             : {}),
-          ...(fields.clubId !== undefined ? { clubId: fields.clubId } : {}),
         })
         .where(eq(groups.id, id));
     }

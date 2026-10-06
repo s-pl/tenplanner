@@ -129,8 +129,7 @@ export async function buildPdfSession(
         phase: item.phase,
         intensity: null,
         materials: [],
-        description:
-          item.title && item.text ? item.text : item.description,
+        description: item.title && item.text ? item.text : item.description,
         blockTitle: blockTitles.get(item.blockOrder) ?? null,
       };
     }),

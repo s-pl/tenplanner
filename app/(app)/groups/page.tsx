@@ -2,20 +2,30 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { groups, groupStudents } from "@/db/schema";
+import { groups, groupStudents, users } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
 import { Users, ChevronRight, Shield, Plus } from "lucide-react";
 import { GroupCreateForm } from "./group-create-form";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getCoachClubOptions } from "@/lib/clubs";
+import {
+  getActiveClubIds,
+  getClubMembersDirectory,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
+import { cn } from "@/lib/utils";
 
-export default async function GroupsPage() {
+interface PageProps {
+  searchParams: Promise<{ monitor?: string }>;
+}
+
+export default async function GroupsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const { monitor } = await searchParams;
 
   const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
   if (!groupsEnabled) {
@@ -29,20 +39,33 @@ export default async function GroupsPage() {
     );
   }
 
-  const coachClubs = await getCoachClubOptions(user.id);
+  const clubIds = await getActiveClubIds(user.id);
+  const clubMembers =
+    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const monitorFilter =
+    monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
+  const visibility = sharedWithClubCondition(
+    groups.coachId,
+    groups.clubId,
+    user.id,
+    clubIds
+  );
 
-  const rows = await db
+  const allRows = await db
     .select({
       id: groups.id,
       name: groups.name,
       description: groups.description,
       createdAt: groups.createdAt,
       memberCount: count(groupStudents.id),
+      coachId: groups.coachId,
+      authorName: users.name,
     })
     .from(groups)
     .leftJoin(groupStudents, eq(groupStudents.groupId, groups.id))
-    .where(eq(groups.coachId, user.id))
-    .groupBy(groups.id)
+    .leftJoin(users, eq(users.id, groups.coachId))
+    .where(visibility)
+    .groupBy(groups.id, users.name)
     .orderBy(groups.name)
     .catch(
       () =>
@@ -52,8 +75,14 @@ export default async function GroupsPage() {
           description: string | null;
           createdAt: Date;
           memberCount: number;
+          coachId: string;
+          authorName: string | null;
         }[]
     );
+
+  const rows = monitorFilter
+    ? allRows.filter((r) => r.coachId === monitorFilter)
+    : allRows;
 
   return (
     <div className="tp-page">
@@ -81,6 +110,39 @@ export default async function GroupsPage() {
             </p>
           </div>
         </header>
+
+        {clubMembers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#050505]/10 bg-white p-2 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+            <span className="pl-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+              Monitor
+            </span>
+            <Link
+              href="/groups"
+              className={cn(
+                "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                !monitorFilter
+                  ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+              )}
+            >
+              Todos
+            </Link>
+            {clubMembers.map((m) => (
+              <Link
+                key={m.id}
+                href={`/groups?monitor=${m.id}`}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                  monitorFilter === m.id
+                    ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                )}
+              >
+                {m.id === user.id ? "Yo" : m.name}
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_320px]">
           {/* Groups grid */}
@@ -129,8 +191,13 @@ export default async function GroupsPage() {
 
                     {/* Name + description */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[18px] font-black leading-tight text-foreground transition-colors group-hover:text-brand">
+                      <p className="flex flex-wrap items-center gap-2 text-[18px] font-black leading-tight text-foreground transition-colors group-hover:text-brand">
                         {g.name}
+                        {g.coachId !== user.id && g.authorName && (
+                          <span className="inline-flex items-center rounded-full border border-[#050505]/10 bg-[#F4F4F1] px-2 py-0.5 text-[10px] font-bold uppercase text-foreground/50 dark:border-white/10 dark:bg-white/[0.06]">
+                            {g.authorName}
+                          </span>
+                        )}
                       </p>
                       {g.description ? (
                         <p className="text-[12px] text-foreground/45 mt-1.5 line-clamp-2 leading-relaxed">
@@ -168,7 +235,7 @@ export default async function GroupsPage() {
                 </h2>
               </div>
               <div className="p-5">
-                <GroupCreateForm coachClubs={coachClubs} />
+                <GroupCreateForm />
               </div>
             </div>
           </div>

@@ -26,7 +26,6 @@ import {
   EventDialog,
   type CalendarEventData,
 } from "@/components/app/event-dialog";
-import { type ClubOption } from "@/components/app/club-context-select";
 import { DayAgenda } from "@/components/app/day-agenda";
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { cn } from "@/lib/utils";
@@ -36,12 +35,18 @@ interface SessionData {
   title: string;
   scheduledAt: string;
   durationMinutes: number;
+  userId?: string;
+  /** Nombre de quien la creó, solo cuando no es del usuario actual
+   * (compartida vía club). */
+  authorName?: string | null;
 }
 
 interface CalendarClientProps {
   sessions: SessionData[];
   events?: CalendarEventData[];
-  coachClubs?: ClubOption[];
+  /** Id del usuario actual — una sesión/evento de otro monitor (compartido
+   * vía club) no se puede arrastrar ni editar desde aquí, solo abrir. */
+  currentUserId?: string;
 }
 
 type DayItem =
@@ -125,7 +130,7 @@ function formatDayTitle(d: Date) {
 export function CalendarClient({
   sessions: initialSessions,
   events: initialEvents = [],
-  coachClubs = [],
+  currentUserId,
 }: CalendarClientProps) {
   const router = useRouter();
   const today = new Date();
@@ -699,8 +704,18 @@ export function CalendarClient({
                                 <Link
                                   key={`s-${item.session.id}`}
                                   href={`/sessions/${item.session.id}`}
-                                  draggable
+                                  draggable={
+                                    !currentUserId ||
+                                    item.session.userId === currentUserId
+                                  }
                                   onDragStart={(e) => {
+                                    if (
+                                      currentUserId &&
+                                      item.session.userId !== currentUserId
+                                    ) {
+                                      e.preventDefault();
+                                      return;
+                                    }
                                     e.dataTransfer.setData(
                                       "text/plain",
                                       item.session.id
@@ -709,10 +724,20 @@ export function CalendarClient({
                                   }}
                                   onDragEnd={() => setDragOverDate(null)}
                                   onClick={(e) => e.stopPropagation()}
-                                  title={item.session.title}
+                                  title={
+                                    item.session.authorName
+                                      ? `${item.session.title} · ${item.session.authorName}`
+                                      : item.session.title
+                                  }
                                   className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
                                 >
                                   {item.session.title}
+                                  {item.session.authorName && (
+                                    <span className="opacity-60">
+                                      {" "}
+                                      · {item.session.authorName}
+                                    </span>
+                                  )}
                                 </Link>
                               ) : (
                                 <button
@@ -720,12 +745,27 @@ export function CalendarClient({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (
+                                      currentUserId &&
+                                      item.event.userId !== currentUserId
+                                    )
+                                      return;
                                     setEventDialog({ event: item.event });
                                   }}
-                                  title={item.event.title}
+                                  title={
+                                    item.event.authorName
+                                      ? `${item.event.title} · ${item.event.authorName}`
+                                      : item.event.title
+                                  }
                                   className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
                                 >
                                   {item.event.title}
+                                  {item.event.authorName && (
+                                    <span className="opacity-60">
+                                      {" "}
+                                      · {item.event.authorName}
+                                    </span>
+                                  )}
                                 </button>
                               )
                             )}
@@ -850,8 +890,18 @@ export function CalendarClient({
                         <Link
                           key={`s-${item.session.id}`}
                           href={`/sessions/${item.session.id}`}
-                          draggable
+                          draggable={
+                            !currentUserId ||
+                            item.session.userId === currentUserId
+                          }
                           onDragStart={(e) => {
+                            if (
+                              currentUserId &&
+                              item.session.userId !== currentUserId
+                            ) {
+                              e.preventDefault();
+                              return;
+                            }
                             e.dataTransfer.setData(
                               "text/plain",
                               item.session.id
@@ -859,20 +909,47 @@ export function CalendarClient({
                             e.dataTransfer.effectAllowed = "move";
                           }}
                           onDragEnd={() => setDragOverDate(null)}
-                          title={item.session.title}
+                          title={
+                            item.session.authorName
+                              ? `${item.session.title} · ${item.session.authorName}`
+                              : item.session.title
+                          }
                           className="block truncate rounded-full bg-brand/20 px-2 py-1 text-[11px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
                         >
                           {item.session.title}
+                          {item.session.authorName && (
+                            <span className="opacity-60">
+                              {" "}
+                              · {item.session.authorName}
+                            </span>
+                          )}
                         </Link>
                       ) : (
                         <button
                           key={`e-${item.event.id}`}
                           type="button"
-                          onClick={() => setEventDialog({ event: item.event })}
-                          title={item.event.title}
+                          onClick={() => {
+                            if (
+                              currentUserId &&
+                              item.event.userId !== currentUserId
+                            )
+                              return;
+                            setEventDialog({ event: item.event });
+                          }}
+                          title={
+                            item.event.authorName
+                              ? `${item.event.title} · ${item.event.authorName}`
+                              : item.event.title
+                          }
                           className="block w-full truncate rounded-full bg-[#2563eb]/15 px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
                         >
                           {item.event.title}
+                          {item.event.authorName && (
+                            <span className="opacity-60">
+                              {" "}
+                              · {item.event.authorName}
+                            </span>
+                          )}
                         </button>
                       )
                     )}
@@ -923,7 +1000,6 @@ export function CalendarClient({
             if (!open) setEventDialog(null);
           }}
           onSaved={handleEventSaved}
-          coachClubs={coachClubs}
         />
       )}
 

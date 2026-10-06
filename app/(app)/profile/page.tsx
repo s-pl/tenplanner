@@ -8,6 +8,8 @@ import {
 } from "@/db/schema";
 import { eq, count, or, sql } from "drizzle-orm";
 import { ProfileClient } from "./profile-client";
+import { WorkModeSwitcher } from "@/components/app/work-mode-switcher";
+import { getActiveWorkClubId, getClubOptionsForUser } from "@/lib/clubs";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -17,6 +19,11 @@ export default async function ProfilePage() {
   const user = session?.user ?? null;
 
   if (!user) redirect("/login");
+
+  const [clubOptions, activeClubId] = await Promise.all([
+    getClubOptionsForUser(user.id),
+    getActiveWorkClubId(user.id),
+  ]);
 
   const [sessionStatsRows, exerciseCountRows, dbUser] = await Promise.all([
     db
@@ -63,6 +70,8 @@ export default async function ProfilePage() {
             panel de trabajo.
           </p>
         </header>
+
+        <WorkModeSwitcher clubs={clubOptions} activeClubId={activeClubId} />
 
         <ProfileClient
           user={{

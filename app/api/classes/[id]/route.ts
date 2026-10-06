@@ -17,6 +17,7 @@ import {
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
+import { getActiveClubIds } from "@/lib/clubs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -119,9 +120,14 @@ export async function GET(_req: Request, ctx: Ctx) {
     .limit(1);
   if (!cls) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Visibilidad: biblioteca pública o creador
+  // Visibilidad: biblioteca pública, creador, o compartida vía club
   const isOwner = !!user && cls.createdBy === user.id;
-  if (!cls.isLibrary && !isOwner) {
+  let sharedViaClub = false;
+  if (!cls.isLibrary && !isOwner && user && cls.clubId) {
+    const clubIds = await getActiveClubIds(user.id);
+    sharedViaClub = clubIds.includes(cls.clubId);
+  }
+  if (!cls.isLibrary && !isOwner && !sharedViaClub) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

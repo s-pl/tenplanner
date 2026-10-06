@@ -90,7 +90,6 @@ const formSchema = z.object({
   preferredSchedule: z.string().trim().max(500).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
   imageUrl: z.string().trim().max(1000).optional().or(z.literal("")),
-  clubId: z.string().uuid().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -150,9 +149,7 @@ export interface StudentFormProps {
     preferredSchedule?: string | null;
     notes?: string | null;
     imageUrl?: string | null;
-    clubId?: string | null;
   };
-  coachClubs?: { id: string; name: string }[];
 }
 
 function SectionHeader({
@@ -185,7 +182,6 @@ export function StudentForm({
   mode,
   studentId,
   initialData,
-  coachClubs = [],
 }: StudentFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -215,7 +211,6 @@ export function StudentForm({
       preferredSchedule: initialData?.preferredSchedule ?? "",
       notes: initialData?.notes ?? "",
       imageUrl: initialData?.imageUrl ?? "",
-      clubId: initialData?.clubId ?? null,
     },
   });
 
@@ -256,7 +251,6 @@ export function StudentForm({
       preferredSchedule: values.preferredSchedule?.trim() || null,
       notes: values.notes?.trim() || null,
       imageUrl: values.imageUrl?.trim() || null,
-      clubId: values.clubId ?? null,
     };
 
     const res = await fetch(url, {
@@ -426,38 +420,6 @@ export function StudentForm({
               )}
             />
           </div>
-
-          {coachClubs.length > 0 && (
-            <div className="space-y-2">
-              <label
-                htmlFor="clubId"
-                className="block text-sm font-semibold text-foreground"
-              >
-                ¿Para quién es este alumno?
-              </label>
-              <Controller
-                name="clubId"
-                control={control}
-                render={({ field }) => (
-                  <select
-                    id="clubId"
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value ? e.target.value : null)
-                    }
-                    className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
-                  >
-                    <option value="">Particular</option>
-                    {coachClubs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-            </div>
-          )}
         </div>
       </section>
 

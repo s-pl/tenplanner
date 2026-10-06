@@ -147,6 +147,11 @@ interface Props {
   nextHref?: string | null;
   navPosition?: number | null;
   navTotal?: number | null;
+  /** false cuando se ve una sesión compartida por el club de otro
+   * monitor: oculta editar/eliminar/cambiar estado/duplicar/repetir. */
+  isOwner?: boolean;
+  /** Nombre de quien creó la sesión, mostrado cuando isOwner es false. */
+  authorName?: string | null;
 }
 
 export interface SessionBlockData {
@@ -220,9 +225,11 @@ function getInitials(name: string) {
 function StudentsSection({
   students,
   sessionId,
+  isOwner = true,
 }: {
   students: SessionStudentData[];
   sessionId: string;
+  isOwner?: boolean;
 }) {
   const [attendance, setAttendance] = useState<Record<string, boolean | null>>(
     () => Object.fromEntries(students.map((s) => [s.id, s.attended]))
@@ -237,6 +244,7 @@ function StudentsSection({
   const [saving, setSaving] = useState<string | null>(null);
 
   async function toggleAttendance(studentId: string) {
+    if (!isOwner) return;
     const current = attendance[studentId];
     const next = current === true ? false : true;
     setSaving(studentId);
@@ -250,6 +258,7 @@ function StudentsSection({
   }
 
   async function setRating(studentId: string, rating: number) {
+    if (!isOwner) return;
     const next = ratings[studentId] === rating ? null : rating;
     setRatings((prev) => ({ ...prev, [studentId]: next }));
     await fetch(`/api/sessions/${sessionId}/attendance`, {
@@ -260,6 +269,7 @@ function StudentsSection({
   }
 
   async function commitFeedback(studentId: string) {
+    if (!isOwner) return;
     const value = feedbacks[studentId] ?? "";
     await fetch(`/api/sessions/${sessionId}/attendance`, {
       method: "PATCH",
@@ -328,7 +338,7 @@ function StudentsSection({
                   </button>
                   <button
                     onClick={() => toggleAttendance(s.id)}
-                    disabled={isSaving}
+                    disabled={isSaving || !isOwner}
                     aria-label={attended ? "Marcar ausente" : "Marcar presente"}
                     className={cn(
                       "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-50 min-w-[90px] justify-center",
@@ -364,11 +374,13 @@ function StudentsSection({
                           key={n}
                           type="button"
                           onClick={() => setRating(s.id, n)}
+                          disabled={!isOwner}
                           className={cn(
-                            "size-7 flex items-center justify-center transition-colors",
+                            "size-7 flex items-center justify-center transition-colors disabled:cursor-default",
                             (rating ?? 0) >= n
                               ? "text-amber-500"
-                              : "text-muted-foreground/40 hover:text-amber-500/60"
+                              : "text-muted-foreground/40",
+                            isOwner && "hover:text-amber-500/60"
                           )}
                           aria-label={`Valorar ${n} estrellas`}
                         >
@@ -392,8 +404,9 @@ function StudentsSection({
                         }))
                       }
                       onBlur={() => commitFeedback(s.id)}
+                      readOnly={!isOwner}
                       placeholder="Observaciones del alumno…"
-                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground placeholder:text-muted-foreground resize-none"
+                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 text-foreground placeholder:text-muted-foreground resize-none disabled:opacity-60"
                     />
                   </div>
                 )}
@@ -550,6 +563,8 @@ export function SessionDetailClient({
   nextHref = null,
   navPosition = null,
   navTotal = null,
+  isOwner = true,
+  authorName = null,
 }: Props) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -673,7 +688,7 @@ export function SessionDetailClient({
         </div>
         <div className="relative mt-4 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0 sm:justify-end">
           {/* Dar clase: ir viendo la sesión paso a paso */}
-          {status !== "cancelled" && (
+          {isOwner && status !== "cancelled" && (
             <Link
               href={`/sessions/${session.id}/execute`}
               className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-bold text-[#050505] transition-colors hover:bg-[#c8ef2f]"
@@ -685,22 +700,26 @@ export function SessionDetailClient({
             </Link>
           )}
           {/* Duplicar: copia completa en otra fecha, en un paso */}
-          <button
-            type="button"
-            onClick={() => setShowDuplicate(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
-          >
-            <Copy className="size-3.5" />
-            <span className="hidden sm:inline">Duplicar</span>
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setShowDuplicate(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
+            >
+              <Copy className="size-3.5" />
+              <span className="hidden sm:inline">Duplicar</span>
+            </button>
+          )}
           {/* Reutilizar: abre el asistente con esta sesión como base */}
-          <Link
-            href={`/sessions/new?from=${session.id}`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
-          >
-            <Repeat className="size-3.5" />
-            <span className="hidden sm:inline">Reutilizar</span>
-          </Link>
+          {isOwner && (
+            <Link
+              href={`/sessions/new?from=${session.id}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
+            >
+              <Repeat className="size-3.5" />
+              <span className="hidden sm:inline">Reutilizar</span>
+            </Link>
+          )}
           <SessionFavoriteToggle
             sessionId={session.id}
             sessionTitle={session.title}
@@ -719,20 +738,29 @@ export function SessionDetailClient({
             )}
             <span className="hidden sm:inline">PDF</span>
           </button>
-          <Link
-            href={`/sessions/${session.id}/edit`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
-          >
-            <Pencil className="size-3.5" />
-            <span className="hidden sm:inline">Editar</span>
-          </Link>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white/70 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.035]"
-          >
-            <Trash2 className="size-3.5" />
-            <span className="hidden sm:inline">Eliminar</span>
-          </button>
+          {isOwner && (
+            <Link
+              href={`/sessions/${session.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
+            >
+              <Pencil className="size-3.5" />
+              <span className="hidden sm:inline">Editar</span>
+            </Link>
+          )}
+          {isOwner && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-white/70 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 dark:bg-white/[0.035]"
+            >
+              <Trash2 className="size-3.5" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </button>
+          )}
+          {!isOwner && authorName && (
+            <span className="inline-flex items-center rounded-full border border-foreground/15 bg-foreground/5 px-3 py-2 text-sm font-semibold text-foreground/60">
+              Sesión de {authorName}
+            </span>
+          )}
         </div>
       </div>
 
@@ -781,7 +809,7 @@ export function SessionDetailClient({
         </div>
 
         {/* Status actions */}
-        {status !== "completed" && status !== "cancelled" && (
+        {isOwner && status !== "completed" && status !== "cancelled" && (
           <div className="flex flex-wrap items-center gap-2 border-b border-border/50 px-4 py-3 sm:px-6">
             <button
               onClick={() => setStatusDialog({ kind: "complete", note: "" })}
@@ -813,7 +841,7 @@ export function SessionDetailClient({
             </button>
           </div>
         )}
-        {status === "cancelled" && (
+        {isOwner && status === "cancelled" && (
           <div className="border-b border-border/50 px-4 py-3 sm:px-6">
             <button
               onClick={() => handleStatusChange("scheduled")}
@@ -892,7 +920,11 @@ export function SessionDetailClient({
       <SessionAnalyticsView analytics={analytics} />
 
       {/* Students */}
-      <StudentsSection students={students} sessionId={session.id} />
+      <StudentsSection
+        students={students}
+        sessionId={session.id}
+        isOwner={isOwner}
+      />
 
       {/* Roadmap */}
       {sessionExercises.length > 0 && (
@@ -1013,10 +1045,10 @@ export function SessionDetailClient({
                                 {item.exerciseName}
                               </Link>
                             ) : (
-                              (item.title ||
-                                item.exerciseName ||
-                                item.freeText ||
-                                "Item")
+                              item.title ||
+                              item.exerciseName ||
+                              item.freeText ||
+                              "Item"
                             )}
                           </p>
                           {item.exerciseDescription && (

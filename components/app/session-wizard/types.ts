@@ -84,8 +84,6 @@ export interface WizardState {
   durationMinutes: number;
   location: string;
   placeId: string | null;
-  /** null = sesión particular; si no, el club para el que es esta sesión. */
-  clubId: string | null;
   objective: string;
   material: string;
   observations: string;

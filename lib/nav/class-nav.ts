@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { classes } from "@/db/schema";
 import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 export type ClassNavParams = Record<string, string | string[] | undefined>;
 
@@ -72,9 +73,19 @@ export async function getFilteredClassIds(
   const aspectoList = paramList(params.aspecto);
   const golpeList = paramList(params.golpe);
 
+  const clubIds = userId ? await getActiveClubIds(userId) : [];
+  const mineOrClub = userId
+    ? sharedWithClubCondition(
+        classes.createdBy,
+        classes.clubId,
+        userId,
+        clubIds
+      )
+    : null;
+
   const conds: SQL[] = [];
   if (activeTab === "mine" && userId) {
-    conds.push(eq(classes.createdBy, userId));
+    conds.push(mineOrClub!);
   } else if (activeTab === "library") {
     conds.push(eq(classes.isLibrary, true));
   } else if (activeTab === "favorites" && userId) {
@@ -84,7 +95,7 @@ export async function getFilteredClassIds(
   } else {
     conds.push(
       userId
-        ? or(eq(classes.isLibrary, true), eq(classes.createdBy, userId))!
+        ? or(eq(classes.isLibrary, true), mineOrClub!)!
         : eq(classes.isLibrary, true)
     );
   }

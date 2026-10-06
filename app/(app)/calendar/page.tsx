@@ -5,13 +5,19 @@ import { db } from "@/db";
 import {
   sessions as sessionsTable,
   calendarEvents as calendarEventsTable,
+  users as usersTable,
 } from "@/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getCoachClubOptions } from "@/lib/clubs";
+import {
+  getActiveClubIds,
+  getClubMembersDirectory,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { CalendarDays, Download, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Sessions loaded into the calendar are limited to this window to keep
 // initial payload bounded. User can navigate the UI within this range.
@@ -19,13 +25,18 @@ const WINDOW_PAST_DAYS = 90;
 const WINDOW_FUTURE_DAYS = 365;
 const MAX_SESSIONS = 1000;
 
-export default async function CalendarPage() {
+interface PageProps {
+  searchParams: Promise<{ monitor?: string }>;
+}
+
+export default async function CalendarPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+  const { monitor } = await searchParams;
 
   const calendarEnabled = await getBooleanSetting("feature.calendar_enabled");
   if (!calendarEnabled) {
@@ -45,7 +56,24 @@ export default async function CalendarPage() {
   const windowEnd = new Date(now);
   windowEnd.setDate(now.getDate() + WINDOW_FUTURE_DAYS);
 
-  const coachClubs = await getCoachClubOptions(user.id);
+  const clubIds = await getActiveClubIds(user.id);
+  const clubMembers =
+    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const monitorFilter =
+    monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
+
+  const sessionsVisibility = sharedWithClubCondition(
+    sessionsTable.userId,
+    sessionsTable.clubId,
+    user.id,
+    clubIds
+  );
+  const eventsVisibility = sharedWithClubCondition(
+    calendarEventsTable.userId,
+    calendarEventsTable.clubId,
+    user.id,
+    clubIds
+  );
 
   const sessions = await db
     .select({
@@ -54,11 +82,15 @@ export default async function CalendarPage() {
       scheduledAt: sessionsTable.scheduledAt,
       durationMinutes: sessionsTable.durationMinutes,
       status: sessionsTable.status,
+      userId: sessionsTable.userId,
+      authorName: usersTable.name,
     })
     .from(sessionsTable)
+    .leftJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
     .where(
       and(
-        eq(sessionsTable.userId, user.id),
+        sessionsVisibility,
+        monitorFilter ? eq(sessionsTable.userId, monitorFilter) : undefined,
         gte(sessionsTable.scheduledAt, windowStart),
         lte(sessionsTable.scheduledAt, windowEnd)
       )
@@ -74,11 +106,17 @@ export default async function CalendarPage() {
       startAt: calendarEventsTable.startAt,
       endAt: calendarEventsTable.endAt,
       clubId: calendarEventsTable.clubId,
+      userId: calendarEventsTable.userId,
+      authorName: usersTable.name,
     })
     .from(calendarEventsTable)
+    .leftJoin(usersTable, eq(usersTable.id, calendarEventsTable.userId))
     .where(
       and(
-        eq(calendarEventsTable.userId, user.id),
+        eventsVisibility,
+        monitorFilter
+          ? eq(calendarEventsTable.userId, monitorFilter)
+          : undefined,
         gte(calendarEventsTable.startAt, windowStart),
         lte(calendarEventsTable.startAt, windowEnd)
       )
@@ -89,12 +127,14 @@ export default async function CalendarPage() {
   const serialized = sessions.map((s) => ({
     ...s,
     scheduledAt: s.scheduledAt.toISOString(),
+    authorName: s.userId !== user.id ? (s.authorName ?? null) : null,
   }));
 
   const serializedEvents = events.map((e) => ({
     ...e,
     startAt: e.startAt.toISOString(),
     endAt: e.endAt.toISOString(),
+    authorName: e.userId !== user.id ? (e.authorName ?? null) : null,
   }));
 
   const total = serialized.length;
@@ -141,6 +181,38 @@ export default async function CalendarPage() {
             </Link>
           </div>
         </header>
+        {clubMembers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#050505]/10 bg-white p-2 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+            <span className="pl-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+              Monitor
+            </span>
+            <Link
+              href="/calendar"
+              className={cn(
+                "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                !monitorFilter
+                  ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+              )}
+            >
+              Todos
+            </Link>
+            {clubMembers.map((m) => (
+              <Link
+                key={m.id}
+                href={`/calendar?monitor=${m.id}`}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                  monitorFilter === m.id
+                    ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                )}
+              >
+                {m.id === user.id ? "Yo" : m.name}
+              </Link>
+            ))}
+          </div>
+        )}
         {total === 0 && totalEvents === 0 ? (
           <div className="tp-panel flex flex-col items-center justify-center gap-4 border-dashed py-20 text-center">
             <p className="max-w-xs text-sm leading-6 text-foreground/55">
@@ -159,7 +231,7 @@ export default async function CalendarPage() {
           <CalendarClient
             sessions={serialized}
             events={serializedEvents}
-            coachClubs={coachClubs}
+            currentUserId={user.id}
           />
         )}
       </div>

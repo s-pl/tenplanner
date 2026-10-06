@@ -4,12 +4,13 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Pencil, ClipboardList, Clock, Flame } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { students, sessionStudents, sessions } from "@/db/schema";
+import { students, sessionStudents, sessions, users } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { DeleteStudentButton } from "./delete-student-button";
 import { SessionFeedback } from "./session-feedback";
 import { UpcomingList } from "./upcoming-list";
 import { GenerateProfileLinkButton } from "./generate-profile-link";
+import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
 
 type Gender = "male" | "female" | "other";
 type DominantHand = "left" | "right";
@@ -89,12 +90,34 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
+  const clubIds = await getActiveClubIds(user.id);
   const [student] = await db
     .select()
     .from(students)
-    .where(and(eq(students.id, id), eq(students.coachId, user.id)))
+    .where(
+      and(
+        eq(students.id, id),
+        sharedWithClubCondition(
+          students.coachId,
+          students.clubId,
+          user.id,
+          clubIds
+        )
+      )
+    )
     .limit(1);
   if (!student) notFound();
+
+  const isOwner = student.coachId === user.id;
+  const authorName = isOwner
+    ? null
+    : ((
+        await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, student.coachId))
+          .limit(1)
+      )[0]?.name ?? null);
 
   const [statsRows, past, upcoming] = await Promise.all([
     db
@@ -211,19 +234,21 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 Ficha individual
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/students/${student.id}/edit`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/12 px-3 text-[11px] font-black uppercase text-white/70 transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
-              >
-                <Pencil className="size-3" strokeWidth={1.6} />
-                Editar
-              </Link>
-              <DeleteStudentButton
-                studentId={student.id}
-                studentName={student.name}
-              />
-            </div>
+            {isOwner && (
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/students/${student.id}/edit`}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/12 px-3 text-[11px] font-black uppercase text-white/70 transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
+                >
+                  <Pencil className="size-3" strokeWidth={1.6} />
+                  Editar
+                </Link>
+                <DeleteStudentButton
+                  studentId={student.id}
+                  studentName={student.name}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-[auto_1fr] items-end gap-4 sm:gap-6">
@@ -264,6 +289,11 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 {student.email && (
                   <span className="truncate text-white/50">
                     {student.email}
+                  </span>
+                )}
+                {!isOwner && authorName && (
+                  <span className="rounded-full bg-white/8 px-3 py-1 text-[10px] font-black uppercase text-white/58">
+                    Alumno de {authorName}
                   </span>
                 )}
               </div>
@@ -370,7 +400,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
               Genera un enlace temporal para que el alumno rellene sus datos
               físicos sin necesidad de cuenta. Caduca en 7 días.
             </p>
-            <GenerateProfileLinkButton studentId={student.id} />
+            {isOwner ? (
+              <GenerateProfileLinkButton studentId={student.id} />
+            ) : (
+              <p className="text-[12px] italic text-foreground/40">
+                Solo {authorName ?? "el entrenador"} puede generar este enlace.
+              </p>
+            )}
           </aside>
         </section>
 
@@ -595,13 +631,24 @@ export default async function StudentDetailPage({ params }: PageProps) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <SessionFeedback
-                      sessionStudentId={s.ssId}
-                      studentId={student.id}
-                      initialAttended={s.attended}
-                      initialRating={s.rating}
-                      initialFeedback={s.feedback}
-                    />
+                    {isOwner ? (
+                      <SessionFeedback
+                        sessionStudentId={s.ssId}
+                        studentId={student.id}
+                        initialAttended={s.attended}
+                        initialRating={s.rating}
+                        initialFeedback={s.feedback}
+                      />
+                    ) : (
+                      <p className="text-[12px] italic text-foreground/40">
+                        {s.attended == null
+                          ? "Sin registro de asistencia."
+                          : s.attended
+                            ? "Asistió."
+                            : "No asistió."}
+                        {s.rating != null && ` · ${s.rating}/5`}
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}

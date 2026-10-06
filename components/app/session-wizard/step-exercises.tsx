@@ -844,7 +844,9 @@ export function StepExercises({
                                     <div className="flex items-center gap-0.5 shrink-0">
                                       <button
                                         type="button"
-                                        onClick={() => startEditDuration(flatIdx)}
+                                        onClick={() =>
+                                          startEditDuration(flatIdx)
+                                        }
                                         title={
                                           isStationsItem(ex)
                                             ? "Duración de cada estación"

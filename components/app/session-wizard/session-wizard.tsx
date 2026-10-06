@@ -49,9 +49,7 @@ interface SessionWizardProps {
   initialBlocks?: WizardSessionBlock[];
   initialLocation?: string;
   initialPlaceId?: string | null;
-  initialClubId?: string | null;
   places?: { id: string; name: string }[];
-  coachClubs?: { id: string; name: string }[];
   monitorName?: string;
   allowDraftRestore?: boolean;
   /** Editar una sesión existente (también las pasadas). */
@@ -151,7 +149,6 @@ function createInitialState({
   initialBlocks,
   initialLocation,
   initialPlaceId,
-  initialClubId,
 }: Pick<
   SessionWizardProps,
   | "initialExercises"
@@ -163,7 +160,6 @@ function createInitialState({
   | "initialBlocks"
   | "initialLocation"
   | "initialPlaceId"
-  | "initialClubId"
 >): WizardState {
   return {
     title: initialTitle ?? "",
@@ -171,7 +167,6 @@ function createInitialState({
     durationMinutes: 60,
     location: initialLocation ?? "",
     placeId: initialPlaceId ?? null,
-    clubId: initialClubId ?? null,
     objective: initialObjective ?? "",
     material: initialMaterial ?? "",
     observations: initialObservations ?? "",
@@ -201,7 +196,6 @@ function toDraftPayload(state: WizardState): SessionDraftPayload {
     durationMinutes: state.durationMinutes,
     location: state.location,
     placeId: state.placeId,
-    clubId: state.clubId,
     objective: state.objective,
     material: state.material,
     observations: state.observations,
@@ -240,10 +234,6 @@ function sanitizeDraftPayload(
       typeof payload.placeId === "string" || payload.placeId === null
         ? payload.placeId
         : fallback.placeId,
-    clubId:
-      typeof payload.clubId === "string" || payload.clubId === null
-        ? payload.clubId
-        : fallback.clubId,
     objective:
       typeof payload.objective === "string"
         ? payload.objective
@@ -306,9 +296,7 @@ export function SessionWizard({
   initialBlocks,
   initialLocation,
   initialPlaceId,
-  initialClubId,
   places = [],
-  coachClubs = [],
   monitorName,
   allowDraftRestore = true,
   edit,
@@ -333,7 +321,6 @@ export function SessionWizard({
       initialBlocks,
       initialLocation,
       initialPlaceId,
-      initialClubId,
     });
     return edit ? { ...base, ...edit.initialState } : base;
   });
@@ -575,7 +562,6 @@ export function SessionWizard({
             tags: state.tags.length > 0 ? state.tags : null,
             location: state.location.trim() || null,
             placeId: state.placeId,
-            clubId: state.clubId,
             studentIds: state.studentIds,
             exercises: exercisesPayload,
             blocks: blocksPayload,
@@ -621,7 +607,6 @@ export function SessionWizard({
             tags: state.tags.length > 0 ? state.tags : null,
             location: state.location.trim() || null,
             placeId: state.placeId,
-            clubId: state.clubId,
             studentIds: state.studentIds,
             exercises: exercisesPayload,
             blocks: blocksPayload,
@@ -744,7 +729,6 @@ export function SessionWizard({
             update={update}
             errors={visibleErrors}
             places={places}
-            coachClubs={coachClubs}
             monitorName={monitorName}
             hideRecurrence={isEdit}
           />
