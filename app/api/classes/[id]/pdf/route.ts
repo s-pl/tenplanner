@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadClassPlan } from "@/lib/classes/plan";
 import { ClassPdf, type PdfClass, type PdfExercise } from "@/lib/classes/pdf";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
+import { getActiveClubIds } from "@/lib/clubs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,7 +53,12 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const isOwner = !!user && cls.createdBy === user.id;
-  if (!cls.isLibrary && !isOwner) {
+  let sharedViaClub = false;
+  if (!cls.isLibrary && !isOwner && user && cls.clubId) {
+    const clubIds = await getActiveClubIds(user.id);
+    sharedViaClub = clubIds.includes(cls.clubId);
+  }
+  if (!cls.isLibrary && !isOwner && !sharedViaClub) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

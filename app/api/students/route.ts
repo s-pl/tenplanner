@@ -1,9 +1,13 @@
-import { asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { canTagWithClub } from "@/lib/clubs";
+import {
+  canTagWithClub,
+  getActiveClubIds,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { createStudentSchema, zodValidationErrorResponse } from "./validation";
 
 function internalServerError() {
@@ -38,10 +42,18 @@ export async function GET() {
   }
 
   try {
+    const clubIds = await getActiveClubIds(user.id);
     const rows = await db
       .select()
       .from(students)
-      .where(eq(students.coachId, user.id))
+      .where(
+        sharedWithClubCondition(
+          students.coachId,
+          students.clubId,
+          user.id,
+          clubIds
+        )
+      )
       .orderBy(asc(students.name));
 
     return NextResponse.json({ data: rows });

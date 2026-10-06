@@ -747,6 +747,11 @@ export const classes = pgTable(
     // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
     // Mismo campo/semántica que exercises.autoria (ver comentario allí).
     autoria: varchar("autoria", { length: 64 }).default("libre"),
+    // null = clase particular. Se asigna cuando el monitor crea esta clase
+    // en nombre de un club al que está vinculado.
+    clubId: uuid("club_id").references(() => clubs.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -763,6 +768,7 @@ export const classes = pgTable(
     index("classes_niveles_gin_idx").using("gin", t.niveles),
     index("classes_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
     index("classes_autoria_idx").on(t.autoria),
+    index("classes_club_id_idx").on(t.clubId),
   ]
 );
 

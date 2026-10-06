@@ -11,8 +11,10 @@ import {
   students,
   exerciseListItems,
   exerciseLists,
+  users,
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { getActiveClubIds } from "@/lib/clubs";
 import { SessionDetailClient } from "./session-detail-client";
 import { getExerciseDiagrams } from "@/lib/exercise-diagrams";
 import {
@@ -142,7 +144,20 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
 
   const session = sessionRow;
   if (!session) notFound();
-  if (session.userId !== user.id) notFound();
+  const isOwner = session.userId === user.id;
+  if (!isOwner) {
+    const clubIds = session.clubId ? await getActiveClubIds(user.id) : [];
+    if (!session.clubId || !clubIds.includes(session.clubId)) notFound();
+  }
+  const authorName = isOwner
+    ? null
+    : ((
+        await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1)
+      )[0]?.name ?? null);
 
   const favoritedIds = new Set(favRows.map((f) => f.exerciseId));
 
@@ -258,6 +273,8 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
       nextHref={nextHref}
       navPosition={navIdx >= 0 ? navIdx + 1 : null}
       navTotal={navIds.length > 0 ? navIds.length : null}
+      isOwner={isOwner}
+      authorName={authorName}
       session={{
         id: session.id,
         title: session.title,

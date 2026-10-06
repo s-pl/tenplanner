@@ -4,7 +4,13 @@ import { and, asc, count, eq, ilike, type SQL } from "drizzle-orm";
 import { Plus, Search, ArrowLeft, ArrowUpRight, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { students as studentsTable } from "@/db/schema";
+import { students as studentsTable, users as usersTable } from "@/db/schema";
+import {
+  getActiveClubIds,
+  getClubMembersDirectory,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 30;
 
@@ -32,7 +38,7 @@ const LEVEL_CODE: Record<PlayerLevel, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; monitor?: string }>;
 }
 
 function initialsFromName(name: string) {
@@ -53,39 +59,71 @@ export default async function StudentsPage({ searchParams }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const { q, page } = await searchParams;
+  const { q, page, monitor } = await searchParams;
   const searchTerm = q?.trim() ?? "";
   const parsedPage = Number(page ?? "1");
   const currentPage =
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
   const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const conditions: SQL[] = [eq(studentsTable.coachId, user.id)];
+  const clubIds = await getActiveClubIds(user.id);
+  const clubMembers =
+    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const monitorFilter =
+    monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
+
+  const visibility = sharedWithClubCondition(
+    studentsTable.coachId,
+    studentsTable.clubId,
+    user.id,
+    clubIds
+  );
+  const baseConditions: SQL[] = [
+    visibility,
+    ...(monitorFilter ? [eq(studentsTable.coachId, monitorFilter)] : []),
+  ];
+
+  const conditions: SQL[] = [...baseConditions];
   if (searchTerm) conditions.push(ilike(studentsTable.name, `%${searchTerm}%`));
   const listWhere = and(...conditions);
+  const baseWhere = and(...baseConditions);
 
   const [rowPage, totalRows, levelRows] = await Promise.all([
     db
-      .select()
+      .select({
+        student: studentsTable,
+        authorName: usersTable.name,
+      })
       .from(studentsTable)
+      .leftJoin(usersTable, eq(usersTable.id, studentsTable.coachId))
       .where(listWhere)
       .orderBy(asc(studentsTable.name))
       .limit(PAGE_SIZE + 1)
       .offset(offset),
-    db
-      .select({ total: count() })
-      .from(studentsTable)
-      .where(eq(studentsTable.coachId, user.id)),
+    db.select({ total: count() }).from(studentsTable).where(baseWhere),
     db
       .select({ level: studentsTable.playerLevel, total: count() })
       .from(studentsTable)
-      .where(eq(studentsTable.coachId, user.id))
+      .where(baseWhere)
       .groupBy(studentsTable.playerLevel),
   ]);
 
   const hasNextPage = rowPage.length > PAGE_SIZE;
-  const filtered = hasNextPage ? rowPage.slice(0, PAGE_SIZE) : rowPage;
+  const pageRows = hasNextPage ? rowPage.slice(0, PAGE_SIZE) : rowPage;
+  const filtered = pageRows.map((r) => ({
+    ...r.student,
+    authorName:
+      r.student.coachId !== user.id ? (r.authorName ?? null) : null,
+  }));
   const totalStudents = Number(totalRows[0]?.total ?? 0);
+
+  function buildHrefWithMonitor(m?: string) {
+    const p = new URLSearchParams();
+    if (searchTerm) p.set("q", searchTerm);
+    if (m) p.set("monitor", m);
+    const s = p.toString();
+    return `/students${s ? `?${s}` : ""}`;
+  }
 
   const levelCounts = levelRows.reduce<Record<PlayerLevel, number>>(
     (acc, r) => {
@@ -100,6 +138,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     const p = new URLSearchParams();
     if (params.q) p.set("q", params.q);
     if (params.page && params.page !== "1") p.set("page", params.page);
+    if (monitorFilter) p.set("monitor", monitorFilter);
     const s = p.toString();
     return `/students${s ? `?${s}` : ""}`;
   }
@@ -132,6 +171,39 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           )}
         </header>
 
+        {clubMembers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#050505]/10 bg-white p-2 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+            <span className="pl-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+              Monitor
+            </span>
+            <Link
+              href={buildHrefWithMonitor()}
+              className={cn(
+                "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                !monitorFilter
+                  ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+              )}
+            >
+              Todos
+            </Link>
+            {clubMembers.map((m) => (
+              <Link
+                key={m.id}
+                href={buildHrefWithMonitor(m.id)}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                  monitorFilter === m.id
+                    ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                )}
+              >
+                {m.id === user.id ? "Yo" : m.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
         {/* Level strip */}
         {totalStudents > 0 && (
           <section className="tp-panel grid grid-cols-2 overflow-hidden p-0 sm:grid-cols-3 lg:grid-cols-5">
@@ -156,6 +228,9 @@ export default async function StudentsPage({ searchParams }: PageProps) {
           <section className="tp-panel grid grid-cols-[auto_1fr_auto] items-center gap-4 p-4">
             <p className="text-[10px] font-black tabular-nums text-brand">01</p>
             <form className="relative" action="/students" method="get">
+              {monitorFilter && (
+                <input type="hidden" name="monitor" value={monitorFilter} />
+              )}
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/40" />
               <input
                 type="search"
@@ -245,8 +320,13 @@ export default async function StudentsPage({ searchParams }: PageProps) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-[15px] font-black text-foreground transition-colors group-hover:text-brand">
-                          {student.name}
+                        <p className="flex items-center gap-2 truncate text-[15px] font-black text-foreground transition-colors group-hover:text-brand">
+                          <span className="truncate">{student.name}</span>
+                          {student.authorName && (
+                            <span className="shrink-0 inline-flex items-center rounded-full border border-[#050505]/10 bg-[#F4F4F1] px-2 py-0.5 text-[10px] font-bold uppercase text-foreground/50 dark:border-white/10 dark:bg-white/[0.06]">
+                              {student.authorName}
+                            </span>
+                          )}
                         </p>
                         {student.email && (
                           <p className="text-[11px] text-foreground/45 truncate mt-0.5 tabular-nums">

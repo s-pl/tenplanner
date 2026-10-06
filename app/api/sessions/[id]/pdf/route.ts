@@ -7,6 +7,7 @@ import { renderToStream } from "@react-pdf/renderer";
 import { db } from "@/db";
 import { sessionStudents, sessions, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveClubIds } from "@/lib/clubs";
 import {
   sessionIdParamsSchema,
   zodValidationErrorResponse,
@@ -65,7 +66,10 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
   if (session.userId !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const clubIds = session.clubId ? await getActiveClubIds(user.id) : [];
+    if (!session.clubId || !clubIds.includes(session.clubId)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const [coachRow] = await db

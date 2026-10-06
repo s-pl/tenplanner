@@ -26,6 +26,9 @@ export interface SessionListItem {
   durationMinutes: number;
   exerciseCount: number;
   favorited: boolean;
+  /** Nombre del monitor que la creó, solo cuando no es la sesión del
+   * usuario actual (compartida vía club). */
+  authorName?: string | null;
 }
 
 /**
@@ -204,6 +207,11 @@ export function SessionsBulkList({
                 </div>
                 <p className="truncate text-[15px] text-foreground">
                   {session.title}
+                  {session.authorName && (
+                    <span className="ml-2 inline-flex items-center rounded-full border border-foreground/15 bg-foreground/5 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-foreground/55">
+                      {session.authorName}
+                    </span>
+                  )}
                 </p>
                 <p className="mt-1 text-[12px] tabular-nums text-foreground/55">
                   <span className="inline-flex items-center gap-1">

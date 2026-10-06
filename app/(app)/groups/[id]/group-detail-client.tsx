@@ -43,6 +43,7 @@ interface Props {
   groupName: string;
   members: Student[];
   availableStudents: Student[];
+  isOwner?: boolean;
 }
 
 function Avatar({
@@ -88,6 +89,7 @@ export function GroupDetailClient({
   groupName,
   members,
   availableStudents,
+  isOwner = true,
 }: Props) {
   const router = useRouter();
   const [currentMembers, setCurrentMembers] = useState(members);
@@ -152,13 +154,15 @@ export function GroupDetailClient({
 
   function onDropMembers(e: DragEvent) {
     e.preventDefault();
-    if (dragging?.from === "available") void addStudent(dragging.student);
+    if (isOwner && dragging?.from === "available")
+      void addStudent(dragging.student);
     setDragging(null);
   }
 
   function onDropAvailable(e: DragEvent) {
     e.preventDefault();
-    if (dragging?.from === "members") void removeStudent(dragging.student.id);
+    if (isOwner && dragging?.from === "members")
+      void removeStudent(dragging.student.id);
     setDragging(null);
   }
 
@@ -201,8 +205,10 @@ export function GroupDetailClient({
             {currentMembers.map((m, i) => (
               <div
                 key={m.id}
-                draggable
-                onDragStart={() => setDragging({ student: m, from: "members" })}
+                draggable={isOwner}
+                onDragStart={() =>
+                  isOwner && setDragging({ student: m, from: "members" })
+                }
                 onDragEnd={() => setDragging(null)}
                 className="group/row flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04] sm:px-5"
               >
@@ -234,18 +240,20 @@ export function GroupDetailClient({
                   )}
                 </div>
 
-                <button
-                  onClick={() => removeStudent(m.id)}
-                  disabled={loadingId === m.id}
-                  aria-label="Quitar del grupo"
-                  className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 md:opacity-0 md:group-hover/row:opacity-100"
-                >
-                  {loadingId === m.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <UserMinus className="size-4" />
-                  )}
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => removeStudent(m.id)}
+                    disabled={loadingId === m.id}
+                    aria-label="Quitar del grupo"
+                    className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 md:opacity-0 md:group-hover/row:opacity-100"
+                  >
+                    {loadingId === m.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <UserMinus className="size-4" />
+                    )}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -255,6 +263,7 @@ export function GroupDetailClient({
       {/* Right panel: add students + danger zone */}
       <div className="space-y-4 lg:sticky lg:top-6">
         {/* Add students */}
+        {isOwner && (
         <div
           className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]"
           onDragOver={(e) => e.preventDefault()}
@@ -324,8 +333,10 @@ export function GroupDetailClient({
             )}
           </div>
         </div>
+        )}
 
         {/* Danger zone */}
+        {isOwner && (
         <div className="rounded-[28px] border border-destructive/20 bg-white p-5 shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:bg-[#10100e]">
           <h3 className="mb-3 text-[10px] font-black uppercase text-destructive/60">
             Zona de peligro
@@ -364,6 +375,7 @@ export function GroupDetailClient({
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );

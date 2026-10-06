@@ -21,7 +21,7 @@ import type {
   WizardSessionBlock,
 } from "@/components/app/session-wizard/types";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getCoachClubOptions } from "@/lib/clubs";
+import { getActiveClubIds, getCoachClubOptions } from "@/lib/clubs";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import {
   createTextItem,
@@ -135,12 +135,19 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         observations: classes.aspectosImportantes,
         isLibrary: classes.isLibrary,
         createdBy: classes.createdBy,
+        clubId: classes.clubId,
       })
       .from(classes)
       .where(eq(classes.id, fromClassId))
       .limit(1);
 
-    if (cls && (cls.isLibrary || cls.createdBy === user.id)) {
+    const classClubIds =
+      cls && !cls.isLibrary && cls.createdBy !== user.id && cls.clubId
+        ? await getActiveClubIds(user.id)
+        : [];
+    const sharedViaClub = !!cls?.clubId && classClubIds.includes(cls.clubId);
+
+    if (cls && (cls.isLibrary || cls.createdBy === user.id || sharedViaClub)) {
       fromClass = {
         id: cls.id,
         name: cls.name,

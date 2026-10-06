@@ -17,6 +17,7 @@ import {
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
+import { canTagWithClub, getActiveClubIds } from "@/lib/clubs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -86,6 +87,7 @@ const updateSchema = z.object({
   golpes: z.array(z.string().max(32)).nullable().optional(),
   isLibrary: z.boolean().optional(),
   autoria: z.enum(AUTORIA_VALUES).nullable().optional(),
+  clubId: z.string().uuid().nullable().optional(),
   blocks: z.array(blockSchema).max(3).optional(),
 });
 
@@ -119,9 +121,14 @@ export async function GET(_req: Request, ctx: Ctx) {
     .limit(1);
   if (!cls) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Visibilidad: biblioteca pública o creador
+  // Visibilidad: biblioteca pública, creador, o compartida vía club
   const isOwner = !!user && cls.createdBy === user.id;
-  if (!cls.isLibrary && !isOwner) {
+  let sharedViaClub = false;
+  if (!cls.isLibrary && !isOwner && user && cls.clubId) {
+    const clubIds = await getActiveClubIds(user.id);
+    sharedViaClub = clubIds.includes(cls.clubId);
+  }
+  if (!cls.isLibrary && !isOwner && !sharedViaClub) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -206,6 +213,13 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   const d = parsed.data;
 
+  if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
+
   // Verify exercises referenced (top-level items and stations) belong to
   // the user or are library exercises.
   const exerciseNameMap = new Map<string, string>();
@@ -288,6 +302,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
         updateValues.isLibrary = isAdmin && d.isLibrary === true;
       if (isAdmin && d.autoria !== undefined)
         updateValues.autoria = d.autoria ?? "libre";
+      if (d.clubId !== undefined) updateValues.clubId = d.clubId;
 
       if (Object.keys(updateValues).length > 0) {
         await tx.update(classes).set(updateValues).where(eq(classes.id, id));

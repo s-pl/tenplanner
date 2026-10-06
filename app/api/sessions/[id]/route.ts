@@ -20,7 +20,11 @@ import {
 } from "../validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
-import { canTagWithClub } from "@/lib/clubs";
+import {
+  canTagWithClub,
+  getActiveClubIds,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
@@ -521,13 +525,22 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     if (sessionFields.sourceClassId) {
+      const classClubIds = await getActiveClubIds(user.id);
       const [sourceClass] = await db
         .select({ id: classes.id })
         .from(classes)
         .where(
           and(
             eq(classes.id, sessionFields.sourceClassId),
-            or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))
+            or(
+              eq(classes.isLibrary, true),
+              sharedWithClubCondition(
+                classes.createdBy,
+                classes.clubId,
+                user.id,
+                classClubIds
+              )
+            )
           )
         )
         .limit(1);

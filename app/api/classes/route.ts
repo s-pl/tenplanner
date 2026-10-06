@@ -17,6 +17,11 @@ import {
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
+import {
+  canTagWithClub,
+  getActiveClubIds,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 
 const stationItemSchema = z
   .object({
@@ -84,6 +89,7 @@ const createSchema = z.object({
   golpes: z.array(z.string().max(32)).optional().nullable(),
   isLibrary: z.boolean().optional().default(false),
   autoria: z.enum(AUTORIA_VALUES).optional().nullable(),
+  clubId: z.string().uuid().optional().nullable(),
   blocks: z.array(blockSchema).max(3).default([]),
 });
 
@@ -114,17 +120,25 @@ export async function GET(request: Request) {
   const nivel = searchParams.get("nivel")?.trim();
   const aspecto = searchParams.get("aspecto")?.trim();
 
+  const clubIds = user ? await getActiveClubIds(user.id) : [];
+  const mineOrClub = user
+    ? sharedWithClubCondition(
+        classes.createdBy,
+        classes.clubId,
+        user.id,
+        clubIds
+      )
+    : null;
+
   const conds = [];
   if (tab === "mine" && user) {
-    conds.push(eq(classes.createdBy, user.id));
+    conds.push(mineOrClub!);
   } else if (tab === "library") {
     conds.push(eq(classes.isLibrary, true));
   } else {
-    // all: biblioteca pública + propias del usuario
+    // all: biblioteca pública + propias del usuario (+ compartidas por club)
     conds.push(
-      user
-        ? or(eq(classes.isLibrary, true), eq(classes.createdBy, user.id))!
-        : eq(classes.isLibrary, true)
+      user ? or(eq(classes.isLibrary, true), mineOrClub!)! : eq(classes.isLibrary, true)
     );
   }
   if (q) conds.push(ilike(classes.name, `%${q}%`));
@@ -160,13 +174,20 @@ export async function GET(request: Request) {
       autoria: classes.autoria,
       createdBy: classes.createdBy,
       createdAt: classes.createdAt,
+      authorName: users.name,
     })
     .from(classes)
+    .leftJoin(users, eq(users.id, classes.createdBy))
     .where(and(...conds))
     .orderBy(desc(classes.createdAt))
     .limit(60);
 
-  return NextResponse.json({ data: rows });
+  return NextResponse.json({
+    data: rows.map((r) => ({
+      ...r,
+      authorName: user && r.createdBy !== user.id ? r.authorName : null,
+    })),
+  });
 }
 
 export async function POST(request: Request) {
@@ -201,6 +222,13 @@ export async function POST(request: Request) {
   const isAdmin = !!dbUser?.isAdmin;
   const niveles = normalizeMultiValue(d.niveles, d.nivel);
   const aspectosJuego = normalizeMultiValue(d.aspectosJuego, d.aspectoJuego);
+
+  if (d.clubId && !(await canTagWithClub(user.id, d.clubId))) {
+    return NextResponse.json(
+      { error: "No perteneces a ese club." },
+      { status: 403 }
+    );
+  }
 
   // Verify exercises referenced (top-level items and stations) belong to
   // the user or are library exercises.
@@ -272,6 +300,7 @@ export async function POST(request: Request) {
           golpes: d.golpes ?? null,
           isLibrary: isAdmin && d.isLibrary === true,
           autoria: isAdmin && d.autoria ? d.autoria : "libre",
+          clubId: d.clubId ?? null,
         })
         .returning();
 

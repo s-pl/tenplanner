@@ -21,6 +21,10 @@ export interface CalendarEventData {
   startAt: string;
   endAt: string;
   clubId?: string | null;
+  userId?: string;
+  /** Nombre de quien lo creó, solo cuando no es del usuario actual
+   * (compartido vía club). */
+  authorName?: string | null;
 }
 
 function pad(n: number) {

@@ -9,8 +9,14 @@ import {
   sessions as sessionsTable,
   sessionExercises,
   sessionDrafts,
+  users as usersTable,
 } from "@/db/schema";
 import { and, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import {
+  getActiveClubIds,
+  getClubMembersDirectory,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import {
   Plus,
   ArrowLeft,
@@ -46,6 +52,7 @@ interface PageProps {
     page?: string;
     q?: string;
     sort?: string;
+    monitor?: string;
   }>;
 }
 
@@ -90,7 +97,18 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const sessionCreationEnabled =
     settings.get("feature.session_creation_enabled") !== false;
 
-  const { filter, page, q, sort } = await searchParams;
+  const { filter, page, q, sort, monitor } = await searchParams;
+  const clubIds = await getActiveClubIds(user.id);
+  const clubMembers =
+    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const monitorFilter =
+    monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
+  const mineOrClub = sharedWithClubCondition(
+    sessionsTable.userId,
+    sessionsTable.clubId,
+    user.id,
+    clubIds
+  );
   const activeFilter: Filter =
     filter === "past" ||
     filter === "upcoming" ||
@@ -105,7 +123,8 @@ export default async function SessionsPage({ searchParams }: PageProps) {
   const currentPage =
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-  const whereConditions: SQL[] = [eq(sessionsTable.userId, user.id)];
+  const whereConditions: SQL[] = [mineOrClub];
+  if (monitorFilter) whereConditions.push(eq(sessionsTable.userId, monitorFilter));
   if (activeFilter === "upcoming")
     whereConditions.push(sql`${sessionsTable.scheduledAt} >= now()`);
   else if (activeFilter === "past")
@@ -119,33 +138,30 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     );
     if (searchWhere) whereConditions.push(searchWhere);
   }
-  const whereClause =
-    and(...whereConditions) ?? eq(sessionsTable.userId, user.id);
+  const whereClause = and(...whereConditions) ?? mineOrClub;
+
+  const baseCountClause = monitorFilter
+    ? and(mineOrClub, eq(sessionsTable.userId, monitorFilter))!
+    : mineOrClub;
 
   const [allCountRows, filteredCountRows, upcomingCountRows, pastCountRows] =
     await Promise.all([
       db
         .select({ total: count() })
         .from(sessionsTable)
-        .where(eq(sessionsTable.userId, user.id)),
+        .where(baseCountClause),
       db.select({ total: count() }).from(sessionsTable).where(whereClause),
       db
         .select({ total: count() })
         .from(sessionsTable)
         .where(
-          and(
-            eq(sessionsTable.userId, user.id),
-            sql`${sessionsTable.scheduledAt} >= now()`
-          )!
+          and(baseCountClause, sql`${sessionsTable.scheduledAt} >= now()`)!
         ),
       db
         .select({ total: count() })
         .from(sessionsTable)
         .where(
-          and(
-            eq(sessionsTable.userId, user.id),
-            sql`${sessionsTable.scheduledAt} < now()`
-          )!
+          and(baseCountClause, sql`${sessionsTable.scheduledAt} < now()`)!
         ),
     ]);
 
@@ -172,8 +188,11 @@ export default async function SessionsPage({ searchParams }: PageProps) {
       scheduledAt: sessionsTable.scheduledAt,
       durationMinutes: sessionsTable.durationMinutes,
       status: sessionsTable.status,
+      userId: sessionsTable.userId,
+      authorName: usersTable.name,
     })
     .from(sessionsTable)
+    .leftJoin(usersTable, eq(usersTable.id, sessionsTable.userId))
     .where(whereClause)
     .orderBy(...sessionOrderBy(activeSort))
     .limit(PAGE_SIZE)
@@ -211,6 +230,7 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     page?: number;
     q?: string;
     sort?: SessionSort;
+    monitor?: string | null;
   }) {
     const p = new URLSearchParams();
     const f = opts.filter ?? activeFilter;
@@ -223,6 +243,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     if (nextPage > 1) p.set("page", String(nextPage));
     const nextSort = opts.sort ?? activeSort;
     if (nextSort !== "oldest") p.set("sort", nextSort);
+    const nextMonitor = Object.prototype.hasOwnProperty.call(opts, "monitor")
+      ? opts.monitor
+      : monitorFilter;
+    if (nextMonitor) p.set("monitor", nextMonitor);
     const qs = p.toString();
     return qs ? `/sessions?${qs}` : "/sessions";
   }
@@ -304,6 +328,39 @@ export default async function SessionsPage({ searchParams }: PageProps) {
               );
             })}
           </nav>
+
+          {clubMembers.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#050505]/10 bg-white p-2 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
+              <span className="pl-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+                Monitor
+              </span>
+              <Link
+                href={sessionsHref({ monitor: null, page: 1 })}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                  !monitorFilter
+                    ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                )}
+              >
+                Todos
+              </Link>
+              {clubMembers.map((m) => (
+                <Link
+                  key={m.id}
+                  href={sessionsHref({ monitor: m.id, page: 1 })}
+                  className={cn(
+                    "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                    monitorFilter === m.id
+                      ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                      : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                  )}
+                >
+                  {m.id === user.id ? "Yo" : m.name}
+                </Link>
+              ))}
+            </div>
+          )}
 
           {activeFilter === "drafts" ? (
             <div className="rounded-lg border border-[#050505]/10 bg-white p-3 shadow-[0_12px_40px_rgba(5,5,5,0.04)] dark:border-white/10 dark:bg-white/[0.045]">
@@ -441,6 +498,10 @@ export default async function SessionsPage({ searchParams }: PageProps) {
                       durationMinutes: session.durationMinutes,
                       exerciseCount: exerciseCountMap.get(session.id) ?? 0,
                       favorited: favoritedIds.has(session.id),
+                      authorName:
+                        session.userId !== user.id
+                          ? (session.authorName ?? null)
+                          : null,
                     };
                   })}
                   allIds={allFilteredIds}

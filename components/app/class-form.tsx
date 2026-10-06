@@ -25,6 +25,10 @@ import {
 } from "@/lib/block-items";
 import { AUTORIAS } from "@/lib/exercise-taxonomy";
 import { SessionExerciseLists } from "@/components/app/session-exercise-lists";
+import {
+  ClubContextSelect,
+  type ClubOption,
+} from "@/components/app/club-context-select";
 
 const NIVELES = [
   { id: "descubrimiento", label: "Descubrimiento (4-6)" },
@@ -108,6 +112,7 @@ export interface ClassInitialData {
   aspectosImportantes: string | null;
   isLibrary: boolean;
   autoria?: string | null;
+  clubId?: string | null;
   blocks: {
     orderIndex: number;
     title: string | null;
@@ -122,6 +127,7 @@ export interface ClassFormProps {
   availableExercises: AvailableExercise[];
   isAdmin?: boolean;
   initialData?: ClassInitialData;
+  coachClubs?: ClubOption[];
 }
 
 export function ClassForm({
@@ -130,6 +136,7 @@ export function ClassForm({
   availableExercises,
   isAdmin = false,
   initialData,
+  coachClubs = [],
 }: ClassFormProps) {
   const router = useRouter();
   const [name, setName] = useState(initialData?.name ?? "");
@@ -165,6 +172,9 @@ export function ClassForm({
   );
   const [isLibrary, setIsLibrary] = useState(initialData?.isLibrary ?? false);
   const [autoria, setAutoria] = useState(initialData?.autoria ?? "libre");
+  const [clubId, setClubId] = useState<string | null>(
+    initialData?.clubId ?? null
+  );
 
   const [blocks, setBlocks] = useState<BlockState[]>(() => {
     const base = BLOCK_TITLES.map((b) => ({
@@ -497,6 +507,7 @@ export function ClassForm({
       golpes: golpes.length > 0 ? golpes : null,
       isLibrary: isAdmin ? isLibrary : false,
       autoria: isAdmin ? autoria : undefined,
+      clubId,
       blocks: blocks
         .filter((b) => b.items.length > 0 || b.notes.trim())
         .map((b) => ({
@@ -1429,6 +1440,17 @@ export function ClassForm({
           placeholder="Información extra valiosa para quien imparta esta clase…"
           className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
         />
+
+        {coachClubs.length > 0 && (
+          <div className="pt-2">
+            <ClubContextSelect
+              value={clubId}
+              onChange={setClubId}
+              clubs={coachClubs}
+              label="¿Para quién es esta clase?"
+            />
+          </div>
+        )}
 
         {isAdmin && (
           <label className="flex items-center gap-2 text-sm pt-2">

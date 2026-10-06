@@ -17,12 +17,14 @@ import {
   classBlockExercises,
   classFavorites,
   exercises,
+  users,
 } from "@/db/schema";
 import { ClassActions } from "./class-actions";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { PrevNextNav } from "@/components/app/prev-next-nav";
 import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
+import { getActiveClubIds } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -57,7 +59,23 @@ export default async function ClassDetailPage({
   if (!cls) notFound();
 
   const isOwner = !!user && cls.createdBy === user.id;
-  if (!cls.isLibrary && !isOwner) notFound();
+  let sharedViaClub = false;
+  if (!cls.isLibrary && !isOwner && user && cls.clubId) {
+    const clubIds = await getActiveClubIds(user.id);
+    sharedViaClub = clubIds.includes(cls.clubId);
+  }
+  if (!cls.isLibrary && !isOwner && !sharedViaClub) notFound();
+
+  const authorName =
+    sharedViaClub && cls.createdBy
+      ? ((
+          await db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, cls.createdBy))
+            .limit(1)
+        )[0]?.name ?? null)
+      : null;
 
   const blocks = await db
     .select()
@@ -172,6 +190,11 @@ export default async function ClassDetailPage({
               <h1 className="max-w-4xl font-heading text-4xl font-semibold leading-tight tracking-normal text-white sm:text-5xl">
                 {cls.name}
               </h1>
+              {authorName && (
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-white/45">
+                  Clase de {authorName}
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/68">
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="size-3.5" /> {cls.duracionMinutes} min

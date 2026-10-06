@@ -2,10 +2,14 @@ import { eq, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { groups, groupStudents, students } from "@/db/schema";
+import { groups, groupStudents, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { canTagWithClub } from "@/lib/clubs";
+import {
+  canTagWithClub,
+  getActiveClubIds,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -32,6 +36,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const withStudents = searchParams.get("withStudents") === "true";
 
+  const clubIds = await getActiveClubIds(user.id);
+  const visibility = sharedWithClubCondition(
+    groups.coachId,
+    groups.clubId,
+    user.id,
+    clubIds
+  );
+
   if (withStudents) {
     // Return groups with member IDs for wizard group-select
     const rows = await db
@@ -44,7 +56,7 @@ export async function GET(request: Request) {
       .from(groups)
       .leftJoin(groupStudents, eq(groupStudents.groupId, groups.id))
       .leftJoin(students, eq(groupStudents.studentId, students.id))
-      .where(eq(groups.coachId, user.id))
+      .where(visibility)
       .orderBy(groups.name)
       .catch(
         () =>
@@ -92,11 +104,14 @@ export async function GET(request: Request) {
       description: groups.description,
       createdAt: groups.createdAt,
       memberCount: count(groupStudents.id),
+      coachId: groups.coachId,
+      authorName: users.name,
     })
     .from(groups)
     .leftJoin(groupStudents, eq(groupStudents.groupId, groups.id))
-    .where(eq(groups.coachId, user.id))
-    .groupBy(groups.id)
+    .leftJoin(users, eq(users.id, groups.coachId))
+    .where(visibility)
+    .groupBy(groups.id, users.name)
     .orderBy(groups.name)
     .catch(
       () =>
@@ -106,10 +121,17 @@ export async function GET(request: Request) {
           description: string | null;
           createdAt: Date;
           memberCount: number;
+          coachId: string;
+          authorName: string | null;
         }[]
     );
 
-  return NextResponse.json({ data: rows });
+  return NextResponse.json({
+    data: rows.map((r) => ({
+      ...r,
+      authorName: r.coachId !== user.id ? r.authorName : null,
+    })),
+  });
 }
 
 export async function POST(request: Request) {
