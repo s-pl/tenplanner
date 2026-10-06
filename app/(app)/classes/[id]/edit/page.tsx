@@ -103,6 +103,7 @@ export default async function EditClassPage({ params }: PageProps) {
     videoUrl: cls.videoUrl,
     aspectosImportantes: cls.aspectosImportantes,
     isLibrary: cls.isLibrary,
+    autoria: cls.autoria,
     blocks: blocks.map((b) => ({
       orderIndex: b.orderIndex,
       title: b.title,

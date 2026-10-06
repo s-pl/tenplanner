@@ -11,6 +11,7 @@ import {
   parseClassSort,
   type ClassSort,
 } from "@/lib/nav/class-nav";
+import { autoriaLabel } from "@/lib/exercise-taxonomy";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -121,6 +122,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     aspectoJuego: string | null;
     aspectosJuego: string[] | null;
     isLibrary: boolean;
+    autoria: string | null;
     createdAt: Date;
   }> = [];
   let draftCount = 0;
@@ -214,6 +216,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         aspectoJuego: classes.aspectoJuego,
         aspectosJuego: classes.aspectosJuego,
         isLibrary: classes.isLibrary,
+        autoria: classes.autoria,
         createdAt: classes.createdAt,
       })
       .from(classes)
@@ -594,6 +597,11 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                             {cls.isLibrary && (
                               <span className="rounded-full border border-[#D6FF38]/50 bg-[#D6FF38]/15 px-2 py-0.5 text-[10px] font-semibold text-[#D6FF38]">
                                 Biblioteca
+                              </span>
+                            )}
+                            {cls.autoria && cls.autoria !== "libre" && (
+                              <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                                {autoriaLabel(cls.autoria)}
                               </span>
                             )}
                             {favorites.has(cls.id) && (

@@ -22,6 +22,7 @@ import { ClassActions } from "./class-actions";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { PrevNextNav } from "@/components/app/prev-next-nav";
 import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
+import { autoriaLabel } from "@/lib/exercise-taxonomy";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -144,6 +145,11 @@ export default async function ClassDetailPage({
                 {cls.isLibrary && (
                   <span className="rounded-full bg-[#D6FF38] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#050505]">
                     Biblioteca
+                  </span>
+                )}
+                {cls.autoria && cls.autoria !== "libre" && (
+                  <span className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62">
+                    {autoriaLabel(cls.autoria)}
                   </span>
                 )}
                 {classNiveles.map((nivel) => (

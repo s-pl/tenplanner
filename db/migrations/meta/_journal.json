@@ -267,6 +267,13 @@
       "when": 1791299016116,
       "tag": "0037_block_item_titles",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791301610332,
+      "tag": "0038_classes_autoria",
+      "breakpoints": true
     }
   ]
 }
