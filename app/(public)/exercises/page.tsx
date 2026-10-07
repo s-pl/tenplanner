@@ -47,6 +47,9 @@ import {
   type TipoPelota,
   TIPO_ACTIVIDAD_LABELS,
 } from "@/lib/exercise-taxonomy";
+import { sportHasContent, sportLabel } from "@/lib/sports";
+import { getActiveSport } from "@/lib/sports-server";
+import { SportComingSoon } from "@/components/app/sport-coming-soon";
 import {
   Plus,
   ArrowLeft,
@@ -145,6 +148,16 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+
+  if (user) {
+    const activeSport = await getActiveSport(user.id);
+    if (!sportHasContent(activeSport)) {
+      return (
+        <SportComingSoon sport={activeSport} label={sportLabel(activeSport)} />
+      );
+    }
+  }
+
   const [publicExercisesEnabled, exerciseCreationEnabled] = await Promise.all([
     getBooleanSetting("feature.public_exercises_enabled"),
     getBooleanSetting("feature.exercise_creation_enabled"),

@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { ClassForm } from "@/components/app/class-form";
+import { SportComingSoon } from "@/components/app/sport-coming-soon";
+import { sportHasContent, sportLabel } from "@/lib/sports";
+import { getActiveSport } from "@/lib/sports-server";
 
 export default async function NewClassPage() {
   const supabase = await createClient();
@@ -13,6 +16,13 @@ export default async function NewClassPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const activeSport = await getActiveSport(user.id);
+  if (!sportHasContent(activeSport)) {
+    return (
+      <SportComingSoon sport={activeSport} label={sportLabel(activeSport)} />
+    );
+  }
 
   const [adminRow] = await db
     .select({ isAdmin: users.isAdmin })

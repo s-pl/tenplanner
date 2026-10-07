@@ -13,6 +13,9 @@ import {
 } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { sportHasContent, sportLabel } from "@/lib/sports";
+import { getActiveSport } from "@/lib/sports-server";
+import { SportComingSoon } from "@/components/app/sport-coming-soon";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -95,6 +98,15 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+
+  if (user) {
+    const activeSport = await getActiveSport(user.id);
+    if (!sportHasContent(activeSport)) {
+      return (
+        <SportComingSoon sport={activeSport} label={sportLabel(activeSport)} />
+      );
+    }
+  }
 
   const requestedTab = (params.tab as string) ?? "all";
   const tab: Tab = TABS.includes(requestedTab as Tab)

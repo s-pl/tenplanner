@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import AppShell from "@/components/app/app-shell";
 import { getAppSettings } from "@/lib/app-settings";
+import { getActiveSport } from "@/lib/sports-server";
 
 export default async function PublicLayout({
   children,
@@ -15,7 +16,7 @@ export default async function PublicLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [adminRows, appSettings] = await Promise.all([
+  const [adminRows, appSettings, activeSport] = await Promise.all([
     user
       ? db
           .select({ isAdmin: users.isAdmin, image: users.image })
@@ -26,6 +27,7 @@ export default async function PublicLayout({
           [] as { isAdmin: boolean | null; image: string | null }[]
         ),
     getAppSettings(["system.maintenance_banner", "feature.dr_planner_enabled"]),
+    user ? getActiveSport(user.id) : Promise.resolve(undefined),
   ]);
 
   const isAdmin = adminRows[0]?.isAdmin ?? false;
@@ -48,6 +50,7 @@ export default async function PublicLayout({
       isAdmin={isAdmin}
       drPlannerEnabled={drPlannerEnabled}
       maintenanceBanner={maintenanceBanner}
+      activeSport={activeSport}
     >
       {children}
     </AppShell>

@@ -105,6 +105,11 @@ export const clubInviteStatusEnum = pgEnum("club_invite_status", [
   "expired",
 ]);
 
+// Deporte: capa superior de la plataforma. Tenis tiene contenido propio;
+// pádel y pickleball comparten el mismo modelo de datos (sesiones, clases,
+// ejercicios) pero aún no tienen biblioteca — ver lib/sports.ts.
+export const sportEnum = pgEnum("sport", ["tenis", "padel", "pickleball"]);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable(
   "users",
@@ -129,6 +134,11 @@ export const users = pgTable(
       (): AnyPgColumn => clubs.id,
       { onDelete: "set null" }
     ),
+    // Deporte activo: qué biblioteca y qué formularios ve el monitor ahora
+    // mismo. Se elige y cambia desde el perfil / la barra lateral, no por
+    // elemento. Todo usuario tiene uno (no hay "particular" como el modo de
+    // trabajo): por defecto tenis, el único con contenido propio por ahora.
+    activeSport: sportEnum("active_sport").default("tenis").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -137,7 +147,10 @@ export const users = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [index("users_active_club_id_idx").on(t.activeClubId)]
+  (t) => [
+    index("users_active_club_id_idx").on(t.activeClubId),
+    index("users_active_sport_idx").on(t.activeSport),
+  ]
 );
 
 // Exercises
@@ -183,6 +196,10 @@ export const exercises = pgTable(
     // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
     // Texto libre (no enum) para poder añadir nuevas autorías sin migración.
     autoria: varchar("autoria", { length: 64 }).default("libre"),
+    // A qué deporte pertenece. Todo el contenido existente es de tenis, de
+    // ahí el default; pádel y pickleball aún no tienen biblioteca propia
+    // (ver lib/sports.ts) pero el campo ya existe para cuando la tengan.
+    sport: sportEnum("sport").default("tenis").notNull(),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
@@ -203,6 +220,7 @@ export const exercises = pgTable(
     index("exercises_category_created_at_idx").on(t.category, t.createdAt),
     index("exercises_name_idx").on(t.name),
     index("exercises_autoria_idx").on(t.autoria),
+    index("exercises_sport_idx").on(t.sport),
   ]
 );
 
@@ -761,6 +779,8 @@ export const classes = pgTable(
     // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
     // Mismo campo/semántica que exercises.autoria (ver comentario allí).
     autoria: varchar("autoria", { length: 64 }).default("libre"),
+    // Mismo campo/semántica que exercises.sport (ver comentario allí).
+    sport: sportEnum("sport").default("tenis").notNull(),
     // null = clase particular. Se asigna cuando el monitor crea esta clase
     // en nombre de un club al que está vinculado.
     clubId: uuid("club_id").references(() => clubs.id, {
@@ -782,6 +802,7 @@ export const classes = pgTable(
     index("classes_niveles_gin_idx").using("gin", t.niveles),
     index("classes_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
     index("classes_autoria_idx").on(t.autoria),
+    index("classes_sport_idx").on(t.sport),
     index("classes_club_id_idx").on(t.clubId),
   ]
 );

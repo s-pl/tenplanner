@@ -288,6 +288,13 @@
       "when": 1791326837709,
       "tag": "0040_users_active_club_id",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791357254962,
+      "tag": "0041_sports_layer",
+      "breakpoints": true
     }
   ]
 }
