@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Eye, EyeOff, Loader2, Mail } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+  User,
+} from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+
+type AccountType = "club" | "monitor";
+type Step = "choice" | "form";
 
 const registerSchema = z
   .object({
@@ -56,6 +68,7 @@ function isAlreadyRegisteredMessage(message: string) {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>("choice");
   const [form, setForm] = useState<RegisterForm>(initialForm);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -67,6 +80,21 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
   const [resendSent, setResendSent] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
+
+  // Un enlace de invitación de club lleva a un monitor directamente a
+  // /register?type=monitor: nos saltamos la pantalla de elección porque su
+  // tipo de cuenta ya está decidido.
+  useEffect(() => {
+    const type = new URLSearchParams(window.location.search).get("type");
+    if (type === "club" || type === "monitor") {
+      selectAccountType(type);
+    }
+  }, []);
+
+  function selectAccountType(type: AccountType) {
+    setForm((prev) => ({ ...prev, isClub: type === "club" }));
+    setStep("form");
+  }
 
   function update<K extends keyof RegisterForm>(
     key: K,
@@ -300,15 +328,89 @@ export default function RegisterPage() {
     );
   }
 
+  if (step === "choice") {
+    return (
+      <div className="w-full rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+        <div>
+          <p className="tp-kicker">Acceso anticipado</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
+            ¿Cómo quieres usar Ten Planner?
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-foreground/62">
+            Elige el tipo de cuenta. Podrás cambiarlo más adelante si hace
+            falta.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => selectAccountType("club")}
+            className="flex flex-col items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-[#F4F4F1] p-5 text-left transition-colors hover:border-brand dark:border-white/10 dark:bg-white/[0.04]"
+          >
+            <span className="flex size-10 items-center justify-center rounded-full bg-brand/15 text-brand">
+              <Building2 className="size-5" />
+            </span>
+            <span>
+              <span className="block text-base font-black text-foreground">
+                Como Club
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-foreground/62">
+                Diriges una escuela o academia y quieres invitar a tus
+                monitores.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => selectAccountType("monitor")}
+            className="flex flex-col items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-[#F4F4F1] p-5 text-left transition-colors hover:border-brand dark:border-white/10 dark:bg-white/[0.04]"
+          >
+            <span className="flex size-10 items-center justify-center rounded-full bg-brand/15 text-brand">
+              <User className="size-5" />
+            </span>
+            <span>
+              <span className="block text-base font-black text-foreground">
+                Como Monitor
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-foreground/62">
+                Planificas tus propias sesiones, con o sin un club detrás.
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          Ya tienes cuenta?{" "}
+          <Link href="/login" className="font-semibold text-brand">
+            Entrar
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
+      <button
+        type="button"
+        onClick={() => setStep("choice")}
+        className="mb-4 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-foreground/50 transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="size-3.5" />
+        Cambiar tipo de cuenta
+      </button>
+
       <div>
         <p className="tp-kicker">Acceso anticipado</p>
         <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
-          Crear cuenta de entrenador
+          {form.isClub ? "Crear cuenta de club" : "Crear cuenta de monitor"}
         </h1>
         <p className="mt-2 text-sm leading-6 text-foreground/62">
-          Alta mínima para empezar a ordenar sesiones, alumnos y biblioteca.
+          {form.isClub
+            ? "Registra tu escuela o academia. Después podrás invitar a tus monitores por email."
+            : "Alta mínima para empezar a ordenar sesiones, alumnos y biblioteca."}
         </p>
       </div>
 
@@ -348,32 +450,6 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Nombre</Label>
-          <Input
-            id="name"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-            autoComplete="name"
-            aria-invalid={!!fieldErrors.name}
-          />
-          {fieldErrors.name && (
-            <p className="text-xs text-destructive">{fieldErrors.name}</p>
-          )}
-        </div>
-
-        <label className="flex items-start gap-3 rounded-[22px] border border-[#050505]/10 bg-[#F4F4F1] p-3 text-sm text-foreground/62 dark:border-white/10 dark:bg-white/[0.04]">
-          <input
-            type="checkbox"
-            checked={form.isClub}
-            onChange={(e) => update("isClub", e.target.checked)}
-            className="mt-1"
-          />
-          <span>
-            Me registro como <strong>club</strong>, no como monitor individual.
-          </span>
-        </label>
-
         {form.isClub && (
           <div className="grid gap-4 rounded-[22px] border border-brand/30 bg-brand/5 p-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -407,6 +483,22 @@ export default function RegisterPage() {
             </div>
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="name">
+            {form.isClub ? "Nombre y apellidos del responsable" : "Nombre"}
+          </Label>
+          <Input
+            id="name"
+            value={form.name}
+            onChange={(e) => update("name", e.target.value)}
+            autoComplete="name"
+            aria-invalid={!!fieldErrors.name}
+          />
+          {fieldErrors.name && (
+            <p className="text-xs text-destructive">{fieldErrors.name}</p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
