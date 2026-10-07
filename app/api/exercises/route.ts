@@ -30,6 +30,7 @@ import {
   exercisesListQuerySchema,
   zodValidationErrorResponse,
 } from "./validation";
+import { getActiveSport } from "@/lib/sports";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -130,6 +131,10 @@ export async function GET(request: NextRequest) {
   }
 
   const whereConditions: SQL[] = [visibilityCondition];
+
+  if (user) {
+    whereConditions.push(eq(exercises.sport, await getActiveSport(user.id)));
+  }
 
   if (category) {
     whereConditions.push(eq(exercises.category, category));
@@ -370,6 +375,7 @@ export async function POST(request: Request) {
       .where(eq(users.id, user.id))
       .limit(1);
     const isAdmin = !!dbUser?.isAdmin;
+    const sport = await getActiveSport(user.id);
 
     const {
       isGlobal: requestedIsGlobal,
@@ -447,6 +453,7 @@ export async function POST(request: Request) {
         isGlobal: isAdmin && requestedIsGlobal === true,
         autoria: isAdmin && requestedAutoria ? requestedAutoria : "libre",
         createdBy: user.id,
+        sport,
       })
       .returning();
 

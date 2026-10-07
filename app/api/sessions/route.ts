@@ -32,6 +32,7 @@ import {
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
 import { embedSession } from "@/lib/ai/semantic-search";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
@@ -292,7 +293,10 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
   const now = new Date();
 
-  const activeClubId = await getActiveWorkClubId(user.id);
+  const [activeClubId, activeSport] = await Promise.all([
+    getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
+  ]);
   const whereConditions: SQL[] = [
     sharedWithClubCondition(
       sessions.userId,
@@ -300,6 +304,7 @@ export async function GET(request: NextRequest) {
       user.id,
       activeClubId
     ),
+    eq(sessions.sport, activeSport),
   ];
 
   if (filter === "upcoming") {
@@ -459,7 +464,11 @@ export async function POST(request: Request) {
 
   // El club ya no se elige por elemento: se etiqueta automáticamente con
   // el modo de trabajo activo del usuario (ver /api/account/work-mode).
-  const clubId = await getActiveWorkClubId(user.id);
+  const [clubId, activeSport] = await Promise.all([
+    getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
+  ]);
+  let sessionSport = activeSport;
 
   try {
     await ensureUser(user);
@@ -503,7 +512,7 @@ export async function POST(request: Request) {
     if (sourceClassId) {
       const classActiveClubId = await getActiveWorkClubId(user.id);
       const [sourceClass] = await db
-        .select({ id: classes.id })
+        .select({ id: classes.id, sport: classes.sport })
         .from(classes)
         .where(
           and(
@@ -527,6 +536,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+      sessionSport = sourceClass.sport;
     }
 
     const normalizedBlocks = normalizeBlocks(blocks, exerciseItems);
@@ -591,6 +601,7 @@ export async function POST(request: Request) {
           location: location ?? null,
           placeId: placeId ?? null,
           clubId: clubId ?? null,
+          sport: sessionSport,
         })
         .returning();
 

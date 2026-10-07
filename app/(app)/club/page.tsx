@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getOwnedClub, getCoachMemberships, listClubRoster } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
+import { SPORT_LABELS } from "@/lib/sport-constants";
 import { redirect } from "next/navigation";
 import { ClubOwnerPanel } from "./club-owner-panel";
 import { NewClubForm } from "./new-club-form";
@@ -12,9 +14,10 @@ export default async function ClubPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [ownedClub, coachOf] = await Promise.all([
+  const [ownedClub, coachOf, activeSport] = await Promise.all([
     getOwnedClub(user.id),
     getCoachMemberships(user.id),
+    getActiveSport(user.id),
   ]);
 
   if (ownedClub) {
@@ -28,14 +31,15 @@ export default async function ClubPage() {
           </h1>
           <p className="mt-2 text-sm leading-6 text-foreground/62">
             Invita monitores por email. Cuando acepten, tendrás acceso
-            compartido a sus sesiones, alumnos, grupos y calendario — cada uno
-            conserva su propio panel.
+            compartido a sus sesiones, alumnos, grupos y calendario de ese
+            deporte — cada uno conserva su propio panel.
           </p>
         </div>
         <ClubOwnerPanel
           club={ownedClub}
           initialMembers={members}
           initialInvites={invites}
+          defaultSport={activeSport}
         />
       </div>
     );
@@ -57,12 +61,22 @@ export default async function ClubPage() {
             Formas parte de
           </h2>
           <ul className="mt-3 space-y-2">
-            {coachOf.map(({ club }) => (
+            {coachOf.map(({ club, sports }) => (
               <li
                 key={club.id}
-                className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm font-semibold text-foreground dark:border-white/10"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm font-semibold text-foreground dark:border-white/10"
               >
-                {club.name}
+                <span className="truncate">{club.name}</span>
+                <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                  {sports.map((sport) => (
+                    <span
+                      key={sport}
+                      className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70"
+                    >
+                      {SPORT_LABELS[sport]}
+                    </span>
+                  ))}
+                </span>
               </li>
             ))}
           </ul>

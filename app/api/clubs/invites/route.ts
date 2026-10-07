@@ -10,9 +10,11 @@ import {
   inviteExpiryDate,
   listClubRoster,
 } from "@/lib/clubs";
+import { getActiveSport, SPORTS } from "@/lib/sports";
 
 const createSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
+  sport: z.enum(SPORTS).optional(),
 });
 
 export async function GET() {
@@ -62,8 +64,11 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email;
+  // Por defecto, el deporte activo del dueño del club — así el formulario
+  // puede omitirlo y seguir invitando "para lo que estoy viendo ahora".
+  const sport = parsed.data.sport ?? (await getActiveSport(user.id));
 
-  // Already an active coach in this club?
+  // Already an active coach in this club, for this sport?
   const [existingMember] = await db
     .select({ id: clubMembers.id })
     .from(clubMembers)
@@ -72,18 +77,20 @@ export async function POST(request: Request) {
       and(
         eq(clubMembers.clubId, club.id),
         eq(clubMembers.status, "active"),
+        eq(clubMembers.sport, sport),
         eq(users.email, email)
       )
     )
     .limit(1);
   if (existingMember) {
     return NextResponse.json(
-      { error: "Ese monitor ya está vinculado al club." },
+      { error: "Ese monitor ya está vinculado al club para ese deporte." },
       { status: 409 }
     );
   }
 
-  // Refresh an existing pending invite instead of piling up duplicates.
+  // Refresh an existing pending invite (same club+email+sport) instead of
+  // piling up duplicates — a different sport gets its own invite.
   const [existingInvite] = await db
     .select()
     .from(clubInvites)
@@ -91,6 +98,7 @@ export async function POST(request: Request) {
       and(
         eq(clubInvites.clubId, club.id),
         eq(clubInvites.email, email),
+        eq(clubInvites.sport, sport),
         eq(clubInvites.status, "pending")
       )
     )
@@ -110,6 +118,7 @@ export async function POST(request: Request) {
         .values({
           clubId: club.id,
           email,
+          sport,
           token,
           invitedByUserId: user.id,
           expiresAt,

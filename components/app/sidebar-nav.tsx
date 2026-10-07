@@ -31,7 +31,9 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { WorkModeBadge } from "./work-mode-badge";
+import { SportBadge } from "./sport-badge";
 import type { ClubOption } from "./club-context-select";
+import type { Sport } from "@/lib/sport-constants";
 
 type FeatureKey =
   | "drPlanner"
@@ -130,6 +132,7 @@ const navItems: NavItem[] = [
 interface WorkModeProps {
   workModeClubs?: ClubOption[];
   activeWorkClubId?: string | null;
+  activeSport?: Sport;
 }
 
 interface SidebarNavProps extends WorkModeProps {
@@ -168,6 +171,7 @@ function NavContent({
   appName,
   workModeClubs = [],
   activeWorkClubId = null,
+  activeSport = "tenis",
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -221,12 +225,15 @@ function NavContent({
         </Link>
       </div>
 
-      {user && workModeClubs.length > 0 && (
-        <div className="border-b border-sidebar-border px-3 py-3">
-          <WorkModeBadge
-            clubs={workModeClubs}
-            activeClubId={activeWorkClubId}
-          />
+      {user && (
+        <div className="border-b border-sidebar-border px-3 py-3 space-y-2">
+          <SportBadge activeSport={activeSport} />
+          {workModeClubs.length > 0 && (
+            <WorkModeBadge
+              clubs={workModeClubs}
+              activeClubId={activeWorkClubId}
+            />
+          )}
         </div>
       )}
 
@@ -527,6 +534,7 @@ export function SidebarNav({
   appName,
   workModeClubs = [],
   activeWorkClubId = null,
+  activeSport = "tenis",
 }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -611,6 +619,7 @@ export function SidebarNav({
           appName={appName}
           workModeClubs={workModeClubs}
           activeWorkClubId={activeWorkClubId}
+          activeSport={activeSport}
         />
       </aside>
 
@@ -648,12 +657,15 @@ export function SidebarNav({
             </button>
           </div>
         </div>
-        {user && workModeClubs.length > 0 && (
-          <div className="px-4 pb-3">
-            <WorkModeBadge
-              clubs={workModeClubs}
-              activeClubId={activeWorkClubId}
-            />
+        {user && (
+          <div className="px-4 pb-3 space-y-2">
+            <SportBadge activeSport={activeSport} />
+            {workModeClubs.length > 0 && (
+              <WorkModeBadge
+                clubs={workModeClubs}
+                activeClubId={activeWorkClubId}
+              />
+            )}
           </div>
         )}
       </header>
@@ -697,6 +709,7 @@ export function SidebarNav({
               appName={appName}
               workModeClubs={workModeClubs}
               activeWorkClubId={activeWorkClubId}
+              activeSport={activeSport}
             />
           </aside>
         </div>

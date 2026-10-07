@@ -7,11 +7,14 @@ import { Check, Copy, Loader2, Mail, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { SPORT_LABELS, SPORT_OPTIONS, type Sport } from "@/lib/sport-constants";
 
 interface Member {
   id: string;
   role: string;
   status: string;
+  sport: Sport;
   createdAt: string | Date;
   name: string;
   email: string;
@@ -21,6 +24,7 @@ interface Member {
 interface Invite {
   id: string;
   email: string;
+  sport: Sport;
   token: string;
   status: string;
   createdAt: string | Date;
@@ -37,15 +41,18 @@ export function ClubOwnerPanel({
   club,
   initialMembers,
   initialInvites,
+  defaultSport = "tenis",
 }: {
   club: Club;
   initialMembers: Member[];
   initialInvites: Invite[];
+  defaultSport?: Sport;
 }) {
   const router = useRouter();
   const [members] = useState(initialMembers);
   const [invites, setInvites] = useState(initialInvites);
   const [email, setEmail] = useState("");
+  const [sport, setSport] = useState<Sport>(defaultSport);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -61,7 +68,7 @@ export function ClubOwnerPanel({
       const res = await fetch("/api/clubs/invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), sport }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
@@ -106,30 +113,46 @@ export function ClubOwnerPanel({
           <Mail className="size-4" />
           Invitar monitor
         </h2>
-        <form
-          onSubmit={onInvite}
-          className="mt-3 flex flex-col gap-2 sm:flex-row"
-        >
-          <div className="flex-1 space-y-1">
-            <Label htmlFor="invite-email" className="sr-only">
-              Email del monitor
-            </Label>
-            <Input
-              id="invite-email"
-              type="email"
-              placeholder="monitor@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+        <form onSubmit={onInvite} className="mt-3 space-y-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="invite-email" className="sr-only">
+                Email del monitor
+              </Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="monitor@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="h-11 shrink-0 rounded-full font-black"
+            >
+              {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Invitar
+            </Button>
           </div>
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="h-11 shrink-0 rounded-full font-black"
-          >
-            {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Invitar
-          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            {SPORT_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setSport(option.id)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-bold transition-colors",
+                  sport === option.id
+                    ? "border-brand bg-brand/10 text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </form>
         {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
         <p className="mt-2 text-xs text-foreground/50">
@@ -154,8 +177,11 @@ export function ClubOwnerPanel({
                 key={invite.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-[#050505]/10 px-4 py-3 dark:border-white/10"
               >
-                <span className="truncate text-sm font-semibold text-foreground">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
                   {invite.email}
+                  <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70">
+                    {SPORT_LABELS[invite.sport]}
+                  </span>
                 </span>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
@@ -208,6 +234,9 @@ export function ClubOwnerPanel({
                     {member.email}
                   </p>
                 </div>
+                <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70">
+                  {SPORT_LABELS[member.sport]}
+                </span>
               </li>
             ))}
           </ul>

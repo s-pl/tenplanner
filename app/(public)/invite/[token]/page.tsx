@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { clubInvites, clubs } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { AcceptInviteButton } from "./accept-invite-button";
+import { SPORT_LABELS } from "@/lib/sport-constants";
 
 function isInviteExpired(invite: { status: string; expiresAt: Date }) {
   return invite.status === "expired" || invite.expiresAt.getTime() < Date.now();
@@ -92,13 +93,15 @@ export default async function InvitePage({
     <>
       <p className="tp-kicker">Invitación de club</p>
       <h1 className="mt-3 text-2xl font-black leading-tight text-foreground">
-        {club.name} quiere vincularte como monitor
+        {club.name} quiere vincularte como monitor de{" "}
+        {SPORT_LABELS[invite.sport]}
       </h1>
       <p className="mt-3 text-sm leading-6 text-foreground/62">
         Invitación enviada a{" "}
-        <span className="font-semibold text-foreground">{invite.email}</span>.
-        Al aceptar, el club tendrá acceso compartido a tus sesiones, alumnos,
-        grupos y calendario. Tu cuenta sigue siendo tuya.
+        <span className="font-semibold text-foreground">{invite.email}</span>{" "}
+        para <strong>{SPORT_LABELS[invite.sport]}</strong>. Al aceptar, el
+        club tendrá acceso compartido a tus sesiones, alumnos, grupos y
+        calendario de ese deporte. Tu cuenta sigue siendo tuya.
       </p>
 
       {!user && (

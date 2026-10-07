@@ -105,6 +105,17 @@ export const clubInviteStatusEnum = pgEnum("club_invite_status", [
   "expired",
 ]);
 
+// Multi-sport (PMV 261007) — tenis (ya implementado), pádel, pickleball y
+// tenis playa comparten el mismo modelo de datos. El deporte es un contexto:
+// se etiqueta en groups/classes/exercises/sessions/session_templates, y la
+// vinculación monitor↔club es por (club, usuario, deporte).
+export const sportEnum = pgEnum("sport", [
+  "tenis",
+  "padel",
+  "pickleball",
+  "tenis_playa",
+]);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable(
   "users",
@@ -129,6 +140,12 @@ export const users = pgTable(
       (): AnyPgColumn => clubs.id,
       { onDelete: "set null" }
     ),
+    // Deporte activo: el contexto que filtra todo lo que el usuario ve y
+    // crea (sesiones, biblioteca, grupos...). Se elige y cambia desde el
+    // selector de deporte, no por elemento. Independiente de activeClubId:
+    // un usuario puede estar en modo club para un deporte y particular
+    // para otro.
+    activeSport: sportEnum("active_sport").default("tenis").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -185,6 +202,9 @@ export const exercises = pgTable(
     autoria: varchar("autoria", { length: 64 }).default("libre"),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
+    // Deporte al que pertenece el ejercicio. Default "tenis" para que todo
+    // el contenido existente quede migrado sin tocar datos.
+    sport: sportEnum("sport").default("tenis").notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -203,6 +223,7 @@ export const exercises = pgTable(
     index("exercises_category_created_at_idx").on(t.category, t.createdAt),
     index("exercises_name_idx").on(t.name),
     index("exercises_autoria_idx").on(t.autoria),
+    index("exercises_sport_idx").on(t.sport),
   ]
 );
 
@@ -260,6 +281,9 @@ export const sessions = pgTable(
     clubId: uuid("club_id").references(() => clubs.id, {
       onDelete: "set null",
     }),
+    // Deporte de la sesión. Si viene de una clase/grupo, hereda el suyo al
+    // crearse; default "tenis" para que lo existente migre sin tocar datos.
+    sport: sportEnum("sport").default("tenis").notNull(),
     status: sessionStatusEnum("status").notNull().default("scheduled"),
     statusNote: text("status_note"), // notas de completada / motivo de cancelada
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -276,6 +300,7 @@ export const sessions = pgTable(
     index("sessions_user_scheduled_at_idx").on(t.userId, t.scheduledAt),
     index("sessions_place_id_idx").on(t.placeId),
     index("sessions_club_id_idx").on(t.clubId),
+    index("sessions_sport_idx").on(t.sport),
   ]
 );
 
@@ -452,6 +477,10 @@ export const groups = pgTable(
     clubId: uuid("club_id").references(() => clubs.id, {
       onDelete: "set null",
     }),
+    // Un deporte por grupo (fijo a la creación). Un alumno puede
+    // pertenecer a varios grupos del mismo o de distinto deporte —
+    // ver group_students, que no lleva sport.
+    sport: sportEnum("sport").default("tenis").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -463,6 +492,7 @@ export const groups = pgTable(
   (t) => [
     index("groups_coach_id_idx").on(t.coachId),
     index("groups_club_id_idx").on(t.clubId),
+    index("groups_sport_idx").on(t.sport),
   ]
 );
 
@@ -660,6 +690,7 @@ export const sessionTemplates = pgTable(
     tags: json("tags").$type<string[]>(),
     location: varchar("location", { length: 50 }),
     adoptionsCount: integer("adoptions_count").default(0).notNull(),
+    sport: sportEnum("sport").default("tenis").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -672,6 +703,7 @@ export const sessionTemplates = pgTable(
     index("session_templates_author_id_idx").on(t.authorId),
     index("session_templates_created_at_idx").on(t.createdAt),
     index("session_templates_adoptions_count_idx").on(t.adoptionsCount),
+    index("session_templates_sport_idx").on(t.sport),
   ]
 );
 
@@ -766,6 +798,8 @@ export const classes = pgTable(
     clubId: uuid("club_id").references(() => clubs.id, {
       onDelete: "set null",
     }),
+    // Deporte de la clase (biblioteca de plantillas por deporte).
+    sport: sportEnum("sport").default("tenis").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -783,6 +817,7 @@ export const classes = pgTable(
     index("classes_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
     index("classes_autoria_idx").on(t.autoria),
     index("classes_club_id_idx").on(t.clubId),
+    index("classes_sport_idx").on(t.sport),
   ]
 );
 
@@ -1507,6 +1542,10 @@ export const clubMembers = pgTable(
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
+    // La vinculación monitor↔club es por (club, usuario, deporte): un
+    // mismo monitor puede estar dado de alta en el Club X para tenis y
+    // pádel, pero no para pickleball, con una fila por combinación.
+    sport: sportEnum("sport").default("tenis").notNull(),
     role: clubMemberRoleEnum("role").notNull(),
     status: clubMemberStatusEnum("status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1518,9 +1557,14 @@ export const clubMembers = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("club_members_club_user_uniq").on(t.clubId, t.userId),
+    uniqueIndex("club_members_club_user_sport_uniq").on(
+      t.clubId,
+      t.userId,
+      t.sport
+    ),
     index("club_members_club_id_idx").on(t.clubId),
     index("club_members_user_id_idx").on(t.userId),
+    index("club_members_sport_idx").on(t.sport),
   ]
 );
 
@@ -1536,6 +1580,10 @@ export const clubInvites = pgTable(
     email: varchar("email", { length: 255 }).notNull(),
     token: varchar("token", { length: 128 }).notNull().unique(),
     status: clubInviteStatusEnum("status").notNull().default("pending"),
+    // El deporte para el que se invita al monitor — una invitación es para
+    // un deporte; el mismo email puede tener invitaciones pendientes
+    // distintas para deportes distintos del mismo club.
+    sport: sportEnum("sport").default("tenis").notNull(),
     invitedByUserId: uuid("invited_by_user_id")
       .references(() => users.id, { onDelete: "set null" })
       .notNull(),
@@ -1548,6 +1596,7 @@ export const clubInvites = pgTable(
   (t) => [
     index("club_invites_club_id_idx").on(t.clubId),
     index("club_invites_email_idx").on(t.email),
+    index("club_invites_sport_idx").on(t.sport),
   ]
 );
 

@@ -18,6 +18,7 @@ import {
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
 
 const stationItemSchema = z
   .object({
@@ -115,7 +116,9 @@ export async function GET(request: Request) {
   const nivel = searchParams.get("nivel")?.trim();
   const aspecto = searchParams.get("aspecto")?.trim();
 
-  const activeClubId = user ? await getActiveWorkClubId(user.id) : null;
+  const [activeClubId, activeSport] = user
+    ? await Promise.all([getActiveWorkClubId(user.id), getActiveSport(user.id)])
+    : [null, null];
   const mineOrClub = user
     ? sharedWithClubCondition(
         classes.createdBy,
@@ -138,6 +141,7 @@ export async function GET(request: Request) {
         : eq(classes.isLibrary, true)
     );
   }
+  if (activeSport) conds.push(eq(classes.sport, activeSport));
   if (q) conds.push(ilike(classes.name, `%${q}%`));
   if (nivel) {
     conds.push(
@@ -222,7 +226,10 @@ export async function POST(request: Request) {
 
   // El club ya no se elige por elemento: se etiqueta automáticamente con
   // el modo de trabajo activo del usuario (ver /api/account/work-mode).
-  const clubId = await getActiveWorkClubId(user.id);
+  const [clubId, sport] = await Promise.all([
+    getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
+  ]);
 
   // Verify exercises referenced (top-level items and stations) belong to
   // the user or are library exercises.
@@ -295,6 +302,7 @@ export async function POST(request: Request) {
           isLibrary: isAdmin && d.isLibrary === true,
           autoria: isAdmin && d.autoria ? d.autoria : "libre",
           clubId,
+          sport,
         })
         .returning();
 
