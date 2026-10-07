@@ -115,7 +115,7 @@ export default async function InvitePage({
               Iniciar sesión
             </Link>
             <Link
-              href="/register"
+              href="/register?type=monitor"
               className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-brand text-sm font-black text-brand-foreground"
             >
               Crear cuenta
