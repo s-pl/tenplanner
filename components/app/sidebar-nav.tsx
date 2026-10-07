@@ -33,7 +33,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { WorkModeBadge } from "./work-mode-badge";
 import { SportBadge } from "./sport-badge";
 import type { ClubOption } from "./club-context-select";
-import type { Sport } from "@/lib/sports";
+import type { Sport } from "@/lib/sport-constants";
 
 type FeatureKey =
   | "drPlanner"

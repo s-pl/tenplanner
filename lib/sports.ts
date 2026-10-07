@@ -1,27 +1,16 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { sportEnum, users } from "@/db/schema";
+import { users } from "@/db/schema";
+import { DEFAULT_SPORT, type Sport } from "@/lib/sport-constants";
 
-/** Valores válidos de la columna `sport` (ver db/schema.ts). */
-export const SPORTS = sportEnum.enumValues;
-export type Sport = (typeof SPORTS)[number];
-
-export const DEFAULT_SPORT: Sport = "tenis";
-
-export const SPORT_LABELS: Record<Sport, string> = {
-  tenis: "Tenis",
-  padel: "Pádel",
-  pickleball: "Pickleball",
-  tenis_playa: "Tenis playa",
-};
-
-export const SPORT_OPTIONS: { id: Sport; label: string }[] = SPORTS.map(
-  (id) => ({ id, label: SPORT_LABELS[id] })
-);
-
-export function isSport(value: string): value is Sport {
-  return (SPORTS as readonly string[]).includes(value);
-}
+export {
+  SPORTS,
+  DEFAULT_SPORT,
+  SPORT_LABELS,
+  SPORT_OPTIONS,
+  isSport,
+  type Sport,
+} from "@/lib/sport-constants";
 
 /**
  * El deporte activo del usuario — el contexto que filtra todo lo que ve y

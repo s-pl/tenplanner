@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SPORT_OPTIONS, type Sport } from "@/lib/sports";
+import { SPORT_OPTIONS, type Sport } from "@/lib/sport-constants";
 
 /**
  * Indicador siempre visible (barra lateral / cabecera móvil) del deporte

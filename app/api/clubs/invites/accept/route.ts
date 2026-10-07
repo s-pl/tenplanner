@@ -84,11 +84,12 @@ export async function POST(request: Request) {
       .values({
         clubId: invite.invite.clubId,
         userId: user.id,
+        sport: invite.invite.sport,
         role: "coach",
         status: "active",
       })
       .onConflictDoUpdate({
-        target: [clubMembers.clubId, clubMembers.userId],
+        target: [clubMembers.clubId, clubMembers.userId, clubMembers.sport],
         set: { role: "coach", status: "active" },
       });
 

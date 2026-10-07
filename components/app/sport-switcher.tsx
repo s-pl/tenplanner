@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SPORT_OPTIONS, type Sport } from "@/lib/sports";
+import { SPORT_OPTIONS, type Sport } from "@/lib/sport-constants";
 
 export function SportSwitcher({
   activeSport: initialActiveSport,

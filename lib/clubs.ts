@@ -31,9 +31,13 @@ export async function getOwnedClub(userId: string) {
   return row?.club ?? null;
 }
 
-/** Every club a user is linked to as an active coach (not counting one they own). */
+/**
+ * Every club a user is linked to as an active coach (not counting one they
+ * own), one row per club — with every sport they're linked for at that
+ * club (club_members has one row per (club, user, sport), see schema.ts).
+ */
 export async function getCoachMemberships(userId: string) {
-  return db
+  const rows = await db
     .select({ club: clubs, membership: clubMembers })
     .from(clubMembers)
     .innerJoin(clubs, eq(clubs.id, clubMembers.clubId))
@@ -44,6 +48,16 @@ export async function getCoachMemberships(userId: string) {
         eq(clubMembers.status, "active")
       )
     );
+  const byClubId = new Map<
+    string,
+    { club: (typeof rows)[number]["club"]; sports: (typeof rows)[number]["membership"]["sport"][] }
+  >();
+  for (const { club, membership } of rows) {
+    const entry = byClubId.get(club.id) ?? { club, sports: [] };
+    entry.sports.push(membership.sport);
+    byClubId.set(club.id, entry);
+  }
+  return Array.from(byClubId.values());
 }
 
 /**
@@ -52,17 +66,22 @@ export async function getCoachMemberships(userId: string) {
  * switcher in the profile — the user picks one of these (or "particular")
  * and everything they create from then on is tagged with it until they
  * switch again (see getActiveWorkClubId / setActiveWorkClub).
+ *
+ * A coach may have several club_members rows for the same club (one per
+ * sport they're linked for — see club_members.sport), so this dedupes by
+ * club id: "modo de trabajo" is about the club, not the sport, which is
+ * its own context (see lib/sports.ts).
  */
 export async function getClubOptionsForUser(userId: string) {
   const [owned, coachOf] = await Promise.all([
     getOwnedClub(userId),
     getCoachMemberships(userId),
   ]);
-  const options: { id: string; name: string }[] = [];
-  if (owned) options.push({ id: owned.id, name: owned.name });
+  const byId = new Map<string, { id: string; name: string }>();
+  if (owned) byId.set(owned.id, { id: owned.id, name: owned.name });
   for (const { club } of coachOf)
-    options.push({ id: club.id, name: club.name });
-  return options;
+    byId.set(club.id, { id: club.id, name: club.name });
+  return Array.from(byId.values());
 }
 
 /**
@@ -195,6 +214,7 @@ export async function listClubRoster(clubId: string) {
         id: clubMembers.id,
         role: clubMembers.role,
         status: clubMembers.status,
+        sport: clubMembers.sport,
         createdAt: clubMembers.createdAt,
         name: users.name,
         email: users.email,

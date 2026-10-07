@@ -1580,6 +1580,10 @@ export const clubInvites = pgTable(
     email: varchar("email", { length: 255 }).notNull(),
     token: varchar("token", { length: 128 }).notNull().unique(),
     status: clubInviteStatusEnum("status").notNull().default("pending"),
+    // El deporte para el que se invita al monitor — una invitación es para
+    // un deporte; el mismo email puede tener invitaciones pendientes
+    // distintas para deportes distintos del mismo club.
+    sport: sportEnum("sport").default("tenis").notNull(),
     invitedByUserId: uuid("invited_by_user_id")
       .references(() => users.id, { onDelete: "set null" })
       .notNull(),
@@ -1592,6 +1596,7 @@ export const clubInvites = pgTable(
   (t) => [
     index("club_invites_club_id_idx").on(t.clubId),
     index("club_invites_email_idx").on(t.email),
+    index("club_invites_sport_idx").on(t.sport),
   ]
 );
 

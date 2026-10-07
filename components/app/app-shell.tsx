@@ -2,7 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { SidebarNav } from "./sidebar-nav";
 import type { ClubOption } from "./club-context-select";
-import type { Sport } from "@/lib/sports";
+import type { Sport } from "@/lib/sport-constants";
 
 interface AppShellProps {
   children: React.ReactNode;
