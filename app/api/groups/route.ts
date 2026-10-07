@@ -5,11 +5,7 @@ import { db } from "@/db";
 import { groups, groupStudents, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
-import {
-  getActiveClubIds,
-  getActiveWorkClubId,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -35,12 +31,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const withStudents = searchParams.get("withStudents") === "true";
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
   const visibility = sharedWithClubCondition(
     groups.coachId,
     groups.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
 
   if (withStudents) {

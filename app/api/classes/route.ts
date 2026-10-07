@@ -17,11 +17,7 @@ import {
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
-import {
-  getActiveClubIds,
-  getActiveWorkClubId,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 const stationItemSchema = z
   .object({
@@ -119,13 +115,13 @@ export async function GET(request: Request) {
   const nivel = searchParams.get("nivel")?.trim();
   const aspecto = searchParams.get("aspecto")?.trim();
 
-  const clubIds = user ? await getActiveClubIds(user.id) : [];
+  const activeClubId = user ? await getActiveWorkClubId(user.id) : null;
   const mineOrClub = user
     ? sharedWithClubCondition(
         classes.createdBy,
         classes.clubId,
         user.id,
-        clubIds
+        activeClubId
       )
     : null;
 

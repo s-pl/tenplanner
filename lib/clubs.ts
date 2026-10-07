@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { and, desc, eq, inArray, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import { db } from "@/db";
 import { clubInvites, clubMembers, clubs, users } from "@/db/schema";
@@ -162,21 +162,29 @@ export async function setActiveWorkClub(userId: string, clubId: string | null) {
 }
 
 /**
- * Visibility condition for "mine, or shared with a club I'm active in":
- * `ownerColumn = userId OR clubColumn IN (clubIds)`. Use this instead of
- * a bare `eq(table.userId, user.id)` wherever a club's members should see
- * each other's club-tagged sessions/events/groups/students/classes. An
- * item tagged null (created in "particular" mode) is never matched by
- * the club half, so it stays private to its creator.
+ * Visibility condition driven by the viewer's current "modo de trabajo"
+ * (see getActiveWorkClubId), not by which clubs they merely belong to:
+ *
+ * - "Particular" mode (`activeClubId` is null): only the viewer's own
+ *   items that were themselves created in particular mode
+ *   (`ownerColumn = userId AND clubColumn IS NULL`). Anything the viewer
+ *   created while working as a club stays out of their particular space.
+ * - A club's mode (`activeClubId` set): every item tagged with that club
+ *   (`clubColumn = activeClubId`), regardless of who created it — the
+ *   whole shared space of that club, not just the viewer's own items.
+ *
+ * Use this instead of a bare `eq(table.userId, user.id)` wherever a
+ * club's members should see each other's club-tagged
+ * sessions/events/groups/students/classes.
  */
 export function sharedWithClubCondition(
   ownerColumn: AnyColumn,
   clubColumn: AnyColumn,
   userId: string,
-  clubIds: string[]
+  activeClubId: string | null
 ): SQL {
-  if (clubIds.length === 0) return eq(ownerColumn, userId);
-  return or(eq(ownerColumn, userId), inArray(clubColumn, clubIds))!;
+  if (activeClubId) return eq(clubColumn, activeClubId);
+  return and(eq(ownerColumn, userId), isNull(clubColumn))!;
 }
 
 /** Active coaches and pending invites for a club the caller owns. */

@@ -17,7 +17,7 @@ import {
   STATION_COUNT_MIN,
 } from "@/lib/block-items";
 import { AUTORIA_VALUES } from "@/lib/exercise-taxonomy";
-import { getActiveClubIds } from "@/lib/clubs";
+import { getActiveWorkClubId } from "@/lib/clubs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -124,8 +124,8 @@ export async function GET(_req: Request, ctx: Ctx) {
   const isOwner = !!user && cls.createdBy === user.id;
   let sharedViaClub = false;
   if (!cls.isLibrary && !isOwner && user && cls.clubId) {
-    const clubIds = await getActiveClubIds(user.id);
-    sharedViaClub = clubIds.includes(cls.clubId);
+    const activeClubId = await getActiveWorkClubId(user.id);
+    sharedViaClub = cls.clubId === activeClubId;
   }
   if (!cls.isLibrary && !isOwner && !sharedViaClub) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -9,7 +9,7 @@ import { GroupCreateForm } from "./group-create-form";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
-  getActiveClubIds,
+  getActiveWorkClubId,
   getClubMembersDirectory,
   sharedWithClubCondition,
 } from "@/lib/clubs";
@@ -39,16 +39,17 @@ export default async function GroupsPage({ searchParams }: PageProps) {
     );
   }
 
-  const clubIds = await getActiveClubIds(user.id);
-  const clubMembers =
-    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const activeClubId = await getActiveWorkClubId(user.id);
+  const clubMembers = activeClubId
+    ? await getClubMembersDirectory([activeClubId])
+    : [];
   const monitorFilter =
     monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
   const visibility = sharedWithClubCondition(
     groups.coachId,
     groups.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
 
   const allRows = await db

@@ -31,11 +31,7 @@ import {
 } from "./validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
-import {
-  getActiveClubIds,
-  getActiveWorkClubId,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { embedSession } from "@/lib/ai/semantic-search";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
@@ -296,9 +292,14 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
   const now = new Date();
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
   const whereConditions: SQL[] = [
-    sharedWithClubCondition(sessions.userId, sessions.clubId, user.id, clubIds),
+    sharedWithClubCondition(
+      sessions.userId,
+      sessions.clubId,
+      user.id,
+      activeClubId
+    ),
   ];
 
   if (filter === "upcoming") {
@@ -500,7 +501,7 @@ export async function POST(request: Request) {
     }
 
     if (sourceClassId) {
-      const classClubIds = await getActiveClubIds(user.id);
+      const classActiveClubId = await getActiveWorkClubId(user.id);
       const [sourceClass] = await db
         .select({ id: classes.id })
         .from(classes)
@@ -513,7 +514,7 @@ export async function POST(request: Request) {
                 classes.createdBy,
                 classes.clubId,
                 user.id,
-                classClubIds
+                classActiveClubId
               )
             )
           )

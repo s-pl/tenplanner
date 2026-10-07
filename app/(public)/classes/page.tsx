@@ -12,7 +12,7 @@ import {
   type ClassSort,
 } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -149,13 +149,13 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     draftCount = draftRows.length;
   }
 
-  const clubIds = user ? await getActiveClubIds(user.id) : [];
+  const activeClubId = user ? await getActiveWorkClubId(user.id) : null;
   const mineOrClub = user
     ? sharedWithClubCondition(
         classes.createdBy,
         classes.clubId,
         user.id,
-        clubIds
+        activeClubId
       )
     : null;
 

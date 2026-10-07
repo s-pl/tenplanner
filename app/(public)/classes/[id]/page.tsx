@@ -24,7 +24,7 @@ import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { PrevNextNav } from "@/components/app/prev-next-nav";
 import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
-import { getActiveClubIds } from "@/lib/clubs";
+import { getActiveWorkClubId } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -61,8 +61,8 @@ export default async function ClassDetailPage({
   const isOwner = !!user && cls.createdBy === user.id;
   let sharedViaClub = false;
   if (!cls.isLibrary && !isOwner && user && cls.clubId) {
-    const clubIds = await getActiveClubIds(user.id);
-    sharedViaClub = clubIds.includes(cls.clubId);
+    const activeClubId = await getActiveWorkClubId(user.id);
+    sharedViaClub = cls.clubId === activeClubId;
   }
   if (!cls.isLibrary && !isOwner && !sharedViaClub) notFound();
 

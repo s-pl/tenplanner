@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import {
   studentIdParamsSchema,
   updateStudentSchema,
@@ -33,7 +33,7 @@ export async function GET(_request: Request, context: StudentRouteContext) {
   if (!parsed.success) return zodValidationErrorResponse(parsed.error);
 
   try {
-    const clubIds = await getActiveClubIds(user.id);
+    const activeClubId = await getActiveWorkClubId(user.id);
     const [row] = await db
       .select()
       .from(students)
@@ -44,7 +44,7 @@ export async function GET(_request: Request, context: StudentRouteContext) {
             students.coachId,
             students.clubId,
             user.id,
-            clubIds
+            activeClubId
           )
         )
       )

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { classListItems, classLists, classes } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 type RouteContext = { params: Promise<{ listId: string }> };
 
@@ -52,7 +52,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!list)
     return NextResponse.json({ error: "List not found" }, { status: 404 });
 
-  const classClubIds = await getActiveClubIds(user.id);
+  const classActiveClubId = await getActiveWorkClubId(user.id);
   const [cls] = await db
     .select({ id: classes.id })
     .from(classes)
@@ -65,7 +65,7 @@ export async function POST(request: Request, context: RouteContext) {
             classes.createdBy,
             classes.clubId,
             user.id,
-            classClubIds
+            classActiveClubId
           )
         )!
       )

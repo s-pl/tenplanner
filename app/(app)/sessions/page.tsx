@@ -13,7 +13,7 @@ import {
 } from "@/db/schema";
 import { and, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
-  getActiveClubIds,
+  getActiveWorkClubId,
   getClubMembersDirectory,
   sharedWithClubCondition,
 } from "@/lib/clubs";
@@ -98,16 +98,17 @@ export default async function SessionsPage({ searchParams }: PageProps) {
     settings.get("feature.session_creation_enabled") !== false;
 
   const { filter, page, q, sort, monitor } = await searchParams;
-  const clubIds = await getActiveClubIds(user.id);
-  const clubMembers =
-    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const activeClubId = await getActiveWorkClubId(user.id);
+  const clubMembers = activeClubId
+    ? await getClubMembersDirectory([activeClubId])
+    : [];
   const monitorFilter =
     monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
   const mineOrClub = sharedWithClubCondition(
     sessionsTable.userId,
     sessionsTable.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
   const activeFilter: Filter =
     filter === "past" ||
