@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { SidebarNav } from "./sidebar-nav";
+import type { ClubOption } from "./club-context-select";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -16,6 +17,8 @@ interface AppShellProps {
   };
   maintenanceBanner?: string;
   appName?: string;
+  workModeClubs?: ClubOption[];
+  activeWorkClubId?: string | null;
 }
 
 export default function AppShell({
@@ -27,6 +30,8 @@ export default function AppShell({
   features,
   maintenanceBanner,
   appName,
+  workModeClubs = [],
+  activeWorkClubId = null,
 }: AppShellProps) {
   return (
     <div className="app-shell relative flex h-dvh flex-col overflow-hidden bg-background text-foreground md:flex-row">
@@ -41,6 +46,8 @@ export default function AppShell({
         drPlannerEnabled={drPlannerEnabled}
         features={features}
         appName={appName}
+        workModeClubs={workModeClubs}
+        activeWorkClubId={activeWorkClubId}
       />
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <div
