@@ -31,7 +31,9 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { WorkModeBadge } from "./work-mode-badge";
+import { SportBadge } from "./sport-badge";
 import type { ClubOption } from "./club-context-select";
+import type { Sport } from "@/lib/sports";
 
 type FeatureKey =
   | "drPlanner"
@@ -132,7 +134,11 @@ interface WorkModeProps {
   activeWorkClubId?: string | null;
 }
 
-interface SidebarNavProps extends WorkModeProps {
+interface SportProps {
+  activeSport?: Sport;
+}
+
+interface SidebarNavProps extends WorkModeProps, SportProps {
   user: {
     email?: string | null;
     user_metadata?: { full_name?: string };
@@ -168,6 +174,7 @@ function NavContent({
   appName,
   workModeClubs = [],
   activeWorkClubId = null,
+  activeSport,
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -177,7 +184,8 @@ function NavContent({
   features: FeatureMap;
   onSignOut: () => void;
   appName?: string;
-} & WorkModeProps) {
+} & WorkModeProps &
+  SportProps) {
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
   const initials = displayName
@@ -220,6 +228,17 @@ function NavContent({
           </div>
         </Link>
       </div>
+
+      {user && activeSport && (
+        <div
+          className={cn(
+            "px-3 py-3",
+            workModeClubs.length > 0 && "border-b border-sidebar-border"
+          )}
+        >
+          <SportBadge activeSport={activeSport} />
+        </div>
+      )}
 
       {user && workModeClubs.length > 0 && (
         <div className="border-b border-sidebar-border px-3 py-3">
@@ -527,6 +546,7 @@ export function SidebarNav({
   appName,
   workModeClubs = [],
   activeWorkClubId = null,
+  activeSport,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -611,6 +631,7 @@ export function SidebarNav({
           appName={appName}
           workModeClubs={workModeClubs}
           activeWorkClubId={activeWorkClubId}
+          activeSport={activeSport}
         />
       </aside>
 
@@ -648,14 +669,17 @@ export function SidebarNav({
             </button>
           </div>
         </div>
-        {user && workModeClubs.length > 0 && (
-          <div className="px-4 pb-3">
-            <WorkModeBadge
-              clubs={workModeClubs}
-              activeClubId={activeWorkClubId}
-            />
+        {(user && activeSport) || (user && workModeClubs.length > 0) ? (
+          <div className="flex flex-col gap-2 px-4 pb-3">
+            {activeSport && <SportBadge activeSport={activeSport} />}
+            {workModeClubs.length > 0 && (
+              <WorkModeBadge
+                clubs={workModeClubs}
+                activeClubId={activeWorkClubId}
+              />
+            )}
           </div>
-        )}
+        ) : null}
       </header>
 
       {mobileOpen && (
@@ -697,6 +721,7 @@ export function SidebarNav({
               appName={appName}
               workModeClubs={workModeClubs}
               activeWorkClubId={activeWorkClubId}
+              activeSport={activeSport}
             />
           </aside>
         </div>

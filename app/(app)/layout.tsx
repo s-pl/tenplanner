@@ -6,6 +6,7 @@ import { users } from "@/db/schema";
 import AppShell from "@/components/app/app-shell";
 import { getAppSettings, type SettingKey } from "@/lib/app-settings";
 import { getActiveWorkClubId, getClubOptionsForUser } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports-server";
 
 const APP_LAYOUT_SETTING_KEYS = [
   "feature.dr_planner_enabled",
@@ -45,7 +46,7 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  const [[row], appSettings, workModeClubs, activeWorkClubId] =
+  const [[row], appSettings, workModeClubs, activeWorkClubId, activeSport] =
     await Promise.all([
       db
         .select({ isAdmin: users.isAdmin, image: users.image })
@@ -55,6 +56,7 @@ export default async function AppLayout({
       getAppSettings(APP_LAYOUT_SETTING_KEYS),
       getClubOptionsForUser(user.id),
       getActiveWorkClubId(user.id),
+      getActiveSport(user.id),
     ]);
 
   const isAdmin = row?.isAdmin ?? false;
@@ -98,6 +100,7 @@ export default async function AppLayout({
       appName={appName}
       workModeClubs={workModeClubs}
       activeWorkClubId={activeWorkClubId}
+      activeSport={activeSport}
     >
       {children}
     </AppShell>

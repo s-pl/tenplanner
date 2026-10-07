@@ -7,7 +7,10 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { ExerciseForm } from "@/components/app/exercise-form";
 import { FeatureLocked } from "@/components/app/feature-locked";
+import { SportComingSoon } from "@/components/app/sport-coming-soon";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { sportHasContent, sportLabel } from "@/lib/sports";
+import { getActiveSport } from "@/lib/sports-server";
 
 interface PageProps {
   searchParams: Promise<{ mode?: string }>;
@@ -21,14 +24,21 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const [[dbUser], exerciseCreationEnabled] = await Promise.all([
+  const [[dbUser], exerciseCreationEnabled, activeSport] = await Promise.all([
     db
       .select({ isAdmin: users.isAdmin })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
     getBooleanSetting("feature.exercise_creation_enabled"),
+    getActiveSport(user.id),
   ]);
+
+  if (!sportHasContent(activeSport)) {
+    return (
+      <SportComingSoon sport={activeSport} label={sportLabel(activeSport)} />
+    );
+  }
 
   if (!exerciseCreationEnabled) {
     return (
