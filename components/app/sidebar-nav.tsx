@@ -30,6 +30,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
+import { WorkModeBadge } from "./work-mode-badge";
+import type { ClubOption } from "./club-context-select";
 
 type FeatureKey =
   | "drPlanner"
@@ -125,7 +127,12 @@ const navItems: NavItem[] = [
   { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
-interface SidebarNavProps {
+interface WorkModeProps {
+  workModeClubs?: ClubOption[];
+  activeWorkClubId?: string | null;
+}
+
+interface SidebarNavProps extends WorkModeProps {
   user: {
     email?: string | null;
     user_metadata?: { full_name?: string };
@@ -159,6 +166,8 @@ function NavContent({
   features,
   onSignOut,
   appName,
+  workModeClubs = [],
+  activeWorkClubId = null,
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -168,7 +177,7 @@ function NavContent({
   features: FeatureMap;
   onSignOut: () => void;
   appName?: string;
-}) {
+} & WorkModeProps) {
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
   const initials = displayName
@@ -211,6 +220,15 @@ function NavContent({
           </div>
         </Link>
       </div>
+
+      {user && workModeClubs.length > 0 && (
+        <div className="border-b border-sidebar-border px-3 py-3">
+          <WorkModeBadge
+            clubs={workModeClubs}
+            activeClubId={activeWorkClubId}
+          />
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="flex flex-col gap-1">
@@ -507,6 +525,8 @@ export function SidebarNav({
   drPlannerEnabled = true,
   features,
   appName,
+  workModeClubs = [],
+  activeWorkClubId = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -589,41 +609,53 @@ export function SidebarNav({
           features={resolvedFeatures}
           onSignOut={handleSignOut}
           appName={appName}
+          workModeClubs={workModeClubs}
+          activeWorkClubId={activeWorkClubId}
         />
       </aside>
 
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground md:hidden">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Link
-            href="/dashboard"
-            className="flex min-w-0 shrink items-center gap-2.5"
-          >
-            <BrandMark className="size-9" />
-            <span className="truncate text-sm font-black tracking-tight">
-              {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
+      <header className="sticky top-0 z-40 flex flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground md:hidden">
+        <div className="flex h-16 items-center justify-between px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Link
+              href="/dashboard"
+              className="flex min-w-0 shrink items-center gap-2.5"
+            >
+              <BrandMark className="size-9" />
+              <span className="truncate text-sm font-black tracking-tight">
+                {appName && appName !== "TenPlanner" ? appName : "TenPlanner"}
+              </span>
+            </Link>
+            <span className="text-sidebar-foreground/24" aria-hidden>
+              /
             </span>
-          </Link>
-          <span className="text-sidebar-foreground/24" aria-hidden>
-            /
-          </span>
-          <span className="truncate text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/54">
-            {activeLabel}
-          </span>
+            <span className="truncate text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/54">
+              {activeLabel}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <ThemeToggle compact />
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              aria-label="Abrir menú"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-drawer"
+            >
+              <Menu className="size-5" strokeWidth={1.8} />
+            </button>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <ThemeToggle compact />
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-            aria-label="Abrir menú"
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-nav-drawer"
-          >
-            <Menu className="size-5" strokeWidth={1.8} />
-          </button>
-        </div>
+        {user && workModeClubs.length > 0 && (
+          <div className="px-4 pb-3">
+            <WorkModeBadge
+              clubs={workModeClubs}
+              activeClubId={activeWorkClubId}
+            />
+          </div>
+        )}
       </header>
 
       {mobileOpen && (
@@ -663,6 +695,8 @@ export function SidebarNav({
               features={resolvedFeatures}
               onSignOut={handleSignOut}
               appName={appName}
+              workModeClubs={workModeClubs}
+              activeWorkClubId={activeWorkClubId}
             />
           </aside>
         </div>
