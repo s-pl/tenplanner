@@ -3,11 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getActiveClubIds,
-  getActiveWorkClubId,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { createStudentSchema, zodValidationErrorResponse } from "./validation";
 
 function internalServerError() {
@@ -42,7 +38,7 @@ export async function GET() {
   }
 
   try {
-    const clubIds = await getActiveClubIds(user.id);
+    const activeClubId = await getActiveWorkClubId(user.id);
     const rows = await db
       .select()
       .from(students)
@@ -51,7 +47,7 @@ export async function GET() {
           students.coachId,
           students.clubId,
           user.id,
-          clubIds
+          activeClubId
         )
       )
       .orderBy(asc(students.name));

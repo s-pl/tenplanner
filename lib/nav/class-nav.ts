@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { classes } from "@/db/schema";
 import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 export type ClassNavParams = Record<string, string | string[] | undefined>;
 
@@ -73,13 +73,13 @@ export async function getFilteredClassIds(
   const aspectoList = paramList(params.aspecto);
   const golpeList = paramList(params.golpe);
 
-  const clubIds = userId ? await getActiveClubIds(userId) : [];
+  const activeClubId = userId ? await getActiveWorkClubId(userId) : null;
   const mineOrClub = userId
     ? sharedWithClubCondition(
         classes.createdBy,
         classes.clubId,
         userId,
-        clubIds
+        activeClubId
       )
     : null;
 

@@ -14,7 +14,7 @@ import {
   users,
 } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { getActiveClubIds } from "@/lib/clubs";
+import { getActiveWorkClubId } from "@/lib/clubs";
 import { SessionDetailClient } from "./session-detail-client";
 import { getExerciseDiagrams } from "@/lib/exercise-diagrams";
 import {
@@ -146,8 +146,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
   if (!session) notFound();
   const isOwner = session.userId === user.id;
   if (!isOwner) {
-    const clubIds = session.clubId ? await getActiveClubIds(user.id) : [];
-    if (!session.clubId || !clubIds.includes(session.clubId)) notFound();
+    const activeClubId = session.clubId
+      ? await getActiveWorkClubId(user.id)
+      : null;
+    if (!session.clubId || session.clubId !== activeClubId) notFound();
   }
   const authorName = isOwner
     ? null

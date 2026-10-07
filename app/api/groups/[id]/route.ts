@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { groups, groupStudents, students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 async function ensureGroupsEnabled() {
   const groupsEnabled = await getBooleanSetting("feature.groups_enabled");
@@ -36,14 +36,19 @@ export async function GET(_req: Request, ctx: Ctx) {
 
   const { id } = await ctx.params;
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
   const [group] = await db
     .select()
     .from(groups)
     .where(
       and(
         eq(groups.id, id),
-        sharedWithClubCondition(groups.coachId, groups.clubId, user.id, clubIds)
+        sharedWithClubCondition(
+          groups.coachId,
+          groups.clubId,
+          user.id,
+          activeClubId
+        )
       )
     )
     .limit(1);

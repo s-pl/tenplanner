@@ -20,7 +20,7 @@ import {
 } from "../validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
 
 function internalServerError() {
@@ -511,7 +511,7 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     if (sessionFields.sourceClassId) {
-      const classClubIds = await getActiveClubIds(user.id);
+      const classActiveClubId = await getActiveWorkClubId(user.id);
       const [sourceClass] = await db
         .select({ id: classes.id })
         .from(classes)
@@ -524,7 +524,7 @@ export async function PUT(request: Request, context: RouteContext) {
                 classes.createdBy,
                 classes.clubId,
                 user.id,
-                classClubIds
+                classActiveClubId
               )
             )
           )

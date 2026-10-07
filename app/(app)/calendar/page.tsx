@@ -12,7 +12,7 @@ import { CalendarClient } from "./calendar-client";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
 import {
-  getActiveClubIds,
+  getActiveWorkClubId,
   getClubMembersDirectory,
   sharedWithClubCondition,
 } from "@/lib/clubs";
@@ -56,9 +56,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const windowEnd = new Date(now);
   windowEnd.setDate(now.getDate() + WINDOW_FUTURE_DAYS);
 
-  const clubIds = await getActiveClubIds(user.id);
-  const clubMembers =
-    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const activeClubId = await getActiveWorkClubId(user.id);
+  const clubMembers = activeClubId
+    ? await getClubMembersDirectory([activeClubId])
+    : [];
   const monitorFilter =
     monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
 
@@ -66,13 +67,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     sessionsTable.userId,
     sessionsTable.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
   const eventsVisibility = sharedWithClubCondition(
     calendarEventsTable.userId,
     calendarEventsTable.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
 
   const sessions = await db

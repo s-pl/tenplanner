@@ -4,11 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getActiveClubIds,
-  getActiveWorkClubId,
-  sharedWithClubCondition,
-} from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 const createSchema = z
   .object({
@@ -33,13 +29,13 @@ export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get("from");
   const to = request.nextUrl.searchParams.get("to");
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
   const conditions = [
     sharedWithClubCondition(
       calendarEvents.userId,
       calendarEvents.clubId,
       user.id,
-      clubIds
+      activeClubId
     ),
   ];
   if (from) conditions.push(gte(calendarEvents.startAt, new Date(from)));

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { students as studentsTable, users as usersTable } from "@/db/schema";
 import {
-  getActiveClubIds,
+  getActiveWorkClubId,
   getClubMembersDirectory,
   sharedWithClubCondition,
 } from "@/lib/clubs";
@@ -66,9 +66,10 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
   const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const clubIds = await getActiveClubIds(user.id);
-  const clubMembers =
-    clubIds.length > 0 ? await getClubMembersDirectory(clubIds) : [];
+  const activeClubId = await getActiveWorkClubId(user.id);
+  const clubMembers = activeClubId
+    ? await getClubMembersDirectory([activeClubId])
+    : [];
   const monitorFilter =
     monitor && clubMembers.some((m) => m.id === monitor) ? monitor : null;
 
@@ -76,7 +77,7 @@ export default async function StudentsPage({ searchParams }: PageProps) {
     studentsTable.coachId,
     studentsTable.clubId,
     user.id,
-    clubIds
+    activeClubId
   );
   const baseConditions: SQL[] = [
     visibility,

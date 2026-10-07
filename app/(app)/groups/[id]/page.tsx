@@ -9,7 +9,7 @@ import { GroupDetailClient } from "./group-detail-client";
 import { GroupEditDetails } from "./group-edit-details";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,7 +36,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
 
   const [group] = await db
     .select()
@@ -44,7 +44,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
     .where(
       and(
         eq(groups.id, id),
-        sharedWithClubCondition(groups.coachId, groups.clubId, user.id, clubIds)
+        sharedWithClubCondition(
+          groups.coachId,
+          groups.clubId,
+          user.id,
+          activeClubId
+        )
       )
     )
     .limit(1);

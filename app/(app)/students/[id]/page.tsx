@@ -10,7 +10,7 @@ import { DeleteStudentButton } from "./delete-student-button";
 import { SessionFeedback } from "./session-feedback";
 import { UpcomingList } from "./upcoming-list";
 import { GenerateProfileLinkButton } from "./generate-profile-link";
-import { getActiveClubIds, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 
 type Gender = "male" | "female" | "other";
 type DominantHand = "left" | "right";
@@ -90,7 +90,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const clubIds = await getActiveClubIds(user.id);
+  const activeClubId = await getActiveWorkClubId(user.id);
   const [student] = await db
     .select()
     .from(students)
@@ -101,7 +101,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
           students.coachId,
           students.clubId,
           user.id,
-          clubIds
+          activeClubId
         )
       )
     )
