@@ -9,11 +9,13 @@ import {
 import { eq, count, or, sql } from "drizzle-orm";
 import { ProfileClient } from "./profile-client";
 import { WorkModeSwitcher } from "@/components/app/work-mode-switcher";
+import { SportSwitcher } from "@/components/app/sport-switcher";
 import {
   getActiveWorkClubId,
   getClubOptionsForUser,
   sharedWithClubCondition,
 } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -24,9 +26,10 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login");
 
-  const [clubOptions, activeClubId] = await Promise.all([
+  const [clubOptions, activeClubId, activeSport] = await Promise.all([
     getClubOptionsForUser(user.id),
     getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
   ]);
 
   const [sessionStatsRows, exerciseCountRows, dbUser] = await Promise.all([
@@ -81,6 +84,8 @@ export default async function ProfilePage() {
             panel de trabajo.
           </p>
         </header>
+
+        <SportSwitcher activeSport={activeSport} />
 
         <WorkModeSwitcher clubs={clubOptions} activeClubId={activeClubId} />
 

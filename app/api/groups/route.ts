@@ -1,4 +1,4 @@
-import { eq, count } from "drizzle-orm";
+import { and, eq, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
@@ -6,6 +6,7 @@ import { groups, groupStudents, students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -31,13 +32,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const withStudents = searchParams.get("withStudents") === "true";
 
-  const activeClubId = await getActiveWorkClubId(user.id);
-  const visibility = sharedWithClubCondition(
-    groups.coachId,
-    groups.clubId,
-    user.id,
-    activeClubId
-  );
+  const [activeClubId, activeSport] = await Promise.all([
+    getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
+  ]);
+  const visibility = and(
+    sharedWithClubCondition(groups.coachId, groups.clubId, user.id, activeClubId),
+    eq(groups.sport, activeSport)
+  )!;
 
   if (withStudents) {
     // Return groups with member IDs for wizard group-select
@@ -160,7 +162,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const clubId = await getActiveWorkClubId(user.id);
+  const [clubId, sport] = await Promise.all([
+    getActiveWorkClubId(user.id),
+    getActiveSport(user.id),
+  ]);
 
   const [group] = await db
     .insert(groups)
@@ -169,6 +174,7 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       clubId,
+      sport,
     })
     .returning();
 
