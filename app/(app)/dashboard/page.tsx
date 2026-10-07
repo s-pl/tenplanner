@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { greetingForHour } from "@/lib/time-greeting";
 import { getBooleanSetting } from "@/lib/app-settings";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
+import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { cn } from "@/lib/utils";
 
 function formatDayMonth(date: Date) {
@@ -137,6 +138,22 @@ async function DashboardBody({
   const lastWeekStart = new Date(now);
   lastWeekStart.setDate(now.getDate() - 7);
 
+  // El panel refleja el modo de trabajo activo: en particular, solo lo
+  // propio sin club; en modo club, todo el espacio compartido de ese club.
+  const activeClubId = await getActiveWorkClubId(userId);
+  const sessionsVisibility = sharedWithClubCondition(
+    sessionsTable.userId,
+    sessionsTable.clubId,
+    userId,
+    activeClubId
+  );
+  const studentsVisibility = sharedWithClubCondition(
+    studentsTable.coachId,
+    studentsTable.clubId,
+    userId,
+    activeClubId
+  );
+
   const [
     upcomingSessions,
     sessionStats,
@@ -154,12 +171,7 @@ async function DashboardBody({
         location: sessionsTable.location,
       })
       .from(sessionsTable)
-      .where(
-        and(
-          eq(sessionsTable.userId, userId),
-          gte(sessionsTable.scheduledAt, now)
-        )
-      )
+      .where(and(sessionsVisibility, gte(sessionsTable.scheduledAt, now)))
       .orderBy(asc(sessionsTable.scheduledAt))
       .limit(4),
     db
@@ -169,15 +181,12 @@ async function DashboardBody({
         thisWeekCount: sql<number>`count(*) filter (where ${sessionsTable.scheduledAt} >= ${weekStart.toISOString()})`,
       })
       .from(sessionsTable)
-      .where(eq(sessionsTable.userId, userId)),
+      .where(sessionsVisibility),
     db
       .select({ count: count() })
       .from(exercisesTable)
       .where(exerciseVisibleToUserCondition(userId)),
-    db
-      .select({ count: count() })
-      .from(studentsTable)
-      .where(eq(studentsTable.coachId, userId)),
+    db.select({ count: count() }).from(studentsTable).where(studentsVisibility),
     db
       .select({
         minutes: sql<number>`coalesce(sum(${sessionsTable.durationMinutes}), 0)`,
@@ -185,7 +194,7 @@ async function DashboardBody({
       .from(sessionsTable)
       .where(
         and(
-          eq(sessionsTable.userId, userId),
+          sessionsVisibility,
           gte(sessionsTable.scheduledAt, lastWeekStart),
           lt(sessionsTable.scheduledAt, now)
         )
@@ -204,7 +213,7 @@ async function DashboardBody({
         exercisesTable,
         eq(exercisesTable.id, sessionExercises.exerciseId)
       )
-      .where(eq(sessionsTable.userId, userId))
+      .where(sessionsVisibility)
       .groupBy(exercisesTable.id, exercisesTable.name)
       .orderBy(desc(sql`count(${sessionExercises.id})`))
       .limit(1),
