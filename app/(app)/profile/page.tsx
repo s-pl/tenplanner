@@ -9,7 +9,11 @@ import {
 import { eq, count, or, sql } from "drizzle-orm";
 import { ProfileClient } from "./profile-client";
 import { WorkModeSwitcher } from "@/components/app/work-mode-switcher";
-import { getActiveWorkClubId, getClubOptionsForUser } from "@/lib/clubs";
+import {
+  getActiveWorkClubId,
+  getClubOptionsForUser,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -33,7 +37,14 @@ export default async function ProfilePage() {
         upcomingSessions: sql<number>`COUNT(*) FILTER (WHERE ${sessionsTable.scheduledAt} >= now())`,
       })
       .from(sessionsTable)
-      .where(eq(sessionsTable.userId, user.id)),
+      .where(
+        sharedWithClubCondition(
+          sessionsTable.userId,
+          sessionsTable.clubId,
+          user.id,
+          activeClubId
+        )
+      ),
     db
       .select({ count: count() })
       .from(exercisesTable)
