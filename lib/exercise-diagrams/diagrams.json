@@ -7999,5 +7999,160 @@
       { "t": "shot", "points": [[50, 85], [75, 20]] }
     ],
     "caption": "El alumno golpea de derecha y de derecha invertida (se puede añadir corta, volea o globo)."
+  },
+  "7d963c02-4a38-4f4a-84dc-96c591b091e8": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [35, 55], "to": [65, 70], "label": "ZONA" },
+      { "t": "player", "at": [50, 10], "role": "monitor", "label": "M" },
+      { "t": "player", "at": [50, 80], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 12], [50, 60]] }
+    ],
+    "caption": "El monitor lanza a una zona marcada; si falla, el alumno va a recoger la bola."
+  },
+  "a609e9cd-d565-4e9d-be01-e00cea043694": {
+    "court": "tenis",
+    "elements": [
+      { "t": "player", "at": [12.5, 100], "role": "alumno", "label": "A" },
+      { "t": "move", "points": [[12.5, 100], [12.5, 77], [12.5, 100], [12.5, 54], [12.5, 100], [12.5, 23], [12.5, 100], [12.5, 0]] }
+    ],
+    "caption": "Toca cada línea del pasillo de dobles y vuelve a la primera, sumando líneas."
+  },
+  "a87a8cbe-4f4e-4227-98af-790f61b812d7": {
+    "court": "libre",
+    "elements": [
+      { "t": "zone", "from": [20, 10], "to": [35, 22], "label": "ROJO" },
+      { "t": "zone", "from": [42, 10], "to": [57, 22], "label": "AZUL" },
+      { "t": "zone", "from": [65, 10], "to": [80, 22], "label": "VERDE" },
+      { "t": "cone", "at": [27, 40] },
+      { "t": "cone", "at": [50, 40] },
+      { "t": "cone", "at": [72, 40] },
+      { "t": "player", "at": [50, 85], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 80], [50, 24]] }
+    ],
+    "caption": "Giran una flecha y lanzan la bola por el agujero del color que indica."
+  },
+  "aa98b39e-9a29-4dee-b4d9-e9224f588c9b": {
+    "court": "libre",
+    "elements": [
+      { "t": "player", "at": [15, 50], "role": "alumno", "label": "A" },
+      { "t": "ball", "at": [25, 50] },
+      { "t": "line", "from": [25, 50], "to": [80, 50] },
+      { "t": "basket", "at": [85, 50] },
+      { "t": "shot", "points": [[25, 50], [80, 50]] }
+    ],
+    "caption": "Golpean la bola por una rampa intentando que entre en el agujero o el cubo final."
+  },
+  "adbf259f-5b2e-49c1-be12-50d004a28acb": {
+    "court": "libre",
+    "elements": [
+      { "t": "cone", "at": [25, 60] },
+      { "t": "cone", "at": [25, 48] },
+      { "t": "cone", "at": [25, 36] },
+      { "t": "cone", "at": [25, 24] },
+      { "t": "cone", "at": [25, 12] },
+      { "t": "cone", "at": [75, 60] },
+      { "t": "cone", "at": [75, 48] },
+      { "t": "cone", "at": [75, 36] },
+      { "t": "player", "at": [25, 90], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [75, 90], "role": "rival", "label": "B" }
+    ],
+    "caption": "Cada punto ganado añade una pieza a la torre; el primero en 5 niveles gana."
+  },
+  "b7bbc596-3bb0-4ef4-9f96-8d2e84905c21": {
+    "court": "tenis",
+    "elements": [
+      { "t": "player", "at": [50, 50], "role": "monitor", "label": "P" },
+      { "t": "player", "at": [12.5, 23], "role": "alumno" },
+      { "t": "player", "at": [87.5, 77], "role": "alumno" },
+      { "t": "player", "at": [50, 100], "role": "alumno" },
+      { "t": "move", "points": [[50, 50], [40, 65]] }
+    ],
+    "caption": "Corren por las líneas sin salirse; Pacman persigue y atrapa a los jugadores."
+  },
+  "b9e6dbb2-f359-49f5-8fbc-3eb72e67292a": {
+    "court": "medio",
+    "elements": [
+      { "t": "player", "at": [50, 10], "role": "monitor", "label": "M" },
+      { "t": "player", "at": [50, 90], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 12], [50, 85]] }
+    ],
+    "caption": "El alumno trabaja golpes liftados y cortados con una herramienta que gira la bola."
+  },
+  "bf5138ac-ea8c-49e9-8d53-721af3cfed6d": {
+    "court": "libre",
+    "elements": [
+      { "t": "basket", "at": [50, 90] },
+      { "t": "text", "at": [50, 80], "text": "Máquina aire" },
+      { "t": "ball", "at": [50, 68] },
+      { "t": "ball", "at": [42, 52] },
+      { "t": "ball", "at": [58, 38] },
+      { "t": "player", "at": [50, 15], "role": "alumno", "label": "A" }
+    ],
+    "caption": "La máquina de aire impulsa bolas a distintas alturas; el alumno las golpea."
+  },
+  "c16401a7-2514-4766-ad02-ccdbe64c63fe": {
+    "court": "tenis",
+    "elements": [
+      { "t": "player", "at": [28, 35], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [38, 35], "role": "alumno", "label": "B" },
+      { "t": "player", "at": [62, 65], "role": "rival", "label": "C" },
+      { "t": "player", "at": [72, 65], "role": "rival", "label": "D" }
+    ],
+    "caption": "Dobles en los cuadros de saque, agarrados de la mano; cambian de lado cada 4 puntos."
+  },
+  "c189dfa2-dc23-4d06-8117-67422efd54a0": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [30, 2], "to": [70, 20], "label": "PANTALLA" },
+      { "t": "player", "at": [50, 95], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 90], [50, 22]] }
+    ],
+    "caption": "El alumno golpea hacia una pantalla con zonas marcadas, buscando precisión."
+  },
+  "c20abc2b-37f5-4c2d-887a-0870bd2b0dd2": {
+    "court": "tenis",
+    "elements": [
+      { "t": "zone", "from": [28, 47], "to": [34, 53], "label": "A" },
+      { "t": "zone", "from": [66, 47], "to": [72, 53], "label": "B" },
+      { "t": "player", "at": [30, 90], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [70, 10], "role": "rival", "label": "B" }
+    ],
+    "caption": "Cada punto ganado sube la pinza un escalón en la red; gana quien llega arriba."
+  },
+  "c4d24311-f207-4d5b-a660-40a119808bfa": {
+    "court": "medio",
+    "elements": [
+      { "t": "cone", "at": [30, 60] },
+      { "t": "player", "at": [50, 95], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [50, 10], "role": "monitor", "label": "M" },
+      { "t": "move", "points": [[50, 90], [30, 60], [50, 90]] },
+      { "t": "shot", "points": [[50, 12], [50, 85]] }
+    ],
+    "caption": "El alumno toca un cono y vuelve a golpear la bola que le lanza el monitor."
+  },
+  "c4f35cb3-de74-490c-a7c8-cdc05740260e": {
+    "court": "libre",
+    "elements": [
+      { "t": "zone", "from": [15, 25], "to": [35, 40], "label": "?" },
+      { "t": "zone", "from": [40, 25], "to": [60, 40], "label": "?" },
+      { "t": "zone", "from": [65, 25], "to": [85, 40], "label": "?" },
+      { "t": "zone", "from": [15, 50], "to": [35, 65], "label": "?" },
+      { "t": "zone", "from": [40, 50], "to": [60, 65], "label": "?" },
+      { "t": "zone", "from": [65, 50], "to": [85, 65], "label": "?" },
+      { "t": "player", "at": [30, 85], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [70, 85], "role": "alumno", "label": "B" }
+    ],
+    "caption": "Destapan dos tarjetas por turno; si forman pareja se las quedan y repiten."
+  },
+  "cbd03cd0-da77-497d-93d0-f818a1e08720": {
+    "court": "medio",
+    "elements": [
+      { "t": "basket", "at": [50, 8] },
+      { "t": "text", "at": [50, 2], "text": "Máquina" },
+      { "t": "player", "at": [50, 90], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 15], [50, 85]] }
+    ],
+    "caption": "La máquina lanza bolas de forma continua; el alumno busca la distancia y el golpeo limpio."
   }
 }
