@@ -25,6 +25,7 @@ export const TIPOS_EJERCICIO = [
   "juego_puntos",
   "juego_ludico",
   "preparacion_fisica",
+  "trucos_tecnicos",
 ] as const;
 
 // Valores antiguos: se siguen aceptando para no romper los ejercicios ya
@@ -52,6 +53,7 @@ export const TIPO_ACTIVIDAD_LABELS: Record<TipoEjercicio, string> = {
   juego_puntos: "Juego de puntos",
   juego_ludico: "Juego lúdico",
   preparacion_fisica: "Preparación física",
+  trucos_tecnicos: "Trucos técnicos",
   // Antiguos
   fisico_movilidad: "Físico / movilidad",
   otros_deportes: "Otros deportes",
