@@ -600,187 +600,189 @@ export function CalendarClient({
       {/* Vista mensual */}
       {view === "month" && (
         <>
-          <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
-            <div className="grid grid-cols-7 border-b border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
-              {DAYS.map((d) => (
-                <div
-                  key={d}
-                  className="py-3 text-center text-xs font-black uppercase text-foreground/52"
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7">
-              {Array.from({ length: totalCells }).map((_, idx) => {
-                const dayNum = idx - firstDay + 1;
-                const isValid = dayNum >= 1 && dayNum <= daysInMonth;
-                const cellDate = isValid
-                  ? new Date(viewYear, viewMonth, dayNum)
-                  : null;
-                const cellKey = cellDate ? dateKey(cellDate) : null;
-                const isToday =
-                  isValid && cellDate && isSameDate(cellDate, todayMidnight);
-                const isPast =
-                  isValid && cellDate !== null && cellDate < todayMidnight;
-                const isSelected = isValid && selectedDay === dayNum;
-                const daySessions =
-                  isValid && cellKey
-                    ? (sessionsByDateKey.get(cellKey) ?? [])
-                    : [];
-                const dayItems: DayItem[] = cellDate
-                  ? itemsForDate(cellDate)
-                  : [];
-                const hasSessions = daySessions.length > 0;
-                const hasItems = dayItems.length > 0;
-
-                return (
+          <div className="overflow-x-auto rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-7 border-b border-[#050505]/10 bg-[#F4F4F1] dark:border-white/10 dark:bg-white/[0.04]">
+                {DAYS.map((d) => (
                   <div
-                    key={idx}
-                    onClick={() => {
-                      if (!isValid) return;
-                      const next = dayNum === selectedDay ? null : dayNum;
-                      setSelectedDay(next);
-                      if (next !== null)
-                        setFocusDate(new Date(viewYear, viewMonth, next));
-                    }}
-                    onDragOver={(e) => {
-                      if (!isValid || !cellKey) return;
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "move";
-                      if (dragOverDate !== cellKey) setDragOverDate(cellKey);
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverDate === cellKey) setDragOverDate(null);
-                    }}
-                    onDrop={(e) => {
-                      if (!isValid || !cellDate) return;
-                      e.preventDefault();
-                      setDragOverDate(null);
-                      const id = e.dataTransfer.getData("text/plain");
-                      if (id) void moveSessionToDate(id, cellDate);
-                    }}
-                    className={cn(
-                      isValid &&
-                        dragOverDate === cellKey &&
-                        "ring-2 ring-inset ring-brand bg-brand/15",
-                      "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
-                      isValid ? "cursor-pointer" : "cursor-default",
-                      !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
-                      isValid && isPast && !isSelected && "opacity-50",
-                      isSelected && "bg-brand/15",
-                      isValid &&
-                        !isSelected &&
-                        "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
-                      idx >= totalCells - 7 && "border-b-0"
-                    )}
+                    key={d}
+                    className="py-3 text-center text-xs font-black uppercase text-foreground/52"
                   >
-                    {isValid && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={cn(
-                              "flex size-8 items-center justify-center rounded-full text-sm font-black",
-                              isToday && "bg-brand text-brand-foreground",
-                              !isToday && "text-foreground"
-                            )}
-                          >
-                            {dayNum}
-                          </span>
-                          {hasItems && !isToday && (
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7">
+                {Array.from({ length: totalCells }).map((_, idx) => {
+                  const dayNum = idx - firstDay + 1;
+                  const isValid = dayNum >= 1 && dayNum <= daysInMonth;
+                  const cellDate = isValid
+                    ? new Date(viewYear, viewMonth, dayNum)
+                    : null;
+                  const cellKey = cellDate ? dateKey(cellDate) : null;
+                  const isToday =
+                    isValid && cellDate && isSameDate(cellDate, todayMidnight);
+                  const isPast =
+                    isValid && cellDate !== null && cellDate < todayMidnight;
+                  const isSelected = isValid && selectedDay === dayNum;
+                  const daySessions =
+                    isValid && cellKey
+                      ? (sessionsByDateKey.get(cellKey) ?? [])
+                      : [];
+                  const dayItems: DayItem[] = cellDate
+                    ? itemsForDate(cellDate)
+                    : [];
+                  const hasSessions = daySessions.length > 0;
+                  const hasItems = dayItems.length > 0;
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (!isValid) return;
+                        const next = dayNum === selectedDay ? null : dayNum;
+                        setSelectedDay(next);
+                        if (next !== null)
+                          setFocusDate(new Date(viewYear, viewMonth, next));
+                      }}
+                      onDragOver={(e) => {
+                        if (!isValid || !cellKey) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverDate !== cellKey) setDragOverDate(cellKey);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverDate === cellKey) setDragOverDate(null);
+                      }}
+                      onDrop={(e) => {
+                        if (!isValid || !cellDate) return;
+                        e.preventDefault();
+                        setDragOverDate(null);
+                        const id = e.dataTransfer.getData("text/plain");
+                        if (id) void moveSessionToDate(id, cellDate);
+                      }}
+                      className={cn(
+                        isValid &&
+                          dragOverDate === cellKey &&
+                          "ring-2 ring-inset ring-brand bg-brand/15",
+                        "min-h-[78px] border-b border-r border-[#050505]/10 p-2 transition-colors last-of-type:border-r-0 dark:border-white/10 sm:min-h-[108px]",
+                        isValid ? "cursor-pointer" : "cursor-default",
+                        !isValid && "bg-[#F4F4F1]/70 dark:bg-white/[0.025]",
+                        isValid && isPast && !isSelected && "opacity-50",
+                        isSelected && "bg-brand/15",
+                        isValid &&
+                          !isSelected &&
+                          "hover:bg-[#F4F4F1] dark:hover:bg-white/[0.04]",
+                        idx >= totalCells - 7 && "border-b-0"
+                      )}
+                    >
+                      {isValid && (
+                        <>
+                          <div className="flex items-center justify-between">
                             <span
                               className={cn(
-                                "size-1.5 rounded-full",
-                                hasSessions ? "bg-brand" : "bg-[#2563eb]"
+                                "flex size-8 items-center justify-center rounded-full text-sm font-black",
+                                isToday && "bg-brand text-brand-foreground",
+                                !isToday && "text-foreground"
                               )}
-                            />
-                          )}
-                        </div>
-                        {hasItems && (
-                          <div className="mt-1 space-y-0.5">
-                            {dayItems.slice(0, 2).map((item) =>
-                              item.kind === "session" ? (
-                                <Link
-                                  key={`s-${item.session.id}`}
-                                  href={`/sessions/${item.session.id}`}
-                                  draggable={
-                                    !currentUserId ||
-                                    item.session.userId === currentUserId
-                                  }
-                                  onDragStart={(e) => {
-                                    if (
-                                      currentUserId &&
-                                      item.session.userId !== currentUserId
-                                    ) {
-                                      e.preventDefault();
-                                      return;
-                                    }
-                                    e.dataTransfer.setData(
-                                      "text/plain",
-                                      item.session.id
-                                    );
-                                    e.dataTransfer.effectAllowed = "move";
-                                  }}
-                                  onDragEnd={() => setDragOverDate(null)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  title={
-                                    item.session.authorName
-                                      ? `${item.session.title} · ${item.session.authorName}`
-                                      : item.session.title
-                                  }
-                                  className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
-                                >
-                                  {item.session.title}
-                                  {item.session.authorName && (
-                                    <span className="opacity-60">
-                                      {" "}
-                                      · {item.session.authorName}
-                                    </span>
-                                  )}
-                                </Link>
-                              ) : (
-                                <button
-                                  key={`e-${item.event.id}`}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (
-                                      currentUserId &&
-                                      item.event.userId !== currentUserId
-                                    )
-                                      return;
-                                    setEventDialog({ event: item.event });
-                                  }}
-                                  title={
-                                    item.event.authorName
-                                      ? `${item.event.title} · ${item.event.authorName}`
-                                      : item.event.title
-                                  }
-                                  className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
-                                >
-                                  {item.event.title}
-                                  {item.event.authorName && (
-                                    <span className="opacity-60">
-                                      {" "}
-                                      · {item.event.authorName}
-                                    </span>
-                                  )}
-                                </button>
-                              )
-                            )}
-                            {dayItems.length > 2 && (
-                              <div className="text-[10px] text-muted-foreground px-1.5">
-                                +{dayItems.length - 2} más
-                              </div>
+                            >
+                              {dayNum}
+                            </span>
+                            {hasItems && !isToday && (
+                              <span
+                                className={cn(
+                                  "size-1.5 rounded-full",
+                                  hasSessions ? "bg-brand" : "bg-[#2563eb]"
+                                )}
+                              />
                             )}
                           </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                          {hasItems && (
+                            <div className="mt-1 space-y-0.5">
+                              {dayItems.slice(0, 2).map((item) =>
+                                item.kind === "session" ? (
+                                  <Link
+                                    key={`s-${item.session.id}`}
+                                    href={`/sessions/${item.session.id}`}
+                                    draggable={
+                                      !currentUserId ||
+                                      item.session.userId === currentUserId
+                                    }
+                                    onDragStart={(e) => {
+                                      if (
+                                        currentUserId &&
+                                        item.session.userId !== currentUserId
+                                      ) {
+                                        e.preventDefault();
+                                        return;
+                                      }
+                                      e.dataTransfer.setData(
+                                        "text/plain",
+                                        item.session.id
+                                      );
+                                      e.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    onDragEnd={() => setDragOverDate(null)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    title={
+                                      item.session.authorName
+                                        ? `${item.session.title} · ${item.session.authorName}`
+                                        : item.session.title
+                                    }
+                                    className="block truncate rounded-full bg-brand/20 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
+                                  >
+                                    {item.session.title}
+                                    {item.session.authorName && (
+                                      <span className="opacity-60">
+                                        {" "}
+                                        · {item.session.authorName}
+                                      </span>
+                                    )}
+                                  </Link>
+                                ) : (
+                                  <button
+                                    key={`e-${item.event.id}`}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (
+                                        currentUserId &&
+                                        item.event.userId !== currentUserId
+                                      )
+                                        return;
+                                      setEventDialog({ event: item.event });
+                                    }}
+                                    title={
+                                      item.event.authorName
+                                        ? `${item.event.title} · ${item.event.authorName}`
+                                        : item.event.title
+                                    }
+                                    className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
+                                  >
+                                    {item.event.title}
+                                    {item.event.authorName && (
+                                      <span className="opacity-60">
+                                        {" "}
+                                        · {item.event.authorName}
+                                      </span>
+                                    )}
+                                  </button>
+                                )
+                              )}
+                              {dayItems.length > 2 && (
+                                <div className="text-[10px] text-muted-foreground px-1.5">
+                                  +{dayItems.length - 2} más
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -833,8 +835,8 @@ export function CalendarClient({
 
       {/* Vista semanal */}
       {view === "week" && (
-        <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
-          <div className="grid grid-cols-1 divide-y divide-[#050505]/10 sm:grid-cols-7 sm:divide-x sm:divide-y-0 dark:divide-white/10">
+        <div className="overflow-x-auto rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-60px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+          <div className="grid min-w-[700px] grid-cols-7 divide-x divide-[#050505]/10 dark:divide-white/10">
             {weekDays.map((d) => {
               const key = dateKey(d);
               const items = itemsForDate(d);
@@ -968,7 +970,7 @@ export function CalendarClient({
 
       {/* Vista anual */}
       {view === "year" && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 12 }).map((_, m) => renderMiniMonth(m))}
         </div>
       )}
