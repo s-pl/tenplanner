@@ -5317,6 +5317,140 @@
     ],
     "caption": "Golpea al objetivo; si acierta, coloca su bola en el tablero de 16 conos"
   },
+  "291333bf-002f-4d9a-8e79-6de879b18360": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "cone",
+        "at": [15, 8]
+      },
+      {
+        "t": "ball",
+        "at": [15, 8]
+      },
+      {
+        "t": "cone",
+        "at": [27, 8]
+      },
+      {
+        "t": "ball",
+        "at": [27, 8]
+      },
+      {
+        "t": "cone",
+        "at": [38, 8]
+      },
+      {
+        "t": "ball",
+        "at": [38, 8]
+      },
+      {
+        "t": "cone",
+        "at": [50, 8]
+      },
+      {
+        "t": "ball",
+        "at": [50, 8]
+      },
+      {
+        "t": "cone",
+        "at": [62, 8]
+      },
+      {
+        "t": "ball",
+        "at": [62, 8]
+      },
+      {
+        "t": "cone",
+        "at": [73, 8]
+      },
+      {
+        "t": "ball",
+        "at": [73, 8]
+      },
+      {
+        "t": "cone",
+        "at": [85, 8]
+      },
+      {
+        "t": "ball",
+        "at": [85, 8]
+      },
+      {
+        "t": "player",
+        "at": [50, 22],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "cone",
+        "at": [15, 92]
+      },
+      {
+        "t": "ball",
+        "at": [15, 92]
+      },
+      {
+        "t": "cone",
+        "at": [27, 92]
+      },
+      {
+        "t": "ball",
+        "at": [27, 92]
+      },
+      {
+        "t": "cone",
+        "at": [38, 92]
+      },
+      {
+        "t": "ball",
+        "at": [38, 92]
+      },
+      {
+        "t": "cone",
+        "at": [50, 92]
+      },
+      {
+        "t": "ball",
+        "at": [50, 92]
+      },
+      {
+        "t": "cone",
+        "at": [62, 92]
+      },
+      {
+        "t": "ball",
+        "at": [62, 92]
+      },
+      {
+        "t": "cone",
+        "at": [73, 92]
+      },
+      {
+        "t": "ball",
+        "at": [73, 92]
+      },
+      {
+        "t": "cone",
+        "at": [85, 92]
+      },
+      {
+        "t": "ball",
+        "at": [85, 92]
+      },
+      {
+        "t": "player",
+        "at": [50, 78],
+        "role": "rival",
+        "label": "B"
+      },
+      {
+        "t": "shot",
+        "points": [[50, 26], [50, 74]]
+      }
+    ],
+    "caption": "Cada equipo tiene 7 bolas sobre sus conos; juegan puntos hasta quedarse sin bolas"
+  },
   "cc07ceee-84a0-4e35-ad42-44b81d14defe": {
     "court": "libre",
     "elements": [
