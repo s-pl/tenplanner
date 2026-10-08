@@ -2152,7 +2152,6 @@ export function ExerciseForm({
     </section>
   );
   void stepsSection;
-  void resourcesSection;
 
   return (
     <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
@@ -2273,7 +2272,10 @@ export function ExerciseForm({
             open={expandedSections.pedagogical}
             onToggle={(next) => toggleAccordion("pedagogical", next)}
           >
-            <div className="flex flex-col gap-8">{workSection}</div>
+            <div className="flex flex-col gap-8">
+              {workSection}
+              {resourcesSection}
+            </div>
           </AccordionSection>
 
           <AccordionSection
