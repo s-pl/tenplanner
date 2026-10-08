@@ -13,6 +13,10 @@ import {
 } from "@/lib/nav/class-nav";
 import { autoriaLabel } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { getActiveSport } from "@/lib/sports";
+import { getPublicSportCookie } from "@/lib/public-sport";
+import { SportGate } from "@/components/public/sport-gate";
+import { SportChangePill } from "@/components/public/sport-change-pill";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 type Tab = (typeof TABS)[number];
@@ -96,6 +100,14 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
 
+  const sport = user
+    ? await getActiveSport(user.id)
+    : await getPublicSportCookie();
+
+  if (!sport) {
+    return <SportGate />;
+  }
+
   const requestedTab = (params.tab as string) ?? "all";
   const tab: Tab = TABS.includes(requestedTab as Tab)
     ? (requestedTab as Tab)
@@ -160,7 +172,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     : null;
 
   if (activeTab !== "drafts") {
-    const conds = [];
+    const conds = [eq(classes.sport, sport)];
     if (activeTab === "mine" && user) {
       conds.push(mineOrClub!);
     } else if (activeTab === "library") {
@@ -274,9 +286,12 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
             <div>
-              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
-                Biblioteca de clases
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                  Biblioteca de clases
+                </p>
+                {!user && <SportChangePill sport={sport} />}
+              </div>
               <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
                 Clases
               </h1>

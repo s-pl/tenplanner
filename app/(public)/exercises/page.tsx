@@ -25,6 +25,10 @@ import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getActiveSport } from "@/lib/sports";
+import { getPublicSportCookie } from "@/lib/public-sport";
+import { SportGate } from "@/components/public/sport-gate";
+import { SportChangePill } from "@/components/public/sport-change-pill";
 import {
   exerciseNavQueryString,
   exerciseOrderBy,
@@ -161,6 +165,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     );
   }
 
+  const sport = user
+    ? await getActiveSport(user.id)
+    : await getPublicSportCookie();
+
+  if (!sport) {
+    return <SportGate />;
+  }
+
   const params = await searchParams;
 
   const activeCategory = (
@@ -239,25 +251,31 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     activeSituacionJuego.length > 0 ||
     activeAutoria.length > 0;
 
+  const sportWhere = eq(exercisesTable.sport, sport);
+
   // Unauthenticated users only see global exercises
-  const allVisibleWhere = user
-    ? publicExercisesEnabled
-      ? (or(
-          eq(exercisesTable.isGlobal, true),
-          eq(exercisesTable.createdBy, user.id)
-        ) ?? eq(exercisesTable.createdBy, user.id))
-      : eq(exercisesTable.createdBy, user.id)
-    : publicExercisesEnabled
-      ? eq(exercisesTable.isGlobal, true)
-      : sql`1=0`;
+  const allVisibleWhere = and(
+    sportWhere,
+    user
+      ? publicExercisesEnabled
+        ? (or(
+            eq(exercisesTable.isGlobal, true),
+            eq(exercisesTable.createdBy, user.id)
+          ) ?? eq(exercisesTable.createdBy, user.id))
+        : eq(exercisesTable.createdBy, user.id)
+      : publicExercisesEnabled
+        ? eq(exercisesTable.isGlobal, true)
+        : sql`1=0`
+  )!;
 
   const visibilityWhere =
     activeTab === "global"
-      ? publicExercisesEnabled
-        ? eq(exercisesTable.isGlobal, true)
-        : sql`1=0`
+      ? and(
+          sportWhere,
+          publicExercisesEnabled ? eq(exercisesTable.isGlobal, true) : sql`1=0`
+        )!
       : activeTab === "mine" && user
-        ? eq(exercisesTable.createdBy, user.id)
+        ? and(sportWhere, eq(exercisesTable.createdBy, user.id))!
         : allVisibleWhere;
 
   const listConditions: SQL[] = [];
@@ -278,6 +296,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
   {
     if (activeTab === "favorites" && user) {
+      listConditions.push(sportWhere);
       listConditions.push(
         favIdArray.length > 0
           ? inArray(exercisesTable.id, favIdArray)
@@ -440,13 +459,13 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         ? db
             .select({ total: count() })
             .from(exercisesTable)
-            .where(eq(exercisesTable.isGlobal, true))
+            .where(and(sportWhere, eq(exercisesTable.isGlobal, true)))
         : Promise.resolve([{ total: 0 }]),
       user
         ? db
             .select({ total: count() })
             .from(exercisesTable)
-            .where(eq(exercisesTable.createdBy, user.id))
+            .where(and(sportWhere, eq(exercisesTable.createdBy, user.id)))
         : Promise.resolve([{ total: 0 }]),
       db
         .select({ category: exercisesTable.category, total: count() })
@@ -585,9 +604,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
             <div>
-              <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
-                Biblioteca pública
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#D6FF38]">
+                  Biblioteca pública
+                </p>
+                {!user && <SportChangePill sport={sport} />}
+              </div>
               <h1 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-normal text-white sm:text-5xl">
                 Ejercicios
               </h1>
