@@ -65,6 +65,7 @@ import {
   Clock,
   Lock,
   Heart,
+  FileDown,
 } from "lucide-react";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
@@ -1199,6 +1200,24 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     </div>
                   )}
                 </div>
+
+                {filtered.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
+                      {tabCounts[activeTab]} resultado
+                      {tabCounts[activeTab] !== 1 ? "s" : ""}
+                    </p>
+                    <a
+                      href={`/api/exercises/pdf${navQs ? `?${navQs}` : ""}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[#050505]/15 bg-white px-4 text-[12px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/15 dark:bg-white/[0.04]"
+                    >
+                      <FileDown className="size-3.5" strokeWidth={1.8} />
+                      Generar PDF de los resultados
+                    </a>
+                  </div>
+                )}
 
                 {filtered.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
