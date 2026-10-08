@@ -177,6 +177,7 @@ export default async function EditClassPage({ params }: PageProps) {
         availableExercises={availableExercises}
         isAdmin={adminRow?.isAdmin ?? false}
         initialData={initialData}
+        sport={cls.sport}
       />
     </div>
   );

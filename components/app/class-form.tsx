@@ -23,18 +23,15 @@ import {
   STATION_COUNT_MIN,
   type StationDraftItem,
 } from "@/lib/block-items";
-import { AUTORIAS } from "@/lib/exercise-taxonomy";
+import { AUTORIAS, nivelesForSport } from "@/lib/exercise-taxonomy";
 import { SessionExerciseLists } from "@/components/app/session-exercise-lists";
 
-const NIVELES = [
-  { id: "descubrimiento", label: "Descubrimiento (4-6)" },
-  { id: "desarrollo", label: "Desarrollo (6-8)" },
-  { id: "consolidacion", label: "Consolidación (8-10)" },
-  { id: "especializacion", label: "Especialización (10-12)" },
-  { id: "precompeticion", label: "Precompetición (12-14)" },
-  { id: "competicion", label: "Competición (14-16)" },
-  { id: "rendimiento", label: "Rendimiento (14-18)" },
-];
+function nivelOptionsForSport(sport?: string | null) {
+  return nivelesForSport(sport).map((n) => ({
+    id: n.id,
+    label: n.edad ? `${n.label} (${n.edad.replace(" años", "")})` : n.label,
+  }));
+}
 
 const ASPECTOS = [
   { id: "tecnica", label: "Técnica" },
@@ -122,6 +119,7 @@ export interface ClassFormProps {
   availableExercises: AvailableExercise[];
   isAdmin?: boolean;
   initialData?: ClassInitialData;
+  sport?: string | null;
 }
 
 export function ClassForm({
@@ -130,8 +128,10 @@ export function ClassForm({
   availableExercises,
   isAdmin = false,
   initialData,
+  sport,
 }: ClassFormProps) {
   const router = useRouter();
+  const NIVELES = nivelOptionsForSport(sport);
   const [name, setName] = useState(initialData?.name ?? "");
   const [duracionMinutes, setDuracionMinutes] = useState<number>(
     initialData?.duracionMinutes ?? 60

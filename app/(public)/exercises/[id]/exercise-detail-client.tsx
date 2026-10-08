@@ -58,6 +58,7 @@ type TipoActividad =
 export interface ExerciseData {
   id: string;
   name: string;
+  sport: string;
   description: string | null;
   category: Category;
   difficulty: Difficulty;
@@ -297,6 +298,7 @@ export function ExerciseDetailClient({
             mode="edit"
             exerciseId={exercise.id}
             isAdmin={isAdmin}
+            sport={exercise.sport}
             initialData={{
               name: exercise.name,
               description: exercise.description,

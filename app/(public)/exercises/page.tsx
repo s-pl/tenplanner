@@ -42,9 +42,10 @@ import {
   CARACTER_VALUES,
   caracterLabel,
   FASES,
-  NIVELES,
+  nivelesForSport,
   nivelLabel,
   pelotaLabel,
+  showsTipoPelota,
   SITUACION_JUEGO_VALUES,
   situacionJuegoLabel,
   TIPO_PELOTA_VALUES,
@@ -211,9 +212,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const activeParametro = getStrings(params.parametro);
   const activeDuracionRango = getStrings(params.duracionRango);
   const activeNumJugadores = getNumbers(params.numJugadores);
-  const activeTipoPelota = getStrings(params.tipoPelota).filter((v) =>
-    (TIPO_PELOTA_VALUES as readonly string[]).includes(v)
-  ) as TipoPelota[];
+  // En pádel no se etiqueta/filtra por tipo de pelota.
+  const activeTipoPelota = showsTipoPelota(sport)
+    ? (getStrings(params.tipoPelota).filter((v) =>
+        (TIPO_PELOTA_VALUES as readonly string[]).includes(v)
+      ) as TipoPelota[])
+    : [];
   const activeCaracter = getStrings(params.caracter).filter((v) =>
     (CARACTER_VALUES as readonly string[]).includes(v)
   );
@@ -973,7 +977,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     >
                       Todos
                     </Link>
-                    {NIVELES.map((n) => {
+                    {nivelesForSport(sport).map((n) => {
                       const isActive = activeNivel.includes(n.id);
                       const nextNivel = isActive
                         ? activeNivel.filter((v) => v !== n.id)
@@ -988,7 +992,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             q: searchTerm || undefined,
                             tab: activeTab,
                           })}
-                          title={n.edad}
+                          title={n.edad ?? undefined}
                           className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-sans font-semibold transition-colors ${
                             isActive
                               ? "border-[#050505] bg-[#050505] text-white dark:border-white dark:bg-white dark:text-[#050505]"
@@ -1001,11 +1005,13 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             style={{ backgroundColor: n.color }}
                           />
                           {n.label}
-                          <span
-                            className={`font-normal ${isActive ? "opacity-70" : "text-foreground/45"}`}
-                          >
-                            {n.edad}
-                          </span>
+                          {n.edad && (
+                            <span
+                              className={`font-normal ${isActive ? "opacity-70" : "text-foreground/45"}`}
+                            >
+                              {n.edad}
+                            </span>
+                          )}
                         </Link>
                       );
                     })}
@@ -1013,6 +1019,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
 
                   {/* ─── Filtros avanzados ─── */}
                   <ExerciseFilters
+                    sport={sport}
                     currentFilters={{
                       formato: activeFormato,
                       nivel: activeNivel,
