@@ -5143,106 +5143,162 @@
     "court": "libre",
     "elements": [
       {
-        "t": "cone",
-        "at": [35, 30]
+        "t": "text",
+        "at": [50, 16],
+        "text": "16 conos"
       },
       {
         "t": "cone",
-        "at": [50, 30]
+        "at": [31, 28]
       },
       {
         "t": "cone",
-        "at": [65, 30]
+        "at": [44, 28]
       },
       {
         "t": "cone",
-        "at": [35, 45]
+        "at": [57, 28]
       },
       {
         "t": "cone",
-        "at": [50, 45]
+        "at": [70, 28]
       },
       {
         "t": "cone",
-        "at": [65, 45]
+        "at": [31, 40]
       },
       {
         "t": "cone",
-        "at": [35, 60]
+        "at": [44, 40]
       },
       {
         "t": "cone",
-        "at": [50, 60]
+        "at": [57, 40]
       },
       {
         "t": "cone",
-        "at": [65, 60]
+        "at": [70, 40]
+      },
+      {
+        "t": "cone",
+        "at": [31, 52]
+      },
+      {
+        "t": "cone",
+        "at": [44, 52]
+      },
+      {
+        "t": "cone",
+        "at": [57, 52]
+      },
+      {
+        "t": "cone",
+        "at": [70, 52]
+      },
+      {
+        "t": "cone",
+        "at": [31, 64]
+      },
+      {
+        "t": "cone",
+        "at": [44, 64]
+      },
+      {
+        "t": "cone",
+        "at": [57, 64]
+      },
+      {
+        "t": "cone",
+        "at": [70, 64]
       },
       {
         "t": "basket",
-        "at": [85, 50]
-      },
-      {
-        "t": "text",
-        "at": [50, 18],
-        "text": "Tablero 3x3"
+        "at": [88, 46]
       }
     ],
-    "caption": "Tablero de 3 en raya con conos; el punto ganado coloca ficha"
+    "caption": "Tablero de 16 conos; el equipo que gana el punto coloca su ficha"
   },
   "a9640216-8bcc-43ca-9e62-7fc5c1bccbf9": {
     "court": "libre",
     "elements": [
       {
         "t": "zone",
-        "from": [38, 5],
-        "to": [62, 19],
+        "from": [38, 3],
+        "to": [62, 16],
         "label": "OBJETIVO"
       },
       {
         "t": "cone",
-        "at": [35, 32]
+        "at": [31, 25]
       },
       {
         "t": "cone",
-        "at": [50, 32]
+        "at": [44, 25]
       },
       {
         "t": "cone",
-        "at": [65, 32]
+        "at": [57, 25]
       },
       {
         "t": "cone",
-        "at": [35, 47]
+        "at": [70, 25]
       },
       {
         "t": "cone",
-        "at": [50, 47]
+        "at": [31, 36]
       },
       {
         "t": "cone",
-        "at": [65, 47]
+        "at": [44, 36]
       },
       {
         "t": "cone",
-        "at": [35, 62]
+        "at": [57, 36]
       },
       {
         "t": "cone",
-        "at": [50, 62]
+        "at": [70, 36]
       },
       {
         "t": "cone",
-        "at": [65, 62]
+        "at": [31, 47]
+      },
+      {
+        "t": "cone",
+        "at": [44, 47]
+      },
+      {
+        "t": "cone",
+        "at": [57, 47]
+      },
+      {
+        "t": "cone",
+        "at": [70, 47]
+      },
+      {
+        "t": "cone",
+        "at": [31, 58]
+      },
+      {
+        "t": "cone",
+        "at": [44, 58]
+      },
+      {
+        "t": "cone",
+        "at": [57, 58]
+      },
+      {
+        "t": "cone",
+        "at": [70, 58]
       },
       {
         "t": "ball",
-        "at": [50, 47]
+        "at": [44, 36]
       },
       {
         "t": "text",
-        "at": [50, 77],
-        "text": "Tablero 3x3"
+        "at": [50, 71],
+        "text": "16 conos"
       },
       {
         "t": "player",
@@ -5256,10 +5312,10 @@
       },
       {
         "t": "shot",
-        "points": [[50, 86], [50, 24]]
+        "points": [[50, 86], [50, 19]]
       }
     ],
-    "caption": "Golpea el objetivo marcado; si acierta, coloca su bola en el tablero de 3 en raya"
+    "caption": "Golpea al objetivo; si acierta, coloca su bola en el tablero de 16 conos"
   },
   "cc07ceee-84a0-4e35-ad42-44b81d14defe": {
     "court": "libre",
