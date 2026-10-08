@@ -17,6 +17,7 @@ const PUBLIC_PREFIXES = [
   "/terminos",
   "/landing/",
   "/api/cron/",
+  "/api/public/sport",
 ];
 const PUBLIC_EXACT = new Set(["/"]);
 const RECOVERABLE_REFRESH_TOKEN_ERRORS = new Set([
