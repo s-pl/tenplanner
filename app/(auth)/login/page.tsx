@@ -6,7 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Eye, EyeOff, Loader2, Mail } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,6 +141,14 @@ function LoginForm() {
             Inicia sesión en tu cuenta de entrenamiento.
           </p>
         </div>
+
+        <Link
+          href="/exercises"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/20 px-4 text-sm font-black text-foreground/75 transition-colors hover:border-brand hover:text-brand"
+        >
+          <BookOpen className="size-4" />
+          Accede sin registrarte
+        </Link>
 
         {emailJustRegistered && (
           <div className="rounded-[24px] border border-brand/30 bg-brand/10 px-4 py-4">

@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BookOpen,
   Building2,
   CheckCircle2,
   ChevronLeft,
@@ -341,6 +342,14 @@ export default function RegisterPage() {
             falta.
           </p>
         </div>
+
+        <Link
+          href="/exercises"
+          className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/20 px-4 text-sm font-black text-foreground/75 transition-colors hover:border-brand hover:text-brand"
+        >
+          <BookOpen className="size-4" />
+          Accede sin registrarte
+        </Link>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <button
