@@ -143,7 +143,7 @@ function LoginForm() {
         </div>
 
         <Link
-          href="/exercises"
+          href="/acceso"
           className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/20 px-4 text-sm font-black text-foreground/75 transition-colors hover:border-brand hover:text-brand"
         >
           <BookOpen className="size-4" />
