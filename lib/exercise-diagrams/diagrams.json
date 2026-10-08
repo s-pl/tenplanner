@@ -5139,7 +5139,7 @@
     ],
     "caption": "A saca o golpea de derecha y B intenta atrapar la bola"
   },
-  "cb56742f-2c2d-4a7d-bcdf-03c314fcf248": {
+  "38d8d7f0-26df-4de0-8ea5-349ad35ecca2": {
     "court": "libre",
     "elements": [
       {
@@ -5189,6 +5189,77 @@
       }
     ],
     "caption": "Tablero de 3 en raya con conos; el punto ganado coloca ficha"
+  },
+  "a9640216-8bcc-43ca-9e62-7fc5c1bccbf9": {
+    "court": "libre",
+    "elements": [
+      {
+        "t": "zone",
+        "from": [38, 5],
+        "to": [62, 19],
+        "label": "OBJETIVO"
+      },
+      {
+        "t": "cone",
+        "at": [35, 32]
+      },
+      {
+        "t": "cone",
+        "at": [50, 32]
+      },
+      {
+        "t": "cone",
+        "at": [65, 32]
+      },
+      {
+        "t": "cone",
+        "at": [35, 47]
+      },
+      {
+        "t": "cone",
+        "at": [50, 47]
+      },
+      {
+        "t": "cone",
+        "at": [65, 47]
+      },
+      {
+        "t": "cone",
+        "at": [35, 62]
+      },
+      {
+        "t": "cone",
+        "at": [50, 62]
+      },
+      {
+        "t": "cone",
+        "at": [65, 62]
+      },
+      {
+        "t": "ball",
+        "at": [50, 47]
+      },
+      {
+        "t": "text",
+        "at": [50, 77],
+        "text": "Tablero 3x3"
+      },
+      {
+        "t": "player",
+        "at": [50, 94],
+        "role": "alumno",
+        "label": "A"
+      },
+      {
+        "t": "ball",
+        "at": [50, 88]
+      },
+      {
+        "t": "shot",
+        "points": [[50, 86], [50, 24]]
+      }
+    ],
+    "caption": "Golpea el objetivo marcado; si acierta, coloca su bola en el tablero de 3 en raya"
   },
   "cc07ceee-84a0-4e35-ad42-44b81d14defe": {
     "court": "libre",
