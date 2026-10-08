@@ -2151,7 +2151,6 @@ export function ExerciseForm({
       </div>
     </section>
   );
-  void stepsSection;
 
   return (
     <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
@@ -2274,6 +2273,7 @@ export function ExerciseForm({
           >
             <div className="flex flex-col gap-8">
               {workSection}
+              {stepsSection}
               {resourcesSection}
             </div>
           </AccordionSection>
