@@ -141,13 +141,36 @@ export const NIVELES = [
 
 export type NivelId = (typeof NIVELES)[number]["id"];
 
-export const NIVEL_IDS = NIVELES.map((n) => n.id) as unknown as readonly [
-  NivelId,
-  ...NivelId[],
-];
+// Pádel usa una escala de nivel distinta (sin tramos de edad): se filtra por
+// el deporte activo/etiquetado, nunca se mezcla con la escala de tenis.
+export const PADEL_NIVELES = [
+  { id: "iniciacion", label: "Iniciación", edad: null, color: "#43A047" },
+  { id: "medio", label: "Medio", edad: null, color: "#FB8C00" },
+  { id: "avanzado", label: "Avanzado", edad: null, color: "#E53935" },
+] as const;
+
+export type PadelNivelId = (typeof PADEL_NIVELES)[number]["id"];
+
+// Todos los ids de nivel posibles (tenis/pickleball/tenis playa + pádel),
+// usado para validar en el esquema sin importar qué deporte esté activo.
+export const NIVEL_IDS = [
+  ...NIVELES.map((n) => n.id),
+  ...PADEL_NIVELES.map((n) => n.id),
+] as unknown as readonly [NivelId | PadelNivelId, ...(NivelId | PadelNivelId)[]];
+
+// Devuelve el listado de niveles a mostrar/elegir según el deporte: pádel
+// tiene su propia escala (Iniciación/Medio/Avanzado), el resto de deportes
+// sigue usando la escala por edades existente.
+export function nivelesForSport(sport?: string | null) {
+  return sport === "padel" ? PADEL_NIVELES : NIVELES;
+}
 
 export function nivelLabel(id: string) {
-  return NIVELES.find((n) => n.id === id)?.label ?? id.replace(/_/g, " ");
+  return (
+    NIVELES.find((n) => n.id === id)?.label ??
+    PADEL_NIVELES.find((n) => n.id === id)?.label ??
+    id.replace(/_/g, " ")
+  );
 }
 
 // Fase de la sesión (columna `phase`).
@@ -193,6 +216,11 @@ export function pelotaLabel(id: string) {
 
 export function isLegacyPelota(id: string) {
   return PELOTAS_LEGACY.some((p) => p.id === id);
+}
+
+// En pádel no se etiqueta tipo de pelota (no aplica como en tenis).
+export function showsTipoPelota(sport?: string | null) {
+  return sport !== "padel";
 }
 
 // Carácter (varias opciones).

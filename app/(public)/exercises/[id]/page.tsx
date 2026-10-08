@@ -124,6 +124,7 @@ export default async function ExercisePage({
       exercise={{
         id: exercise.id,
         name: exercise.name,
+        sport: exercise.sport,
         description: exercise.description,
         category: exercise.category,
         difficulty: exercise.difficulty,

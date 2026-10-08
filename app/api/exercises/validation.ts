@@ -4,6 +4,7 @@ import { isAllowedImageUrl, isPublicHttpUrl } from "@/lib/url-safety";
 import {
   AUTORIA_VALUES,
   CARACTER_VALUES,
+  NIVEL_IDS,
   NUEVOS_TIPOS_ACTIVIDAD,
   SITUACION_JUEGO_VALUES,
   TIPO_PELOTA_VALUES,
@@ -64,15 +65,10 @@ export const GOLPES_VALUES = [
   "chiquita",
 ] as const;
 
-export const NIVEL_PMV_VALUES = [
-  "descubrimiento",
-  "desarrollo",
-  "consolidacion",
-  "especializacion",
-  "precompeticion",
-  "competicion",
-  "rendimiento",
-] as const;
+// Incluye tanto la escala por edades (tenis/pickleball/tenis playa) como la
+// escala de pádel (iniciación/medio/avanzado) — la validación no depende del
+// deporte activo en el momento de guardar.
+export const NIVEL_PMV_VALUES = NIVEL_IDS;
 
 export const ASPECTO_JUEGO_VALUES = [
   "tecnica",

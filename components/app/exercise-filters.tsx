@@ -11,6 +11,7 @@ import {
   NUEVOS_TIPOS_ACTIVIDAD,
   PELOTAS,
   PELOTAS_LEGACY,
+  showsTipoPelota,
   SITUACION_JUEGO,
   tipoEjercicioOptionLabel,
 } from "@/lib/exercise-taxonomy";
@@ -110,6 +111,7 @@ export interface ExerciseFiltersProps {
     category?: string;
     difficulty?: string;
   };
+  sport?: string | null;
 }
 
 function ChipButton({
@@ -187,8 +189,10 @@ function appendAll(
 export function ExerciseFilters({
   currentFilters,
   preserved,
+  sport,
 }: ExerciseFiltersProps) {
   const router = useRouter();
+  const showPelota = showsTipoPelota(sport);
   const [open, setOpen] = useState(false);
   const [formato, setFormato] = useState(new Set(currentFilters.formato));
   const [fase, setFase] = useState(new Set(currentFilters.fase));
@@ -452,27 +456,34 @@ export function ExerciseFilters({
             </FilterGroup>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FilterGroup label="Pelota">
-              {TIPOS_PELOTA.map(({ id, label, color }) => (
-                <ChipButton
-                  key={id}
-                  active={tipoPelota.has(id)}
-                  onClick={() => toggleString(tipoPelota, setTipoPelota, id)}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    {color && (
-                      <span
-                        aria-hidden
-                        className="size-2 shrink-0 rounded-full border border-black/10"
-                        style={{ backgroundColor: color }}
-                      />
-                    )}
-                    {label}
-                  </span>
-                </ChipButton>
-              ))}
-            </FilterGroup>
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-5",
+              showPelota && "md:grid-cols-2"
+            )}
+          >
+            {showPelota && (
+              <FilterGroup label="Pelota">
+                {TIPOS_PELOTA.map(({ id, label, color }) => (
+                  <ChipButton
+                    key={id}
+                    active={tipoPelota.has(id)}
+                    onClick={() => toggleString(tipoPelota, setTipoPelota, id)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {color && (
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full border border-black/10"
+                          style={{ backgroundColor: color }}
+                        />
+                      )}
+                      {label}
+                    </span>
+                  </ChipButton>
+                ))}
+              </FilterGroup>
+            )}
 
             <FilterGroup label="Lugar">
               {UBICACIONES.map(({ id, label }) => (

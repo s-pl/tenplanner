@@ -55,9 +55,12 @@ import {
   CARACTER,
   isLegacyPelota,
   NIVEL_IDS,
-  NIVELES,
+  type NivelId,
+  nivelesForSport,
+  type PadelNivelId,
   PELOTAS,
   pelotaLabel,
+  showsTipoPelota,
   SITUACION_JUEGO,
   TIPO_PELOTA_VALUES,
   type TipoPelota,
@@ -95,12 +98,14 @@ const GOLPES_PRESET = [
   { id: "resto", label: "Resto" },
 ] as const;
 
-const NIVELES_PMV = NIVELES.map((n) => ({
-  id: n.id,
-  label: n.label,
-  desc: n.edad,
-  color: n.color,
-}));
+function nivelesPmvForSport(sport?: string | null) {
+  return nivelesForSport(sport).map((n) => ({
+    id: n.id,
+    label: n.label,
+    desc: n.edad,
+    color: n.color,
+  }));
+}
 
 const ASPECTOS_JUEGO = [
   { id: "tecnica", label: "Técnica" },
@@ -130,7 +135,7 @@ const DURACION_RANGOS = [
   { id: "+20", label: "+20 min" },
 ] as const;
 
-type NivelPmv = (typeof NIVELES_PMV)[number]["id"];
+type NivelPmv = NivelId | PadelNivelId;
 type AspectoJuego = (typeof ASPECTOS_JUEGO)[number]["id"];
 type Parametro = (typeof PARAMETROS)[number]["id"];
 type Tipologia = "juego" | "reto" | "otros_deportes";
@@ -283,6 +288,9 @@ const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
   precompeticion: "advanced",
   competicion: "advanced",
   rendimiento: "advanced",
+  iniciacion: "beginner",
+  medio: "intermediate",
+  avanzado: "advanced",
 };
 
 const LOCATIONS: { id: Location; label: string; icon: string }[] = [
@@ -312,6 +320,7 @@ export interface ExerciseFormProps {
   initialFormMode?: ExerciseFormMode;
   enableDrafts?: boolean;
   draftQueryParam?: string;
+  sport?: string | null;
   initialData?: {
     name?: string;
     description?: string | null;
@@ -515,10 +524,13 @@ export function ExerciseForm({
   enableDrafts = false,
   draftQueryParam = "draft",
   initialData,
+  sport,
   onSuccess,
   onCancel,
 }: ExerciseFormProps) {
   const router = useRouter();
+  const NIVELES_PMV = nivelesPmvForSport(sport);
+  const showPelota = showsTipoPelota(sport);
   const [serverError, setServerError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<ExerciseFormMode>(() =>
     resolveInitialFormMode(mode, initialFormMode)
@@ -939,7 +951,7 @@ export function ExerciseForm({
     !!watchedValues.formato,
     watchedValues.numJugadores != null,
     tiposActividad.size > 0,
-    !!watchedValues.tipoPelota,
+    ...(showPelota ? [!!watchedValues.tipoPelota] : []),
     golpes.size > 0,
     efecto.size > 0,
     parametros.size > 0,
@@ -985,7 +997,7 @@ export function ExerciseForm({
       autoria: isAdmin ? (values.autoria ?? "libre") : undefined,
       formato: values.formato ?? null,
       numJugadores: values.numJugadores ?? null,
-      tipoPelota: values.tipoPelota ?? null,
+      tipoPelota: showPelota ? (values.tipoPelota ?? null) : null,
       tipoActividad: null,
       tiposActividad:
         selectedTiposActividad.length > 0 ? selectedTiposActividad : null,
@@ -1548,67 +1560,69 @@ export function ExerciseForm({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-foreground">
-              Tipo de pelota{" "}
-              <span className="font-normal text-muted-foreground">
-                (opcional)
-              </span>
-            </label>
-            <Controller
-              name="tipoPelota"
-              control={control}
-              render={({ field }) => {
-                const TIPOS: {
-                  id: TipoPelota;
-                  label: string;
-                  color?: string;
-                }[] = [
-                  ...PELOTAS,
-                  // Pelota antigua que ya tenía el ejercicio.
-                  ...(field.value && isLegacyPelota(field.value)
-                    ? [
-                        {
-                          id: field.value,
-                          label: `${pelotaLabel(field.value)} (antigua)`,
-                        },
-                      ]
-                    : []),
-                ];
-                return (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {TIPOS.map(({ id, label, color }) => {
-                      const isSelected = field.value === id;
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() =>
-                            field.onChange(field.value === id ? null : id)
-                          }
-                          className={cn(
-                            "inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-150",
-                            isSelected
-                              ? "bg-brand/10 border-brand text-brand"
-                              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {color && (
-                            <span
-                              aria-hidden
-                              className="size-2.5 shrink-0 rounded-full border border-black/10"
-                              style={{ backgroundColor: color }}
-                            />
-                          )}
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              }}
-            />
-          </div>
+          {showPelota && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-foreground">
+                Tipo de pelota{" "}
+                <span className="font-normal text-muted-foreground">
+                  (opcional)
+                </span>
+              </label>
+              <Controller
+                name="tipoPelota"
+                control={control}
+                render={({ field }) => {
+                  const TIPOS: {
+                    id: TipoPelota;
+                    label: string;
+                    color?: string;
+                  }[] = [
+                    ...PELOTAS,
+                    // Pelota antigua que ya tenía el ejercicio.
+                    ...(field.value && isLegacyPelota(field.value)
+                      ? [
+                          {
+                            id: field.value,
+                            label: `${pelotaLabel(field.value)} (antigua)`,
+                          },
+                        ]
+                      : []),
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {TIPOS.map(({ id, label, color }) => {
+                        const isSelected = field.value === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() =>
+                              field.onChange(field.value === id ? null : id)
+                            }
+                            className={cn(
+                              "inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all duration-150",
+                              isSelected
+                                ? "bg-brand/10 border-brand text-brand"
+                                : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            {color && (
+                              <span
+                                aria-hidden
+                                className="size-2.5 shrink-0 rounded-full border border-black/10"
+                                style={{ backgroundColor: color }}
+                              />
+                            )}
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -2237,9 +2251,13 @@ export function ExerciseForm({
 
           <AccordionSection
             title="Parámetros deportivos"
-            subtitle="Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros."
+            subtitle={
+              showPelota
+                ? "Formato, jugadores, pelota, tipo de actividad, golpes, efecto y parámetros."
+                : "Formato, jugadores, tipo de actividad, golpes, efecto y parámetros."
+            }
             filled={paramsFilled}
-            total={7}
+            total={showPelota ? 7 : 6}
             open={expandedSections.params}
             onToggle={(next) => toggleAccordion("params", next)}
           >

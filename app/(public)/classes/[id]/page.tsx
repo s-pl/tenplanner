@@ -23,7 +23,7 @@ import { ClassActions } from "./class-actions";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { PrevNextNav } from "@/components/app/prev-next-nav";
 import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
-import { autoriaLabel } from "@/lib/exercise-taxonomy";
+import { autoriaLabel, nivelLabel } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId } from "@/lib/clubs";
 
 interface PageProps {
@@ -173,9 +173,9 @@ export default async function ClassDetailPage({
                 {classNiveles.map((nivel) => (
                   <span
                     key={nivel}
-                    className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62 capitalize"
+                    className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62"
                   >
-                    {nivel.replace(/_/g, " ")}
+                    {nivelLabel(nivel)}
                   </span>
                 ))}
                 {classAspectos.map((aspecto) => (

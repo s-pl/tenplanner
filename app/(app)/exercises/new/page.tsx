@@ -8,6 +8,7 @@ import { users } from "@/db/schema";
 import { ExerciseForm } from "@/components/app/exercise-form";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getActiveSport } from "@/lib/sports";
 
 interface PageProps {
   searchParams: Promise<{ mode?: string }>;
@@ -21,13 +22,14 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
   const user = session?.user ?? null;
   if (!user) redirect("/login");
 
-  const [[dbUser], exerciseCreationEnabled] = await Promise.all([
+  const [[dbUser], exerciseCreationEnabled, sport] = await Promise.all([
     db
       .select({ isAdmin: users.isAdmin })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
     getBooleanSetting("feature.exercise_creation_enabled"),
+    getActiveSport(user.id),
   ]);
 
   if (!exerciseCreationEnabled) {
@@ -72,6 +74,7 @@ export default async function NewExercisePage({ searchParams }: PageProps) {
           isAdmin={isAdmin}
           initialFormMode={initialFormMode}
           enableDrafts
+          sport={sport}
         />
       </div>
     </div>

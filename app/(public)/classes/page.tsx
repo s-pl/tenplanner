@@ -11,7 +11,11 @@ import {
   parseClassSort,
   type ClassSort,
 } from "@/lib/nav/class-nav";
-import { autoriaLabel } from "@/lib/exercise-taxonomy";
+import {
+  autoriaLabel,
+  nivelesForSport,
+  nivelLabel,
+} from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { getActiveSport } from "@/lib/sports";
 import { getPublicSportCookie } from "@/lib/public-sport";
@@ -29,16 +33,15 @@ const TAB_LABELS: Record<Tab, string> = {
   drafts: "Borradores",
 };
 
-const NIVEL_FILTERS = [
-  { id: "", label: "Todos" },
-  { id: "descubrimiento", label: "Descubrimiento (4-6)" },
-  { id: "desarrollo", label: "Desarrollo (6-8)" },
-  { id: "consolidacion", label: "Consolidación (8-10)" },
-  { id: "especializacion", label: "Especialización (10-12)" },
-  { id: "precompeticion", label: "Precompetición (12-14)" },
-  { id: "competicion", label: "Competición (14-16)" },
-  { id: "rendimiento", label: "Rendimiento (14-18)" },
-];
+function nivelFiltersForSport(sport?: string | null) {
+  return [
+    { id: "", label: "Todos" },
+    ...nivelesForSport(sport).map((n) => ({
+      id: n.id,
+      label: n.edad ? `${n.label} (${n.edad.replace(" años", "")})` : n.label,
+    })),
+  ];
+}
 
 const DURACION_FILTERS = [
   { id: "", label: "Cualquiera" },
@@ -468,7 +471,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                   defaultValue={nivel}
                   className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
                 >
-                  {NIVEL_FILTERS.map((n) => (
+                  {nivelFiltersForSport(sport).map((n) => (
                     <option key={n.id} value={n.id}>
                       {n.label}
                     </option>
@@ -681,7 +684,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                             key={nivel}
                             className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]"
                           >
-                            {nivel.replace(/_/g, " ")}
+                            {nivelLabel(nivel)}
                           </span>
                         ))}
                         {classValues(cls.aspectosJuego, cls.aspectoJuego).map(

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { exercises, users } from "@/db/schema";
 import { ClassForm } from "@/components/app/class-form";
+import { getActiveSport } from "@/lib/sports";
 
 export default async function NewClassPage() {
   const supabase = await createClient();
@@ -14,11 +15,14 @@ export default async function NewClassPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [adminRow] = await db
-    .select({ isAdmin: users.isAdmin })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
+  const [[adminRow], sport] = await Promise.all([
+    db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+    getActiveSport(user.id),
+  ]);
 
   const availableExercises = await db
     .select({
@@ -61,6 +65,7 @@ export default async function NewClassPage() {
         mode="create"
         availableExercises={availableExercises}
         isAdmin={adminRow?.isAdmin ?? false}
+        sport={sport}
       />
     </div>
   );
