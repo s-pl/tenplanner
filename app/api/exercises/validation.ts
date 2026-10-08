@@ -247,6 +247,7 @@ export const createExerciseSchema = z.object({
   golpes: z.array(golpeSchema).max(15).optional().nullable(),
   efecto: z.array(efectoSchema).max(5).optional().nullable(),
   variantes: z.string().trim().max(2000).optional().nullable(),
+  observaciones: z.string().trim().max(2000).optional().nullable(),
   imageUrls: z.array(imageUrlSchema).max(4).optional().nullable(),
   isGlobal: z.boolean().optional(),
   autoria: autoriaSchema.optional().nullable(),

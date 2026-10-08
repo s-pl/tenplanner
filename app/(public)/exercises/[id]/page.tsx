@@ -144,6 +144,7 @@ export default async function ExercisePage({
         imageUrl: exercise.imageUrl ?? null,
         imageUrls: (exercise.imageUrls as string[] | null) ?? null,
         variantes: exercise.variantes ?? null,
+        observaciones: exercise.observaciones ?? null,
         formato:
           (exercise.formato as
             | "individual"

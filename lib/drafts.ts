@@ -9,6 +9,7 @@ export interface ExerciseDraftPayload {
   objectives: string;
   tips: string;
   variantes: string;
+  observaciones: string;
   category?: string;
   difficulty?: string;
   durationMinutes?: number;
@@ -260,6 +261,7 @@ export function hasMeaningfulExerciseDraft(payload: ExerciseDraftPayload) {
     payload.objectives.trim() ||
     payload.tips.trim() ||
     payload.variantes.trim() ||
+    payload.observaciones.trim() ||
     payload.category ||
     payload.difficulty ||
     payload.durationMinutes != null ||

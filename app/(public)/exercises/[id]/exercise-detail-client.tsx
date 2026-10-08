@@ -22,6 +22,7 @@ import {
   ExternalLink,
   BookMarked,
   Shuffle,
+  StickyNote,
   Lock,
   ShieldAlert,
 } from "lucide-react";
@@ -72,6 +73,7 @@ export interface ExerciseData {
   imageUrl: string | null;
   imageUrls: string[] | null;
   variantes: string | null;
+  observaciones: string | null;
   formato: Formato | null;
   numJugadores: number | null;
   tipoPelota: TipoPelota | null;
@@ -314,6 +316,7 @@ export function ExerciseDetailClient({
               imageUrl: exercise.imageUrl,
               imageUrls: exercise.imageUrls,
               variantes: exercise.variantes,
+              observaciones: exercise.observaciones,
               formato: exercise.formato,
               numJugadores: exercise.numJugadores,
               tipoPelota: exercise.tipoPelota,
@@ -785,6 +788,20 @@ export function ExerciseDetailClient({
               </div>
               <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                 {exercise.variantes}
+              </p>
+            </div>
+          )}
+
+          {exercise.observaciones && (
+            <div className="bg-muted/50 border border-border rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <StickyNote className="size-3.5 text-muted-foreground" />
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Observaciones
+                </p>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {exercise.observaciones}
               </p>
             </div>
           )}

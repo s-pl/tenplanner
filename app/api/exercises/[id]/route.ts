@@ -67,6 +67,7 @@ export async function GET(_request: Request, context: ExerciseRouteContext) {
         golpes: exercises.golpes,
         efecto: exercises.efecto,
         variantes: exercises.variantes,
+        observaciones: exercises.observaciones,
         imageUrls: exercises.imageUrls,
         nivel: exercises.nivel,
         niveles: exercises.niveles,
@@ -221,6 +222,7 @@ export async function PUT(request: Request, context: ExerciseRouteContext) {
       "golpes",
       "efecto",
       "variantes",
+      "observaciones",
       "imageUrls",
       "duracionRango",
     ] as const;

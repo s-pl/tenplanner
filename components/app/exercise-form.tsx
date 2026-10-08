@@ -173,6 +173,7 @@ const formSchema = z.object({
   objectives: z.string().max(1000).optional().nullable(),
   tips: z.string().max(1000).optional().nullable(),
   variantes: z.string().max(2000).optional().nullable(),
+  observaciones: z.string().max(2000).optional().nullable(),
   category: z.enum(["technique", "tactics", "fitness", "warm-up"] as const, {
     required_error: "Selecciona una categoría",
   }),
@@ -346,6 +347,7 @@ export interface ExerciseFormProps {
     golpes?: string[] | null;
     efecto?: string[] | null;
     variantes?: string | null;
+    observaciones?: string | null;
     imageUrls?: string[] | null;
     isGlobal?: boolean;
     autoria?: string | null;
@@ -608,6 +610,7 @@ export function ExerciseForm({
       objectives: initialData?.objectives ?? "",
       tips: initialData?.tips ?? "",
       variantes: initialData?.variantes ?? "",
+      observaciones: initialData?.observaciones ?? "",
       category:
         initialData?.category ??
         getPrimaryCategory(resolveAspectosJuegoValues(initialData)),
@@ -675,6 +678,7 @@ export function ExerciseForm({
         objectives: draft.payload.objectives,
         tips: draft.payload.tips,
         variantes: draft.payload.variantes,
+        observaciones: draft.payload.observaciones,
         category:
           (draft.payload.category as Category | undefined) ??
           getPrimaryCategory(draftAspectosJuego),
@@ -845,6 +849,7 @@ export function ExerciseForm({
     objectives: watchedValues.objectives ?? "",
     tips: watchedValues.tips ?? "",
     variantes: watchedValues.variantes ?? "",
+    observaciones: watchedValues.observaciones ?? "",
     category: watchedValues.category,
     difficulty: watchedValues.difficulty ?? undefined,
     durationMinutes: watchedValues.durationMinutes ?? undefined,
@@ -943,6 +948,7 @@ export function ExerciseForm({
     !!watchedValues.description?.trim(),
     !!watchedValues.tips?.trim(),
     !!watchedValues.variantes?.trim(),
+    !!watchedValues.observaciones?.trim(),
     !!watchedValues.videoUrl?.trim(),
     steps.some((step) => step.title.trim() || step.description.trim()),
   ]);
@@ -1007,6 +1013,7 @@ export function ExerciseForm({
       situacionJuego:
         situacionJuego.size > 0 ? Array.from(situacionJuego) : null,
       variantes: values.variantes?.trim() || null,
+      observaciones: values.observaciones?.trim() || null,
       steps: steps
         .filter((s) => s.title.trim())
         .map((s) => ({
@@ -2121,6 +2128,26 @@ export function ExerciseForm({
             className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
           />
         </div>
+
+        <div className="space-y-1.5">
+          <label
+            htmlFor="observaciones"
+            className="block text-sm font-semibold text-foreground"
+          >
+            Observaciones{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </label>
+          <textarea
+            id="observaciones"
+            placeholder="Notas adicionales, contexto o recordatorios sobre este ejercicio…"
+            rows={3}
+            maxLength={2000}
+            {...register("observaciones")}
+            className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
+          />
+        </div>
       </div>
     </section>
   );
@@ -2242,7 +2269,7 @@ export function ExerciseForm({
             title="Descripción y objetivos"
             subtitle="Qué se trabaja en este ejercicio y qué se busca."
             filled={pedagogicalFilled}
-            total={6}
+            total={7}
             open={expandedSections.pedagogical}
             onToggle={(next) => toggleAccordion("pedagogical", next)}
           >

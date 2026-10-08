@@ -183,6 +183,7 @@ export const exercises = pgTable(
     golpes: json("golpes").$type<string[]>(),
     efecto: json("efecto").$type<string[]>(),
     variantes: text("variantes"),
+    observaciones: text("observaciones"),
     imageUrls: json("image_urls").$type<string[]>(),
     // New taxonomy (PMV 260506) — additive, replaces difficulty/intensity in UI
     nivel: varchar("nivel", { length: 32 }), // descubrimiento|desarrollo|consolidacion|especializacion|precompeticion|competicion|adultos_iniciacion|adultos_medio_alto
