@@ -6716,7 +6716,7 @@
     ],
     "caption": "El rey juega un punto contra cada aspirante; si pierde, cambia"
   },
-  "ff9c3a1f-ba81-4d3d-b19b-17b220b0e842": {
+  "73701454-0562-4034-813e-4735574ad0a9": {
     "court": "libre",
     "elements": [
       {
@@ -7810,5 +7810,194 @@
       }
     ],
     "caption": "Se juega el punto; quien gana se queda, quien pierde espera su turno en el poste."
+  },
+  "0aa11af0-35a3-4a58-a162-ddbe3c223af3": {
+    "court": "libre",
+    "elements": [
+      { "t": "cone", "at": [30, 25] },
+      { "t": "cone", "at": [50, 20] },
+      { "t": "cone", "at": [70, 25] },
+      { "t": "cone", "at": [25, 50] },
+      { "t": "cone", "at": [50, 50] },
+      { "t": "cone", "at": [75, 50] },
+      { "t": "cone", "at": [30, 75] },
+      { "t": "cone", "at": [50, 80] },
+      { "t": "cone", "at": [70, 75] },
+      { "t": "ball", "at": [50, 50] },
+      { "t": "player", "at": [10, 50], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [90, 50], "role": "rival", "label": "B" }
+    ],
+    "caption": "Debajo de algunos conos hay un tesoro; cada punto ganado permite levantar uno."
+  },
+  "0d679467-4ded-4ca7-9655-b0716adf457d": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [58, 88], "to": [72, 100], "label": "TORRE" },
+      { "t": "player", "at": [65, 94], "role": "alumno", "label": "A" },
+      { "t": "ball", "at": [65, 88] },
+      { "t": "shot", "points": [[65, 86], [76, 18]] }
+    ],
+    "caption": "Saca desde una torre elevada que facilita el gesto del servicio."
+  },
+  "12a0c5a9-55a6-4e36-b4bc-c8c8dd991ff9": {
+    "court": "medio",
+    "elements": [
+      { "t": "player", "at": [50, 18], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [50, 85], "role": "monitor", "label": "M" },
+      { "t": "ball", "at": [50, 78] },
+      { "t": "shot", "points": [[50, 80], [50, 24]] }
+    ],
+    "caption": "El alumno volea cerca de la red, sin dejar botar la bola."
+  },
+  "1681b0b2-6a6a-4df8-b8c4-676dba18ad58": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [75, 14], "to": [87, 26], "label": "CRUZADO" },
+      { "t": "zone", "from": [62, 14], "to": [74, 26], "label": "PARALELO" },
+      { "t": "player", "at": [30, 95], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [70, 95], "role": "alumno", "label": "B" },
+      { "t": "shot", "points": [[30, 90], [80, 20]] },
+      { "t": "shot", "points": [[70, 90], [68, 20]] }
+    ],
+    "caption": "Una fila golpea cruzado de derecha y la otra paralelo de revés a la zona marcada."
+  },
+  "366fcb4f-5d07-4bf9-9d1f-de907216355b": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [8, 80], "to": [45, 100], "label": "HANDICAP" },
+      { "t": "player", "at": [25, 92], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [75, 92], "role": "rival", "label": "B" },
+      { "t": "shot", "points": [[25, 86], [70, 20]] }
+    ],
+    "caption": "Se juega con una limitación para el de más nivel (solo revés, saque y volea, zona…)."
+  },
+  "3a056f45-9510-4d7c-993f-b337c9ac7c21": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [8, 80], "to": [45, 100], "label": "HANDICAP" },
+      { "t": "player", "at": [25, 92], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [75, 92], "role": "rival", "label": "B" },
+      { "t": "shot", "points": [[25, 86], [70, 20]] }
+    ],
+    "caption": "Dificultades para los que mejor juegan: menos puntuación, solo revés, saque y volea…"
+  },
+  "4bb311e5-8958-4af5-8a4f-41ac4070104d": {
+    "court": "libre",
+    "elements": [
+      { "t": "zone", "from": [38, 88], "to": [62, 100], "label": "SALIDA" },
+      { "t": "player", "at": [50, 94], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [30, 94], "role": "alumno" },
+      { "t": "player", "at": [70, 94], "role": "alumno" },
+      { "t": "player", "at": [50, 25], "role": "monitor", "label": "M" },
+      { "t": "move", "points": [[45, 90], [45, 35]] },
+      { "t": "move", "points": [[55, 35], [55, 90]] },
+      { "t": "shot", "points": [[50, 27], [48, 33]] }
+    ],
+    "caption": "Corre, golpea la bola que lanza el entrenador y vuelve para dar el relevo al siguiente."
+  },
+  "57971de1-c057-495d-98ed-dfeb5d729084": {
+    "court": "tenis",
+    "elements": [
+      { "t": "zone", "from": [78, 83], "to": [98, 98], "label": "PRISIÓN" },
+      { "t": "player", "at": [30, 95], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [70, 5], "role": "rival", "label": "B" },
+      { "t": "shot", "points": [[30, 90], [70, 10]] }
+    ],
+    "caption": "Cada fallo resta una vida; con 3 fallos, a la prisión del campo contrario."
+  },
+  "5ade0747-2757-4a8d-b750-7246e4406fa7": {
+    "court": "medio",
+    "elements": [
+      { "t": "player", "at": [50, 10], "role": "monitor", "label": "M" },
+      { "t": "basket", "at": [50, 4] },
+      { "t": "player", "at": [35, 68], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [65, 68], "role": "alumno", "label": "B" },
+      { "t": "cone", "at": [35, 88] },
+      { "t": "cone", "at": [65, 88] },
+      { "t": "shot", "points": [[50, 12], [37, 64]] },
+      { "t": "shot", "points": [[50, 12], [63, 64]] },
+      { "t": "move", "points": [[35, 70], [35, 85], [35, 70]] },
+      { "t": "move", "points": [[65, 70], [65, 85], [65, 70]] }
+    ],
+    "caption": "El monitor alimenta desde la cesta; tras golpear, cada jugador rodea su cono."
+  },
+  "5debbd70-e7d4-43bf-bf8a-5e522073120a": {
+    "court": "libre",
+    "elements": [
+      { "t": "player", "at": [50, 50], "role": "monitor", "label": "M" },
+      { "t": "ball", "at": [50, 38] },
+      { "t": "player", "at": [20, 20], "role": "alumno" },
+      { "t": "player", "at": [80, 20], "role": "alumno" },
+      { "t": "player", "at": [20, 80], "role": "alumno" },
+      { "t": "player", "at": [80, 80], "role": "alumno" },
+      { "t": "shot", "points": [[22, 24], [46, 40]] },
+      { "t": "shot", "points": [[78, 24], [54, 40]] },
+      { "t": "shot", "points": [[22, 76], [46, 44]] },
+      { "t": "shot", "points": [[78, 76], [54, 44]] }
+    ],
+    "caption": "El monitor mantiene un globo en el aire; los alumnos deben golpearlo antes de que caiga."
+  },
+  "605b63c7-bd89-4538-8bc2-f4920261e15c": {
+    "court": "libre",
+    "elements": [
+      { "t": "cone", "at": [30, 25] },
+      { "t": "cone", "at": [50, 20] },
+      { "t": "cone", "at": [70, 25] },
+      { "t": "cone", "at": [25, 50] },
+      { "t": "cone", "at": [50, 50] },
+      { "t": "cone", "at": [75, 50] },
+      { "t": "cone", "at": [30, 75] },
+      { "t": "cone", "at": [50, 80] },
+      { "t": "cone", "at": [70, 75] },
+      { "t": "ball", "at": [50, 50] },
+      { "t": "player", "at": [10, 50], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [90, 50], "role": "rival", "label": "B" },
+      { "t": "shot", "points": [[13, 50], [45, 50]] }
+    ],
+    "caption": "Golpean de derecha o revés; quien gana levanta un cono para buscar el tesoro escondido."
+  },
+  "60e72a31-7d84-4a77-a8a8-f5fc18995697": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [40, 3], "to": [60, 15], "label": "BOMBA" },
+      { "t": "player", "at": [50, 95], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 90], [25, 20]] },
+      { "t": "shot", "points": [[50, 90], [75, 20]] },
+      { "t": "shot", "points": [[50, 90], [50, 16]] }
+    ],
+    "caption": "Encadena derecha y revés; si gana ambos, juega una bomba (bola alta) para sumar punto."
+  },
+  "64ad6ab2-ae9b-40fb-b264-388e15ae8d38": {
+    "court": "medio",
+    "elements": [
+      { "t": "zone", "from": [40, 0], "to": [60, 10], "label": "PORTERÍA" },
+      { "t": "player", "at": [30, 95], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [70, 95], "role": "rival", "label": "B" },
+      { "t": "shot", "points": [[30, 90], [70, 20]] },
+      { "t": "shot", "points": [[30, 88], [50, 6]] }
+    ],
+    "caption": "Juegan el punto; quien lo gana lanza un penalti con la raqueta hacia la portería."
+  },
+  "67894080-0515-46e3-8473-3e75b6f0485c": {
+    "court": "tenis",
+    "elements": [
+      { "t": "player", "at": [35, 95], "role": "alumno", "label": "A" },
+      { "t": "player", "at": [65, 95], "role": "alumno", "label": "B" },
+      { "t": "player", "at": [35, 5], "role": "rival", "label": "C" },
+      { "t": "player", "at": [65, 5], "role": "rival", "label": "D" },
+      { "t": "shot", "points": [[35, 90], [65, 10]] }
+    ],
+    "caption": "Pelotean por parejas; cuando una falla, la otra grita «punto» y juegan un punto de dobles."
+  },
+  "7ce90b1b-daf7-4f6a-846e-225c249d42eb": {
+    "court": "medio",
+    "elements": [
+      { "t": "player", "at": [50, 10], "role": "monitor", "label": "M" },
+      { "t": "player", "at": [50, 90], "role": "alumno", "label": "A" },
+      { "t": "shot", "points": [[50, 12], [50, 85]] },
+      { "t": "shot", "points": [[50, 85], [25, 20]] },
+      { "t": "shot", "points": [[50, 85], [75, 20]] }
+    ],
+    "caption": "El alumno golpea de derecha y de derecha invertida (se puede añadir corta, volea o globo)."
   }
 }
