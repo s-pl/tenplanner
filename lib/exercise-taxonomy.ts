@@ -153,12 +153,28 @@ export const PADEL_NIVELES = [
 
 export type PadelNivelId = (typeof PADEL_NIVELES)[number]["id"];
 
-// Todos los ids de nivel posibles (tenis/pickleball/tenis playa + pádel),
-// usado para validar en el esquema sin importar qué deporte esté activo.
+// Niveles heredados de cuando los ejercicios compartían la escala de
+// alumnos/grupos (adultos_iniciacion, adultos_medio_alto). Ya no se ofrecen
+// al etiquetar ejercicios nuevos, pero se siguen aceptando en el esquema
+// para no romper el guardado de ejercicios ya etiquetados con ellos.
+export const NIVEL_LEGACY = [
+  { id: "adultos_iniciacion", label: "Adultos iniciación" },
+  { id: "adultos_medio_alto", label: "Adultos medio-alto" },
+] as const;
+
+export type NivelLegacyId = (typeof NIVEL_LEGACY)[number]["id"];
+
+// Todos los ids de nivel posibles (tenis/pickleball/tenis playa + pádel +
+// legacy), usado para validar en el esquema sin importar qué deporte esté
+// activo.
 export const NIVEL_IDS = [
   ...NIVELES.map((n) => n.id),
   ...PADEL_NIVELES.map((n) => n.id),
-] as unknown as readonly [NivelId | PadelNivelId, ...(NivelId | PadelNivelId)[]];
+  ...NIVEL_LEGACY.map((n) => n.id),
+] as unknown as readonly [
+  NivelId | PadelNivelId | NivelLegacyId,
+  ...(NivelId | PadelNivelId | NivelLegacyId)[],
+];
 
 // Devuelve el listado de niveles a mostrar/elegir según el deporte: pádel
 // tiene su propia escala (Iniciación/Medio/Avanzado), el resto de deportes
@@ -171,6 +187,7 @@ export function nivelLabel(id: string) {
   return (
     NIVELES.find((n) => n.id === id)?.label ??
     PADEL_NIVELES.find((n) => n.id === id)?.label ??
+    NIVEL_LEGACY.find((n) => n.id === id)?.label ??
     id.replace(/_/g, " ")
   );
 }

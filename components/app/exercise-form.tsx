@@ -56,6 +56,7 @@ import {
   isLegacyPelota,
   NIVEL_IDS,
   type NivelId,
+  type NivelLegacyId,
   nivelesForSport,
   type PadelNivelId,
   PELOTAS,
@@ -135,7 +136,7 @@ const DURACION_RANGOS = [
   { id: "+20", label: "+20 min" },
 ] as const;
 
-type NivelPmv = NivelId | PadelNivelId;
+type NivelPmv = NivelId | PadelNivelId | NivelLegacyId;
 type AspectoJuego = (typeof ASPECTOS_JUEGO)[number]["id"];
 type Parametro = (typeof PARAMETROS)[number]["id"];
 type Tipologia = "juego" | "reto" | "otros_deportes";
@@ -292,6 +293,9 @@ const NIVEL_TO_DIFFICULTY: Record<NivelPmv, Difficulty> = {
   iniciacion: "beginner",
   medio: "intermediate",
   avanzado: "advanced",
+  // Legacy (escala de alumnos/grupos, ya no se ofrece al etiquetar)
+  adultos_iniciacion: "beginner",
+  adultos_medio_alto: "intermediate",
 };
 
 const LOCATIONS: { id: Location; label: string; icon: string }[] = [
