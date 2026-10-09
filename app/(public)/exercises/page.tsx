@@ -432,7 +432,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     : [{ total: 0 }];
   const draftCount = Number(draftCountRows[0]?.total ?? 0);
 
-  const [rowPage, allRows, globalRows, mineRows, categoryRows] =
+  const [rowPage, allRows, globalRows, mineRows, categoryRows, fisicoAspectoRows] =
     await Promise.all([
       db
         .select({
@@ -477,6 +477,22 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
         .from(exercisesTable)
         .where(visibilityWhere)
         .groupBy(exercisesTable.category),
+      // "Aspectos del juego" es una etiqueta multivalor (jsonb), no la
+      // categoría exclusiva de arriba: un ejercicio puede tener varios
+      // aspectos a la vez, así que este conteo no tiene por qué cuadrar
+      // con el total de ejercicios.
+      db
+        .select({ total: count() })
+        .from(exercisesTable)
+        .where(
+          and(
+            visibilityWhere,
+            or(
+              jsonbArrayHasAny(exercisesTable.aspectosJuego, ["fisico"])!,
+              inArray(exercisesTable.aspectoJuego, ["fisico"])
+            )
+          )
+        ),
     ]);
 
   const hasNextPage = rowPage.length > PAGE_SIZE;
@@ -511,10 +527,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const byCategoryMap = new Map(
     categoryRows.map((row) => [row.category, Number(row.total)])
   );
-  const byCategory = CATEGORIES.slice(1).map((cat) => ({
-    cat,
-    count: byCategoryMap.get(cat as Category) ?? 0,
-  }));
+  const fisicoAspectoCount = Number(fisicoAspectoRows[0]?.total ?? 0);
 
   const tabCounts: Record<Tab, number> = {
     all: Number(allRows[0]?.total ?? 0),
@@ -586,6 +599,54 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     }
     const s = p.toString();
     return `/exercises${s ? `?${s}` : ""}`;
+  }
+
+  // Tira de 4 tarjetas: Técnica/Táctica/Físico siguen viniendo de la
+  // categoría exclusiva del ejercicio; la 4ª tarjeta (antes "Calentamiento")
+  // pasa a mostrar los ejercicios etiquetados con el aspecto de juego
+  // "Físico/Movilidad" en vez de la categoría "warm-up". Al venir de una
+  // etiqueta multivalor (aspectosJuego), esta tarjeta no tiene por qué
+  // cuadrar con el total de ejercicios: un ejercicio puede tener varios
+  // aspectos a la vez.
+  const statStrip: Array<{
+    key: string;
+    code: string;
+    label: string;
+    count: number;
+    isActive: boolean;
+    href: string;
+  }> = (["technique", "tactics", "fitness"] as const).map((cat) => {
+    const isActive = activeCategory === cat;
+    return {
+      key: cat,
+      code: CATEGORY_CODE[cat],
+      label: CATEGORY_LABEL[cat],
+      count: byCategoryMap.get(cat) ?? 0,
+      isActive,
+      href: buildHref({
+        category: isActive ? "all" : cat,
+        difficulty: activeDifficulty,
+        q: searchTerm || undefined,
+        tab: activeTab,
+      }),
+    };
+  });
+  {
+    const isActive = activeAspectoJuego.includes("fisico");
+    statStrip.push({
+      key: "aspecto-fisico",
+      code: "FÍS/MOV",
+      label: "Físico/Movilidad",
+      count: fisicoAspectoCount,
+      isActive,
+      href: buildHref({
+        aspectoJuego: isActive ? undefined : ["fisico"],
+        category: activeCategory,
+        difficulty: activeDifficulty,
+        q: searchTerm || undefined,
+        tab: activeTab,
+      }),
+    });
   }
 
   const FORMATO_LABEL: Record<string, string> = {
@@ -739,17 +800,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {/* ─── Category strip ─── */}
                 {tabCounts[activeTab] > 0 && (
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {byCategory.map(({ cat, count }) => {
-                      const isActive = activeCategory === cat;
+                    {statStrip.map(({ key, code, label, count, isActive, href }) => {
                       return (
                         <Link
-                          key={cat}
-                          href={buildHref({
-                            category: isActive ? "all" : cat,
-                            difficulty: activeDifficulty,
-                            q: searchTerm || undefined,
-                            tab: activeTab,
-                          })}
+                          key={key}
+                          href={href}
                           className={`group rounded-lg border px-5 py-5 transition-all ${
                             isActive
                               ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505] shadow-[0_18px_40px_rgba(214,255,56,0.24)]"
@@ -760,8 +815,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             <p
                               className={`font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? "text-[#050505]/70" : "text-foreground/45"}`}
                             >
-                              {CATEGORY_CODE[cat as Category]} ·{" "}
-                              {CATEGORY_LABEL[cat as Category]}
+                              {code} · {label}
                             </p>
                             {isActive && (
                               <span className="size-1.5 rounded-full bg-[#050505]" />
