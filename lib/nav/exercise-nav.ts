@@ -87,9 +87,13 @@ export function exerciseOrderBy(sort: ExerciseSort) {
     case "popular":
       return [sql`${POPULARITY_SQL} desc`, asc(exercisesTable.name)];
     case "recent":
-      return [desc(exercisesTable.createdAt)];
+      // Muchos ejercicios comparten el mismo created_at exacto (altas por
+      // lote), así que sin desempate Postgres no da un orden estable entre
+      // ellos y el "más recientes/antiguos" parece no hacer nada al paginar
+      // o recargar.
+      return [desc(exercisesTable.createdAt), asc(exercisesTable.name)];
     case "oldest":
-      return [asc(exercisesTable.createdAt)];
+      return [asc(exercisesTable.createdAt), asc(exercisesTable.name)];
     case "alpha":
     default:
       return [asc(exercisesTable.name)];

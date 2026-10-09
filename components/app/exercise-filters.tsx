@@ -328,6 +328,26 @@ export function ExerciseFilters({
 
       {open && (
         <div className="mt-3 space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+          <div className="flex flex-wrap items-center gap-3 border-b border-foreground/10 pb-3">
+            <button
+              type="button"
+              onClick={applyFilters}
+              className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2 text-[12px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e]"
+            >
+              Aplicar filtros
+            </button>
+            {activeCount > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 text-[11px] text-foreground/50 transition-colors hover:text-foreground"
+              >
+                <X className="size-3" />
+                Limpiar ({activeCount})
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <FilterGroup label="Fase de la sesión">
               {FASES.map(({ id, label }) => (
