@@ -276,6 +276,7 @@ export const AUTORIAS = [
   { id: "ten_planner", label: "Ten Planner" },
   { id: "academia_christian_larsen", label: "Academia Christian Larsen" },
   { id: "guia_latinoamericana", label: "Guía latinoamericana" },
+  { id: "rfet", label: "RFET" },
   { id: "libre", label: "Libre" },
 ] as const;
 
