@@ -277,6 +277,7 @@ export const AUTORIAS = [
   { id: "academia_christian_larsen", label: "Academia Christian Larsen" },
   { id: "guia_latinoamericana", label: "Guía latinoamericana" },
   { id: "rfet", label: "RFET" },
+  { id: "itf", label: "ITF" },
   { id: "libre", label: "Libre" },
 ] as const;
 
