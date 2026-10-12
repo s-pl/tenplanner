@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting } from "@/lib/app-settings";
+import { getActiveSport } from "@/lib/sports";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
 import { planItemsToWizard } from "@/components/app/session-wizard/timeline";
@@ -39,9 +40,10 @@ export default async function EditSessionPage({ params }: PageProps) {
     .limit(1);
   if (!sessionRow || sessionRow.userId !== user.id) notFound();
 
-  const publicExercisesEnabled = await getBooleanSetting(
-    "feature.public_exercises_enabled"
-  );
+  const [publicExercisesEnabled, sport] = await Promise.all([
+    getBooleanSetting("feature.public_exercises_enabled"),
+    getActiveSport(user.id),
+  ]);
 
   const [plan, studentRows, coachPlaces, userRow, allExercises] =
     await Promise.all([
@@ -60,6 +62,10 @@ export default async function EditSessionPage({ params }: PageProps) {
         .from(users)
         .where(eq(users.id, user.id))
         .limit(1),
+      // Todos los ejercicios del deporte activo (antes se cortaba en 200 por
+      // orden alfabético y mezclando deportes, igual que pasaba en "Nueva
+      // sesión" — ver 7a97549). El paso de ejercicios solo pinta los 30
+      // primeros resultados del buscador.
       db
         .select({
           id: exercises.id,
@@ -71,12 +77,15 @@ export default async function EditSessionPage({ params }: PageProps) {
         })
         .from(exercises)
         .where(
-          publicExercisesEnabled
-            ? exerciseVisibleToUserCondition(user.id)
-            : eq(exercises.createdBy, user.id)
+          and(
+            publicExercisesEnabled
+              ? exerciseVisibleToUserCondition(user.id)
+              : eq(exercises.createdBy, user.id),
+            eq(exercises.sport, sport)
+          )
         )
         .orderBy(exercises.name)
-        .limit(200),
+        .limit(2000),
     ]);
 
   const monitorName =
