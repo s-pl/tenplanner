@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  Check,
   ClipboardList,
+  FileDown,
   FolderPlus,
   GraduationCap,
   Loader2,
@@ -15,6 +17,11 @@ import {
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { nivelLabel } from "@/lib/exercise-taxonomy";
+import { toast } from "sonner";
+import {
+  downloadClassesPdf,
+  MAX_CLASSES_PER_PDF,
+} from "@/lib/classes/download-pdf";
 
 interface ListedClass {
   id: string;
@@ -85,6 +92,43 @@ function ListCard({
   const [renameVal, setRenameVal] = useState(list.name);
   const [renameSaving, setRenameSaving] = useState(false);
   const renameRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pdfLoading, setPdfLoading] = useState<"all" | "selected" | null>(null);
+
+  // Solo cuentan las clases que siguen en la lista (por si se quita alguna).
+  const selectedIds = list.items
+    .map((i) => i.id)
+    .filter((id) => selected.has(id));
+  const allSelected =
+    list.items.length > 0 && selectedIds.length === list.items.length;
+
+  function toggleItem(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // PDF con varias clases de la lista, en el orden de la lista.
+  async function downloadPdf(ids: string[], mode: "all" | "selected") {
+    if (ids.length === 0 || pdfLoading) return;
+    if (ids.length > MAX_CLASSES_PER_PDF) {
+      toast.error(
+        `Máximo ${MAX_CLASSES_PER_PDF} clases por PDF. Despliega la lista y elige menos clases.`
+      );
+      return;
+    }
+    setPdfLoading(mode);
+    try {
+      await downloadClassesPdf(ids, list.name);
+    } catch {
+      toast.error("No se pudo generar el PDF. Inténtalo de nuevo.");
+    } finally {
+      setPdfLoading(null);
+    }
+  }
 
   const accent = ACCENT_PALETTE[index % ACCENT_PALETTE.length];
 
@@ -118,7 +162,9 @@ function ListCard({
     <article
       className={cn(
         "overflow-hidden rounded-2xl border border-foreground/10 bg-card shadow-sm shadow-black/5 transition-all",
-        expanded ? "shadow-lg shadow-foreground/5" : "hover:border-foreground/20"
+        expanded
+          ? "shadow-lg shadow-foreground/5"
+          : "hover:border-foreground/20"
       )}
     >
       <div
@@ -190,7 +236,9 @@ function ListCard({
               )}
             </div>
           )}
-          <span className={cn("font-sans text-[10px] tabular-nums", accent.text)}>
+          <span
+            className={cn("font-sans text-[10px] tabular-nums", accent.text)}
+          >
             {list.itemsCount} clase{list.itemsCount !== 1 ? "s" : ""}
           </span>
         </div>
@@ -199,6 +247,24 @@ function ListCard({
           className="flex items-center gap-1 shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
+          <button
+            title="Descargar PDF de toda la lista"
+            onClick={() =>
+              void downloadPdf(
+                list.items.map((i) => i.id),
+                "all"
+              )
+            }
+            disabled={list.items.length === 0 || pdfLoading !== null}
+            className="inline-flex items-center gap-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold text-foreground/40 hover:text-foreground hover:bg-foreground/8 transition-colors disabled:opacity-30"
+          >
+            {pdfLoading === "all" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <FileDown className="size-3.5" />
+            )}
+            PDF
+          </button>
           <button
             title="Renombrar"
             onClick={() => {
@@ -238,79 +304,139 @@ function ListCard({
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-foreground/8">
-              {list.items.map((item) => {
-                const removeKey = `${list.id}:${item.id}`;
-                return (
-                  <li
-                    key={item.id}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-foreground/[0.015] transition-colors"
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-foreground/8 px-5 py-2.5">
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelected(new Set(list.items.map((i) => i.id)))
+                    }
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 font-semibold transition-colors",
+                      allSelected
+                        ? "border-[#D6FF38] bg-[#D6FF38]/20 text-foreground"
+                        : "border-foreground/15 text-foreground/50 hover:text-foreground"
+                    )}
                   >
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/classes/${item.id}`}
-                        className="block font-sans text-[13px] font-medium text-foreground hover:text-brand transition-colors truncate"
+                    Todas ({list.items.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(new Set())}
+                    className="rounded-full px-2.5 py-1 font-semibold text-foreground/40 hover:text-foreground"
+                  >
+                    Ninguna
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void downloadPdf(selectedIds, "selected")}
+                  disabled={selectedIds.length === 0 || pdfLoading !== null}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-3.5 py-1.5 text-[12px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e] disabled:opacity-40"
+                >
+                  {pdfLoading === "selected" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <FileDown className="size-3.5" />
+                  )}
+                  {pdfLoading === "selected"
+                    ? "Generando…"
+                    : `PDF${selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}`}
+                </button>
+              </div>
+              <ul className="divide-y divide-foreground/8">
+                {list.items.map((item) => {
+                  const removeKey = `${list.id}:${item.id}`;
+                  const isSelected = selected.has(item.id);
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-foreground/[0.015] transition-colors"
+                    >
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        aria-label={`Seleccionar ${item.name}`}
+                        onClick={() => toggleItem(item.id)}
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+                          isSelected
+                            ? "border-[#050505] bg-[#050505] text-white dark:border-white dark:bg-white dark:text-[#050505]"
+                            : "border-foreground/25 hover:border-foreground/50"
+                        )}
                       >
-                        {item.name}
-                      </Link>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "font-sans text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5 rounded",
-                            accent.bg,
-                            accent.text
-                          )}
+                        {isSelected && (
+                          <Check className="size-3.5" strokeWidth={3} />
+                        )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/classes/${item.id}`}
+                          className="block font-sans text-[13px] font-medium text-foreground hover:text-brand transition-colors truncate"
                         >
-                          {item.duracionMinutes}′
-                        </span>
-                        {item.nivel && (
-                          <span className="font-sans text-[9px] text-foreground/40 px-1.5 py-0.5 rounded border border-foreground/10">
-                            {nivelLabel(item.nivel)}
+                          {item.name}
+                        </Link>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "font-sans text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5 rounded",
+                              accent.bg,
+                              accent.text
+                            )}
+                          >
+                            {item.duracionMinutes}′
                           </span>
-                        )}
-                        {item.alumnosTipo && (
-                          <span className="font-sans text-[9px] text-foreground/40 px-1.5 py-0.5 rounded border border-foreground/10 capitalize">
-                            {item.alumnosTipo}
-                          </span>
-                        )}
-                        {item.isLibrary && (
-                          <span className="font-sans text-[9px] text-brand/70 px-1.5 py-0.5 rounded border border-brand/25">
-                            Biblioteca
-                          </span>
-                        )}
+                          {item.nivel && (
+                            <span className="font-sans text-[9px] text-foreground/40 px-1.5 py-0.5 rounded border border-foreground/10">
+                              {nivelLabel(item.nivel)}
+                            </span>
+                          )}
+                          {item.alumnosTipo && (
+                            <span className="font-sans text-[9px] text-foreground/40 px-1.5 py-0.5 rounded border border-foreground/10 capitalize">
+                              {item.alumnosTipo}
+                            </span>
+                          )}
+                          {item.isLibrary && (
+                            <span className="font-sans text-[9px] text-brand/70 px-1.5 py-0.5 rounded border border-brand/25">
+                              Biblioteca
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <Link
-                      href={`/sessions/new?fromClass=${item.id}`}
-                      title="Crear sesión desde esta clase"
-                      className={cn(
-                        "hidden sm:inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold transition-colors",
-                        accent.border,
-                        accent.text,
-                        accent.bg,
-                        "hover:opacity-80"
-                      )}
-                    >
-                      <ClipboardList className="size-3" /> Sesión
-                    </Link>
+                      <Link
+                        href={`/sessions/new?fromClass=${item.id}`}
+                        title="Crear sesión desde esta clase"
+                        className={cn(
+                          "hidden sm:inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold transition-colors",
+                          accent.border,
+                          accent.text,
+                          accent.bg,
+                          "hover:opacity-80"
+                        )}
+                      >
+                        <ClipboardList className="size-3" /> Sesión
+                      </Link>
 
-                    <button
-                      onClick={() => onRemoveItem(list.id, item.id)}
-                      disabled={removingKey === removeKey}
-                      title="Quitar de la lista"
-                      className="p-2 rounded-xl text-foreground/25 hover:text-red-400 hover:bg-red-400/8 transition-colors disabled:opacity-40 shrink-0"
-                    >
-                      {removingKey === removeKey ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <X className="size-3.5" />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                      <button
+                        onClick={() => onRemoveItem(list.id, item.id)}
+                        disabled={removingKey === removeKey}
+                        title="Quitar de la lista"
+                        className="p-2 rounded-xl text-foreground/25 hover:text-red-400 hover:bg-red-400/8 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        {removingKey === removeKey ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <X className="size-3.5" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
       )}
@@ -412,9 +538,7 @@ export function ClassListsSection() {
   }
 
   function handleRename(listId: string, name: string) {
-    setLists((prev) =>
-      prev.map((l) => (l.id === listId ? { ...l, name } : l))
-    );
+    setLists((prev) => prev.map((l) => (l.id === listId ? { ...l, name } : l)));
   }
 
   async function removeFromList(listId: string, classId: string) {
@@ -469,8 +593,8 @@ export function ClassListsSection() {
               Aún no tienes listas de clases.
             </h3>
             <p className="mt-2 text-[14px] text-foreground/40 max-w-xs mx-auto leading-relaxed">
-              Crea tu primera lista y guarda clases desde su ficha con el
-              botón de lista.
+              Crea tu primera lista y guarda clases desde su ficha con el botón
+              de lista.
             </p>
             <button
               onClick={() => setShowCreate(true)}
