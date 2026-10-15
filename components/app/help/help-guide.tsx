@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   CalendarDays,
@@ -47,9 +42,7 @@ function StepList({ steps }: { steps: Step[] }) {
                 className="size-4 shrink-0 text-foreground/50"
                 strokeWidth={1.8}
               />
-              <p className="text-sm font-black text-foreground">
-                {step.title}
-              </p>
+              <p className="text-sm font-black text-foreground">{step.title}</p>
             </div>
             <p className="mt-1 text-sm leading-6 text-foreground/66">
               {step.description}
@@ -121,7 +114,8 @@ const adminSteps: Step[] = [
   },
   {
     title: "Usuarios",
-    description: "Gestiona altas, roles y permisos de las cuentas de la plataforma.",
+    description:
+      "Gestiona altas, roles y permisos de las cuentas de la plataforma.",
     icon: Users,
   },
   {
