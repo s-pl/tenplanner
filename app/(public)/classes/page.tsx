@@ -264,7 +264,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       .leftJoin(users, eq(users.id, classes.createdBy))
       .where(and(...conds))
       .orderBy(...classOrderBy(activeSort))
-      .limit(60);
+      .limit(500);
     rows = rawRows.map((r) => ({
       ...r,
       authorName: user && r.createdBy !== user.id ? r.authorName : null,

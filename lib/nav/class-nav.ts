@@ -41,7 +41,7 @@ export function classOrderBy(sort: ClassSort) {
       return [asc(classes.createdAt)];
     case "alpha":
     default:
-      return [asc(classes.name)];
+      return [sql`lower(${classes.name}) asc`, asc(classes.name)];
   }
 }
 

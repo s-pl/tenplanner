@@ -343,7 +343,19 @@ export function ClassListsSection() {
       const payload = (await res.json().catch(() => ({}))) as {
         data?: ClassListWithItems[];
       };
-      setLists(Array.isArray(payload.data) ? payload.data : []);
+      setLists(
+        Array.isArray(payload.data)
+          ? payload.data.map((l) => ({
+              ...l,
+              items: [...(l.items ?? [])].sort((a, b) =>
+                a.name.localeCompare(b.name, "es", {
+                  numeric: true,
+                  sensitivity: "base",
+                })
+              ),
+            }))
+          : []
+      );
     } finally {
       setLoading(false);
     }
