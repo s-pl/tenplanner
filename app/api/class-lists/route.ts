@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
           .innerJoin(classLists, eq(classLists.id, classListItems.listId))
           .innerJoin(classes, eq(classes.id, classListItems.classId))
           .where(eq(classLists.userId, user.id))
+          // Mismo orden en que se añadieron las clases a la lista.
+          .orderBy(asc(classListItems.createdAt))
       : Promise.resolve(
           [] as Array<{
             listId: string;

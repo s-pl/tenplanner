@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, FileDown, Heart, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { downloadClassesPdf } from "@/lib/classes/download-pdf";
 import { cn } from "@/lib/utils";
 import { autoriaLabel, nivelLabel } from "@/lib/exercise-taxonomy";
 import { AddClassesToListDialog } from "@/components/app/add-classes-to-list-dialog";
@@ -73,17 +74,7 @@ export function ClassesGrid({
     if (ids.length === 0 || downloading) return;
     setDownloading(true);
     try {
-      const res = await fetch(`/api/classes/pdf?ids=${ids.join(",")}`);
-      if (!res.ok) throw new Error("Error generando el PDF");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download =
-        res.headers.get("content-disposition")?.match(/filename="(.+)"/)?.[1] ??
-        "clases.pdf";
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadClassesPdf(ids);
     } catch {
       toast.error("No se pudo generar el PDF. Inténtalo de nuevo.");
     } finally {

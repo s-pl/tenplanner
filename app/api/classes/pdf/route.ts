@@ -18,13 +18,14 @@ import {
 } from "@/lib/classes/pdf-data";
 import { getActiveWorkClubId } from "@/lib/clubs";
 import { canSeeClassDraft } from "@/lib/classes/visibility";
+import { MAX_CLASSES_PER_PDF } from "@/lib/classes/download-pdf";
 
 // Generar muchas clases (con diagramas) puede tardar más que el límite por
 // defecto de una función.
 export const maxDuration = 120;
 
 /** Igual que el máximo de clases que muestra el listado filtrado. */
-const MAX_CLASSES = 60;
+const MAX_CLASSES = MAX_CLASSES_PER_PDF;
 /** Clases que se preparan a la vez, para no saturar la base de datos. */
 const BATCH_SIZE = 5;
 
@@ -53,7 +54,8 @@ const querySchema = z.object({
 /**
  * Genera un único PDF con varias clases (todas las de un filtrado o una
  * selección), cada una en una página nueva y en el orden de `ids`. Uso:
- * GET /api/classes/pdf?ids=<uuid1>,<uuid2>,...
+ * GET /api/classes/pdf?ids=<uuid1>,<uuid2>,...&title=<opcional>
+ * `title` (p. ej. el nombre de una lista) da nombre al documento y al archivo.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -65,6 +67,11 @@ export async function GET(request: Request) {
     );
   }
   const { ids } = parsed.data;
+  const customTitle =
+    (searchParams.get("title") ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100) || null;
 
   const supabase = await createClient();
   const {
@@ -114,9 +121,11 @@ export async function GET(request: Request) {
     }
 
     const title =
-      visible.length === 1 ? visible[0].name : `Clases (${visible.length})`;
-    const filename =
-      visible.length === 1
+      customTitle ??
+      (visible.length === 1 ? visible[0].name : `Clases (${visible.length})`);
+    const filename = customTitle
+      ? `${slugify(customTitle)}.pdf`
+      : visible.length === 1
         ? `clase-${slugify(visible[0].name)}.pdf`
         : `clases-${visible.length}-${new Date().toISOString().split("T")[0]}.pdf`;
 
