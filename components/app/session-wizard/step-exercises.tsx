@@ -913,7 +913,7 @@ export function StepExercises({
                   />
                   <GripVertical className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
                   <div className="flex-1 min-w-0">
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
+                    <p className="flex items-start gap-1.5 text-sm font-medium text-foreground break-words leading-snug">
                       <NextLink
                         href={pickExerciseHref(ex.id, pickerId, "sesion")}
                         target="_blank"
@@ -921,7 +921,7 @@ export function StepExercises({
                         onClick={rememberPickTarget}
                         draggable={false}
                         title="Ver la ficha del ejercicio"
-                        className="min-w-0 truncate hover:text-brand hover:underline"
+                        className="min-w-0 break-words hover:text-brand hover:underline"
                       >
                         {ex.name}
                       </NextLink>
@@ -1199,7 +1199,7 @@ export function StepExercises({
                                         Estaciones ({ex.stations?.length ?? 0})
                                       </p>
                                     ) : (
-                                      <p className="text-sm font-medium text-foreground truncate leading-snug">
+                                      <p className="text-sm font-medium text-foreground break-words leading-snug">
                                         {ex.name}
                                       </p>
                                     )}
