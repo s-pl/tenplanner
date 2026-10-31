@@ -7,6 +7,7 @@ import {
   Download,
   Eraser,
   Loader2,
+  Move,
   Pencil,
   Save,
   Trash2,
@@ -35,6 +36,9 @@ import {
   distance,
   distanceToShape,
   drawingDataUrl,
+  hitTest,
+  translateShape,
+  type DragPart,
   isDrawingUrl,
   parseBoardDoc,
   type BoardDoc,
@@ -47,6 +51,7 @@ const RESOURCES_BUCKET = "resources";
 const BOARD_KEY = "tenplanner-board";
 
 type Tool =
+  | "select"
   | "move"
   | "ball-path"
   | "free"
@@ -58,6 +63,7 @@ type Tool =
   | "erase";
 
 const TOOLS: { id: Tool; label: string; icon: typeof Pencil }[] = [
+  { id: "select", label: "Mover", icon: Move },
   { id: "move", label: "Movimiento", icon: ArrowRight },
   { id: "ball-path", label: "Trayectoria", icon: ArrowRight },
   { id: "free", label: "Lápiz", icon: Pencil },
@@ -301,7 +307,8 @@ export function CourtBoardDialog({
   const [title, setTitle] = useState(editing?.title ?? "");
   const [court, setCourt] = useState<CourtMode>("full");
   const [shapes, setShapes] = useState<Shape[]>([]);
-  const [tool, setTool] = useState<Tool>("move");
+  const [tool, setTool] = useState<Tool>(editing ? "select" : "move");
+  const [dragging, setDragging] = useState(false);
   const [textValue, setTextValue] = useState("Saque");
   const [preview, setPreview] = useState<Shape | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(!!editing);
@@ -312,6 +319,9 @@ export function CourtBoardDialog({
   const svgRef = useRef<SVGSVGElement>(null);
   const startRef = useRef<Pt | null>(null);
   const freeRef = useRef<Pt[]>([]);
+  const dragRef = useRef<{ index: number; part: DragPart; last: Pt } | null>(
+    null
+  );
 
   const vb = COURT_VIEWBOX[court];
 
@@ -371,6 +381,14 @@ export function CourtBoardDialog({
     setMessage(null);
 
     switch (tool) {
+      case "select": {
+        const hit = hitTest(p, shapes);
+        if (hit) {
+          dragRef.current = { index: hit.index, part: hit.part, last: p };
+          setDragging(true);
+        }
+        break;
+      }
       case "move":
       case "ball-path":
         startRef.current = p;
@@ -424,6 +442,20 @@ export function CourtBoardDialog({
   }
 
   function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    const drag = dragRef.current;
+    if (drag) {
+      const q = toPoint(e);
+      if (!q) return;
+      const dx = q[0] - drag.last[0];
+      const dy = q[1] - drag.last[1];
+      drag.last = q;
+      setShapes((prev) =>
+        prev.map((s, i) =>
+          i === drag.index ? translateShape(s, dx, dy, drag.part) : s
+        )
+      );
+      return;
+    }
     if (!preview) return;
     const p = toPoint(e);
     if (!p) return;
@@ -439,6 +471,10 @@ export function CourtBoardDialog({
   }
 
   function onPointerUp() {
+    if (dragRef.current) {
+      dragRef.current = null;
+      setDragging(false);
+    }
     if (preview) {
       if (preview.t === "arrow" && distance(preview.a, preview.b) > 14) {
         setShapes((prev) => [...prev, preview]);
@@ -681,7 +717,14 @@ export function CourtBoardDialog({
                 maxHeight: "62vh",
                 display: "block",
                 touchAction: "none",
-                cursor: tool === "erase" ? "pointer" : "crosshair",
+                cursor:
+                  tool === "select"
+                    ? dragging
+                      ? "grabbing"
+                      : "grab"
+                    : tool === "erase"
+                      ? "pointer"
+                      : "crosshair",
               }}
             >
               <CourtLines />
@@ -693,7 +736,8 @@ export function CourtBoardDialog({
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground">
-            Movimiento: flecha continua · Trayectoria: flecha de puntos ·
+            Mover: arrastra una figura (en una flecha, un extremo para girarla)
+            · Movimiento: flecha continua · Trayectoria: flecha de puntos ·
             Borrar: toca una figura
           </p>
 
