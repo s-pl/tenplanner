@@ -307,6 +307,8 @@ export function CourtBoardDialog({
   const [title, setTitle] = useState(editing?.title ?? "");
   const [court, setCourt] = useState<CourtMode>("full");
   const [shapes, setShapes] = useState<Shape[]>([]);
+  // Estados anteriores, para que "Deshacer" revierta cualquier cambio.
+  const [past, setPast] = useState<Shape[][]>([]);
   const [tool, setTool] = useState<Tool>(editing ? "select" : "move");
   const [dragging, setDragging] = useState(false);
   const [textValue, setTextValue] = useState("Saque");
@@ -319,11 +321,27 @@ export function CourtBoardDialog({
   const svgRef = useRef<SVGSVGElement>(null);
   const startRef = useRef<Pt | null>(null);
   const freeRef = useRef<Pt[]>([]);
-  const dragRef = useRef<{ index: number; part: DragPart; last: Pt } | null>(
-    null
-  );
+  const dragRef = useRef<{
+    index: number;
+    part: DragPart;
+    last: Pt;
+    started: boolean;
+  } | null>(null);
 
   const vb = COURT_VIEWBOX[court];
+
+  /** Aplica un cambio guardando antes el estado actual para poder deshacerlo. */
+  function change(fn: (prev: Shape[]) => Shape[]) {
+    setPast((h) => [...h.slice(-49), shapes]);
+    setShapes(fn);
+  }
+
+  function undo() {
+    const last = past[past.length - 1];
+    if (!last) return;
+    setPast((h) => h.slice(0, -1));
+    setShapes(last);
+  }
 
   // Al retocar un dibujo, recupera sus datos editables.
   useEffect(() => {
@@ -384,7 +402,12 @@ export function CourtBoardDialog({
       case "select": {
         const hit = hitTest(p, shapes);
         if (hit) {
-          dragRef.current = { index: hit.index, part: hit.part, last: p };
+          dragRef.current = {
+            index: hit.index,
+            part: hit.part,
+            last: p,
+            started: false,
+          };
           setDragging(true);
         }
         break;
@@ -399,7 +422,7 @@ export function CourtBoardDialog({
         setPreview({ t: "free", pts: [p] });
         break;
       case "alumno":
-        setShapes((prev) => {
+        change((prev) => {
           const n =
             prev.reduce(
               (max, s) => (s.t === "alumno" ? Math.max(max, s.n) : max),
@@ -409,35 +432,34 @@ export function CourtBoardDialog({
         });
         break;
       case "monitor":
-        setShapes((prev) => [...prev, { t: "monitor", at: p }]);
+        change((prev) => [...prev, { t: "monitor", at: p }]);
         break;
       case "cone":
-        setShapes((prev) => [...prev, { t: "cone", at: p }]);
+        change((prev) => [...prev, { t: "cone", at: p }]);
         break;
       case "ball":
-        setShapes((prev) => [...prev, { t: "ball", at: p }]);
+        change((prev) => [...prev, { t: "ball", at: p }]);
         break;
       case "text":
         if (textValue.trim())
-          setShapes((prev) => [
+          change((prev) => [
             ...prev,
             { t: "text", at: p, text: textValue.trim().slice(0, 24) },
           ]);
         break;
-      case "erase":
-        setShapes((prev) => {
-          let best = -1;
-          let bestD = 26;
-          prev.forEach((s, i) => {
-            const d = distanceToShape(p, s);
-            if (d <= bestD) {
-              bestD = d;
-              best = i;
-            }
-          });
-          return best < 0 ? prev : prev.filter((_, i) => i !== best);
+      case "erase": {
+        let best = -1;
+        let bestD = 26;
+        shapes.forEach((s, i) => {
+          const d = distanceToShape(p, s);
+          if (d <= bestD) {
+            bestD = d;
+            best = i;
+          }
         });
+        if (best >= 0) change((prev) => prev.filter((_, i) => i !== best));
         break;
+      }
     }
   }
 
@@ -448,7 +470,13 @@ export function CourtBoardDialog({
       if (!q) return;
       const dx = q[0] - drag.last[0];
       const dy = q[1] - drag.last[1];
+      if (dx === 0 && dy === 0) return;
       drag.last = q;
+      // El estado previo se guarda al empezar a mover, no al solo tocar.
+      if (!drag.started) {
+        drag.started = true;
+        setPast((h) => [...h.slice(-49), shapes]);
+      }
       setShapes((prev) =>
         prev.map((s, i) =>
           i === drag.index ? translateShape(s, dx, dy, drag.part) : s
@@ -477,9 +505,9 @@ export function CourtBoardDialog({
     }
     if (preview) {
       if (preview.t === "arrow" && distance(preview.a, preview.b) > 14) {
-        setShapes((prev) => [...prev, preview]);
+        change((prev) => [...prev, preview]);
       } else if (preview.t === "free" && preview.pts.length > 2) {
-        setShapes((prev) => [...prev, preview]);
+        change((prev) => [...prev, preview]);
       }
     }
     setPreview(null);
@@ -644,15 +672,15 @@ export function CourtBoardDialog({
             <div className="ml-auto flex gap-1">
               <button
                 type="button"
-                onClick={() => setShapes((prev) => prev.slice(0, -1))}
-                disabled={shapes.length === 0}
+                onClick={undo}
+                disabled={past.length === 0}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/10 px-3 text-xs font-bold disabled:opacity-40"
               >
                 <Undo2 className="size-3.5" /> Deshacer
               </button>
               <button
                 type="button"
-                onClick={() => setShapes([])}
+                onClick={() => change(() => [])}
                 disabled={shapes.length === 0}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/10 px-3 text-xs font-bold disabled:opacity-40"
               >
