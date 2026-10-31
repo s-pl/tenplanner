@@ -96,6 +96,83 @@ export function distanceToShape(p: Pt, s: Shape): number {
   }
 }
 
+export type DragPart = "a" | "b" | "all";
+
+/**
+ * Qué figura hay bajo un punto, para arrastrarla. Las figuras sueltas
+ * (jugadores, conos, pelotas, textos) tienen prioridad sobre las líneas, y
+ * entre iguales gana la de arriba (la última dibujada). En una flecha se
+ * distingue si se agarra un extremo (para cambiar su dirección) o el cuerpo
+ * (para moverla entera).
+ */
+export function hitTest(
+  p: Pt,
+  shapes: Shape[],
+  itemRadius = 24,
+  lineRadius = 16
+): { index: number; part: DragPart } | null {
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if (s.t !== "arrow" && s.t !== "free" && distance(p, s.at) <= itemRadius)
+      return { index: i, part: "all" };
+  }
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if (s.t === "arrow") {
+      if (distance(p, s.b) <= itemRadius) return { index: i, part: "b" };
+      if (distance(p, s.a) <= itemRadius) return { index: i, part: "a" };
+      if (distanceToShape(p, s) <= lineRadius) return { index: i, part: "all" };
+    } else if (s.t === "free" && distanceToShape(p, s) <= lineRadius) {
+      return { index: i, part: "all" };
+    }
+  }
+  return null;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function shapePoints(s: Shape): Pt[] {
+  if (s.t === "arrow") return [s.a, s.b];
+  if (s.t === "free") return s.pts;
+  return [s.at];
+}
+
+/**
+ * Mueve una figura (dx, dy) sin sacarla del lienzo. Para mover toda una
+ * figura de varios puntos se limita el desplazamiento, así no se deforma.
+ */
+export function translateShape(
+  s: Shape,
+  dx: number,
+  dy: number,
+  part: DragPart = "all",
+  bounds = { w: 400, h: 800 }
+): Shape {
+  if (s.t === "arrow" && part !== "all") {
+    const moved = (q: Pt): Pt => [
+      clamp(q[0] + dx, 0, bounds.w),
+      clamp(q[1] + dy, 0, bounds.h),
+    ];
+    return part === "a" ? { ...s, a: moved(s.a) } : { ...s, b: moved(s.b) };
+  }
+  const pts = shapePoints(s);
+  const xs = pts.map((q) => q[0]);
+  const ys = pts.map((q) => q[1]);
+  const mx = clamp(dx, -Math.min(...xs), bounds.w - Math.max(...xs));
+  const my = clamp(dy, -Math.min(...ys), bounds.h - Math.max(...ys));
+  const move = (q: Pt): Pt => [q[0] + mx, q[1] + my];
+  switch (s.t) {
+    case "arrow":
+      return { ...s, a: move(s.a), b: move(s.b) };
+    case "free":
+      return { ...s, pts: s.pts.map(move) };
+    default:
+      return { ...s, at: move(s.at) };
+  }
+}
+
 /** Puntos de la cabeza de una flecha en el extremo `b`. */
 export function arrowHead(a: Pt, b: Pt, size = 14): string {
   const angle = Math.atan2(b[1] - a[1], b[0] - a[0]);

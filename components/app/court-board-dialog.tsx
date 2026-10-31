@@ -7,6 +7,7 @@ import {
   Download,
   Eraser,
   Loader2,
+  Move,
   Pencil,
   Save,
   Trash2,
@@ -24,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { embedPngText, readPngText } from "@/lib/png-text";
 import { cn } from "@/lib/utils";
 import type { ResourceData } from "@/components/app/resource-form-dialog";
 import {
@@ -34,6 +36,9 @@ import {
   distance,
   distanceToShape,
   drawingDataUrl,
+  hitTest,
+  translateShape,
+  type DragPart,
   isDrawingUrl,
   parseBoardDoc,
   type BoardDoc,
@@ -43,8 +48,10 @@ import {
 } from "@/lib/court-board";
 
 const RESOURCES_BUCKET = "resources";
+const BOARD_KEY = "tenplanner-board";
 
 type Tool =
+  | "select"
   | "move"
   | "ball-path"
   | "free"
@@ -56,6 +63,7 @@ type Tool =
   | "erase";
 
 const TOOLS: { id: Tool; label: string; icon: typeof Pencil }[] = [
+  { id: "select", label: "Mover", icon: Move },
   { id: "move", label: "Movimiento", icon: ArrowRight },
   { id: "ball-path", label: "Trayectoria", icon: ArrowRight },
   { id: "free", label: "Lápiz", icon: Pencil },
@@ -299,7 +307,10 @@ export function CourtBoardDialog({
   const [title, setTitle] = useState(editing?.title ?? "");
   const [court, setCourt] = useState<CourtMode>("full");
   const [shapes, setShapes] = useState<Shape[]>([]);
-  const [tool, setTool] = useState<Tool>("move");
+  // Estados anteriores, para que "Deshacer" revierta cualquier cambio.
+  const [past, setPast] = useState<Shape[][]>([]);
+  const [tool, setTool] = useState<Tool>(editing ? "select" : "move");
+  const [dragging, setDragging] = useState(false);
   const [textValue, setTextValue] = useState("Saque");
   const [preview, setPreview] = useState<Shape | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(!!editing);
@@ -310,8 +321,27 @@ export function CourtBoardDialog({
   const svgRef = useRef<SVGSVGElement>(null);
   const startRef = useRef<Pt | null>(null);
   const freeRef = useRef<Pt[]>([]);
+  const dragRef = useRef<{
+    index: number;
+    part: DragPart;
+    last: Pt;
+    started: boolean;
+  } | null>(null);
 
   const vb = COURT_VIEWBOX[court];
+
+  /** Aplica un cambio guardando antes el estado actual para poder deshacerlo. */
+  function change(fn: (prev: Shape[]) => Shape[]) {
+    setPast((h) => [...h.slice(-49), shapes]);
+    setShapes(fn);
+  }
+
+  function undo() {
+    const last = past[past.length - 1];
+    if (!last) return;
+    setPast((h) => h.slice(0, -1));
+    setShapes(last);
+  }
 
   // Al retocar un dibujo, recupera sus datos editables.
   useEffect(() => {
@@ -319,9 +349,19 @@ export function CourtBoardDialog({
     let active = true;
     (async () => {
       try {
-        const res = await fetch(drawingDataUrl(editing.imageUrl!));
+        // Los trazos viajan dentro del propio PNG.
+        const res = await fetch(editing.imageUrl!);
         if (!res.ok) throw new Error("no data");
-        const doc = parseBoardDoc(await res.json());
+        const text = readPngText(
+          new Uint8Array(await res.arrayBuffer()),
+          BOARD_KEY
+        );
+        let doc = text ? parseBoardDoc(JSON.parse(text)) : null;
+        if (!doc) {
+          // Dibujos guardados con la primera versión: trazos en un .json aparte.
+          const legacy = await fetch(drawingDataUrl(editing.imageUrl!));
+          if (legacy.ok) doc = parseBoardDoc(await legacy.json());
+        }
         if (!doc) throw new Error("bad data");
         if (active) {
           setShapes(doc.shapes);
@@ -330,7 +370,7 @@ export function CourtBoardDialog({
       } catch {
         if (active)
           setMessage(
-            "No se pudieron recuperar los trazos de este dibujo. Puedes dibujar uno nuevo y guardarlo encima."
+            "Este dibujo se guardó sin trazos editables. Puedes dibujar uno nuevo y guardarlo encima."
           );
       } finally {
         if (active) setLoadingDoc(false);
@@ -359,6 +399,19 @@ export function CourtBoardDialog({
     setMessage(null);
 
     switch (tool) {
+      case "select": {
+        const hit = hitTest(p, shapes);
+        if (hit) {
+          dragRef.current = {
+            index: hit.index,
+            part: hit.part,
+            last: p,
+            started: false,
+          };
+          setDragging(true);
+        }
+        break;
+      }
       case "move":
       case "ball-path":
         startRef.current = p;
@@ -369,7 +422,7 @@ export function CourtBoardDialog({
         setPreview({ t: "free", pts: [p] });
         break;
       case "alumno":
-        setShapes((prev) => {
+        change((prev) => {
           const n =
             prev.reduce(
               (max, s) => (s.t === "alumno" ? Math.max(max, s.n) : max),
@@ -379,39 +432,58 @@ export function CourtBoardDialog({
         });
         break;
       case "monitor":
-        setShapes((prev) => [...prev, { t: "monitor", at: p }]);
+        change((prev) => [...prev, { t: "monitor", at: p }]);
         break;
       case "cone":
-        setShapes((prev) => [...prev, { t: "cone", at: p }]);
+        change((prev) => [...prev, { t: "cone", at: p }]);
         break;
       case "ball":
-        setShapes((prev) => [...prev, { t: "ball", at: p }]);
+        change((prev) => [...prev, { t: "ball", at: p }]);
         break;
       case "text":
         if (textValue.trim())
-          setShapes((prev) => [
+          change((prev) => [
             ...prev,
             { t: "text", at: p, text: textValue.trim().slice(0, 24) },
           ]);
         break;
-      case "erase":
-        setShapes((prev) => {
-          let best = -1;
-          let bestD = 26;
-          prev.forEach((s, i) => {
-            const d = distanceToShape(p, s);
-            if (d <= bestD) {
-              bestD = d;
-              best = i;
-            }
-          });
-          return best < 0 ? prev : prev.filter((_, i) => i !== best);
+      case "erase": {
+        let best = -1;
+        let bestD = 26;
+        shapes.forEach((s, i) => {
+          const d = distanceToShape(p, s);
+          if (d <= bestD) {
+            bestD = d;
+            best = i;
+          }
         });
+        if (best >= 0) change((prev) => prev.filter((_, i) => i !== best));
         break;
+      }
     }
   }
 
   function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    const drag = dragRef.current;
+    if (drag) {
+      const q = toPoint(e);
+      if (!q) return;
+      const dx = q[0] - drag.last[0];
+      const dy = q[1] - drag.last[1];
+      if (dx === 0 && dy === 0) return;
+      drag.last = q;
+      // El estado previo se guarda al empezar a mover, no al solo tocar.
+      if (!drag.started) {
+        drag.started = true;
+        setPast((h) => [...h.slice(-49), shapes]);
+      }
+      setShapes((prev) =>
+        prev.map((s, i) =>
+          i === drag.index ? translateShape(s, dx, dy, drag.part) : s
+        )
+      );
+      return;
+    }
     if (!preview) return;
     const p = toPoint(e);
     if (!p) return;
@@ -427,11 +499,15 @@ export function CourtBoardDialog({
   }
 
   function onPointerUp() {
+    if (dragRef.current) {
+      dragRef.current = null;
+      setDragging(false);
+    }
     if (preview) {
       if (preview.t === "arrow" && distance(preview.a, preview.b) > 14) {
-        setShapes((prev) => [...prev, preview]);
+        change((prev) => [...prev, preview]);
       } else if (preview.t === "free" && preview.pts.length > 2) {
-        setShapes((prev) => [...prev, preview]);
+        change((prev) => [...prev, preview]);
       }
     }
     setPreview(null);
@@ -500,8 +576,18 @@ export function CourtBoardDialog({
     setError(null);
     setMessage(null);
     try {
-      const png = await renderPng();
+      const plain = await renderPng();
       const doc: BoardDoc = { v: 1, sport: "tenis", court, shapes };
+      const png = new Blob(
+        [
+          embedPngText(
+            new Uint8Array(await plain.arrayBuffer()),
+            BOARD_KEY,
+            JSON.stringify(doc)
+          ),
+        ],
+        { type: "image/png" }
+      );
       const base = `${userId}/${DRAWINGS_FOLDER}/${Date.now()}`;
       const supabase = createClient();
 
@@ -509,15 +595,6 @@ export function CourtBoardDialog({
         .from(RESOURCES_BUCKET)
         .upload(`${base}.png`, png, { contentType: "image/png", upsert: true });
       if (pngErr) throw pngErr;
-
-      // Los datos editables son un extra: si fallan, la imagen se guarda igual.
-      const { error: jsonErr } = await supabase.storage
-        .from(RESOURCES_BUCKET)
-        .upload(
-          `${base}.json`,
-          new Blob([JSON.stringify(doc)], { type: "application/json" }),
-          { contentType: "application/json", upsert: true }
-        );
 
       const {
         data: { publicUrl },
@@ -539,13 +616,6 @@ export function CourtBoardDialog({
       const json = (await res.json()) as { data: ResourceData };
       onSaved(json.data);
 
-      if (jsonErr) {
-        setMessage(
-          "Imagen guardada. No se pudieron guardar los trazos, así que no podrás editarlo después."
-        );
-        setSaving(false);
-        return;
-      }
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar el dibujo");
@@ -602,15 +672,15 @@ export function CourtBoardDialog({
             <div className="ml-auto flex gap-1">
               <button
                 type="button"
-                onClick={() => setShapes((prev) => prev.slice(0, -1))}
-                disabled={shapes.length === 0}
+                onClick={undo}
+                disabled={past.length === 0}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/10 px-3 text-xs font-bold disabled:opacity-40"
               >
                 <Undo2 className="size-3.5" /> Deshacer
               </button>
               <button
                 type="button"
-                onClick={() => setShapes([])}
+                onClick={() => change(() => [])}
                 disabled={shapes.length === 0}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-foreground/10 px-3 text-xs font-bold disabled:opacity-40"
               >
@@ -675,7 +745,14 @@ export function CourtBoardDialog({
                 maxHeight: "62vh",
                 display: "block",
                 touchAction: "none",
-                cursor: tool === "erase" ? "pointer" : "crosshair",
+                cursor:
+                  tool === "select"
+                    ? dragging
+                      ? "grabbing"
+                      : "grab"
+                    : tool === "erase"
+                      ? "pointer"
+                      : "crosshair",
               }}
             >
               <CourtLines />
@@ -687,7 +764,8 @@ export function CourtBoardDialog({
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground">
-            Movimiento: flecha continua · Trayectoria: flecha de puntos ·
+            Mover: arrastra una figura (en una flecha, un extremo para girarla)
+            · Movimiento: flecha continua · Trayectoria: flecha de puntos ·
             Borrar: toca una figura
           </p>
 
