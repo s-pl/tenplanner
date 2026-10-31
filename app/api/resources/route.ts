@@ -1,9 +1,13 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { resources, users } from "@/db/schema";
-import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import {
+  getActiveWorkClubId,
+  getClubAccountClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { createClient } from "@/lib/supabase/server";
 
 const createSchema = z.object({
@@ -31,18 +35,26 @@ export async function GET() {
 
   // Particular: solo los míos. Club: los de todos los miembros del club.
   const activeClubId = await getActiveWorkClubId(user.id);
+  let visible = sharedWithClubCondition(
+    resources.userId,
+    resources.clubId,
+    user.id,
+    activeClubId
+  );
+  // Una cuenta de club no tiene espacio particular: los recursos que creó
+  // antes de que existiera "Recursos club" (sin club asignado) siguen siendo
+  // suyos y deben verse en su carpeta.
+  if (activeClubId && (await getClubAccountClubId(user.id))) {
+    visible = or(
+      visible,
+      and(eq(resources.userId, user.id), isNull(resources.clubId))
+    )!;
+  }
   const rows = await db
     .select({ resource: resources, authorName: users.name })
     .from(resources)
     .innerJoin(users, eq(users.id, resources.userId))
-    .where(
-      sharedWithClubCondition(
-        resources.userId,
-        resources.clubId,
-        user.id,
-        activeClubId
-      )
-    )
+    .where(visible)
     .orderBy(desc(resources.createdAt));
 
   return NextResponse.json({

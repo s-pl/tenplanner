@@ -167,12 +167,20 @@ export function ResourcesPanel({
       <div key={r.id} className="tp-panel space-y-3 p-4">
         <div className="flex items-start gap-3">
           {r.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- stored/external url preview
-            <img
-              src={r.imageUrl}
-              alt={r.title}
-              className="size-12 shrink-0 rounded-xl object-cover border border-foreground/10"
-            />
+            <a
+              href={r.imageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Ver imagen"
+              className="shrink-0"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- stored/external url preview */}
+              <img
+                src={r.imageUrl}
+                alt={r.title}
+                className="size-12 rounded-xl object-cover border border-foreground/10"
+              />
+            </a>
           ) : (
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-foreground/10 bg-background text-muted-foreground">
               {r.documentUrl ? (
@@ -239,10 +247,26 @@ export function ResourcesPanel({
             </a>
           )}
           {!r.url && !r.documentUrl && r.imageUrl && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 px-3 py-1.5 text-xs font-bold text-muted-foreground">
+            <a
+              href={r.imageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 px-3 py-1.5 text-xs font-bold text-foreground transition-colors hover:border-brand/40 hover:text-brand"
+            >
               <ImageIcon className="size-3.5" />
-              {isDrawingUrl(r.imageUrl) ? "Dibujo" : "Imagen"}
-            </span>
+              {isDrawingUrl(r.imageUrl) ? "Ver dibujo" : "Ver imagen"}
+              <ExternalLink className="size-3" />
+            </a>
+          )}
+          {isMine && isDrawingUrl(r.imageUrl) && (
+            <button
+              type="button"
+              onClick={() => setBoardState({ resource: r })}
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:bg-brand/10"
+            >
+              <PenTool className="size-3.5" />
+              Editar dibujo
+            </button>
           )}
 
           <div className="ml-auto flex items-center gap-1">

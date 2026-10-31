@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { embedPngText, readPngText } from "@/lib/png-text";
 import { cn } from "@/lib/utils";
 import type { ResourceData } from "@/components/app/resource-form-dialog";
 import {
@@ -43,6 +44,7 @@ import {
 } from "@/lib/court-board";
 
 const RESOURCES_BUCKET = "resources";
+const BOARD_KEY = "tenplanner-board";
 
 type Tool =
   | "move"
@@ -319,9 +321,19 @@ export function CourtBoardDialog({
     let active = true;
     (async () => {
       try {
-        const res = await fetch(drawingDataUrl(editing.imageUrl!));
+        // Los trazos viajan dentro del propio PNG.
+        const res = await fetch(editing.imageUrl!);
         if (!res.ok) throw new Error("no data");
-        const doc = parseBoardDoc(await res.json());
+        const text = readPngText(
+          new Uint8Array(await res.arrayBuffer()),
+          BOARD_KEY
+        );
+        let doc = text ? parseBoardDoc(JSON.parse(text)) : null;
+        if (!doc) {
+          // Dibujos guardados con la primera versión: trazos en un .json aparte.
+          const legacy = await fetch(drawingDataUrl(editing.imageUrl!));
+          if (legacy.ok) doc = parseBoardDoc(await legacy.json());
+        }
         if (!doc) throw new Error("bad data");
         if (active) {
           setShapes(doc.shapes);
@@ -330,7 +342,7 @@ export function CourtBoardDialog({
       } catch {
         if (active)
           setMessage(
-            "No se pudieron recuperar los trazos de este dibujo. Puedes dibujar uno nuevo y guardarlo encima."
+            "Este dibujo se guardó sin trazos editables. Puedes dibujar uno nuevo y guardarlo encima."
           );
       } finally {
         if (active) setLoadingDoc(false);
@@ -500,8 +512,18 @@ export function CourtBoardDialog({
     setError(null);
     setMessage(null);
     try {
-      const png = await renderPng();
+      const plain = await renderPng();
       const doc: BoardDoc = { v: 1, sport: "tenis", court, shapes };
+      const png = new Blob(
+        [
+          embedPngText(
+            new Uint8Array(await plain.arrayBuffer()),
+            BOARD_KEY,
+            JSON.stringify(doc)
+          ),
+        ],
+        { type: "image/png" }
+      );
       const base = `${userId}/${DRAWINGS_FOLDER}/${Date.now()}`;
       const supabase = createClient();
 
@@ -509,15 +531,6 @@ export function CourtBoardDialog({
         .from(RESOURCES_BUCKET)
         .upload(`${base}.png`, png, { contentType: "image/png", upsert: true });
       if (pngErr) throw pngErr;
-
-      // Los datos editables son un extra: si fallan, la imagen se guarda igual.
-      const { error: jsonErr } = await supabase.storage
-        .from(RESOURCES_BUCKET)
-        .upload(
-          `${base}.json`,
-          new Blob([JSON.stringify(doc)], { type: "application/json" }),
-          { contentType: "application/json", upsert: true }
-        );
 
       const {
         data: { publicUrl },
@@ -539,13 +552,6 @@ export function CourtBoardDialog({
       const json = (await res.json()) as { data: ResourceData };
       onSaved(json.data);
 
-      if (jsonErr) {
-        setMessage(
-          "Imagen guardada. No se pudieron guardar los trazos, así que no podrás editarlo después."
-        );
-        setSaving(false);
-        return;
-      }
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar el dibujo");
