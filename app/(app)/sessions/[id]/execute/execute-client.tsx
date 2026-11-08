@@ -94,6 +94,7 @@ interface StudentData {
   name: string;
   attended: boolean | null;
   rating: number | null;
+  feedback?: string | null;
 }
 
 interface Props {
@@ -196,6 +197,13 @@ export function ExecuteSessionClient({
   );
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  const [studentFeedback, setStudentFeedback] = useState<
+    Record<string, string>
+  >(() =>
+    Object.fromEntries(
+      students.filter((s) => s.feedback).map((s) => [s.id, s.feedback as string])
+    )
+  );
   // Valoración al terminar: estrellas de la clase (obligatoria), comentario y
   // estrellas por alumno (opcionales).
   const [sessionRating, setSessionRating] = useState(
@@ -413,14 +421,23 @@ export function ExecuteSessionClient({
           }),
         }),
         ...students
-          .filter((student) => (studentRatings[student.id] ?? 0) > 0)
+          .filter(
+            (student) =>
+              (studentRatings[student.id] ?? 0) > 0 ||
+              (studentFeedback[student.id] ?? "").trim() !== ""
+          )
           .map((student) =>
             fetch(`/api/sessions/${session.id}/attendance`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 studentId: student.id,
-                rating: studentRatings[student.id],
+                ...((studentRatings[student.id] ?? 0) > 0
+                  ? { rating: studentRatings[student.id] }
+                  : {}),
+                ...((studentFeedback[student.id] ?? "").trim() !== ""
+                  ? { feedback: studentFeedback[student.id].trim() }
+                  : {}),
               }),
             })
           ),
@@ -525,10 +542,8 @@ export function ExecuteSessionClient({
           </summary>
           <ul className="divide-y divide-[#050505]/10 border-t border-[#050505]/10 dark:divide-white/10 dark:border-white/10">
             {reviewStudents.map((student) => (
-              <li
-                key={student.id}
-                className="flex items-center justify-between gap-2 px-3 py-2"
-              >
+              <li key={student.id} className="space-y-2 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {student.name}
                 </span>
@@ -543,6 +558,21 @@ export function ExecuteSessionClient({
                     }))
                   }
                   label={`Valoración de ${student.name}`}
+                />
+                </div>
+                <textarea
+                  value={studentFeedback[student.id] ?? ""}
+                  onChange={(e) =>
+                    setStudentFeedback((prev) => ({
+                      ...prev,
+                      [student.id]: e.target.value,
+                    }))
+                  }
+                  rows={2}
+                  maxLength={1000}
+                  aria-label={`Comentario sobre ${student.name}`}
+                  placeholder="Comentario sobre este alumno (opcional)"
+                  className="w-full resize-none rounded-xl border border-[#050505]/10 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40 dark:border-white/10"
                 />
               </li>
             ))}
