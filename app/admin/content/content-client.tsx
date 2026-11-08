@@ -81,11 +81,6 @@ interface Props {
   tab: string;
 }
 
-const DIFF_LABEL: Record<string, string> = {
-  beginner: "Inicio",
-  intermediate: "Medio",
-  advanced: "Avanzado",
-};
 const CAT_LABEL: Record<string, string> = {
   technique: "Técnica",
   tactics: "Táctica",
@@ -415,9 +410,6 @@ export function AdminContentClient({
                     <p className="truncate text-sm font-medium text-foreground">
                       {e.name}
                     </p>
-                    <p className="mt-0.5 text-xs text-foreground/40">
-                      {DIFF_LABEL[e.difficulty] ?? e.difficulty}
-                    </p>
                   </div>
                   <Badge
                     variant="outline"
@@ -575,9 +567,6 @@ export function AdminContentClient({
                     <TableCell>
                       <p className="text-sm font-medium text-foreground">
                         {e.name}
-                      </p>
-                      <p className="text-xs text-foreground/40">
-                        {DIFF_LABEL[e.difficulty] ?? e.difficulty}
                       </p>
                     </TableCell>
                     <TableCell>

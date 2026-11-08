@@ -121,12 +121,6 @@ const CAT: Record<Category, { label: string; code: string }> = {
   fitness: { label: "Fitness", code: "FÍS" },
   "warm-up": { label: "Calentamiento", code: "CAL" },
 };
-const DIFF: Record<Difficulty, { label: string; bars: number }> = {
-  beginner: { label: "Principiante", bars: 2 },
-  intermediate: { label: "Intermedio", bars: 3 },
-  advanced: { label: "Avanzado", bars: 5 },
-};
-
 const LEVEL_LABEL: Record<string, string> = {
   beginner: "Principiante",
   amateur: "Amateur",
@@ -520,7 +514,6 @@ function ExerciseCard({
   onModify: (ex: ExerciseItem) => void;
 }) {
   const cat = CAT[exercise.category] ?? CAT.technique;
-  const diff = DIFF[exercise.difficulty] ?? DIFF.intermediate;
   return (
     <div
       onClick={onToggle}
@@ -574,20 +567,6 @@ function ExerciseCard({
           <span className="flex items-center gap-1">
             <Clock className="size-3" strokeWidth={1.6} />
             {exercise.durationMinutes}′
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="flex gap-[2px]">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <span
-                  key={n}
-                  className={cn(
-                    "w-[2px] h-2",
-                    n <= diff.bars ? "bg-brand" : "bg-foreground/15"
-                  )}
-                />
-              ))}
-            </span>
-            {diff.label}
           </span>
         </div>
         <button
