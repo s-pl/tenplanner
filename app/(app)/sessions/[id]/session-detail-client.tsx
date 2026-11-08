@@ -59,12 +59,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   "warm-up": "Calentamiento",
 };
 
-const DIFFICULTY_META: Record<string, { label: string; color: string }> = {
-  beginner: { label: "Principiante", color: "text-brand" },
-  intermediate: { label: "Intermedio", color: "text-amber-400" },
-  advanced: { label: "Avanzado", color: "text-red-400" },
-};
-
 export interface SessionData {
   id: string;
   title: string;
@@ -1178,7 +1172,6 @@ export function SessionDetailClient({
           </div>
           <div className="flex flex-col gap-3 p-4 sm:p-5">
             {sessionExercises.map((ex, idx) => {
-              const diff = DIFFICULTY_META[ex.difficulty];
               const currentRating = exerciseRatings[ex.exerciseId] ?? 0;
               const isSaving = savingRating === ex.exerciseId;
               return (
@@ -1206,14 +1199,6 @@ export function SessionDetailClient({
                           )}
                         >
                           {CATEGORY_LABELS[ex.category] ?? ex.category}
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[10px] font-medium",
-                            diff?.color ?? "text-muted-foreground"
-                          )}
-                        >
-                          {diff?.label ?? ex.difficulty}
                         </span>
                       </div>
                       {ex.description && (
