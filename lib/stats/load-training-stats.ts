@@ -35,7 +35,10 @@ function pastNotCancelled() {
   );
 }
 
-async function statsForSessionIds(ids: string[]): Promise<TrainingStats> {
+/** Estadística de entrenamiento de un conjunto de sesiones (por id). */
+export async function statsForSessionIds(
+  ids: string[]
+): Promise<TrainingStats> {
   if (ids.length === 0) return computeTrainingStats([], new Map());
 
   const [sessionRows, itemRows] = await Promise.all([
@@ -173,9 +176,11 @@ export async function loadGroupTrainingStats(groupId: string): Promise<{
             and(
               inArray(sessionStudents.sessionId, ids),
               // Si se pasó lista y faltó, no cuenta.
+              // (Un "no viene" previsto solo es falta si la sesión se completó.)
               or(
                 isNull(sessionStudents.attended),
-                eq(sessionStudents.attended, true)
+                eq(sessionStudents.attended, true),
+                ne(sessions.status, "completed")
               )
             )
           )
@@ -214,7 +219,11 @@ export async function loadStudentTrainingStats(
       and(
         eq(sessionStudents.studentId, studentId),
         pastNotCancelled(),
-        or(isNull(sessionStudents.attended), eq(sessionStudents.attended, true))
+        or(
+          isNull(sessionStudents.attended),
+          eq(sessionStudents.attended, true),
+          ne(sessions.status, "completed")
+        )
       )
     );
   return statsForSessionIds(rows.map((r) => r.id));
@@ -239,7 +248,11 @@ export async function loadStudentTrainingStatsInRange(
         pastNotCancelled(),
         gte(sessions.scheduledAt, from),
         lte(sessions.scheduledAt, to),
-        or(isNull(sessionStudents.attended), eq(sessionStudents.attended, true))
+        or(
+          isNull(sessionStudents.attended),
+          eq(sessionStudents.attended, true),
+          ne(sessions.status, "completed")
+        )
       )
     );
   return statsForSessionIds(rows.map((r) => r.id));

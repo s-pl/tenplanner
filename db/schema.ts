@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   integer,
+  smallint,
   timestamp,
   pgEnum,
   json,
@@ -122,6 +123,30 @@ export const sportEnum = pgEnum("sport", [
   "tenis_playa",
 ]);
 
+// Escalera de niveles (migración 0094). Catálogo: solo cambia con
+// migraciones. `position` ordena dentro de (sport, track); track "base" o
+// "adultos". Ver lib/skill-levels.ts.
+export const skillLevels = pgTable(
+  "skill_levels",
+  {
+    code: varchar("code", { length: 32 }).primaryKey(),
+    sport: sportEnum("sport").default("tenis").notNull(),
+    track: varchar("track", { length: 16 }).default("base").notNull(),
+    position: smallint("position").notNull(),
+    labelEs: varchar("label_es", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("skill_levels_sport_track_position_uniq").on(
+      t.sport,
+      t.track,
+      t.position
+    ),
+  ]
+);
+
 // Users — id references auth.users(id) managed by Supabase Auth
 export const users = pgTable(
   "users",
@@ -130,6 +155,9 @@ export const users = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull().unique(),
     image: text("image"),
+    // Enlace público para reservar sus pistas (/reservar/<token>). null =
+    // aún no lo ha generado.
+    bookingToken: varchar("booking_token", { length: 40 }).unique(),
     city: varchar("city", { length: 255 }),
     role: varchar("role", { length: 20 }), // "player" | "coach" | "both"
     playerLevel: varchar("player_level", { length: 30 }), // "beginner" | "amateur" | "intermediate" | "advanced" | "competitive"
@@ -159,6 +187,10 @@ export const users = pgTable(
     // estadísticas de monitores y alumnos del club, y gestión de monitores.
     // Solo consulta; activeClubId sigue apuntando a su club.
     managementMode: boolean("management_mode").default(false).notNull(),
+    // DEPRECADO: no usar. Columna de la migración 0066_user_ten_planner_mode,
+    // que sigue en producción. El "Modo Ten Planner" se deduce hoy de
+    // isPlatformAccount y adminMode (ver app/(app)/layout.tsx).
+    tenPlannerMode: boolean("ten_planner_mode").default(false).notNull(),
     // Deporte activo: el contexto que filtra todo lo que el usuario ve y
     // crea (sesiones, biblioteca, grupos...). Se elige y cambia desde el
     // selector de deporte, no por elemento. Independiente de activeClubId:
@@ -191,6 +223,10 @@ export const exercises = pgTable(
     // (una AnimationScene de lib/classes/animation.ts). Null = se deduce
     // del texto.
     animationScene: varchar("animation_scene", { length: 24 }),
+    // Existe en producción y ningún código la usa todavía (la animación sale
+    // de animationScene y del texto). Se declara para que schema.ts coincida
+    // con la base; no borrar.
+    animation: json("animation"),
     steps: json("steps").$type<Array<{ title: string; description: string }>>(),
     materials: json("materials").$type<string[]>(),
     imageUrl: text("image_url"),
@@ -230,6 +266,11 @@ export const exercises = pgTable(
     autoria: varchar("autoria", { length: 64 }).default("libre"),
     isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
     isGlobal: boolean("is_global").default(false).notNull(),
+    // Solo para ejercicios globales: si es false, no aparece en la biblioteca,
+    // el buscador, Dr. Planner ni las propuestas de sesión (salvo para el
+    // administrador). Las clases que ya lo usan siguen funcionando.
+    // Migración 0099_exercise_published.
+    isPublished: boolean("is_published").default(true).notNull(),
     // null = ejercicio del espacio particular de su autor. Se asigna cuando
     // el monitor lo crea trabajando como un club (modo de trabajo): queda
     // compartido con todos los miembros activos de ese club ("Mis
@@ -255,11 +296,25 @@ export const exercises = pgTable(
     index("exercises_created_by_idx").on(t.createdBy),
     index("exercises_created_by_name_idx").on(t.createdBy, t.name),
     index("exercises_is_global_idx").on(t.isGlobal),
+    index("exercises_global_published_idx").on(t.isGlobal, t.isPublished),
     index("exercises_category_created_at_idx").on(t.category, t.createdAt),
     index("exercises_name_idx").on(t.name),
     index("exercises_autoria_idx").on(t.autoria),
     index("exercises_sport_idx").on(t.sport),
     index("exercises_club_id_idx").on(t.clubId),
+    // Índices creados por migraciones SQL (0010, 0015, 0017, 0027) que ya
+    // existen en producción; se declaran aquí para que schema.ts los refleje.
+    index("exercises_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
+    index("exercises_formato_idx").on(t.formato),
+    index("exercises_tipo_actividad_idx").on(t.tipoActividad),
+    index("exercises_tipo_pelota_idx").on(t.tipoPelota),
+    index("exercises_num_jugadores_idx").on(t.numJugadores),
+    index("exercises_niveles_gin_idx").using("gin", t.niveles),
+    index("exercises_aspectos_juego_gin_idx").using("gin", t.aspectosJuego),
+    index("exercises_parametros_gin_idx").using("gin", t.parametros),
+    index("exercises_tipos_actividad_gin_idx").using("gin", t.tiposActividad),
+    index("exercises_fases_gin_idx").using("gin", t.fases),
+    index("exercises_tipo_competicion_gin_idx").using("gin", t.tipoCompeticion),
   ]
 );
 
@@ -273,6 +328,11 @@ export const places = pgTable(
       .notNull(),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description"),
+    // Reserva pública: si la pista se puede reservar desde el enlace público
+    // y su horario (minutos desde medianoche, hora local).
+    bookingEnabled: boolean("booking_enabled").notNull().default(false),
+    bookingOpenMinute: integer("booking_open_minute").notNull().default(480),
+    bookingCloseMinute: integer("booking_close_minute").notNull().default(1320),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -284,6 +344,35 @@ export const places = pgTable(
   (t) => [
     index("places_coach_id_idx").on(t.coachId),
     uniqueIndex("places_coach_name_uniq").on(t.coachId, t.name),
+  ]
+);
+
+// Reservas públicas de pistas (desde /reservar/<token>, sin cuenta).
+export const courtBookings = pgTable(
+  "court_bookings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    placeId: uuid("place_id")
+      .references(() => places.id, { onDelete: "cascade" })
+      .notNull(),
+    // Dueño de la pista (el monitor o la cuenta del club).
+    ownerId: uuid("owner_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    // Cliente: nombre y apellidos. Reserva del club: para qué es.
+    fullName: varchar("full_name", { length: 120 }).notNull(),
+    // "public" = desde el enlace público; "club" = la hace el propio club.
+    kind: varchar("kind", { length: 16 }).notNull().default("public"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("court_bookings_place_start_idx").on(t.placeId, t.startAt),
+    index("court_bookings_owner_start_idx").on(t.ownerId, t.startAt),
   ]
 );
 
@@ -299,6 +388,12 @@ export const sessions = pgTable(
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
+    // Monitor que imparte la sesión (puede no ser quien la creó: el gestor
+    // del club la crea y se la asigna). null = la imparte el creador.
+    // Ver lib/sessions/permissions.ts.
+    coachId: uuid("coach_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     objective: text("objective"),
     material: text("material"),
     observations: text("observations"),
@@ -325,21 +420,41 @@ export const sessions = pgTable(
     // Deporte de la sesión. Si viene de una clase/grupo, hereda el suyo al
     // crearse; default "tenis" para que lo existente migre sin tocar datos.
     sport: sportEnum("sport").default("tenis").notNull(),
+    // Pistas que usa la sesión (1 o 2). Con 2, cada item del plan indica su
+    // pista (session_block_items.court). Default 1 = como siempre.
+    courts: smallint("courts").default(1).notNull(),
+    // Lugar de la segunda pista (Mis lugares). Con courts = 2 la sesión
+    // ocupa placeId y secondPlaceId (reservas y coincidencias).
+    secondPlaceId: uuid("second_place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
     status: sessionStatusEnum("status").notNull().default("scheduled"),
     statusNote: text("status_note"), // notas de completada / motivo de cancelada
     // Comentario libre del monitor sobre la sesión en general; se puede
     // escribir antes o después de marcarla como completada.
     coachComment: text("coach_comment"),
+    // Valoración global de la clase (1-5), obligatoria al terminar la sesión en marcha.
+    coachRating: integer("coach_rating"),
+    // DEPRECADO: no usar. Viene de la migración 0084 de s-pl; existe en
+    // producción, nunca se ha rellenado. La valoración de la sesión es
+    // coachRating. Ver docs/f1-plan.md ("Tres campos de valoración").
+    sessionRating: integer("session_rating"),
+    // Cierre: ¿se dio tal y como estaba planificada? (null = sin responder)
+    // y motivo del cambio (clave de lib/sessions/plan-change.ts, opcional).
+    planFollowed: boolean("plan_followed"),
+    planChangeReason: varchar("plan_change_reason", { length: 40 }),
     // Nota de voz del monitor sobre la sesión en general: ruta del archivo
     // en el bucket privado "session-audio" y duración en segundos.
     coachAudioPath: text("coach_audio_path"),
     coachAudioSeconds: integer("coach_audio_seconds"),
-    // Cierre de la sesión: ¿se dio tal y como estaba planificada? (null =
-    // sin responder, sesiones antiguas), motivo del cambio (clave de
-    // lib/sessions/plan-change.ts, opcional) y valoración final 1-5.
-    planFollowed: boolean("plan_followed"),
-    planChangeReason: varchar("plan_change_reason", { length: 40 }),
-    sessionRating: integer("session_rating"),
+    // Motor "Monta la clase" (migración 0095): versión del motor ("auto_v1")
+    // o null, la entrada (GenerateInput) y la traza para explicar y depurar.
+    generatedBy: varchar("generated_by", { length: 16 }),
+    generationInput: jsonb("generation_input"),
+    generationTrace: jsonb("generation_trace"),
+    // Vía de creación (ver SessionCreatedVia en lib/sessions/created-via.ts).
+    // null = anterior a la medición.
+    createdVia: varchar("created_via", { length: 16 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -353,9 +468,14 @@ export const sessions = pgTable(
     index("sessions_scheduled_at_idx").on(t.scheduledAt),
     index("sessions_user_scheduled_at_idx").on(t.userId, t.scheduledAt),
     index("sessions_place_id_idx").on(t.placeId),
+    index("sessions_second_place_id_idx").on(t.secondPlaceId),
     index("sessions_club_id_idx").on(t.clubId),
     index("sessions_sport_idx").on(t.sport),
     index("sessions_group_id_idx").on(t.groupId),
+    index("sessions_coach_id_idx").on(t.coachId),
+    // Ya existen en producción (migraciones 0015 y 0026).
+    index("sessions_source_class_id_idx").on(t.sourceClassId),
+    index("sessions_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
   ]
 );
 
@@ -399,6 +519,9 @@ export const sessionBlocks = pgTable(
     orderIndex: integer("order_index").notNull(),
     title: varchar("title", { length: 120 }),
     notes: text("notes"),
+    // Dos pistas con rotación: los dos grupos hacen el programa de las dos
+    // pistas y rotan a mitad; los minutos son por grupo (ver 0103).
+    rotates: boolean("rotates").default(false).notNull(),
   },
   (t) => [
     uniqueIndex("session_blocks_session_order_uniq").on(
@@ -446,6 +569,16 @@ export const sessionBlockItems = pgTable(
     // Nota de voz sobre este ejercicio/actividad (bucket "session-audio").
     coachAudioPath: text("coach_audio_path"),
     coachAudioSeconds: integer("coach_audio_seconds"),
+    // Pista en la que se hace el item (1 o 2). Solo importa si la sesión
+    // tiene sessions.courts = 2; los items antiguos quedan en la pista 1.
+    court: smallint("court").default(1).notNull(),
+    // Quién dirige el item: "coach" (con monitor) | "auto" (autónomo).
+    // null = sin indicar.
+    ledBy: varchar("led_by", { length: 8 }),
+    // Por turnos: cada alumno turn_minutes minutos, de turn_size en turn_size
+    // (null = todos a la vez). Ver 0104.
+    turnMinutes: smallint("turn_minutes"),
+    turnSize: smallint("turn_size"),
   },
   (t) => [
     index("session_block_items_block_id_idx").on(t.blockId),
@@ -462,14 +595,22 @@ export const students = pgTable(
     coachId: uuid("coach_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
+    // Nombre completo (nombre + apellidos), el que se muestra en listas,
+    // informes y PDF. La API lo recalcula a partir de first_name/last_name.
     name: varchar("name", { length: 255 }).notNull(),
+    firstName: varchar("first_name", { length: 255 }),
+    lastName: varchar("last_name", { length: 255 }),
     email: varchar("email", { length: 255 }),
     gender: varchar("gender", { length: 20 }), // "male" | "female" | "other"
     birthDate: date("birth_date"),
     heightCm: integer("height_cm"),
     weightKg: integer("weight_kg"),
     dominantHand: varchar("dominant_hand", { length: 10 }), // "left" | "right"
-    playerLevel: varchar("player_level", { length: 30 }), // ahora admite los 8 niveles PMV
+    // Código de skill_levels (FK desde la migración 0094). null = sin nivel.
+    playerLevel: varchar("player_level", { length: 30 }).references(
+      () => skillLevels.code,
+      { onDelete: "set null", onUpdate: "cascade" }
+    ),
     yearsExperience: integer("years_experience"),
     yearStartedTennis: integer("year_started_tennis"),
     yearStartedRacketSports: integer("year_started_racket_sports"),
@@ -481,6 +622,17 @@ export const students = pgTable(
     locality: varchar("locality", { length: 120 }),
     localityLat: doublePrecision("locality_lat"),
     localityLng: doublePrecision("locality_lng"),
+    // Fecha de alta en la escuela: editable; por defecto, la de creación.
+    joinedAt: date("joined_at")
+      .default(sql`CURRENT_DATE`)
+      .notNull(),
+    // Alta: cómo nos conoció (clave de lib/students/membership.ts + detalle).
+    howFound: varchar("how_found", { length: 40 }),
+    howFoundDetail: varchar("how_found_detail", { length: 255 }),
+    // Baja: fecha y motivo (clave + detalle). left_at a null = alumno activo.
+    leftAt: date("left_at"),
+    leftReason: varchar("left_reason", { length: 40 }),
+    leftReasonDetail: varchar("left_reason_detail", { length: 500 }),
     notes: text("notes"),
     imageUrl: text("image_url"),
     profileToken: varchar("profile_token", { length: 128 }).unique(),
@@ -506,6 +658,8 @@ export const students = pgTable(
     index("students_coach_id_idx").on(t.coachId),
     index("students_coach_name_idx").on(t.coachId, t.name),
     index("students_club_id_idx").on(t.clubId),
+    // Ya existe en producción (migración 0015).
+    index("students_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
   ]
 );
 
@@ -656,6 +810,37 @@ export const studentObjectives = pgTable(
   ]
 );
 
+// Fichas de vídeo del alumno (migración 0098). Solo se guarda el enlace
+// (YouTube, Google Drive...), no el archivo.
+export const studentVideos = pgTable(
+  "student_videos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    studentId: uuid("student_id")
+      .references(() => students.id, { onDelete: "cascade" })
+      .notNull(),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    location: varchar("location", { length: 200 }),
+    event: varchar("event", { length: 200 }),
+    recordedOn: date("recorded_on"),
+    notes: text("notes"),
+    videoUrl: text("video_url").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("student_videos_student_recorded_idx").on(t.studentId, t.recordedOn),
+    check("student_videos_video_url_chk", sql`${t.videoUrl} ~* '^https?://'`),
+  ]
+);
+
 // Session ↔ Students pivot
 export const sessionStudents = pgTable(
   "session_students",
@@ -707,6 +892,12 @@ export const groups = pgTable(
     // Objetivos de trabajo del grupo: texto libre, uno por línea. Se pueden
     // cargar del catálogo de Objetivos o escribir a mano.
     objetivos: text("objetivos"),
+    // Nivel por defecto del grupo (código de skill_levels): respaldo cuando
+    // los asistentes del día no tienen nivel. null = sin definir.
+    defaultLevel: varchar("default_level", { length: 32 }).references(
+      () => skillLevels.code,
+      { onDelete: "set null", onUpdate: "cascade" }
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1032,7 +1223,10 @@ export const classes = pgTable(
     // Autoría de la clase: "ten_planner" | "libre" | el id de un
     // monitor/academia dado de alta (p. ej. "academia_christian_larsen").
     // Mismo campo/semántica que exercises.autoria (ver comentario allí).
-    autoria: varchar("autoria", { length: 64 }).default("libre"),
+    // En producción es varchar(100) NOT NULL con default 'ten_planner'; la
+    // app sigue mandando "libre" si no se indica otra (no cambiar sin revisar
+    // quién crea clases sin autoría).
+    autoria: varchar("autoria", { length: 100 }).default("libre").notNull(),
     // null = clase particular. Se asigna cuando el monitor crea esta clase
     // en nombre de un club al que está vinculado.
     clubId: uuid("club_id").references(() => clubs.id, {
@@ -1040,6 +1234,9 @@ export const classes = pgTable(
     }),
     // Deporte de la clase (biblioteca de plantillas por deporte).
     sport: sportEnum("sport").default("tenis").notNull(),
+    // Pistas que usa la plantilla (1 o 2). Con 2, cada elemento del plan
+    // indica su pista (class_block_exercises.court). Default 1 = como siempre.
+    courts: smallint("courts").default(1).notNull(),
     // "published" | "draft". Un borrador solo lo ve quien lo creó (aún se
     // está configurando); ver lib/classes/visibility.ts.
     status: varchar("status", { length: 16 }).default("published").notNull(),
@@ -1075,6 +1272,8 @@ export const classBlocks = pgTable(
     orderIndex: integer("order_index").notNull(), // 1=inicial, 2=principal, 3=final
     title: varchar("title", { length: 120 }),
     notes: text("notes"),
+    // Dos pistas con rotación (igual que session_blocks.rotates, ver 0103).
+    rotates: boolean("rotates").default(false).notNull(),
   },
   (t) => [
     uniqueIndex("class_blocks_class_order_uniq").on(t.classId, t.orderIndex),
@@ -1112,6 +1311,12 @@ export const classBlockExercises = pgTable(
     // una ficha completa. Null para ejercicios de biblioteca (su aspecto
     // sale de exercises.aspecto_juego) y para items sin clasificar.
     aspectoJuego: varchar("aspecto_juego", { length: 16 }),
+    // Pista del elemento (1 o 2) y quién lo dirige ("coach" | "auto" | null);
+    // solo cuentan si classes.courts = 2. Igual que en session_block_items.
+    court: smallint("court").default(1).notNull(),
+    ledBy: varchar("led_by", { length: 8 }),
+    turnMinutes: smallint("turn_minutes"),
+    turnSize: smallint("turn_size"),
   },
   (t) => [
     index("class_block_exercises_block_id_idx").on(t.blockId),
@@ -1244,6 +1449,51 @@ export const calendarEvents = pgTable(
     index("calendar_events_start_at_idx").on(t.startAt),
     index("calendar_events_user_start_at_idx").on(t.userId, t.startAt),
     index("calendar_events_club_id_idx").on(t.clubId),
+  ]
+);
+
+// Tareas del Modo gestión: las crea y ve solo el gestor del club (su dueño).
+// Responsable: un monitor del club, el propio club u otra persona en texto.
+// Con notify_email, un cron diario avisa por correo al gestor (notified_at
+// evita repetirlo).
+export const managementTasks = pgTable(
+  "management_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clubId: uuid("club_id")
+      .references(() => clubs.id, { onDelete: "cascade" })
+      .notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    dueDate: date("due_date", { mode: "string" }),
+    notifyEmail: boolean("notify_email").default(false).notNull(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    responsibleKind: varchar("responsible_kind", { length: 10 })
+      .$type<"coach" | "club" | "other">()
+      .default("club")
+      .notNull(),
+    responsibleUserId: uuid("responsible_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    responsibleText: varchar("responsible_text", { length: 255 }),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("management_tasks_club_due_idx").on(t.clubId, t.dueDate),
+    check(
+      "management_tasks_responsible_kind_chk",
+      sql`${t.responsibleKind} IN ('coach', 'club', 'other')`
+    ),
   ]
 );
 
@@ -1642,7 +1892,8 @@ export const classDraftsRelations = relations(classDrafts, ({ one }) => ({
 // Landing page editable content (admin-managed copy)
 export const landingContent = pgTable("landing_content", {
   key: varchar("key", { length: 80 }).primaryKey(),
-  value: json("value").$type<unknown>().notNull(),
+  // jsonb en producción.
+  value: jsonb("value").$type<unknown>().notNull(),
   type: varchar("type", { length: 20 }).notNull().default("string"),
   label: varchar("label", { length: 200 }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -1711,6 +1962,20 @@ export const aiDocumentEmbeddings = pgTable(
     index("ai_doc_embeddings_owner_source_idx").on(t.ownerId, t.source),
     index("ai_doc_embeddings_source_id_idx").on(t.source, t.sourceId),
     index("ai_doc_embeddings_hash_idx").on(t.contentHash),
+    // Creados por la migración 0022; ya existen en producción.
+    uniqueIndex("ai_doc_embeddings_global_source_uniq")
+      .on(t.source, t.sourceId)
+      .where(sql`${t.ownerId} IS NULL`),
+    uniqueIndex("ai_doc_embeddings_owner_source_uniq")
+      .on(t.ownerId, t.source, t.sourceId)
+      .where(sql`${t.ownerId} IS NOT NULL`),
+    // OJO: producción sigue con vector(1536) y este índice de la 0022 porque
+    // la migración 0083 (Voyage, 1024 dim.) nunca se aplicó allí. Ver
+    // docs/handoff.md.
+    index("ai_doc_embeddings_embedding_hnsw_idx").using(
+      "hnsw",
+      t.embedding.op("vector_cosine_ops")
+    ),
   ]
 );
 
@@ -1842,6 +2107,15 @@ export const clubs = pgTable(
     // Número de pistas por tipo de superficie; ver lib/club-identity.ts.
     courts: jsonb("courts").$type<Partial<Record<string, number>>>(),
     foundedYear: integer("founded_year"),
+    // Ficha del club en "Mi club" (lib/club-identity.ts).
+    email: varchar("email", { length: 255 }),
+    coverImageUrl: text("cover_image_url"),
+    photos: jsonb("photos").$type<string[]>(),
+    // Enlaces de vídeo (YouTube u otros).
+    videos: jsonb("videos").$type<string[]>(),
+    padelCourts: integer("padel_courts"),
+    hasCafeteria: boolean("has_cafeteria"),
+    hasParking: boolean("has_parking"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1851,6 +2125,31 @@ export const clubs = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [index("clubs_owner_id_idx").on(t.ownerId)]
+);
+
+// Plantillas del informe de gestión del club: nombre y lista de datos
+// (ids de lib/club-report/catalog.ts). El periodo se elige al generarlo.
+export const reportTemplates = pgTable(
+  "report_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clubId: uuid("club_id")
+      .references(() => clubs.id, { onDelete: "cascade" })
+      .notNull(),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: varchar("name", { length: 120 }).notNull(),
+    metrics: jsonb("metrics").$type<string[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("report_templates_club_id_idx").on(t.clubId)]
 );
 
 // Club membership — one row per (club, user). The owner also gets a row
@@ -2267,4 +2566,22 @@ export const announcementReadsRelations = relations(
       references: [users.id],
     }),
   })
+);
+
+// Importar texto con Ten Planner: una fila por importación, para limitar las
+// importaciones por usuario y día (migración 0097).
+export const textImports = pgTable(
+  "text_imports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    kind: varchar("kind", { length: 16 }).notNull(), // exercises | classes
+    chars: integer("chars").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("text_imports_user_created_idx").on(t.userId, t.createdAt)]
 );

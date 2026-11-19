@@ -1,0 +1,89 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { getActiveWorkClubId } from "@/lib/clubs";
+import { GOLPES } from "@/lib/session-engine/types";
+import { buildProposal } from "@/lib/session-engine/today";
+
+// Propuesta del motor "Monta la clase" (no guarda nada). El guardado va por
+// POST /api/sessions con createdVia = "engine".
+
+const bodySchema = z.object({
+  // Un grupo guardado o, si es una clase suelta, los alumnos (sin grupo).
+  groupId: z.string().uuid().optional(),
+  studentIds: z.array(z.string().uuid()).min(1).max(12).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // Duración de la sesión (la del calendario / paso 1 del asistente).
+  durationMinutes: z.number().int().min(10).max(240),
+  intensity: z.enum(["suave", "media", "alta"]).default("media"),
+  focus: z.enum(["auto", "tactica", "fisico", ...GOLPES]).default("auto"),
+  attendeeIds: z.array(z.string().uuid()).max(100).nullable().default(null),
+  // Objetivos de la sesión (uno por línea): orientan la propuesta.
+  objectives: z.string().max(4000).nullable().optional(),
+  pinned: z
+    .array(
+      z.object({
+        slotIndex: z.number().int().min(0).max(20),
+        exerciseId: z.string().uuid(),
+        minutes: z.number().int().min(1).max(120).optional(),
+      })
+    )
+    .max(20)
+    .optional(),
+  previousIds: z.array(z.string().uuid()).max(20).optional(),
+  slotAdjust: z
+    .object({
+      slotIndex: z.number().int().min(0).max(20),
+      levelShift: z
+        .union([z.literal(-1), z.literal(0), z.literal(1)])
+        .optional(),
+      excludeIds: z.array(z.string().uuid()).max(50).optional(),
+    })
+    .optional(),
+  variant: z.number().int().min(0).max(10_000).optional(),
+  courts: z.union([z.literal(1), z.literal(2)]).optional(),
+  rotate: z.boolean().optional(),
+}).refine((b) => !!b.groupId || (b.studentIds?.length ?? 0) > 0, {
+  message: "Indica un grupo o unos alumnos",
+});
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 422 }
+    );
+  }
+
+  try {
+    const activeClubId = await getActiveWorkClubId(user.id);
+    const proposal = await buildProposal(user.id, activeClubId, parsed.data);
+    if (!proposal) {
+      return NextResponse.json(
+        { error: "Grupo no encontrado" },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({ data: proposal });
+  } catch (error) {
+    console.error("[sessions/generate]", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

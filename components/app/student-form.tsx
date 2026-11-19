@@ -17,28 +17,35 @@ import {
   Phone,
   Clock,
   MapPin,
+  UserPlus,
+  Video,
 } from "lucide-react";
+import { StudentVideosPanel } from "@/components/app/student-videos-panel";
+import {
+  createStudentVideo,
+  deleteStudentVideo,
+  updateStudentVideo,
+} from "@/app/(app)/students/[id]/video-actions";
+import type { StudentVideoItem } from "@/lib/student-videos";
 import { cn } from "@/lib/utils";
+import { splitFullName } from "@/lib/students/names";
+import {
+  HOW_FOUND_OPTIONS,
+  LEFT_REASON_OPTIONS,
+  type HowFound,
+  type LeftReason,
+} from "@/lib/students/membership";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 type Gender = "male" | "female" | "other";
 type DominantHand = "left" | "right";
-type PlayerLevel =
-  | "beginner"
-  | "amateur"
-  | "intermediate"
-  | "advanced"
-  | "competitive"
-  | "descubrimiento"
-  | "desarrollo"
-  | "consolidacion"
-  | "especializacion"
-  | "precompeticion"
-  | "competicion"
-  | "adultos_iniciacion"
-  | "adultos_medio_alto";
+// Código de skill_levels; la API comprueba que exista.
+type PlayerLevel = string;
 
 const formSchema = z.object({
-  name: z.string().trim().min(1, "El nombre es obligatorio").max(255),
+  firstName: z.string().trim().min(1, "El nombre es obligatorio").max(255),
+  lastName: z.string().trim().max(255).optional().nullable(),
   email: z
     .string()
     .trim()
@@ -61,24 +68,7 @@ const formSchema = z.object({
     .optional()
     .nullable(),
   dominantHand: z.enum(["left", "right"]).optional().nullable(),
-  playerLevel: z
-    .enum([
-      "beginner",
-      "amateur",
-      "intermediate",
-      "advanced",
-      "competitive",
-      "descubrimiento",
-      "desarrollo",
-      "consolidacion",
-      "especializacion",
-      "precompeticion",
-      "competicion",
-      "adultos_iniciacion",
-      "adultos_medio_alto",
-    ])
-    .optional()
-    .nullable(),
+  playerLevel: z.string().max(30).optional().nullable(),
   yearsExperience: z
     .union([z.coerce.number().int().min(0).max(80), z.literal("")])
     .optional()
@@ -90,6 +80,12 @@ const formSchema = z.object({
   phone: z.string().trim().max(32).optional().or(z.literal("")),
   preferredSchedule: z.string().trim().max(500).optional().nullable(),
   locality: z.string().trim().max(120).optional().nullable(),
+  joinedAt: z.string().optional().nullable(),
+  howFound: z.string().optional().nullable(),
+  howFoundDetail: z.string().trim().max(255).optional().nullable(),
+  leftAt: z.string().optional().nullable(),
+  leftReason: z.string().optional().nullable(),
+  leftReasonDetail: z.string().trim().max(500).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
   imageUrl: z.string().trim().max(1000).optional().or(z.literal("")),
 });
@@ -116,14 +112,12 @@ const LEVELS: { id: PlayerLevel; label: string; desc: string }[] = [
   { id: "competicion", label: "Competición", desc: "14-18 años" },
 ];
 
-// Niveles legacy que pueden venir en datos antiguos. Se muestran si están
-// activos pero no se ofrecen como nueva selección.
+// Niveles válidos que ya no se ofrecen como nueva selección; se muestran si
+// el alumno los tiene. (Los antiguos intermediate/advanced se normalizaron
+// en la migración 0094.)
 const LEGACY_LEVEL_LABELS: Record<string, string> = {
-  beginner: "Principiante (legacy)",
-  amateur: "Amateur (legacy)",
-  intermediate: "Intermedio (legacy)",
-  advanced: "Avanzado (legacy)",
-  competitive: "Competitivo (legacy)",
+  familiarizacion: "Familiarización",
+  rendimiento: "Rendimiento",
   adultos_iniciacion: "Adultos iniciación (legacy)",
   adultos_medio_alto: "Adultos medio-alto (legacy)",
 };
@@ -133,6 +127,8 @@ export interface StudentFormProps {
   studentId?: string;
   initialData?: {
     name?: string;
+    firstName?: string | null;
+    lastName?: string | null;
     email?: string | null;
     gender?: Gender | null;
     birthDate?: string | null;
@@ -146,9 +142,21 @@ export interface StudentFormProps {
     phone?: string | null;
     preferredSchedule?: string | null;
     locality?: string | null;
+    joinedAt?: string | null;
+    howFound?: HowFound | null;
+    howFoundDetail?: string | null;
+    leftAt?: string | null;
+    leftReason?: LeftReason | null;
+    leftReasonDetail?: string | null;
     notes?: string | null;
     imageUrl?: string | null;
   };
+  /**
+   * Fichas de vídeo del alumno (solo al editar). Se gestionan al momento, sin
+   * esperar a «Guardar cambios». null = no se muestra la sección.
+   */
+  videos?: StudentVideoItem[] | null;
+  studentName?: string;
 }
 
 function SectionHeader({
@@ -181,7 +189,11 @@ export function StudentForm({
   mode,
   studentId,
   initialData,
+  videos,
+  studentName,
 }: StudentFormProps) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_studentform");
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -193,7 +205,15 @@ export function StudentForm({
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: initialData?.name ?? "",
+      // Fichas antiguas sin nombre y apellidos separados: se separan aquí.
+      firstName:
+        initialData?.firstName ??
+        splitFullName(initialData?.name).firstName ??
+        "",
+      lastName:
+        initialData?.firstName != null
+          ? (initialData?.lastName ?? "")
+          : (splitFullName(initialData?.name).lastName ?? ""),
       email: initialData?.email ?? "",
       gender: initialData?.gender ?? null,
       birthDate: initialData?.birthDate ?? "",
@@ -209,6 +229,12 @@ export function StudentForm({
       phone: initialData?.phone ?? "",
       preferredSchedule: initialData?.preferredSchedule ?? "",
       locality: initialData?.locality ?? "",
+      joinedAt: initialData?.joinedAt ?? "",
+      howFound: initialData?.howFound ?? "",
+      howFoundDetail: initialData?.howFoundDetail ?? "",
+      leftAt: initialData?.leftAt ?? "",
+      leftReason: initialData?.leftReason ?? "",
+      leftReasonDetail: initialData?.leftReasonDetail ?? "",
       notes: initialData?.notes ?? "",
       imageUrl: initialData?.imageUrl ?? "",
     },
@@ -221,7 +247,8 @@ export function StudentForm({
     const method = mode === "create" ? "POST" : "PUT";
 
     const payload = {
-      name: values.name.trim(),
+      firstName: values.firstName.trim(),
+      lastName: values.lastName?.trim() || null,
       email: values.email ? values.email : null,
       gender: values.gender ?? null,
       birthDate: values.birthDate || null,
@@ -250,6 +277,14 @@ export function StudentForm({
       phone: values.phone?.trim() || null,
       preferredSchedule: values.preferredSchedule?.trim() || null,
       locality: values.locality?.trim() || null,
+      joinedAt: values.joinedAt || null,
+      howFound: values.howFound || null,
+      howFoundDetail: values.howFoundDetail?.trim() || null,
+      leftAt: values.leftAt || null,
+      leftReason: values.leftAt ? values.leftReason || null : null,
+      leftReasonDetail: values.leftAt
+        ? values.leftReasonDetail?.trim() || null
+        : null,
       notes: values.notes?.trim() || null,
       imageUrl: values.imageUrl?.trim() || null,
     };
@@ -265,7 +300,7 @@ export function StudentForm({
       setServerError(
         data.details?.map((d: { message: string }) => d.message).join(". ") ??
           data.error ??
-          "Ha ocurrido un error."
+          tx("haOcurridoUnError")
       );
       return;
     }
@@ -285,29 +320,49 @@ export function StudentForm({
       <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={User}
-          title="Datos personales"
+          title={tx("datosPersonales")}
           subtitle="Información básica del alumno"
         />
         <div className="space-y-5">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="name"
-              className="block text-sm font-semibold text-foreground"
-            >
-              Nombre completo
-            </label>
-            <input
-              id="name"
-              type="text"
-              placeholder="Ej: Carmen García"
-              autoComplete="off"
-              aria-invalid={!!errors.name}
-              {...register("name")}
-              className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
-            />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
-            )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="firstName"
+                className="block text-sm font-semibold text-foreground"
+              >
+                {tx("nombre")}
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                placeholder={tx("ejCarmen")}
+                autoComplete="off"
+                aria-invalid={!!errors.firstName}
+                {...register("firstName")}
+                className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+              />
+              {errors.firstName && (
+                <p className="text-xs text-destructive">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="lastName"
+                className="block text-sm font-semibold text-foreground"
+              >
+                {tx("apellidos")}
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                placeholder={tx("ejGarciaLopez")}
+                autoComplete="off"
+                {...register("lastName")}
+                className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+              />
+            </div>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -317,16 +372,16 @@ export function StudentForm({
                 className="block text-sm font-semibold text-foreground"
               >
                 <span className="inline-flex items-center gap-1.5">
-                  <Mail className="size-3.5" /> Email
+                  <Mail className="size-3.5" />{" "}{tx("email")}
                 </span>
                 <span className="font-normal text-muted-foreground ml-1">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
                 id="email"
                 type="email"
-                placeholder="alumno@email.com"
+                placeholder={tx("alumnoEmailCom")}
                 {...register("email")}
                 className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
@@ -343,10 +398,10 @@ export function StudentForm({
                 className="block text-sm font-semibold text-foreground"
               >
                 <span className="inline-flex items-center gap-1.5">
-                  <Phone className="size-3.5" /> Teléfono
+                  <Phone className="size-3.5" />{" "}{tx("telefono")}
                 </span>
                 <span className="font-normal text-muted-foreground ml-1">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
@@ -368,9 +423,9 @@ export function StudentForm({
                 htmlFor="birthDate"
                 className="block text-sm font-semibold text-foreground"
               >
-                Fecha de nacimiento{" "}
+                {tx("fechaDeNacimiento")}{" "}
                 <span className="font-normal text-muted-foreground">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
@@ -389,9 +444,9 @@ export function StudentForm({
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Género{" "}
+              {tx("genero")}{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <Controller
@@ -427,7 +482,7 @@ export function StudentForm({
       <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={Ruler}
-          title="Datos físicos"
+          title={tx("datosFisicos")}
           subtitle="Altura, peso y mano dominante"
         />
         <div className="space-y-5">
@@ -437,8 +492,8 @@ export function StudentForm({
                 htmlFor="heightCm"
                 className="block text-sm font-semibold text-foreground"
               >
-                Altura{" "}
-                <span className="font-normal text-muted-foreground">(cm)</span>
+                {tx("altura")}{" "}
+                <span className="font-normal text-muted-foreground">{tx("cm")}</span>
               </label>
               <input
                 id="heightCm"
@@ -460,8 +515,8 @@ export function StudentForm({
                 htmlFor="weightKg"
                 className="block text-sm font-semibold text-foreground"
               >
-                Peso{" "}
-                <span className="font-normal text-muted-foreground">(kg)</span>
+                {tx("peso")}{" "}
+                <span className="font-normal text-muted-foreground">{tx("kg")}</span>
               </label>
               <input
                 id="weightKg"
@@ -482,9 +537,9 @@ export function StudentForm({
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Mano dominante{" "}
+              {tx("manoDominante")}{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <Controller
@@ -520,15 +575,15 @@ export function StudentForm({
       <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
           icon={Trophy}
-          title="Nivel de juego"
+          title={tx("nivelDeJuego")}
           subtitle="Experiencia y nivel del jugador"
         />
         <div className="space-y-5">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Nivel{" "}
+              {tx("nivel")}{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <Controller
@@ -575,9 +630,9 @@ export function StudentForm({
                     </div>
                     {isLegacy && (
                       <p className="text-[11px] text-muted-foreground">
-                        Nivel actual:{" "}
+                        {tx("nivelActual")}{" "}
                         <span className="font-medium">
-                          {LEGACY_LEVEL_LABELS[field.value as string]}
+                          {term(LEGACY_LEVEL_LABELS[field.value as string])}
                         </span>
                         . Selecciona uno nuevo para sustituirlo.
                       </p>
@@ -594,9 +649,9 @@ export function StudentForm({
                 htmlFor="yearsExperience"
                 className="block text-sm font-semibold text-foreground"
               >
-                Años de experiencia{" "}
+                {tx("anosDeExperiencia")}{" "}
                 <span className="font-normal text-muted-foreground">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
@@ -622,7 +677,7 @@ export function StudentForm({
               >
                 Año de inicio en deportes de raqueta{" "}
                 <span className="font-normal text-muted-foreground">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
@@ -648,17 +703,17 @@ export function StudentForm({
               className="block text-sm font-semibold text-foreground"
             >
               <span className="inline-flex items-center gap-1.5">
-                <Clock className="size-3.5" /> Horario preferente
+                <Clock className="size-3.5" />{" "}{tx("horarioPreferente")}
               </span>
               <span className="font-normal text-muted-foreground ml-1">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <input
               id="preferredSchedule"
               type="text"
               maxLength={500}
-              placeholder="Ej: Martes y jueves por la tarde"
+              placeholder={tx("ejMartesYJueves")}
               {...register("preferredSchedule")}
               className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
@@ -675,17 +730,17 @@ export function StudentForm({
               className="block text-sm font-semibold text-foreground"
             >
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="size-3.5" /> Localidad
+                <MapPin className="size-3.5" />{" "}{tx("localidad")}
               </span>
               <span className="font-normal text-muted-foreground ml-1">
-                (opcional · para el mapa de procedencia del club)
+                {tx("opcionalParaElMapa")}
               </span>
             </label>
             <input
               id="locality"
               type="text"
               maxLength={120}
-              placeholder="Ej: Santa Cruz de Tenerife"
+              placeholder={tx("ejSantaCruzDe")}
               {...register("locality")}
               className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
@@ -700,8 +755,164 @@ export function StudentForm({
 
       <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
         <SectionHeader
+          icon={UserPlus}
+          title={tx("altaYBaja")}
+          subtitle="Cómo nos conoció y, si deja la escuela, cuándo y por qué"
+        />
+        <div className="space-y-5">
+          <div className="space-y-1.5 sm:max-w-xs">
+            <label
+              htmlFor="joinedAt"
+              className="block text-sm font-semibold text-foreground"
+            >
+              {tx("fechaDeAlta")}
+              <span className="font-normal text-muted-foreground ml-1">
+                {mode === "create" ? tx("siLaDejasVacia") : ""}
+              </span>
+            </label>
+            <input
+              id="joinedAt"
+              type="date"
+              {...register("joinedAt")}
+              className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+            />
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="howFound"
+                className="block text-sm font-semibold text-foreground"
+              >
+                {tx("comoNosConocio")}
+                <span className="font-normal text-muted-foreground ml-1">
+                  {tx("opcional")}
+                </span>
+              </label>
+              <select
+                id="howFound"
+                {...register("howFound")}
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+              >
+                <option value="">{tx("sinIndicar")}</option>
+                {HOW_FOUND_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {term(o.label)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="howFoundDetail"
+                className="block text-sm font-semibold text-foreground"
+              >
+                {tx("detalle")}
+                <span className="font-normal text-muted-foreground ml-1">
+                  {tx("opcional")}
+                </span>
+              </label>
+              <input
+                id="howFoundDetail"
+                type="text"
+                maxLength={255}
+                placeholder={tx("ejNosLoRecomendo")}
+                {...register("howFoundDetail")}
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-foreground/10 bg-background/40 p-4">
+            <p className="mb-3 text-sm font-semibold text-foreground">
+              {tx("baja")}
+              <span className="font-normal text-muted-foreground ml-1">
+                {tx("dejalaVaciaSiEl")}
+              </span>
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="leftAt"
+                  className="block text-xs font-semibold text-foreground"
+                >
+                  {tx("fechaDeBaja")}
+                </label>
+                <input
+                  id="leftAt"
+                  type="date"
+                  {...register("leftAt")}
+                  className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="leftReason"
+                  className="block text-xs font-semibold text-foreground"
+                >
+                  {tx("motivo")}
+                </label>
+                <select
+                  id="leftReason"
+                  {...register("leftReason")}
+                  className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+                >
+                  <option value="">{tx("sinIndicar")}</option>
+                  {LEFT_REASON_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {term(o.label)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 space-y-1.5">
+              <label
+                htmlFor="leftReasonDetail"
+                className="block text-xs font-semibold text-foreground"
+              >
+                {tx("detalleDelMotivo")}
+                <span className="font-normal text-muted-foreground ml-1">
+                  {tx("opcional")}
+                </span>
+              </label>
+              <input
+                id="leftReasonDetail"
+                type="text"
+                maxLength={500}
+                {...register("leftReasonDetail")}
+                className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {mode === "edit" && studentId && videos && (
+        <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+          <SectionHeader
+            icon={Video}
+            title={tx("videos")}
+            subtitle="Fichas con el enlace al vídeo (YouTube, Google Drive…). Se guardan al momento"
+          />
+          <StudentVideosPanel
+            studentId={studentId}
+            studentName={studentName ?? "el alumno"}
+            canEdit
+            initialVideos={videos}
+            actions={{
+              create: createStudentVideo,
+              update: updateStudentVideo,
+              remove: deleteStudentVideo,
+            }}
+          />
+        </section>
+      )}
+
+      <section className="rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
+        <SectionHeader
           icon={FileText}
-          title="Notas y foto"
+          title={tx("notasYFoto")}
           subtitle="Información adicional"
         />
         <div className="space-y-5">
@@ -711,16 +922,16 @@ export function StudentForm({
               className="block text-sm font-semibold text-foreground"
             >
               <span className="inline-flex items-center gap-1.5">
-                <ImageIcon className="size-3.5" /> URL de foto
+                <ImageIcon className="size-3.5" />{" "}{tx("urlDeFoto")}
               </span>
               <span className="font-normal text-muted-foreground ml-1">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <input
               id="imageUrl"
               type="url"
-              placeholder="https://..."
+              placeholder={"https://..."}
               {...register("imageUrl")}
               className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
@@ -731,16 +942,16 @@ export function StudentForm({
               htmlFor="notes"
               className="block text-sm font-semibold text-foreground"
             >
-              Notas{" "}
+              {tx("notas")}{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <textarea
               id="notes"
               rows={4}
               maxLength={2000}
-              placeholder="Objetivos, lesiones, disponibilidad, fortalezas, áreas a mejorar…"
+              placeholder={tx("objetivosLesionesDisponibilidadFortalezas")}
               {...register("notes")}
               className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
@@ -767,7 +978,7 @@ export function StudentForm({
           href={mode === "create" ? "/students" : `/students/${studentId}`}
           className="rounded-full px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          Cancelar
+          {tx("cancelar")}
         </Link>
       </div>
     </form>

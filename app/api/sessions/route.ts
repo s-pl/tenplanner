@@ -33,7 +33,11 @@ import {
 } from "./validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { getBooleanSetting, getNumberSetting } from "@/lib/app-settings";
-import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import {
+  canTagWithClub,
+  getActiveWorkClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { classDraftVisibility } from "@/lib/classes/visibility";
 import { getActiveSport } from "@/lib/sports";
 import { embedSession } from "@/lib/ai/semantic-search";
@@ -75,12 +79,18 @@ type SessionBlockInputItem = {
     durationMinutes?: number | null;
   }> | null;
   aspecto?: string | null;
+  court?: number;
+  ledBy?: string | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
 };
 
 type SessionBlockInput = {
   orderIndex: number;
   title?: string | null;
   notes?: string | null;
+  /** Dos pistas con rotación (solo con courts = 2). */
+  rotates?: boolean;
   items: SessionBlockInputItem[];
 };
 
@@ -172,6 +182,7 @@ function normalizeBlocks(
     existing.title =
       block.title ?? existing.title ?? BLOCK_TITLE_BY_PHASE[orderIndex];
     existing.notes = block.notes ?? existing.notes ?? null;
+    existing.rotates = block.rotates ?? existing.rotates;
     existing.items.push(...block.items);
     byOrder.set(orderIndex, existing);
   }
@@ -454,6 +465,7 @@ export async function POST(request: Request) {
     scheduledAt,
     durationMinutes: providedDuration,
     durationManual,
+    courts: requestedCourts,
     objective,
     material,
     observations,
@@ -462,11 +474,17 @@ export async function POST(request: Request) {
     tags,
     location,
     placeId,
+    secondPlaceId,
     groupId,
+    coachId: requestedCoachId,
     studentIds,
     exercises: exerciseItems,
     blocks,
+    createdVia,
+    absentStudentIds,
+    generation,
   } = parsedBody.data;
+  const isEngine = createdVia === "engine";
 
   // El club ya no se elige por elemento: se etiqueta automáticamente con
   // el modo de trabajo activo del usuario (ver /api/account/work-mode).
@@ -475,6 +493,19 @@ export async function POST(request: Request) {
     getActiveSport(user.id),
   ]);
   let sessionSport = activeSport;
+
+  // Monitor que imparte: solo en modo club y si es monitor activo del club.
+  // Si es quien la crea, se deja null (la imparte el creador).
+  let coachId: string | null = null;
+  if (requestedCoachId && requestedCoachId !== user.id) {
+    if (!clubId || !(await canTagWithClub(requestedCoachId, clubId))) {
+      return NextResponse.json(
+        { error: "El monitor no pertenece al club" },
+        { status: 400 }
+      );
+    }
+    coachId = requestedCoachId;
+  }
 
   try {
     await ensureUser(user);
@@ -571,6 +602,15 @@ export async function POST(request: Request) {
     }
 
     const normalizedBlocks = normalizeBlocks(blocks, exerciseItems);
+    // Sin dos pistas todo va en la pista 1 (aunque el cliente mande otra cosa).
+    const courts = requestedCourts === 2 ? 2 : 1;
+    for (const block of normalizedBlocks) {
+      // La rotación solo existe con dos pistas.
+      block.rotates = courts === 2 && block.rotates === true;
+      for (const item of block.items) {
+        item.court = courts === 2 && item.court === 2 ? 2 : 1;
+      }
+    }
     const compatibilityExercises = buildCompatibilityExercises(
       normalizedBlocks,
       exerciseItems
@@ -636,9 +676,16 @@ export async function POST(request: Request) {
           tags: normalizedTags,
           location: location ?? null,
           placeId: placeId ?? null,
+          secondPlaceId: courts === 2 ? (secondPlaceId ?? null) : null,
           groupId: groupId ?? null,
           clubId: clubId ?? null,
+          coachId,
           sport: sessionSport,
+          courts,
+          createdVia: createdVia ?? "wizard",
+          generatedBy: isEngine ? "auto_v1" : null,
+          generationInput: isEngine ? (generation?.input ?? null) : null,
+          generationTrace: isEngine ? (generation?.trace ?? null) : null,
         })
         .returning();
 
@@ -678,6 +725,7 @@ export async function POST(request: Request) {
             orderIndex: block.orderIndex,
             title: block.title ?? BLOCK_TITLE_BY_PHASE[block.orderIndex],
             notes: block.notes ?? null,
+            rotates: block.rotates === true,
           })
           .returning({ id: sessionBlocks.id });
 
@@ -704,6 +752,11 @@ export async function POST(request: Request) {
                     ? buildStations(item.stations)
                     : null,
                 aspectoJuego: item.exerciseId ? null : (item.aspecto ?? null),
+                court: item.court ?? 1,
+                ledBy: courts === 2 ? (item.ledBy ?? null) : null,
+                turnMinutes: courts === 2 ? (item.turnMinutes ?? null) : null,
+                turnSize:
+                  courts === 2 && item.turnMinutes ? (item.turnSize ?? 1) : null,
               };
             })
           );
@@ -722,10 +775,14 @@ export async function POST(request: Request) {
       }
 
       if (linkedStudentIds.size > 0) {
+        // "No vienen" previsto al montar la clase: attended = false. Solo
+        // cuenta como falta si la sesión llega a completarse.
+        const absent = new Set(absentStudentIds ?? []);
         await tx.insert(sessionStudents).values(
           Array.from(linkedStudentIds).map((studentId) => ({
             sessionId: session.id,
             studentId,
+            ...(absent.has(studentId) ? { attended: false } : {}),
           }))
         );
       }

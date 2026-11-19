@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 type DraftClassOption = {
   id: string;
@@ -40,6 +42,8 @@ export function AddToClassDialog({
   /** Nombre del ejercicio, para el título. */
   label: string;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_addtoclassdialog");
   const [options, setOptions] = useState<DraftClassOption[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -101,7 +105,7 @@ export function AddToClassDialog({
           setError(
             typeof data.error === "string"
               ? data.error
-              : "No se pudo añadir. Inténtalo de nuevo."
+              : tx("noSePudoAnadir")
           );
           return;
         }
@@ -125,14 +129,14 @@ export function AddToClassDialog({
           }),
         });
         if (!res.ok) {
-          setError("No se pudo crear la clase. Inténtalo de nuevo.");
+          setError(tx("noSePudoCrear"));
           return;
         }
         const { data } = (await res.json()) as { data: { id: string } };
         setDone({ id: data.id, name });
       }
     } catch {
-      setError("Error de red. Inténtalo de nuevo.");
+      setError(tx("errorDeRedIntentalo"));
     } finally {
       setSaving(false);
     }
@@ -142,7 +146,7 @@ export function AddToClassDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Añadir a una clase</DialogTitle>
+          <DialogTitle>{tx("anadirAUnaClase")}</DialogTitle>
           <DialogDescription>“{label}”</DialogDescription>
         </DialogHeader>
 
@@ -152,39 +156,39 @@ export function AddToClassDialog({
               <Check className="size-6" />
             </div>
             <p className="text-sm text-foreground">
-              Añadido a <strong>{done.name}</strong> (borrador).
+              {tx("anadidoA")}{" "}<strong>{done.name}</strong>{" "}{tx("borrador")}
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Link
                 href={`/classes/${done.id}/edit`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-bold text-[#050505] hover:bg-[#c8ef2f]"
               >
-                Seguir configurando la clase
+                {tx("seguirConfigurandoLaClase")}
               </Link>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
                 className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted"
               >
-                Cerrar
+                {tx("cerrar")}
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Mis clases en borrador
+              {tx("misClasesEnBorrador")}
             </p>
 
             <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
               {options === null && !loadError ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
-                  Cargando clases…
+                  {tx("cargandoClases")}
                 </div>
               ) : loadError ? (
                 <p className="py-8 text-center text-sm text-destructive">
-                  No se pudieron cargar tus clases en borrador.
+                  {tx("noSePudieronCargar")}
                 </p>
               ) : (
                 <>
@@ -218,8 +222,7 @@ export function AddToClassDialog({
                             {option.name}
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {option.duracionMinutes} min
-                          </span>
+                            {tx("v1Min", { v1: option.duracionMinutes })}</span>
                         </span>
                       </button>
                     );
@@ -246,7 +249,7 @@ export function AddToClassDialog({
                       <Plus className="size-3" />
                     </span>
                     <span className="text-sm font-semibold text-foreground">
-                      Nueva clase en borrador
+                      {tx("nuevaClaseEnBorrador")}
                     </span>
                   </button>
                 </>
@@ -259,26 +262,25 @@ export function AddToClassDialog({
                   htmlFor="new-draft-class-name"
                   className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
                 >
-                  Nombre de la clase
+                  {tx("nombreDeLaClase")}
                 </label>
                 <input
                   id="new-draft-class-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   maxLength={255}
-                  placeholder="Ej.: Minitenis sábado"
+                  placeholder={tx("ejMinitenisSabado")}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-[#D6FF38]"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Se crea con 60 minutos; puedes cambiarlo al terminar de
-                  configurarla.
+                  {tx("seCreaCon60")}
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                ¿En qué bloque?
+                {tx("enQueBloque")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {BLOCKS.map((block) => (
@@ -293,13 +295,12 @@ export function AddToClassDialog({
                         : "border-border text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {block.label}
+                    {term(block.label)}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Se añade al final del bloque. Luego puedes reordenarlo desde
-                Editar clase.
+                {tx("seAnadeAlFinal")}
               </p>
             </div>
 
@@ -319,7 +320,7 @@ export function AddToClassDialog({
                 ) : (
                   <GraduationCap className="size-4" />
                 )}
-                {creating ? "Crear borrador y añadir" : "Añadir a la clase"}
+                {creating ? tx("crearBorradorYAnadir") : tx("anadirALaClase")}
               </button>
             </div>
           </div>
@@ -342,6 +343,7 @@ export function AddToClassButton({
   variant?: "pill" | "icon";
   className?: string;
 }) {
+  const tx = useTranslations("ui.s_app_addtoclassdialog");
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -353,8 +355,8 @@ export function AddToClassButton({
             e.stopPropagation();
             setOpen(true);
           }}
-          title="Añadir a una clase en borrador"
-          aria-label="Añadir a una clase en borrador"
+          title={tx("anadirAUnaClase2")}
+          aria-label={tx("anadirAUnaClase2")}
           className={cn(
             "flex size-7 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-[#D6FF38]",
             className
@@ -372,7 +374,7 @@ export function AddToClassButton({
           )}
         >
           <GraduationCap className="size-4 text-brand" strokeWidth={1.6} />
-          Añadir a clase
+          {tx("anadirAClase")}
         </button>
       )}
       <AddToClassDialog

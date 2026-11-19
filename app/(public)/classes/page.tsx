@@ -1,6 +1,7 @@
 import { SaveSearchToListButton } from "@/components/app/save-search-to-list";
 import { getWorkMode, libraryHeading } from "@/lib/work-mode";
 import Link from "next/link";
+import { ImportTextDialog } from "@/components/app/import-text-dialog";
 import {
   eq,
   or,
@@ -15,7 +16,14 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { classes, classFavorites } from "@/db/schema";
-import { Plus, Search, FileText, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+} from "lucide-react";
 import {
   classNavQueryString,
   classOrderBy,
@@ -26,6 +34,7 @@ import {
 } from "@/lib/nav/class-nav";
 import { AUTORIAS, nivelesForSport } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import { PendingTargetBanner } from "@/components/app/pending-session-target";
 import { spaceLabels } from "@/lib/space-labels";
 import { getActiveSport } from "@/lib/sports";
 import { getPublicSportCookie } from "@/lib/public-sport";
@@ -35,6 +44,11 @@ import { ClassListsSection } from "@/components/app/class-lists-section";
 import { PublicClassListsSection } from "@/components/app/public-class-lists-section";
 import { getSpaceLabel, isUserAdmin } from "@/lib/classes/lists";
 import { ClassesGrid } from "./classes-grid";
+import { LevelBallDot } from "@/components/app/level-balls";
+import { AutoSubmitRadio } from "@/components/app/auto-submit-radio";
+import { getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getTerm } from "@/lib/i18n-terms";
 
 const TABS = ["all", "library", "mine", "favorites", "drafts"] as const;
 
@@ -113,6 +127,9 @@ function paramList(value: string | string[] | undefined) {
 }
 
 export default async function ClassesPage({ searchParams }: PageProps) {
+  const term = await getTerm();
+  const intlLocale = (await getLocale()) === "en" ? "en-GB" : "es-ES";
+  const tx = await getTranslations("ui.s_classes_page");
   const params = await searchParams;
   const supabase = await createClient();
   const {
@@ -159,11 +176,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
 
   // Cabecera con el dueño: "Clases Ten Planner" en la Biblioteca,
   // "Clases CT Tenerife" / "Clases de David" en el espacio propio.
-  const heading = libraryHeading(
-    "Clases",
-    workMode,
-    activeTab === "library"
-  );
+  const heading = libraryHeading("Clases", workMode, activeTab === "library", await getLocale());
 
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const nivel = typeof params.nivel === "string" ? params.nivel : "";
@@ -397,6 +410,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.24),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.18),transparent_34%)]" />
       <div className="relative space-y-6">
+        <PendingTargetBanner />
         <header className="overflow-hidden rounded-lg bg-[#050505] text-white shadow-[0_24px_80px_rgba(5,5,5,0.18)]">
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:p-8">
             <div>
@@ -410,8 +424,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 {heading.title}
               </h1>
               <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
-                Plantillas reutilizables con bloques y ejercicios para preparar
-                sesiones completas sin perder criterio en pista o cancha.
+                {tx("plantillasReutilizablesConBloques")}
               </p>
             </div>
             <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
@@ -422,19 +435,30 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                       {totalRows}
                     </p>
                     <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
-                      visibles
+                      {tx("visibles")}
                     </p>
                   </div>
                 )}
               </div>
               {user && (
-                <Link
-                  href="/classes/new"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
-                >
-                  <Plus className="size-4" />
-                  Nueva clase
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(activeTab === "mine" || activeTab === "drafts") && (
+                    <ImportTextDialog
+                      kind="classes"
+                      allowFile={!!activeClubId}
+                      spaceLabel={
+                        activeClubId ? tx("elEspacioDeTu") : "tu espacio"
+                      }
+                    />
+                  )}
+                  <Link
+                    href="/classes/new"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
+                  >
+                    <Plus className="size-4" />
+                    {tx("nuevaClase")}
+                  </Link>
+                </div>
               )}
             </div>
           </div>
@@ -467,7 +491,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                     : "text-muted-foreground hover:bg-[#050505]/5 hover:text-foreground dark:hover:bg-white/8"
                 }`}
               >
-                {TAB_LABELS[t]}
+                {term(TAB_LABELS[t])}
                 {t === "drafts" && draftCount > 0 && (
                   <span className="ml-1.5 text-[10px] tabular-nums opacity-60">
                     ({draftCount})
@@ -486,23 +510,23 @@ export default async function ClassesPage({ searchParams }: PageProps) {
               </div>
               <div>
                 <p className="text-base font-semibold text-foreground/40">
-                  Sin borradores
+                  {tx("sinBorradores")}
                 </p>
                 <p className="text-sm text-foreground/30 mt-1">
-                  Las clases que guardes como borrador aparecerán aquí.
+                  {tx("lasClasesQueGuardes")}
                 </p>
               </div>
               <Link
                 href="/classes/new"
                 className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
               >
-                Crear clase
+                {tx("crearClase")}
               </Link>
             </div>
           ) : (
             <ul className="space-y-2">
               {draftRows.map((draft, i) => {
-                const name = draft.name.trim() || "Clase sin título";
+                const name = draft.name.trim() || tx("claseSinTitulo");
                 return (
                   <li
                     key={draft.id}
@@ -516,7 +540,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                         {name}
                       </p>
                       <p className="text-[11px] text-foreground/45 mt-0.5 tabular-nums">
-                        {new Intl.DateTimeFormat("es-ES", {
+                        {new Intl.DateTimeFormat(intlLocale, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(draft.updatedAt))}
@@ -526,7 +550,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                       href={`/classes/${draft.id}/edit`}
                       className="inline-flex items-center gap-1 rounded-full bg-[#D6FF38] px-3 py-1.5 text-[12px] font-semibold text-[#050505] transition hover:bg-[#050505] hover:text-white dark:hover:bg-white"
                     >
-                      Continuar
+                      {tx("continuar")}
                     </Link>
                   </li>
                 );
@@ -566,7 +590,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                   htmlFor="q"
                   className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
                 >
-                  Buscar
+                  {tx("buscar")}
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
@@ -574,37 +598,55 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                     id="q"
                     name="q"
                     defaultValue={q}
-                    placeholder="Nombre, contenido, objetivos…"
+                    placeholder={tx("nombreContenidoObjetivos")}
                     className="h-11 w-full rounded-full border border-[#050505]/12 bg-[#F4F4F1] pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
                   />
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="nivel"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
-                >
-                  Nivel
+                <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                  {tx("nivel")}
                 </label>
-                <select
-                  id="nivel"
-                  name="nivel"
-                  defaultValue={nivel}
-                  className="h-11 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-3 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
-                >
-                  {nivelFiltersForSport(sport).map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {n.label}
-                    </option>
-                  ))}
-                </select>
+                {/* Desplegable propio (no <select>) para poder mostrar la
+                    pelota de cada nivel: roja, naranja, verde y amarilla. */}
+                <details className="relative">
+                  <summary className="flex h-11 w-full min-w-[12rem] cursor-pointer list-none items-center justify-between gap-2 rounded-full border border-[#050505]/12 bg-[#F4F4F1] px-4 text-sm text-foreground focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]">
+                    <span className="flex items-center gap-2">
+                      {nivel && <LevelBallDot nivel={nivel} />}
+                      {nivelFiltersForSport(sport).find((n) => n.id === nivel)
+                        ?.label ?? term("Todos")}
+                    </span>
+                    <ChevronDown className="size-4 text-muted-foreground" />
+                  </summary>
+                  <div className="absolute z-10 mt-2 w-64 space-y-1 rounded-lg border border-[#050505]/12 bg-white p-2 shadow-lg dark:border-white/10 dark:bg-[#0a0a0a]">
+                    {nivelFiltersForSport(sport).map((n) => (
+                      <label
+                        key={n.id || "todos"}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground hover:bg-[#D6FF38]/10 has-[:checked]:bg-[#D6FF38]/20 has-[:checked]:font-semibold"
+                      >
+                        <AutoSubmitRadio
+                          name="nivel"
+                          value={n.id}
+                          defaultChecked={nivel === n.id}
+                          className="sr-only"
+                        />
+                        {n.id ? (
+                          <LevelBallDot nivel={n.id} />
+                        ) : (
+                          <span className="size-4 shrink-0" />
+                        )}
+                        {term(n.label)}
+                      </label>
+                    ))}
+                  </div>
+                </details>
               </div>
               <div>
                 <label
                   htmlFor="duracion"
                   className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5"
                 >
-                  Duración
+                  {tx("duracion")}
                 </label>
                 <select
                   id="duracion"
@@ -614,16 +656,16 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 >
                   {DURACION_FILTERS.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.label}
+                      {term(d.label)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Aspecto{" "}
+                  {tx("aspecto")}{" "}
                   <span className="normal-case tracking-normal text-muted-foreground/70">
-                    (varios)
+                    {tx("varios")}
                   </span>
                 </label>
                 <details className="relative">
@@ -649,17 +691,25 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                           defaultChecked={aspectoList.includes(a.id)}
                           className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
                         />
-                        {a.label}
+                        {term(a.label)}
                       </label>
                     ))}
+                    {/* En el móvil el desplegable tapa el botón Filtrar:
+                        se aplica desde aquí mismo. */}
+                    <button
+                      type="submit"
+                      className="mt-1 h-10 w-full rounded-full bg-[#050505] text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
+                    >
+                      {tx("aplicar")}
+                    </button>
                   </div>
                 </details>
               </div>
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Golpe{" "}
+                  {tx("golpe")}{" "}
                   <span className="normal-case tracking-normal text-muted-foreground/70">
-                    (varios)
+                    {tx("varios")}
                   </span>
                 </label>
                 <details className="relative">
@@ -683,17 +733,25 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                           defaultChecked={golpeList.includes(g.id)}
                           className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
                         />
-                        {g.label}
+                        {term(g.label)}
                       </label>
                     ))}
+                    {/* En el móvil el desplegable tapa el botón Filtrar:
+                        se aplica desde aquí mismo. */}
+                    <button
+                      type="submit"
+                      className="mt-1 h-10 w-full rounded-full bg-[#050505] text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
+                    >
+                      {tx("aplicar")}
+                    </button>
                   </div>
                 </details>
               </div>
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Autoría{" "}
+                  {tx("autoria")}{" "}
                   <span className="normal-case tracking-normal text-muted-foreground/70">
-                    (varios)
+                    {tx("varios")}
                   </span>
                 </label>
                 <details className="relative">
@@ -717,9 +775,17 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                           defaultChecked={autoriaList.includes(g.id)}
                           className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
                         />
-                        {g.label}
+                        {term(g.label)}
                       </label>
                     ))}
+                    {/* En el móvil el desplegable tapa el botón Filtrar:
+                        se aplica desde aquí mismo. */}
+                    <button
+                      type="submit"
+                      className="mt-1 h-10 w-full rounded-full bg-[#050505] text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
+                    >
+                      {tx("aplicar")}
+                    </button>
                   </div>
                 </details>
               </div>
@@ -727,14 +793,14 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                 type="submit"
                 className="h-11 rounded-full bg-[#050505] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505] dark:hover:bg-white"
               >
-                Filtrar
+                {tx("filtrar")}
               </button>
             </form>
 
             {/* Orden */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                Ordenar por:
+                {tx("ordenarPor")}
               </span>
               {CLASS_SORTS.map((s) => {
                 const isActive = activeSort === s;
@@ -748,7 +814,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                         : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
                     }`}
                   >
-                    {SORT_LABELS[s]}
+                    {term(SORT_LABELS[s])}
                   </Link>
                 );
               })}
@@ -757,7 +823,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
             {user && rows.length > 0 && activeTab !== "drafts" ? (
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                  {totalRows} clase{totalRows !== 1 ? "s" : ""}
+                  {tx("v1ClaseV2", { v1: totalRows, v2: totalRows !== 1 ? "s" : "" })}
                 </p>
                 <SaveSearchToListButton
                   kind="class"
@@ -771,10 +837,10 @@ export default async function ClassesPage({ searchParams }: PageProps) {
             {rows.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
                 <p className="text-[15px] font-medium text-foreground mb-2">
-                  No hay clases que coincidan
+                  {tx("noHayClasesQue")}
                 </p>
                 <p className="text-[13px] text-foreground/55 max-w-md mx-auto">
-                  Prueba a quitar algún filtro o crea una clase nueva.
+                  {tx("pruebaAQuitarAlgun")}
                 </p>
                 {user && (
                   <Link
@@ -782,7 +848,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                     className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
                   >
                     <Plus className="size-3.5" />
-                    Crear la primera
+                    {tx("crearLaPrimera")}
                   </Link>
                 )}
               </div>
@@ -799,13 +865,11 @@ export default async function ClassesPage({ searchParams }: PageProps) {
 
             {totalPages > 1 && (
               <nav
-                aria-label="Paginación"
+                aria-label={tx("paginacion")}
                 className="flex items-center justify-between gap-3 rounded-lg border border-[#050505]/10 bg-white/70 px-4 py-3 text-[13px] shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
               >
                 <span className="tabular-nums text-foreground/60">
-                  {(currentPage - 1) * PAGE_SIZE + 1}–
-                  {Math.min(currentPage * PAGE_SIZE, totalRows)} de {totalRows}{" "}
-                  · Página {currentPage} de {totalPages}
+                  {tx("v1V2DeV3", { v1: (currentPage - 1) * PAGE_SIZE + 1, v2: Math.min(currentPage * PAGE_SIZE, totalRows), v3: totalRows, v4: currentPage, v5: totalPages })}
                 </span>
                 <span className="flex items-center gap-2">
                   {currentPage > 1 ? (
@@ -813,7 +877,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                       href={buildPageHref(currentPage - 1)}
                       className="inline-flex items-center gap-1.5 rounded-full border border-[#050505]/12 px-3.5 py-1.5 font-semibold transition hover:border-[#D6FF38] dark:border-white/12"
                     >
-                      <ArrowLeft className="size-3.5" /> Anterior
+                      <ArrowLeft className="size-3.5" />{" "}{tx("anterior")}
                     </Link>
                   ) : null}
                   {currentPage < totalPages ? (
@@ -821,7 +885,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                       href={buildPageHref(currentPage + 1)}
                       className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-3.5 py-1.5 font-semibold text-[#050505] transition hover:bg-[#c8f52e]"
                     >
-                      Siguiente <ArrowRight className="size-3.5" />
+                      {tx("siguiente")}{" "}<ArrowRight className="size-3.5" />
                     </Link>
                   ) : null}
                 </span>

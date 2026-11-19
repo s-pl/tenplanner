@@ -16,6 +16,8 @@ import {
 } from "@/components/app/save-search-to-list";
 import { nivelesForSport } from "@/lib/exercise-taxonomy";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 export interface ListableClass {
   id: string;
@@ -99,6 +101,8 @@ export function PickClassesForListDialog({
   onRemoved: (classId: string) => void;
   onBulkAdded?: () => void;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_pickclassesforlistdialog");
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ClassFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -173,13 +177,13 @@ export function PickClassesForListDialog({
         body: JSON.stringify({ classId: cls.id }),
       });
       if (!res.ok) {
-        setActionError("No se pudo actualizar la lista. Inténtalo de nuevo.");
+        setActionError(tx("noSePudoActualizar"));
         return;
       }
       if (adding) onAdded(cls);
       else onRemoved(cls.id);
     } catch {
-      setActionError("No se pudo actualizar la lista. Inténtalo de nuevo.");
+      setActionError(tx("noSePudoActualizar"));
     } finally {
       setBusyId(null);
     }
@@ -221,8 +225,8 @@ export function PickClassesForListDialog({
     >
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Añadir clases</DialogTitle>
-          <DialogDescription>A la lista “{listName}”.</DialogDescription>
+          <DialogTitle>{tx("anadirClases")}</DialogTitle>
+          <DialogDescription>{tx("aLaListaV1", { v1: listName })}</DialogDescription>
         </DialogHeader>
 
         <div className="relative">
@@ -231,7 +235,7 @@ export function PickClassesForListDialog({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar clase por nombre…"
+            placeholder={tx("buscarClasePorNombre")}
             autoFocus
             className="h-10 w-full rounded-lg border border-foreground/15 bg-background pl-9 pr-3 text-sm text-foreground focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
@@ -240,62 +244,62 @@ export function PickClassesForListDialog({
         <div className="space-y-1.5">
           <div className="grid grid-cols-2 gap-1.5">
             <select
-              aria-label="Filtrar por nivel"
+              aria-label={tx("filtrarPorNivel")}
               value={filters.nivel}
               onChange={(e) =>
                 setFilters((f) => ({ ...f, nivel: e.target.value }))
               }
               className={SELECT_CLASS}
             >
-              <option value="">Nivel: todos</option>
+              <option value="">{tx("nivelTodos")}</option>
               {niveles.map((n) => (
                 <option key={n.id} value={n.id}>
-                  {n.label}
+                  {term(n.label)}
                 </option>
               ))}
             </select>
             <select
-              aria-label="Filtrar por duración"
+              aria-label={tx("filtrarPorDuracion")}
               value={filters.duracion}
               onChange={(e) =>
                 setFilters((f) => ({ ...f, duracion: e.target.value }))
               }
               className={SELECT_CLASS}
             >
-              <option value="">Duración: cualquiera</option>
+              <option value="">{tx("duracionCualquiera")}</option>
               {DURACIONES.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.label}
+                  {term(d.label)}
                 </option>
               ))}
             </select>
             <select
-              aria-label="Filtrar por aspecto del juego"
+              aria-label={tx("filtrarPorAspectoDel")}
               value={filters.aspecto}
               onChange={(e) =>
                 setFilters((f) => ({ ...f, aspecto: e.target.value }))
               }
               className={SELECT_CLASS}
             >
-              <option value="">Aspecto: todos</option>
+              <option value="">{tx("aspectoTodos")}</option>
               {ASPECTOS.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.label}
+                  {term(a.label)}
                 </option>
               ))}
             </select>
             <select
-              aria-label="Filtrar por golpe"
+              aria-label={tx("filtrarPorGolpe")}
               value={filters.golpe}
               onChange={(e) =>
                 setFilters((f) => ({ ...f, golpe: e.target.value }))
               }
               className={SELECT_CLASS}
             >
-              <option value="">Golpe: todos</option>
+              <option value="">{tx("golpeTodos")}</option>
               {GOLPES.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.label}
+                  {term(g.label)}
                 </option>
               ))}
             </select>
@@ -307,7 +311,7 @@ export function PickClassesForListDialog({
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
             >
               <X className="size-3" />
-              Quitar filtros
+              {tx("quitarFiltros")}
             </button>
           ) : null}
         </div>
@@ -323,11 +327,11 @@ export function PickClassesForListDialog({
             </div>
           ) : loadError ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No se pudieron cargar las clases.
+              {tx("noSePudieronCargar")}
             </p>
           ) : results.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Sin resultados.
+              {tx("sinResultados")}
             </p>
           ) : (
             <ul className="divide-y divide-foreground/8">
@@ -345,13 +349,13 @@ export function PickClassesForListDialog({
                       <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                         <span className="inline-flex items-center gap-1 tabular-nums">
                           <Clock className="size-3" />
-                          {cls.duracionMinutes} min
+                          {cls.duracionMinutes}{" "}{tx("min")}
                         </span>
                         {cls.alumnosTipo ? (
                           <span className="capitalize">{cls.alumnosTipo}</span>
                         ) : null}
                         {cls.isLibrary ? (
-                          <span className="text-brand/80">Biblioteca</span>
+                          <span className="text-brand/80">{tx("biblioteca")}</span>
                         ) : null}
                       </p>
                       <ExerciseQuickDescription text={cls.objetivos} />
@@ -363,7 +367,7 @@ export function PickClassesForListDialog({
                       aria-label={
                         added
                           ? `Quitar ${cls.name} de la lista`
-                          : `Añadir ${cls.name} a la lista`
+                          : tx("anadirV1ALa", { v1: cls.name })
                       }
                       className={cn(
                         "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-60",
@@ -395,7 +399,7 @@ export function PickClassesForListDialog({
                 className="inline-flex h-8 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-brand hover:bg-brand/10 disabled:opacity-60"
               >
                 {loading ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                Mostrar más
+                {tx("mostrarMas")}
               </button>
             </div>
           ) : null}
@@ -403,8 +407,7 @@ export function PickClassesForListDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground">
-            {total} clase{total === 1 ? "" : "s"}
-            {hasCriteria ? " con esos criterios" : ""}
+            {tx("v1ClaseV2V3", { v1: total, v2: total === 1 ? "" : "s", v3: hasCriteria ? tx("conEsosCriterios") : "" })}
           </p>
           {hasCriteria && total > 0 ? (
             <button
@@ -418,7 +421,7 @@ export function PickClassesForListDialog({
               ) : (
                 <Plus className="size-3.5" />
               )}
-              Añadir las {total} clases
+              {tx("anadirLas")}{" "}{total}{" "}{tx("clases")}
             </button>
           ) : null}
         </div>

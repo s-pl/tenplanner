@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/components/app/language-switcher";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TenPlannerMark } from "./ten-planner-mark";
 import { InstallAppButton } from "./install-app-button";
+import { InstagramIcon } from "./instagram-icon";
 
 const navItems = [
-  { label: "Cómo funciona", href: "#como-funciona" },
-  { label: "Deportes", href: "#deportes" },
-  { label: "Ejercicios", href: "/exercises" },
-  { label: "Clases", href: "/classes" },
-];
+  { key: "labelHow", href: "#como-funciona" },
+  { key: "ex", href: "/exercises" },
+  { key: "cl", href: "/classes" },
+] as const;
 
 export function LandingNav() {
+  const t = useTranslations("landing.nav");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -44,22 +47,33 @@ export function LandingNav() {
               href={item.href}
               className="text-sm font-medium text-[#4d4d45] transition hover:text-[#5f7000]"
             >
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <InstallAppButton className="hidden md:inline-flex" />
-          <Link
-            href="/register"
-            className="hidden min-h-11 items-center rounded-full bg-[#050505] px-6 text-sm font-bold text-white transition hover:bg-[#d6ff38] hover:text-[#050505] md:inline-flex"
+          <a
+            href="https://www.instagram.com/tenplanner/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t("ig")}
+            className="grid size-11 place-items-center rounded-full border border-[#050505]/12 bg-white text-[#050505] transition hover:border-[#5f7000] hover:text-[#5f7000]"
           >
-            Regístrate / Inicia sesión
+            <InstagramIcon className="size-5" />
+          </a>
+          <Link
+            href="/login"
+            aria-label={t("login")}
+            className="grid size-11 place-items-center rounded-full bg-[#d6ff38] text-[#050505] transition hover:bg-[#050505] hover:text-[#d6ff38]"
+          >
+            <UserRound className="size-5" />
           </Link>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-label={open ? t("close") : t("open")}
             aria-expanded={open}
             aria-controls="landing-mobile-nav"
             className="grid size-11 place-items-center rounded-full border border-[#050505]/12 bg-white text-[#050505] transition hover:border-[#5f7000] md:hidden"
@@ -87,16 +101,9 @@ export function LandingNav() {
                 onClick={() => setOpen(false)}
                 className="rounded-xl px-4 py-3 text-sm font-medium text-[#050505] transition hover:bg-[#f4f4f1]"
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             ))}
-            <Link
-              href="/register"
-              onClick={() => setOpen(false)}
-              className="mt-2 inline-flex justify-center rounded-full bg-[#050505] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#d6ff38] hover:text-[#050505]"
-            >
-              Regístrate / Inicia sesión
-            </Link>
             <InstallAppButton className="mt-1 w-full justify-center" />
           </div>
         </div>

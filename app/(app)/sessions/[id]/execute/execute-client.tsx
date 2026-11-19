@@ -20,14 +20,23 @@ import {
   Timer,
   Dumbbell,
   ListOrdered,
+  Check,
+  Star,
+  RefreshCw,
+  Trash2,
+  NotebookPen,
+  PenTool,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CourtBoardDialog } from "@/components/app/court-board-dialog";
+import { TwoCourtsLive } from "./two-courts-live";
 import {
-  SessionCloseDialog,
-  type RatingAfterEdit,
-  type SessionClosePlanChanged,
-  type SessionCloseRating,
-} from "@/components/app/session-close-dialog";
+  PLAN_CHANGE_REASONS,
+  type PlanChangeReason,
+} from "@/lib/sessions/plan-change";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "border-blue-500/40 bg-blue-500/5",
@@ -81,19 +90,40 @@ interface ExerciseData {
   steps: Array<{ title: string; description: string }>;
   tips: string | null;
   materials: string[];
+  /** Solo con dos pistas. */
+  court?: 1 | 2;
+  ledBy?: "coach" | "auto" | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
+  blockOrder?: number;
+  blockRotates?: boolean;
 }
 
 interface SessionData {
+  /** 2 = trabajo en paralelo en dos pistas. */
+  courts?: 1 | 2;
   id: string;
   title: string;
   durationMinutes: number;
   scheduledAt: string;
   status: string;
+  coachRating?: number | null;
+  coachComment?: string | null;
+}
+
+interface StudentData {
+  id: string;
+  name: string;
+  attended: boolean | null;
+  rating: number | null;
 }
 
 interface Props {
+  /** Usuario actual (para guardar los dibujos de la pizarra). */
+  userId: string;
   session: SessionData;
   exercises: ExerciseData[];
+  students?: StudentData[];
   diagrams?: Record<string, Diagram>;
 }
 
@@ -104,6 +134,49 @@ type ExerciseExecution = {
   rating: number | null;
   notes: string;
 };
+
+function StarRating({
+  value,
+  onChange,
+  label,
+  size = "lg",
+  allowClear = false,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  label: string;
+  size?: "lg" | "sm";
+  allowClear?: boolean;
+}) {
+  return (
+    <div
+      className="flex items-center gap-1"
+      role="radiogroup"
+      aria-label={label}
+    >
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          role="radio"
+          aria-checked={value === n}
+          aria-label={`${n} de 5`}
+          onClick={() => onChange(allowClear && value === n ? 0 : n)}
+          className="rounded-md p-0.5 transition-transform active:scale-90"
+        >
+          <Star
+            className={cn(
+              size === "lg" ? "size-9" : "size-6",
+              n <= value
+                ? "fill-amber-400 text-amber-400"
+                : "text-muted-foreground/35"
+            )}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Reloj para medir el tiempo real en pista (solo en manejadores de eventos). */
 function nowMs() {
@@ -116,8 +189,8 @@ function formatTime(seconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function formatDate(isoString: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatDate(isoString: string, loc: string = "es-ES") {
+  return new Intl.DateTimeFormat(loc, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -126,8 +199,36 @@ function formatDate(isoString: string) {
   }).format(new Date(isoString));
 }
 
-export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
+export function ExecuteSessionClient({
+  userId,
+  session,
+  exercises: initialExercises,
+  students = [],
+  diagrams,
+}: Props) {
+  const term = useTerm();
+  const intlLocale = useLocale() === "en" ? "en-GB" : "es-ES";
+  const tx = useTranslations("ui.s_execute_executeclient");
   const router = useRouter();
+  // El plan se puede cambiar durante la clase (sustituir o quitar).
+  const [exercises, setExercises] = useState(initialExercises);
+  const [planEdit, setPlanEdit] = useState<
+    null | { mode: "menu" } | { mode: "replace" } | { mode: "remove" }
+  >(null);
+  const [planSearch, setPlanSearch] = useState("");
+  const [planResults, setPlanResults] = useState<
+    | {
+        id: string;
+        name: string;
+        category: string;
+        durationMinutes: number;
+        description: string | null;
+      }[]
+    | null
+  >(null);
+  const [planBusy, setPlanBusy] = useState(false);
+  const planSearchSeq = useRef(0);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [done, setDone] = useState<Set<string>>(new Set());
@@ -139,10 +240,61 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
   const [showQuickComplete, setShowQuickComplete] = useState(false);
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
-  // Cierre: pregunta "¿según lo planificado?" y valoración. `markAll` = se
-  // llegó desde "Sesión completada" sin ir ejercicio a ejercicio.
-  const [closeDialog, setCloseDialog] = useState<{ markAll: boolean } | null>(
-    null
+  // Cierre: primero "¿se ha completado tal y como estaba planificada?";
+  // si sí, valoración; si no, motivo (opcional) y a editar la sesión.
+  const [closeStep, setCloseStep] = useState<"plan" | "reason" | "review">(
+    "plan"
+  );
+  const [planReason, setPlanReason] = useState<PlanChangeReason | null>(null);
+  const [planFollowed, setPlanFollowed] = useState<boolean | null>(null);
+  const [planNote, setPlanNote] = useState("");
+  // Herramientas a mano durante la clase: bloc de notas y pizarra.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesSaved, setNotesSaved] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [boardMessage, setBoardMessage] = useState<string | null>(null);
+  // Cronómetro libre que el monitor activa si lo necesita (independiente del
+  // temporizador del ejercicio). Sigue corriendo aunque cierre el panel.
+  const [stopwatchOpen, setStopwatchOpen] = useState(false);
+  const [swBaseMs, setSwBaseMs] = useState(0);
+  const [swStartedAt, setSwStartedAt] = useState<number | null>(null);
+  const [swElapsedMs, setSwElapsedMs] = useState(0);
+
+  function openClose(kind: "finish" | "quick") {
+    setCloseStep("plan");
+    setPlanReason(null);
+    setPlanFollowed(null);
+    setPlanNote("");
+    setFinishError(null);
+    if (kind === "finish") setShowFinish(true);
+    else setShowQuickComplete(true);
+  }
+  // Pasar lista antes de empezar: por defecto todos presentes (salvo lo ya
+  // guardado), y el monitor marca a quien falta.
+  const [attendanceStage, setAttendanceStage] = useState(false);
+  const [attendance, setAttendance] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(students.map((s) => [s.id, s.attended ?? true]))
+  );
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  // ¿Se ha pasado lista? (al empezar o en una vez anterior). Si no, se pide
+  // al cerrar la sesión.
+  const [attendanceTaken, setAttendanceTaken] = useState(() =>
+    students.some((s) => s.attended !== null)
+  );
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  // Valoración al terminar: estrellas de la clase (obligatoria), comentario y
+  // estrellas por alumno (opcionales).
+  const [sessionRating, setSessionRating] = useState(session.coachRating ?? 0);
+  const [sessionComment, setSessionComment] = useState(
+    session.coachComment ?? ""
+  );
+  const [studentRatings, setStudentRatings] = useState<Record<string, number>>(
+    () =>
+      Object.fromEntries(
+        students.filter((s) => s.rating).map((s) => [s.id, s.rating as number])
+      )
   );
   const [executionById, setExecutionById] = useState<
     Record<string, ExerciseExecution>
@@ -183,6 +335,33 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
     return () => clearInterval(interval);
   }, [timerRunning, countdownMode]);
 
+  // Cronómetro libre: se calcula con la hora real para no perder tiempo si la
+  // pestaña se queda en segundo plano.
+  useEffect(() => {
+    if (swStartedAt === null) return;
+    const interval = setInterval(() => {
+      setSwElapsedMs(swBaseMs + (nowMs() - swStartedAt));
+    }, 250);
+    return () => clearInterval(interval);
+  }, [swStartedAt, swBaseMs]);
+
+  function toggleStopwatch() {
+    if (swStartedAt === null) {
+      setSwStartedAt(nowMs());
+    } else {
+      const total = swBaseMs + (nowMs() - swStartedAt);
+      setSwBaseMs(total);
+      setSwElapsedMs(total);
+      setSwStartedAt(null);
+    }
+  }
+
+  function resetStopwatch() {
+    setSwStartedAt(null);
+    setSwBaseMs(0);
+    setSwElapsedMs(0);
+  }
+
   // Momento en que el ejercicio actual pasó a estar en pantalla. Sirve para
   // registrar el tiempo real aunque el monitor no use el cronómetro.
   const exerciseShownAtRef = useRef<number | null>(null);
@@ -197,9 +376,48 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
     }
   }
 
-  function handleStart() {
+  function beginSession() {
     resetTimerForExercise(current);
     setStarted(true);
+  }
+
+  function handleStart() {
+    // Lo primero es pasar lista (si la sesión tiene alumnos).
+    if (students.length > 0) {
+      setAttendanceStage(true);
+      return;
+    }
+    beginSession();
+  }
+
+  async function confirmAttendance() {
+    setSavingAttendance(true);
+    setAttendanceError(null);
+    try {
+      const results = await Promise.all(
+        students.map((student) =>
+          fetch(`/api/sessions/${session.id}/attendance`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              studentId: student.id,
+              attended: attendance[student.id] ?? true,
+            }),
+          })
+        )
+      );
+      if (results.some((r) => !r.ok)) throw new Error("attendance");
+    } catch {
+      setSavingAttendance(false);
+      setAttendanceError(
+        tx("noSePudoGuardar")
+      );
+      return;
+    }
+    setSavingAttendance(false);
+    setAttendanceTaken(true);
+    setAttendanceStage(false);
+    beginSession();
   }
 
   function toggleCountdown() {
@@ -280,7 +498,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
       resetTimerForExercise(exercises[nextIdx]);
       setCurrentIdx(nextIdx);
     } else {
-      setShowFinish(true);
+      openClose("finish");
     }
   }
 
@@ -291,7 +509,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
       resetTimerForExercise(exercises[nextIdx]);
       setCurrentIdx(nextIdx);
     } else {
-      setShowFinish(true);
+      openClose("finish");
     }
   }
 
@@ -308,25 +526,186 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
     setCurrentIdx(idx);
   }
 
-  async function handleFinish({
-    markAll = false,
-    close,
-  }: {
-    markAll?: boolean;
-    close: SessionCloseRating | SessionClosePlanChanged | RatingAfterEdit;
-  }): Promise<boolean> {
+  // ── Cambiar el plan durante la clase ───────────────────────────────
+  async function searchPlanExercises(q: string) {
+    setPlanSearch(q);
+    // Solo vale la respuesta de la última búsqueda (se escribe rápido).
+    const requestId = ++planSearchSeq.current;
+    try {
+      const res = await fetch(
+        `/api/sessions/${session.id}/plan-item?q=${encodeURIComponent(q)}`
+      );
+      if (!res.ok) throw new Error();
+      const json = (await res.json()) as {
+        data: NonNullable<typeof planResults>;
+      };
+      if (requestId === planSearchSeq.current) setPlanResults(json.data);
+    } catch {
+      setPlanError(tx("noSePudoBuscar"));
+    }
+  }
+
+  function openReplace() {
+    setPlanError(null);
+    setPlanResults(null);
+    setPlanEdit({ mode: "replace" });
+    void searchPlanExercises("");
+  }
+
+  function forgetProgress(key: string) {
+    setDone((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setExecutionById((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function replaceCurrent(ex: NonNullable<typeof planResults>[number]) {
+    if (!current) return;
+    setPlanBusy(true);
+    setPlanError(null);
+    const res = await fetch(`/api/sessions/${session.id}/plan-item`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "replace",
+        itemKey: current.key,
+        exerciseId: ex.id,
+      }),
+    }).catch(() => null);
+    setPlanBusy(false);
+    if (!res?.ok) {
+      setPlanError(tx("noSePudoSustituir"));
+      return;
+    }
+    const key = current.key;
+    setExercises((list) =>
+      list.map((item) =>
+        item.key === key
+          ? {
+              ...item,
+              kind: "exercise" as const,
+              exerciseId: ex.id,
+              name: ex.name,
+              category: ex.category,
+              description: ex.description,
+              // Se mantiene el tiempo planificado para ese hueco.
+              durationMinutes: item.durationMinutes || ex.durationMinutes,
+              steps: [],
+              tips: null,
+              materials: [],
+            }
+          : item
+      )
+    );
+    forgetProgress(key);
+    resetTimerForExercise({
+      ...current,
+      durationMinutes: current.durationMinutes || ex.durationMinutes,
+    });
+    setPlanEdit(null);
+  }
+
+  async function removeCurrent() {
+    if (!current) return;
+    setPlanBusy(true);
+    setPlanError(null);
+    const res = await fetch(`/api/sessions/${session.id}/plan-item`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove", itemKey: current.key }),
+    }).catch(() => null);
+    setPlanBusy(false);
+    if (!res?.ok) {
+      setPlanError(tx("noSePudoQuitar"));
+      return;
+    }
+    const key = current.key;
+    const nextList = exercises.filter((item) => item.key !== key);
+    forgetProgress(key);
+    setExercises(nextList);
+    const nextIdx = Math.min(currentIdx, Math.max(nextList.length - 1, 0));
+    setCurrentIdx(nextIdx);
+    if (nextList[nextIdx]) resetTimerForExercise(nextList[nextIdx]);
+    setPlanEdit(null);
+  }
+
+  /** Guarda el bloc de notas (comentario general de la sesión) y lo cierra. */
+  async function closeNotes() {
+    setNotesSaved("saving");
+    const res = await fetch(`/api/sessions/${session.id}/comments`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionComment: sessionComment.trim() || null }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      setNotesSaved("error");
+      return;
+    }
+    setNotesSaved("saved");
+    setNotesOpen(false);
+  }
+
+  async function handleFinish({ markAll = false }: { markAll?: boolean } = {}) {
+    if (sessionRating < 1) {
+      setFinishError(tx("valoraLaClaseDe"));
+      return;
+    }
     setFinishing(true);
     setFinishError(null);
-    const closeFields =
-      close.planFollowed === true
-        ? {
-            planFollowed: true,
-            sessionRating: close.sessionRating,
-            statusNote: close.note,
-          }
-        : close.planFollowed === false
-          ? { planFollowed: false, planChangeReason: close.planChangeReason }
-          : {};
+
+    // Valoración de la clase y, si se han puesto, de cada alumno.
+    try {
+      const reviewResults = await Promise.all([
+        fetch(`/api/sessions/${session.id}/review`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(planFollowed === null
+              ? {}
+              : {
+                  planFollowed,
+                  planChangeReason: planFollowed ? null : planReason,
+                  planChangeNote:
+                    !planFollowed && planReason === "otro"
+                      ? planNote.trim() || null
+                      : null,
+                }),
+            coachRating: sessionRating,
+            coachComment: sessionComment.trim() || null,
+          }),
+        }),
+        // Asistencia de todos (se vuelve a guardar al cerrar, por si falló al
+        // empezar o se pasó lista ahora) y valoración de quien la tenga.
+        ...students.map((student) =>
+          fetch(`/api/sessions/${session.id}/attendance`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              studentId: student.id,
+              attended: attendance[student.id] ?? true,
+              ...((studentRatings[student.id] ?? 0) > 0 &&
+              attendance[student.id] !== false
+                ? { rating: studentRatings[student.id] }
+                : {}),
+            }),
+          })
+        ),
+      ]);
+      if (reviewResults.some((r) => !r.ok)) throw new Error("review");
+    } catch {
+      setFinishing(false);
+      setFinishError(
+        tx("noSePudoGuardar2")
+      );
+      return;
+    }
+
     const currentElapsed = current ? elapsedSecondsFor(current) : 0;
     const payload = exercises
       .filter((exercise) => exercise.kind === "exercise" && exercise.exerciseId)
@@ -360,56 +739,288 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
         ? await fetch(`/api/sessions/${session.id}/execution`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              exercises: payload,
-              completeSession: true,
-              ...closeFields,
-            }),
+            body: JSON.stringify({ exercises: payload, completeSession: true }),
           })
         : await fetch(`/api/sessions/${session.id}/status`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "completed", ...closeFields }),
+            body: JSON.stringify({ status: "completed" }),
           });
     if (!res.ok) {
       setFinishing(false);
       setFinishError(
-        "No se pudo guardar. Revisa la conexión e inténtalo de nuevo."
+        tx("noSePudoGuardar3")
       );
-      return false;
+      return;
     }
-    // No se dio según lo planificado: a editar la sesión para que quede lo
-    // que se hizo de verdad; al guardar se pide la valoración final.
-    router.push(
-      close.planFollowed === false
-        ? `/sessions/${session.id}/edit?cierre=1`
-        : `/sessions/${session.id}`
-    );
+    router.push(`/sessions/${session.id}`);
     router.refresh();
-    return true;
   }
+
+  const reviewStudents = students.filter((s) => attendance[s.id] !== false);
+
+  const reviewFields = (
+    <div className="mb-5 space-y-4 text-left">
+      {!attendanceTaken && students.length > 0 && (
+        <div className="rounded-2xl border border-[#050505]/10 p-3 dark:border-white/10">
+          <p className="text-xs font-black text-foreground">
+            {tx("asistencia")}{" "}
+            <span className="font-semibold text-muted-foreground">
+              {tx("noSePasoLista")}
+            </span>
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {students.map((student) => {
+              const present = attendance[student.id] ?? true;
+              return (
+                <li
+                  key={student.id}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                    {student.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttendance((prev) => ({
+                        ...prev,
+                        [student.id]: !present,
+                      }))
+                    }
+                    aria-pressed={present}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1 text-xs font-black transition-colors",
+                      present
+                        ? "bg-brand text-brand-foreground"
+                        : "bg-destructive/15 text-destructive"
+                    )}
+                  >
+                    {present ? "Ha venido" : "Falta"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      <div className="text-center">
+        <p className="text-sm font-black text-foreground">
+          {tx("howWasClass")}{" "}
+          <span className="text-destructive" aria-hidden>
+            *
+          </span>
+        </p>
+        <div className="mt-2 flex justify-center">
+          <StarRating
+            value={sessionRating}
+            onChange={setSessionRating}
+            label={tx("valoracionDeLaClase")}
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {tx("obligatoriaDe1A")}
+        </p>
+      </div>
+      <label className="block">
+        <span className="text-xs font-black text-foreground">
+          {tx("comentario")}{" "}
+          <span className="font-semibold text-muted-foreground">
+            {tx("opcional")}
+          </span>
+        </span>
+        <textarea
+          value={sessionComment}
+          onChange={(e) => setSessionComment(e.target.value)}
+          rows={3}
+          maxLength={2000}
+          placeholder={tx("queHaFuncionadoQue")}
+          className="mt-1 w-full resize-none rounded-2xl border border-[#050505]/10 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40 dark:border-white/10"
+        />
+      </label>
+      {reviewStudents.length > 0 && (
+        <details className="rounded-2xl border border-[#050505]/10 dark:border-white/10">
+          <summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-foreground">
+            {tx("valorarAlumnos")}{" "}
+            <span className="font-semibold text-muted-foreground">
+              {tx("opcional")}
+            </span>
+          </summary>
+          <ul className="divide-y divide-[#050505]/10 border-t border-[#050505]/10 dark:divide-white/10 dark:border-white/10">
+            {reviewStudents.map((student) => (
+              <li
+                key={student.id}
+                className="flex items-center justify-between gap-2 px-3 py-2"
+              >
+                <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                  {student.name}
+                </span>
+                <StarRating
+                  size="sm"
+                  allowClear
+                  value={studentRatings[student.id] ?? 0}
+                  onChange={(next) =>
+                    setStudentRatings((prev) => ({
+                      ...prev,
+                      [student.id]: next,
+                    }))
+                  }
+                  label={tx("valoracionDeV1", { v1: student.name })}
+                />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
 
   const exerciseItemsCount = exercises.filter(
     (e) => e.kind === "exercise"
   ).length;
 
-  const closeDialogEl = (
-    <SessionCloseDialog
-      open={closeDialog !== null}
-      onClose={() => setCloseDialog(null)}
-      summary={
-        closeDialog?.markAll
-          ? undefined
-          : `${done.size} de ${totalExercises} elementos realizados`
-      }
-      onRate={(data) =>
-        handleFinish({ markAll: closeDialog?.markAll ?? false, close: data })
-      }
-      onPlanChanged={(data) =>
-        handleFinish({ markAll: closeDialog?.markAll ?? false, close: data })
-      }
-    />
-  );
+  /** Contenido de la ventana de cierre según el paso (plan, motivo, valoración). */
+  function closeBody({
+    markAll,
+    onBack,
+    backLabel,
+    finishLabel,
+  }: {
+    markAll: boolean;
+    onBack: () => void;
+    backLabel: string;
+    finishLabel: string;
+  }) {
+    const secondary =
+      "flex-1 rounded-full border border-[#050505]/10 px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10";
+    const primary =
+      "inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60";
+
+    if (closeStep === "plan") {
+      return (
+        <>
+          <p className="mb-4 text-center text-base font-black leading-snug text-foreground">
+            {tx("seHaCompletadoLa")}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setPlanFollowed(false);
+                setCloseStep("reason");
+              }}
+              className={secondary}
+            >
+              {tx("noCambio")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPlanFollowed(true);
+                setCloseStep("review");
+              }}
+              className={primary}
+            >
+              {tx("siTalCual")}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-4 w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {backLabel}
+          </button>
+        </>
+      );
+    }
+
+    if (closeStep === "reason") {
+      return (
+        <>
+          <p className="text-base font-black text-foreground">
+            {tx("porQueCambio")}
+          </p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            {tx("opcionalSiQuieresQue")}
+          </p>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {PLAN_CHANGE_REASONS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                aria-pressed={planReason === r.id}
+                onClick={() => setPlanReason(planReason === r.id ? null : r.id)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  planReason === r.id
+                    ? "border-brand bg-brand/20 text-foreground"
+                    : "border-[#050505]/10 text-muted-foreground hover:bg-muted dark:border-white/10"
+                )}
+              >
+                {term(r.label)}
+              </button>
+            ))}
+          </div>
+          {planReason === "otro" && (
+            <textarea
+              autoFocus
+              rows={2}
+              maxLength={300}
+              value={planNote}
+              onChange={(e) => setPlanNote(e.target.value)}
+              placeholder={tx("cuentaBrevementeQuePaso")}
+              className="-mt-2 mb-5 w-full resize-none rounded-2xl border border-[#050505]/10 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40 dark:border-white/10"
+            />
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setCloseStep("plan")}
+              disabled={finishing}
+              className={secondary}
+            >
+              {tx("atras")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCloseStep("review")}
+              className={primary}
+            >
+              {tx("siguiente")}
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {reviewFields}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              setCloseStep(planFollowed === false ? "reason" : "plan")
+            }
+            disabled={finishing}
+            className={secondary}
+          >
+            {tx("atras")}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFinish({ markAll })}
+            disabled={finishing || sessionRating < 1}
+            className={primary}
+          >
+            {finishing && <Loader2 className="size-4 animate-spin" />}
+            {finishLabel}
+          </button>
+        </div>
+      </>
+    );
+  }
 
   const quickCompleteModal = showQuickComplete ? (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
@@ -417,47 +1028,30 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => !finishing && setShowQuickComplete(false)}
       />
-      <div className="relative w-full max-w-sm rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+      <div className="relative max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
         <div className="text-center mb-6">
           <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground">
             <CheckCircle2 className="size-7" />
           </div>
           <h2 className="mb-1 text-2xl font-black text-foreground">
-            ¿Sesión completada?
+            {tx("sesionCompletada")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Se marcará la sesión como completada
-            {exerciseItemsCount > 0
-              ? ` y los ${exerciseItemsCount} ejercicio${exerciseItemsCount !== 1 ? "s" : ""} como realizados`
-              : ""}
-            , sin ir uno por uno.
-          </p>
+            {tx("seMarcaraLaSesion", { v1: exerciseItemsCount > 0
+              ? tx("asDoneSuffix", { n: exerciseItemsCount })
+              : "" })}</p>
           {finishError && (
             <p className="mt-3 text-sm font-semibold text-destructive">
               {finishError}
             </p>
           )}
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowQuickComplete(false)}
-            disabled={finishing}
-            className="flex-1 rounded-full border border-[#050505]/10 px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
-          >
-            Volver
-          </button>
-          <button
-            onClick={() => {
-              setShowQuickComplete(false);
-              setCloseDialog({ markAll: true });
-            }}
-            disabled={finishing}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60"
-          >
-            {finishing && <Loader2 className="size-4 animate-spin" />}
-            Sí, completada
-          </button>
-        </div>
+        {closeBody({
+          markAll: true,
+          onBack: () => setShowQuickComplete(false),
+          backLabel: "Volver a la sesión",
+          finishLabel: "Guardar",
+        })}
       </div>
     </div>
   ) : null;
@@ -469,14 +1063,115 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           <Dumbbell className="size-7 text-foreground/45" />
         </div>
         <p className="mb-2 text-2xl font-black text-foreground/70">
-          Esta sesión no tiene contenido.
+          {tx("estaSesionNoTiene")}
         </p>
         <Link
           href={`/sessions/${session.id}`}
           className="mt-2 inline-flex h-10 items-center rounded-full border border-brand/30 px-4 text-sm font-black text-brand"
         >
-          Volver a la sesión
+          {tx("volverALaSesion")}
         </Link>
+      </div>
+    );
+  }
+
+  // ── Pasar lista ─────────────────────────────────────────────────────
+  if (!started && attendanceStage) {
+    const presentCount = students.filter((s) => attendance[s.id]).length;
+    return (
+      <div className="flex min-h-[100dvh] flex-col bg-[#F4F4F1] text-[#050505] dark:bg-[#050505] dark:text-white">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#050505]/10 bg-white/86 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
+          <button
+            type="button"
+            onClick={() => !savingAttendance && setAttendanceStage(false)}
+            aria-label={tx("volverALaPreparacion")}
+            className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <p className="max-w-[200px] truncate text-xs font-semibold text-foreground">
+            {session.title}
+          </p>
+          <div className="w-9" />
+        </header>
+
+        <main className="mx-auto w-full max-w-xl flex-1 space-y-5 px-4 py-8">
+          <div className="space-y-2 text-center">
+            <p className="tp-kicker">{tx("pasarLista")}</p>
+            <h1 className="text-3xl font-black leading-tight text-foreground">
+              {tx("quienHaVenido")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {tx("v1DeV2Presente", { v1: presentCount, v2: students.length, v3: presentCount !== 1 ? "s" : "" })}</p>
+          </div>
+
+          <ul className="space-y-2">
+            {students.map((student) => {
+              const present = attendance[student.id] ?? true;
+              return (
+                <li key={student.id}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttendance((prev) => ({
+                        ...prev,
+                        [student.id]: !present,
+                      }))
+                    }
+                    aria-pressed={present}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors",
+                      present
+                        ? "border-brand/40 bg-brand/15"
+                        : "border-[#050505]/10 bg-white opacity-70 dark:border-white/10 dark:bg-[#10100e]"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-full",
+                        present
+                          ? "bg-brand text-brand-foreground"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {present ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <X className="size-4" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-base font-black text-foreground">
+                      {student.name}
+                    </span>
+                    <span className="text-xs font-black text-muted-foreground">
+                      {present ? "Presente" : "Ausente"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </main>
+
+        <footer className="border-t border-[#050505]/10 bg-white/86 px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] backdrop-blur dark:border-white/10 dark:bg-[#10100e]/86">
+          {attendanceError && (
+            <p className="mb-3 text-center text-sm font-semibold text-destructive">
+              {attendanceError}
+            </p>
+          )}
+          <button
+            onClick={confirmAttendance}
+            disabled={savingAttendance}
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-brand text-base font-black text-brand-foreground shadow-sm transition-all hover:bg-brand/90 active:scale-[0.98] disabled:opacity-60"
+          >
+            {savingAttendance ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Play className="size-5 translate-x-0.5" />
+            )}
+            {tx("empezarLaClase")}
+          </button>
+        </footer>
       </div>
     );
   }
@@ -501,22 +1196,22 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
         <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8 px-4 py-8">
           {/* Session overview */}
           <div className="text-center space-y-2">
-            <p className="tp-kicker">Preparación</p>
+            <p className="tp-kicker">{tx("preparacion")}</p>
             <h1 className="text-3xl font-black leading-tight text-foreground">
               {session.title}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {formatDate(session.scheduledAt)}
+              {formatDate(session.scheduledAt, intlLocale)}
             </p>
             <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Clock className="size-3.5 text-brand" />
-                {session.durationMinutes} min
+                {session.durationMinutes}{" "}{tx("min")}
               </span>
               <span className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1.5">
                 <Dumbbell className="size-3.5 text-brand" />
-                {totalExercises} elemento{totalExercises !== 1 ? "s" : ""}
+                {totalExercises}{" "}{tx("elemento")}{totalExercises !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -527,7 +1222,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
               <div className="flex items-center gap-2 border-b border-[#050505]/10 px-5 py-4 dark:border-white/10">
                 <Package className="size-4 text-brand" />
                 <h2 className="text-sm font-black text-foreground">
-                  Material necesario
+                  {tx("materialNecesario")}
                 </h2>
                 <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
                   {allMaterials.length}
@@ -551,7 +1246,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
             <div className="border-b border-[#050505]/10 px-5 py-3.5 dark:border-white/10">
               <h2 className="text-sm font-black text-foreground">
-                Plan de la sesión
+                {tx("planDeLaSesion")}
               </h2>
             </div>
             <div className="divide-y divide-[#050505]/10 dark:divide-white/10">
@@ -601,8 +1296,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
                   </div>
                   {ex.durationMinutes > 0 && (
                     <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-                      {ex.durationMinutes} min
-                    </span>
+                      {tx("v1Min", { v1: ex.durationMinutes })}</span>
                   )}
                 </div>
               ))}
@@ -616,18 +1310,17 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
             className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-brand text-base font-black text-brand-foreground shadow-sm transition-all hover:bg-brand/90 active:scale-[0.98]"
           >
             <Play className="size-5 translate-x-0.5" />
-            Comenzar sesión
+            {tx("comenzarSesion")}
           </button>
           <button
-            onClick={() => setShowQuickComplete(true)}
+            onClick={() => openClose("quick")}
             className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#050505]/15 text-sm font-black text-foreground transition-colors hover:bg-muted dark:border-white/15"
           >
             <CheckCircle2 className="size-4" />
-            Sesión completada
+            {tx("sesionCompletada2")}
           </button>
         </footer>
         {quickCompleteModal}
-        {closeDialogEl}
       </div>
     );
   }
@@ -641,10 +1334,9 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
     return (
       <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
         <div className="border-b border-[#050505]/10 px-5 py-3.5 dark:border-white/10">
-          <h2 className="text-sm font-black text-foreground">Hoja de ruta</h2>
+          <h2 className="text-sm font-black text-foreground">{tx("hojaDeRuta")}</h2>
           <p className="text-[11px] text-muted-foreground">
-            {done.size} de {totalExercises} hechos
-            {remainingMinutes > 0 && ` · quedan ${remainingMinutes} min`}
+            {tx("v1DeV2Hechos", { v1: done.size, v2: totalExercises, v3: remainingMinutes > 0 ? tx("remainingSuffix", { min: remainingMinutes }) : "" })}
           </p>
         </div>
         <ol className="divide-y divide-[#050505]/10 dark:divide-white/10">
@@ -744,7 +1436,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
         <button
           type="button"
           onClick={() => setShowRoadmap(true)}
-          aria-label="Ver hoja de ruta"
+          aria-label={tx("verHojaDeRuta")}
           className="ml-2 flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden dark:border-white/10"
         >
           <ListOrdered className="size-4" />
@@ -759,14 +1451,69 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowQuickComplete(true)}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors"
-        >
-          <Flag className="size-3" />
-          Sesión completada
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setNotesSaved("idle");
+              setNotesOpen(true);
+            }}
+            aria-label={tx("blocDeNotas")}
+            title={tx("blocDeNotas")}
+            className={cn(
+              "flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10",
+              sessionComment.trim() &&
+                "border-brand/40 bg-brand/10 text-foreground"
+            )}
+          >
+            <NotebookPen className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setStopwatchOpen(true)}
+            aria-label={tx("cronometro")}
+            title={tx("cronometro")}
+            className={cn(
+              "flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10",
+              swElapsedMs > 0 || swStartedAt !== null
+                ? "border-brand/40 bg-brand/10 px-3 text-foreground"
+                : "size-10"
+            )}
+          >
+            <Timer className="size-4" />
+            {(swElapsedMs > 0 || swStartedAt !== null) && (
+              <span className="text-xs font-black tabular-nums">
+                {formatTime(Math.floor(swElapsedMs / 1000))}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setBoardMessage(null);
+              setBoardOpen(true);
+            }}
+            aria-label={tx("pizarra")}
+            title={tx("pizarra")}
+            className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
+          >
+            <PenTool className="size-4" />
+          </button>
+          <button
+            onClick={() => openClose("quick")}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand border border-brand/30 bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/15 transition-colors"
+          >
+            <Flag className="size-3" />
+            <span className="hidden sm:inline">{tx("sesionCompletada2")}</span>
+            <span className="sm:hidden">{tx("terminar")}</span>
+          </button>
+        </div>
       </header>
+      {boardMessage && (
+        <p className="bg-brand/15 px-4 py-2 text-center text-xs font-semibold text-foreground">
+          {boardMessage}
+        </p>
+      )}
 
       {/* Progress bar */}
       <div className="h-1 bg-border">
@@ -784,7 +1531,20 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
             {renderRoadmap()}
           </div>
         </aside>
-        <main className="flex-1 flex flex-col px-4 py-6 max-w-2xl mx-auto w-full gap-5 lg:px-0">
+        <main
+          className={cn(
+            "mx-auto flex w-full flex-1 flex-col gap-5 px-4 py-6 lg:px-0",
+            session.courts === 2 ? "max-w-4xl" : "max-w-2xl"
+          )}
+        >
+          {session.courts === 2 && (
+            <TwoCourtsLive
+              exercises={exercises}
+              currentIdx={currentIdx}
+              onPick={selectExercise}
+              onNextBlock={selectExercise}
+            />
+          )}
           {/* Category + name */}
           <div
             ref={exerciseTopRef}
@@ -815,13 +1575,13 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
               {current.durationMinutes > 0 && (
                 <span className="flex items-center gap-1">
                   <Clock className="size-3" />
-                  {current.durationMinutes} min sugeridos
+                  {current.durationMinutes}{" "}{tx("minSugeridos")}
                 </span>
               )}
               {done.has(current.key) && (
                 <span className="flex items-center gap-1 text-brand font-semibold">
                   <CheckCircle2 className="size-3" />
-                  Completado
+                  {tx("completado")}
                 </span>
               )}
             </div>
@@ -833,89 +1593,153 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
               {currentIdx < totalExercises - 1 ? (
                 <>
                   <SkipForward className="size-4" />
-                  Siguiente
+                  {tx("siguiente")}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="size-4" />
-                  Completar sesión
+                  {tx("completarSesion")}
                 </>
               )}
             </button>
-          </div>
-
-          {/* Timer */}
-          <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
-            {/* Countdown progress bar */}
-            {countdownMode && (
-              <div className="h-1 bg-border">
-                <div
-                  className={cn(
-                    "h-full transition-all duration-1000",
-                    countdownPct > 30
-                      ? "bg-brand"
-                      : countdownPct > 10
-                        ? "bg-amber-400"
-                        : "bg-red-400"
-                  )}
-                  style={{ width: `${countdownPct}%` }}
-                />
+            {/* Cambiar el plan sobre la marcha */}
+            {planEdit?.mode === "remove" ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+                <span className="font-semibold text-foreground">
+                  {tx("quitarV1DeLa", { v1: current.name })}</span>
+                <span className="ml-auto flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPlanEdit(null)}
+                    disabled={planBusy}
+                    className="rounded-full border border-[#050505]/10 px-3 py-1.5 text-xs font-black text-muted-foreground dark:border-white/10"
+                  >
+                    {tx("no")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removeCurrent()}
+                    disabled={planBusy}
+                    className="inline-flex items-center gap-1 rounded-full bg-destructive px-3 py-1.5 text-xs font-black text-white disabled:opacity-60"
+                  >
+                    {planBusy && <Loader2 className="size-3 animate-spin" />}
+                    {tx("siQuitar")}
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={openReplace}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#050505]/15 text-xs font-black text-foreground transition-colors hover:bg-muted dark:border-white/15"
+                >
+                  <RefreshCw className="size-3.5" />
+                  {tx("sustituir")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlanError(null);
+                    setPlanEdit({ mode: "remove" });
+                  }}
+                  disabled={totalExercises <= 1}
+                  title={
+                    totalExercises <= 1
+                      ? tx("laSesionNecesitaAl")
+                      : undefined
+                  }
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#050505]/15 text-xs font-black text-foreground transition-colors hover:bg-muted disabled:opacity-40 dark:border-white/15"
+                >
+                  <Trash2 className="size-3.5" />
+                  {tx("quitar")}
+                </button>
               </div>
             )}
-            <div className="flex items-center gap-4 p-5">
-              <span
-                className={cn(
-                  "font-mono text-3xl tabular-nums flex-1",
-                  countdownMode && timerSeconds === 0
-                    ? "text-red-400"
-                    : "text-foreground"
-                )}
-              >
-                {formatTime(timerSeconds)}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTimerRunning((r) => !r)}
-                  className="flex size-11 items-center justify-center rounded-full bg-brand text-brand-foreground transition-all hover:bg-brand/90 active:scale-95"
-                  aria-label={timerRunning ? "Pausar" : "Iniciar"}
-                >
-                  {timerRunning ? (
-                    <Pause className="size-5" />
-                  ) : (
-                    <Play className="size-5 translate-x-0.5" />
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setTimerRunning(false);
-                    setTimerSeconds(
-                      countdownMode ? current.durationMinutes * 60 : 0
-                    );
-                  }}
-                  className="flex size-11 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
-                  aria-label="Reiniciar"
-                >
-                  <RotateCcw className="size-4" />
-                </button>
-                <button
-                  onClick={toggleCountdown}
-                  title={
-                    countdownMode
-                      ? "Cambiar a cronómetro"
-                      : "Cambiar a cuenta atrás"
-                  }
+            {planError && planEdit?.mode !== "replace" && (
+              <p className="mt-2 text-xs font-semibold text-destructive">
+                {planError}
+              </p>
+            )}
+          </div>
+
+          {/* Timer (con dos pistas manda el cronómetro del bloque, arriba) */}
+          <div
+            className={cn("overflow-hidden", session.courts === 2 && "hidden")}
+            hidden={session.courts === 2}
+          >
+            <div className="overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-[0_24px_80px_-64px_rgba(5,5,5,0.7)] dark:border-white/10 dark:bg-[#10100e]">
+              {/* Countdown progress bar */}
+              {countdownMode && (
+                <div className="h-1 bg-border">
+                  <div
+                    className={cn(
+                      "h-full transition-all duration-1000",
+                      countdownPct > 30
+                        ? "bg-brand"
+                        : countdownPct > 10
+                          ? "bg-amber-400"
+                          : "bg-red-400"
+                    )}
+                    style={{ width: `${countdownPct}%` }}
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-4 p-5">
+                <span
                   className={cn(
-                    "flex size-11 items-center justify-center rounded-full border transition-colors",
-                    countdownMode
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-[#050505]/10 text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/10"
+                    "font-mono text-3xl tabular-nums flex-1",
+                    countdownMode && timerSeconds === 0
+                      ? "text-red-400"
+                      : "text-foreground"
                   )}
-                  aria-label={
-                    countdownMode ? "Modo cronómetro" : "Modo cuenta atrás"
-                  }
                 >
-                  <Timer className="size-4" />
-                </button>
+                  {formatTime(timerSeconds)}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setTimerRunning((r) => !r)}
+                    className="flex size-11 items-center justify-center rounded-full bg-brand text-brand-foreground transition-all hover:bg-brand/90 active:scale-95"
+                    aria-label={timerRunning ? "Pausar" : "Iniciar"}
+                  >
+                    {timerRunning ? (
+                      <Pause className="size-5" />
+                    ) : (
+                      <Play className="size-5 translate-x-0.5" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTimerRunning(false);
+                      setTimerSeconds(
+                        countdownMode ? current.durationMinutes * 60 : 0
+                      );
+                    }}
+                    className="flex size-11 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
+                    aria-label={tx("reiniciar")}
+                  >
+                    <RotateCcw className="size-4" />
+                  </button>
+                  <button
+                    onClick={toggleCountdown}
+                    title={
+                      countdownMode
+                        ? tx("cambiarACronometro")
+                        : tx("cambiarACuentaAtras")
+                    }
+                    className={cn(
+                      "flex size-11 items-center justify-center rounded-full border transition-colors",
+                      countdownMode
+                        ? "border-brand bg-brand/10 text-brand"
+                        : "border-[#050505]/10 text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/10"
+                    )}
+                    aria-label={
+                      countdownMode ? "Modo cronómetro" : tx("modoCuentaAtras")
+                    }
+                  >
+                    <Timer className="size-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -926,10 +1750,10 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground">
-                    Registro de pista
+                    {tx("registroDePista")}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Se guarda al completar la sesión.
+                    {tx("seGuardaAlCompletar")}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -960,7 +1784,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
                 }
                 rows={3}
                 maxLength={1000}
-                placeholder="Notas rápidas: ajuste aplicado, respuesta del alumno, variante usada..."
+                placeholder={tx("notasRapidasAjusteAplicado")}
                 className="tp-field w-full resize-none px-3 py-2 text-sm placeholder:text-muted-foreground"
               />
             </div>
@@ -1001,7 +1825,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           {current.steps.length > 0 && (
             <div className="space-y-3">
               <p className="text-[10px] font-black uppercase text-muted-foreground">
-                Pasos
+                {tx("pasos")}
               </p>
               <ol className="space-y-3">
                 {current.steps.map((step, i) => (
@@ -1029,7 +1853,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           {current.notes && (
             <div className="rounded-[22px] border border-amber-500/20 bg-amber-500/10 p-4">
               <p className="mb-1.5 text-[10px] font-black uppercase text-amber-500/80">
-                Notas del entrenador
+                {tx("notasDelEntrenador")}
               </p>
               <p className="text-sm text-foreground/80 leading-relaxed">
                 {current.notes}
@@ -1041,7 +1865,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           {current.tips && (
             <div className="rounded-[22px] border border-[#050505]/10 bg-white p-4 dark:border-white/10 dark:bg-[#10100e]">
               <p className="mb-1.5 text-[10px] font-black uppercase text-muted-foreground">
-                Tips
+                {tx("tips")}
               </p>
               <p className="text-sm text-foreground/70 leading-relaxed">
                 {current.tips}
@@ -1059,7 +1883,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
               <button
                 type="button"
                 onClick={() => setShowRoadmap(false)}
-                aria-label="Cerrar hoja de ruta"
+                aria-label={tx("cerrarHojaDeRuta")}
                 className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 text-muted-foreground dark:border-white/10"
               >
                 <X className="size-4" />
@@ -1069,7 +1893,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           </div>
           <button
             type="button"
-            aria-label="Cerrar hoja de ruta"
+            aria-label={tx("cerrarHojaDeRuta")}
             onClick={() => setShowRoadmap(false)}
             className="flex-1 bg-black/40"
           />
@@ -1119,7 +1943,7 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           onClick={skipCurrent}
           className="h-12 shrink-0 rounded-full border border-[#050505]/10 px-4 text-xs font-black text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/10"
         >
-          Saltar
+          {tx("saltar")}
         </button>
 
         <button
@@ -1129,12 +1953,12 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
           {currentIdx < totalExercises - 1 ? (
             <>
               <SkipForward className="size-4" />
-              Siguiente
+              {tx("siguiente")}
             </>
           ) : (
             <>
               <CheckCircle2 className="size-4" />
-              Completar sesión
+              {tx("completarSesion")}
             </>
           )}
         </button>
@@ -1147,48 +1971,225 @@ export function ExecuteSessionClient({ session, exercises, diagrams }: Props) {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => !finishing && setShowFinish(false)}
           />
-          <div className="relative w-full max-w-sm rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+          <div className="relative max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-[28px] border border-[#050505]/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
             <div className="text-center mb-6">
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground">
                 <CheckCircle2 className="size-7" />
               </div>
               <h2 className="mb-1 text-2xl font-black text-foreground">
-                ¡Sesión completada!
+                {tx("sesionCompletada3")}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {done.size} de {totalExercises} elementos realizados
-              </p>
+                {tx("v1DeV2Elementos", { v1: done.size, v2: totalExercises })}</p>
               {finishError && (
                 <p className="mt-3 text-sm font-semibold text-destructive">
                   {finishError}
                 </p>
               )}
             </div>
-            <div className="flex gap-3">
+            {closeBody({
+              markAll: false,
+              onBack: () => setShowFinish(false),
+              backLabel: "Seguir con la sesión",
+              finishLabel: "Guardar y salir",
+            })}
+          </div>
+        </div>
+      )}
+      {planEdit?.mode === "replace" && current && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !planBusy && setPlanEdit(null)}
+          />
+          <div className="relative flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-[28px] border border-[#050505]/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+            <div className="border-b border-[#050505]/10 p-4 dark:border-white/10">
+              <p className="text-xs font-semibold text-muted-foreground">
+                {tx("sustituirV1Por", { v1: current.name })}</p>
+              <input
+                autoFocus
+                value={planSearch}
+                onChange={(e) => void searchPlanExercises(e.target.value)}
+                placeholder={tx("buscaUnEjercicio")}
+                className="mt-2 h-11 w-full rounded-xl border border-[#050505]/15 bg-background px-3 text-base text-foreground outline-none focus:border-brand dark:border-white/15"
+              />
+              {planError && (
+                <p className="mt-2 text-xs font-semibold text-destructive">
+                  {planError}
+                </p>
+              )}
+            </div>
+            <ul className="flex-1 divide-y divide-[#050505]/10 overflow-y-auto dark:divide-white/10">
+              {planResults === null ? (
+                <li className="flex justify-center p-6">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </li>
+              ) : planResults.length === 0 ? (
+                <li className="p-6 text-center text-sm text-muted-foreground">
+                  {tx("noHayEjerciciosCon")}
+                </li>
+              ) : (
+                planResults
+                  .filter((ex) => ex.id !== current.exerciseId)
+                  .map((ex) => (
+                    <li key={ex.id}>
+                      <button
+                        type="button"
+                        disabled={planBusy}
+                        onClick={() => void replaceCurrent(ex)}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-60"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-foreground">
+                            {ex.name}
+                          </span>
+                          {ex.description && (
+                            <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">
+                              {ex.description}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {tx("v1Min", { v1: ex.durationMinutes })}</span>
+                      </button>
+                    </li>
+                  ))
+              )}
+            </ul>
+            <div className="border-t border-[#050505]/10 p-3 dark:border-white/10">
               <button
-                onClick={() => setShowFinish(false)}
-                disabled={finishing}
-                className="flex-1 rounded-full border border-[#050505]/10 px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted dark:border-white/10"
+                type="button"
+                onClick={() => setPlanEdit(null)}
+                disabled={planBusy}
+                className="h-10 w-full rounded-full border border-[#050505]/15 text-sm font-black text-muted-foreground dark:border-white/15"
               >
-                Seguir
-              </button>
-              <button
-                onClick={() => {
-                  setShowFinish(false);
-                  setCloseDialog({ markAll: false });
-                }}
-                disabled={finishing}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 active:scale-95 disabled:opacity-60"
-              >
-                {finishing && <Loader2 className="size-4 animate-spin" />}
-                Guardar y salir
+                {planBusy ? "Guardando…" : "Cancelar"}
               </button>
             </div>
           </div>
         </div>
       )}
+      {notesOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => void closeNotes()}
+          />
+          <div className="relative w-full max-w-md rounded-[28px] border border-[#050505]/10 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+            <div className="mb-2 flex items-center gap-2">
+              <NotebookPen className="size-4 text-brand" />
+              <h2 className="text-base font-black text-foreground">
+                {tx("blocDeNotas")}
+              </h2>
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                {notesSaved === "saving"
+                  ? "Guardando…"
+                  : notesSaved === "saved"
+                    ? "Guardado"
+                    : notesSaved === "error"
+                      ? tx("noSePudoGuardar4")
+                      : ""}
+              </span>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              {tx("apuntaLoQueNo")}
+            </p>
+            <textarea
+              autoFocus
+              rows={7}
+              maxLength={4000}
+              value={sessionComment}
+              onChange={(e) => {
+                setSessionComment(e.target.value);
+                setNotesSaved("idle");
+              }}
+              placeholder={tx("ejJuliaCansadaDel")}
+              className="w-full resize-none rounded-2xl border border-[#050505]/10 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40 dark:border-white/10"
+            />
+            <button
+              type="button"
+              onClick={() => void closeNotes()}
+              className="mt-3 h-11 w-full rounded-full bg-foreground text-sm font-black text-background"
+            >
+              {tx("guardarYVolverA")}
+            </button>
+          </div>
+        </div>
+      )}
+      {stopwatchOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setStopwatchOpen(false)}
+          />
+          <div className="relative w-full max-w-sm rounded-[28px] border border-[#050505]/10 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#10100e]">
+            <div className="mb-2 flex items-center gap-2">
+              <Timer className="size-4 text-brand" />
+              <h2 className="text-base font-black text-foreground">
+                {tx("cronometro")}
+              </h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              {tx("usaloCuandoLoNecesites")}
+            </p>
+            <p
+              className="mb-4 text-center text-6xl font-black tabular-nums text-foreground"
+              aria-live="off"
+            >
+              {formatTime(Math.floor(swElapsedMs / 1000))}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleStopwatch}
+                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-sm font-black text-background"
+              >
+                {swStartedAt !== null ? (
+                  <>
+                    <Pause className="size-4" />{" "}{tx("pausar")}
+                  </>
+                ) : (
+                  <>
+                    <Play className="size-4" />{" "}
+                    {swElapsedMs > 0 ? "Seguir" : "Iniciar"}
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={resetStopwatch}
+                disabled={swElapsedMs === 0 && swStartedAt === null}
+                aria-label={tx("reiniciarCronometro")}
+                title={tx("reiniciar")}
+                className="flex size-11 items-center justify-center rounded-full border border-[#050505]/15 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40 dark:border-white/15"
+              >
+                <RotateCcw className="size-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStopwatchOpen(false)}
+              className="mt-3 h-10 w-full rounded-full border border-[#050505]/15 text-sm font-black text-muted-foreground dark:border-white/15"
+            >
+              {tx("cerrar")}
+            </button>
+          </div>
+        </div>
+      )}
+      {boardOpen && (
+        <CourtBoardDialog
+          open={boardOpen}
+          onOpenChange={setBoardOpen}
+          userId={userId}
+          onSaved={(resource) => {
+            setBoardOpen(false);
+            setBoardMessage(
+              tx("dibujoV1GuardadoEn", { v1: resource.title || term("sin título") })
+            );
+          }}
+        />
+      )}
       {quickCompleteModal}
-      {closeDialogEl}
     </div>
   );
 }

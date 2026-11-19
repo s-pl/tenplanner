@@ -1,11 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { sessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { sessionStudents, sessions, students } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import { getExerciseDiagrams } from "@/lib/exercise-diagrams";
 import { ExecuteSessionClient } from "./execute-client";
+import { canEditSession } from "@/lib/sessions/permissions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,9 +29,21 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
     .limit(1);
 
   if (!sessionRow) notFound();
-  if (sessionRow.userId !== user.id) notFound();
+  if (!(await canEditSession(user.id, sessionRow))) notFound();
 
-  const plan = await loadSessionPlan(id);
+  const studentRows = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      attended: sessionStudents.attended,
+      rating: sessionStudents.rating,
+    })
+    .from(sessionStudents)
+    .innerJoin(students, eq(sessionStudents.studentId, students.id))
+    .where(eq(sessionStudents.sessionId, id))
+    .orderBy(asc(students.name));
+
+  const plan = await loadSessionPlan(id, user.id);
   const resolvedExercises = plan.items.map((item, orderIndex) => {
     if (item.kind === "exercise") {
       return {
@@ -106,16 +119,40 @@ export default async function ExecuteSessionPage({ params }: PageProps) {
     };
   });
 
+  // Dos pistas: cada elemento indica su pista, bloque y rotación.
+  const twoCourts = sessionRow.courts === 2;
+  const rotatingBlocks = new Set(
+    plan.blocks.filter((b) => b.rotates).map((b) => b.orderIndex)
+  );
+  const exercisesForClient = resolvedExercises.map((e, i) => {
+    const item = plan.items[i];
+    if (!twoCourts || !item) return e;
+    return {
+      ...e,
+      court: item.court === 2 ? (2 as const) : (1 as const),
+      ledBy: item.ledBy ?? null,
+      turnMinutes: item.turnMinutes ?? null,
+      turnSize: item.turnSize ?? null,
+      blockOrder: item.blockOrder,
+      blockRotates: rotatingBlocks.has(item.blockOrder),
+    };
+  });
+
   return (
     <ExecuteSessionClient
+      userId={user.id}
       session={{
         id: sessionRow.id,
         title: sessionRow.title,
         durationMinutes: sessionRow.durationMinutes,
         scheduledAt: sessionRow.scheduledAt.toISOString(),
         status: sessionRow.status,
+        coachRating: sessionRow.coachRating,
+        coachComment: sessionRow.coachComment,
+        courts: twoCourts ? 2 : 1,
       }}
-      exercises={resolvedExercises}
+      students={studentRows}
+      exercises={exercisesForClient}
       diagrams={getExerciseDiagrams(
         resolvedExercises
           .map((e) => e.exerciseId)

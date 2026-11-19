@@ -5,11 +5,14 @@ import Link from "next/link";
 import { Check, FileDown, Heart, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AddToPendingSessionButton } from "@/components/app/pending-session-target";
 import { autoriaLabel, nivelLabel } from "@/lib/exercise-taxonomy";
 import { AddClassesToListDialog } from "@/components/app/add-classes-to-list-dialog";
 import { ClassAnimationButton } from "@/components/app/class-animation-player";
 import { hasClassAnimation } from "@/lib/classes/animation";
 import { LevelBalls } from "@/components/app/level-balls";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 export interface ClassGridItem {
   id: string;
@@ -46,6 +49,8 @@ export function ClassesGrid({
   navQs: string;
   canSelect: boolean;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_classes_classesgrid");
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,7 +93,7 @@ export function ClassesGrid({
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("No se pudo generar el PDF. Inténtalo de nuevo.");
+      toast.error(tx("noSePudoGenerar"));
     } finally {
       setDownloading(false);
     }
@@ -111,14 +116,13 @@ export function ClassesGrid({
                       : "border-border text-foreground/70"
                   )}
                 >
-                  Todas ({allIds.length})
-                </button>
+                  {tx("todasV1", { v1: allIds.length })}</button>
                 <button
                   type="button"
                   onClick={() => setSelected(new Set())}
                   className="rounded-full px-3 py-1.5 font-semibold text-muted-foreground hover:text-foreground"
                 >
-                  Ninguna
+                  {tx("ninguna")}
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -127,7 +131,7 @@ export function ClassesGrid({
                   onClick={stopSelecting}
                   className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted-foreground hover:bg-muted"
                 >
-                  Cancelar
+                  {tx("cancelar")}
                 </button>
                 <button
                   type="button"
@@ -151,7 +155,7 @@ export function ClassesGrid({
                   className="inline-flex items-center gap-1.5 rounded-full bg-[#D6FF38] px-4 py-2 text-[13px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e] disabled:opacity-40"
                 >
                   <Plus className="size-3.5" />
-                  Añadir a lista{count > 0 ? ` (${count})` : ""}
+                  {tx("anadirALista")}{count > 0 ? ` (${count})` : ""}
                 </button>
               </div>
             </>
@@ -164,7 +168,7 @@ export function ClassesGrid({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-1.5 text-[13px] font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-white/[0.035]"
               >
                 <Check className="size-3.5" />
-                Seleccionar
+                {tx("seleccionar")}
               </button>
             </>
           )}
@@ -181,8 +185,7 @@ export function ClassesGrid({
                 <div className="mb-4 flex items-start justify-between gap-3 bg-[#050505] px-5 py-3 text-white">
                   <div className="flex items-center gap-2.5">
                     <span className="rounded-full bg-[#D6FF38] px-2.5 py-1 text-[11.5px] font-bold tabular-nums text-[#050505]">
-                      {cls.duracionMinutes} min
-                    </span>
+                      {tx("v1Min", { v1: cls.duracionMinutes })}</span>
                     <LevelBalls
                       size="sm"
                       niveles={classValues(cls.niveles, cls.nivel)}
@@ -191,23 +194,23 @@ export function ClassesGrid({
                   <div className="flex items-center gap-1.5">
                     {cls.status === "draft" && (
                       <span className="rounded-full border border-amber-300/60 bg-amber-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
-                        Borrador
+                        {tx("borrador")}
                       </span>
                     )}
                     {cls.isLibrary && (
                       <span className="rounded-full border border-[#D6FF38]/50 bg-[#D6FF38]/15 px-2 py-0.5 text-[10px] font-semibold text-[#D6FF38]">
-                        Biblioteca
+                        {tx("biblioteca")}
                       </span>
                     )}
                     {cls.autoria && cls.autoria !== "libre" && (
                       <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
-                        {autoriaLabel(cls.autoria)}
+                        {term(autoriaLabel(cls.autoria))}
                       </span>
                     )}
                     {cls.favorited && (
                       <Heart
                         className="size-3.5 fill-pink-500 text-pink-500"
-                        aria-label="Favorito"
+                        aria-label={tx("favorito")}
                       />
                     )}
                   </div>
@@ -231,10 +234,10 @@ export function ClassesGrid({
               >
                 <span className="rounded-full border border-border px-2 py-1 text-[10.5px] text-foreground/60">
                   {cls.numAlumnos
-                    ? `${cls.numAlumnos} alumnos`
+                    ? `${cls.numAlumnos} ${term("alumnos")}`
                     : cls.alumnosTipo === "individual"
-                      ? "1 alumno"
-                      : "Grupo"}
+                      ? term("1 alumno")
+                      : term("Grupo")}
                 </span>
                 {cls.alumnosTipo && (
                   <span className="rounded-full border border-border px-2 py-1 text-[10.5px] capitalize text-foreground/60">
@@ -246,7 +249,7 @@ export function ClassesGrid({
                     key={nivel}
                     className="rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10.5px] text-[#5E6F00] dark:text-[#D6FF38]"
                   >
-                    {nivelLabel(nivel)}
+                    {term(nivelLabel(nivel))}
                   </span>
                 ))}
                 {classValues(cls.aspectosJuego, cls.aspectoJuego).map(
@@ -296,6 +299,13 @@ export function ClassesGrid({
                 >
                   {cardBody}
                 </Link>
+              )}
+              {!selecting && (
+                <AddToPendingSessionButton
+                  classId={cls.id}
+                  compact
+                  className="absolute bottom-4 left-4 z-10"
+                />
               )}
               {animated && !selecting && (
                 <ClassAnimationButton

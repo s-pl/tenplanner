@@ -30,8 +30,13 @@ import { ExerciseFilters } from "@/components/app/exercise-filters";
 import { ExerciseListsSection } from "@/components/app/exercise-lists-section";
 import { SaveSearchToListButton } from "@/components/app/save-search-to-list";
 import { ExerciseDraftsPanel } from "@/components/app/exercise-drafts-panel";
+import { ImportTextDialog } from "@/components/app/import-text-dialog";
 import { FeatureLocked } from "@/components/app/feature-locked";
 import { getBooleanSetting } from "@/lib/app-settings";
+import {
+  exercisePublishedCondition,
+  isPlatformAdmin,
+} from "@/lib/exercise-access";
 import { getActiveSport } from "@/lib/sports";
 import { getPublicSportCookie } from "@/lib/public-sport";
 import { SportGate } from "@/components/public/sport-gate";
@@ -77,6 +82,9 @@ import {
   Heart,
   FileDown,
 } from "lucide-react";
+import { getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getTerm } from "@/lib/i18n-terms";
 
 type Category = "technique" | "tactics" | "fitness" | "warm-up";
 type Difficulty = "beginner" | "intermediate" | "advanced";
@@ -161,11 +169,19 @@ function jsonbArrayHasAny(column: AnyColumn, values: string[]) {
 }
 
 export default async function ExercisesPage({ searchParams }: PageProps) {
+  const term = await getTerm();
+  const tx = await getTranslations("ui.s_exercises_page");
   const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+  // Ejercicios de Ten Planner listables: solo los publicados, salvo admin.
+  const isAdmin = await isPlatformAdmin(user?.id);
+  const globalWhere = and(
+    eq(exercisesTable.isGlobal, true),
+    exercisePublishedCondition(isAdmin)
+  )!;
   const [publicExercisesEnabled, exerciseCreationEnabled] = await Promise.all([
     getBooleanSetting("feature.public_exercises_enabled"),
     getBooleanSetting("feature.exercise_creation_enabled"),
@@ -174,8 +190,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   if (!publicExercisesEnabled && !user) {
     return (
       <FeatureLocked
-        title="Biblioteca global desactivada"
-        description="El administrador ha pausado temporalmente la biblioteca pública de ejercicios."
+        title={tx("bibliotecaGlobalDesactivada")}
+        description={tx("elAdministradorHaPausado")}
         href="/"
         cta="Volver al inicio"
       />
@@ -219,8 +235,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       : inTenPlanner && requestedTab === "mine"
         ? "global"
         : !publicExercisesEnabled && requestedTab === "global"
-        ? "mine"
-        : requestedTab;
+          ? "mine"
+          : requestedTab;
 
   const searchTerm = getString(params.q).trim();
   const activeSort = parseExerciseSort(params);
@@ -293,7 +309,8 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
   const heading = libraryHeading(
     "Ejercicios",
     workMode,
-    activeTab === "global"
+    activeTab === "global",
+    await getLocale()
   );
   const mineWhere = user
     ? sharedWithClubCondition(
@@ -310,19 +327,16 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     sportWhere,
     user
       ? publicExercisesEnabled
-        ? (or(eq(exercisesTable.isGlobal, true), mineWhere) ?? mineWhere)
+        ? (or(globalWhere, mineWhere) ?? mineWhere)
         : mineWhere
       : publicExercisesEnabled
-        ? eq(exercisesTable.isGlobal, true)
+        ? globalWhere
         : sql`1=0`
   )!;
 
   const visibilityWhere =
     activeTab === "global"
-      ? and(
-          sportWhere,
-          publicExercisesEnabled ? eq(exercisesTable.isGlobal, true) : sql`1=0`
-        )!
+      ? and(sportWhere, publicExercisesEnabled ? globalWhere : sql`1=0`)!
       : activeTab === "mine" && user
         ? and(sportWhere, mineWhere)!
         : allVisibleWhere;
@@ -534,7 +548,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
       ? db
           .select({ total: count() })
           .from(exercisesTable)
-          .where(and(sportWhere, eq(exercisesTable.isGlobal, true)))
+          .where(and(sportWhere, globalWhere))
       : Promise.resolve([{ total: 0 }]),
     user
       ? db
@@ -710,7 +724,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
     statStrip.push({
       key: "aspecto-fisico",
       code: "FÍS/MOV",
-      label: "Físico/Movilidad",
+      label: tx("fisicoMovilidad"),
       count: fisicoAspectoCount,
       isActive,
       href: buildHref({
@@ -754,8 +768,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {heading.title}
               </h1>
               <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/68">
-                Biblioteca de ejercicios sueltos, etiquetados por nivel,
-                categoría y duración para entrenadores de deportes de raqueta.
+                {tx("bibliotecaDeEjerciciosSueltos")}
               </p>
             </div>
             <div className="flex flex-col items-start gap-3 lg:items-end lg:justify-between">
@@ -765,7 +778,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     {tabCounts.all}
                   </p>
                   <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
-                    Total
+                    {tx("total")}
                   </p>
                 </div>
                 <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
@@ -773,7 +786,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     {tabCounts.global}
                   </p>
                   <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
-                    Global
+                    {tx("global")}
                   </p>
                 </div>
                 <div className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2">
@@ -781,23 +794,36 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     {tabCounts.favorites}
                   </p>
                   <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/45">
-                    Listas
+                    {tx("listas")}
                   </p>
                 </div>
               </div>
               <div>
                 {user && exerciseCreationEnabled ? (
-                  <Link
-                    href="/exercises/new"
-                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
-                  >
-                    <Plus className="size-4" />
-                    Nuevo ejercicio
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(activeTab === "mine" || activeTab === "drafts") && (
+                      <ImportTextDialog
+                        kind="exercises"
+                        allowFile={!!activeWorkClubId}
+                        spaceLabel={
+                          activeWorkClubId
+                            ? tx("elEspacioDeTu")
+                            : "tu espacio"
+                        }
+                      />
+                    )}
+                    <Link
+                      href="/exercises/new"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#D6FF38] px-5 text-[13px] font-black text-[#050505] transition hover:bg-white"
+                    >
+                      <Plus className="size-4" />
+                      {tx("nuevoEjercicio")}
+                    </Link>
+                  </div>
                 ) : user ? (
                   <span className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 bg-white/[0.04] px-5 text-[13px] font-semibold text-white/45">
                     <Lock className="size-4" />
-                    Bloqueado
+                    {tx("bloqueado")}
                   </span>
                 ) : (
                   <Link
@@ -805,7 +831,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/18 px-5 text-[13px] font-semibold text-white/72 transition hover:border-[#D6FF38] hover:text-[#D6FF38]"
                   >
                     <Lock className="size-3.5" />
-                    Inicia sesión para añadir
+                    {tx("iniciaSesionParaAnadir")}
                   </Link>
                 )}
               </div>
@@ -835,7 +861,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-foreground/35 transition-colors hover:bg-[#050505]/5 hover:text-foreground/55 dark:hover:bg-white/8"
                     >
                       <Lock className="size-3" strokeWidth={1.8} />
-                      {TAB_LABELS[t]}
+                      {term(TAB_LABELS[t])}
                     </Link>
                   );
                 }
@@ -855,7 +881,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         : "text-muted-foreground hover:bg-[#050505]/5 hover:text-foreground dark:hover:bg-white/8"
                     }`}
                   >
-                    {TAB_LABELS[t]}
+                    {term(TAB_LABELS[t])}
                     {tabCounts[t] > 0 && (
                       <span className="ml-1.5 text-[11px] tabular-nums opacity-60">
                         {tabCounts[t]}
@@ -895,7 +921,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               <p
                                 className={`font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? "text-[#050505]/70" : "text-foreground/45"}`}
                               >
-                                {code} · {label}
+                                {term(code)} · {term(label)}
                               </p>
                               {isActive && (
                                 <span className="size-1.5 rounded-full bg-[#050505]" />
@@ -905,7 +931,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               {count}
                             </p>
                             <p className="mt-1.5 font-sans text-[10px] italic opacity-60">
-                              ejercicios
+                              {tx("ejercicios")}
                             </p>
                           </Link>
                         );
@@ -929,7 +955,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                       <input
                         type="search"
                         name="q"
-                        placeholder="Buscar por nombre o descripción…"
+                        placeholder={tx("buscarPorNombreO")}
                         defaultValue={searchTerm}
                         className="h-11 w-full rounded-full border border-[#050505]/12 bg-[#F4F4F1] pl-9 pr-4 text-[13px] text-foreground transition-colors placeholder:text-foreground/40 focus:border-[#D6FF38] focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/40 dark:border-white/10 dark:bg-[#050505]"
                       />
@@ -1074,7 +1100,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   {/* ─── Orden ─── */}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                      Ordenar por:
+                      {tx("ordenarPor")}
                     </span>
                     {EXERCISE_SORTS.map((s) => {
                       const isActive = activeSort === s;
@@ -1094,7 +1120,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
                           }`}
                         >
-                          {SORT_LABELS[s]}
+                          {term(SORT_LABELS[s])}
                         </Link>
                       );
                     })}
@@ -1103,7 +1129,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                   {/* ─── Niveles (etapas) con edad y color ─── */}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="shrink-0 px-1 font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-                      Nivel:
+                      {tx("nivel")}
                     </span>
                     <Link
                       href={buildHref({
@@ -1119,7 +1145,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:text-foreground"
                       }`}
                     >
-                      Todos
+                      {tx("todos")}
                     </Link>
                     {nivelesForSport(sport).map((n) => {
                       const isActive = activeNivel.includes(n.id);
@@ -1148,12 +1174,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             className="size-2.5 shrink-0 rounded-full"
                             style={{ backgroundColor: n.color }}
                           />
-                          {n.label}
+                          {term(n.label)}
                           {n.edad && (
                             <span
                               className={`font-normal ${isActive ? "opacity-70" : "text-foreground/45"}`}
                             >
-                              {n.edad}
+                              {term(n.edad)}
                             </span>
                           )}
                         </Link>
@@ -1203,7 +1229,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`formato-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Formato: {FORMATO_LABEL[value] ?? value}
+                          {tx("formatoV1", { v1: FORMATO_LABEL[value] ?? value })}
                         </span>
                       ))}
                       {activeNivel.map((value) => (
@@ -1211,7 +1237,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`nivel-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Nivel: {nivelLabel(value)}
+                          {tx("nivelV1", { v1: nivelLabel(value) })}
                         </span>
                       ))}
                       {activeAspectoJuego.map((value) => (
@@ -1219,7 +1245,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`aspecto-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Aspecto: {value}
+                          {tx("aspectoV1", { v1: value })}
                         </span>
                       ))}
                       {activeParametro.map((value) => (
@@ -1227,7 +1253,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`parametro-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Parámetro: {value}
+                          {tx("parametroV1", { v1: value })}
                         </span>
                       ))}
                       {activeDuracionRango.map((value) => (
@@ -1235,7 +1261,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`duracion-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Rango: {value}
+                          {tx("rangoV1", { v1: value })}
                         </span>
                       ))}
                       {activeNumJugadores.map((value) => (
@@ -1243,7 +1269,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`jugadores-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          {value} jugador{value !== 1 ? "es" : ""}
+                          {tx("v1JugadorV2", { v1: value, v2: value !== 1 ? "es" : "" })}
                         </span>
                       ))}
                       {activeTipoPelota.map((value) => (
@@ -1251,7 +1277,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`pelota-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Pelota: {pelotaLabel(value)}
+                          {tx("pelotaV1", { v1: pelotaLabel(value) })}
                         </span>
                       ))}
                       {activeTipoActividad.map((value) => (
@@ -1275,7 +1301,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={e}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Efecto: {e.replace(/_/g, " ")}
+                          {tx("efectoV1", { v1: e.replace(/_/g, " ") })}
                         </span>
                       ))}
                       {activeLocation.map((value) => (
@@ -1291,7 +1317,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`fase-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Fase: {FASES.find((f) => f.id === value)?.label}
+                          {tx("faseV1", { v1: FASES.find((f) => f.id === value)?.label ?? "" })}
                         </span>
                       ))}
                       {activeCaracter.map((value) => (
@@ -1299,7 +1325,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`caracter-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Carácter: {caracterLabel(value)}
+                          {tx("caracterV1", { v1: caracterLabel(value) })}
                         </span>
                       ))}
                       {activeSituacionJuego.map((value) => (
@@ -1307,7 +1333,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`situacion-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Situación: {situacionJuegoLabel(value)}
+                          {tx("situacionV1", { v1: situacionJuegoLabel(value) })}
                         </span>
                       ))}
                       {activeTipoCompeticion.map((value) => (
@@ -1315,7 +1341,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`competicion-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Competición: {tipoCompeticionLabel(value)}
+                          {tx("competicionV1", { v1: tipoCompeticionLabel(value) })}
                         </span>
                       ))}
                       {activeAutoria.map((value) => (
@@ -1323,7 +1349,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           key={`autoria-${value}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] bg-brand/8 border border-brand/20 text-brand rounded"
                         >
-                          Autoría: {autoriaLabel(value)}
+                          {tx("autoriaV1", { v1: autoriaLabel(value) })}
                         </span>
                       ))}
                       <Link
@@ -1347,7 +1373,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         })}
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-sans tracking-[0.08em] text-foreground/50 hover:text-foreground border border-foreground/15 rounded transition-colors"
                       >
-                        Limpiar filtros
+                        {tx("limpiarFiltros")}
                       </Link>
                     </div>
                   )}
@@ -1356,8 +1382,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {filtered.length > 0 && (
                   <div className="flex items-center justify-between">
                     <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/40">
-                      {resultCount} resultado
-                      {resultCount !== 1 ? "s" : ""}
+                      {tx("v1ResultadoV2", { v1: resultCount, v2: resultCount !== 1 ? "s" : "" })}
                     </p>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {user && activeTab !== "drafts" ? (
@@ -1374,7 +1399,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[#050505]/15 bg-white px-4 text-[12px] font-semibold text-foreground/70 transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/15 dark:bg-white/[0.04]"
                       >
                         <FileDown className="size-3.5" strokeWidth={1.8} />
-                        Generar PDF de los resultados
+                        {tx("generarPdfDeLos")}
                       </a>
                     </div>
                   </div>
@@ -1383,18 +1408,18 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {filtered.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-[#050505]/18 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/[0.04]">
                     <p className="text-[15px] font-medium text-foreground mb-2">
-                      Sin coincidencias
+                      {tx("sinCoincidencias")}
                     </p>
                     <p className="text-[13px] text-foreground/55 max-w-sm mx-auto mb-4">
                       {searchTerm
-                        ? `No hay ejercicios para "${searchTerm}".`
-                        : "Prueba con otra combinación."}
+                        ? tx("noHayEjerciciosPara", { v1: searchTerm })
+                        : tx("pruebaConOtraCombinacion")}
                     </p>
                     <Link
                       href={buildHref({ tab: activeTab })}
                       className="inline-flex items-center gap-1.5 rounded-full bg-[#050505] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#D6FF38] hover:text-[#050505] dark:bg-[#D6FF38] dark:text-[#050505]"
                     >
-                      Limpiar filtros
+                      {tx("limpiarFiltros")}
                     </Link>
                   </div>
                 ) : (
@@ -1410,14 +1435,14 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                         icon: React.ElementType;
                       } | null = null;
                       if (exercise.isAiGenerated)
-                        owner = { label: "IA", icon: Sparkles };
+                        owner = { label: tx("ia"), icon: Sparkles };
                       else if (exercise.isGlobal)
                         owner = {
                           label: autoriaLabel(exercise.autoria),
                           icon: Globe,
                         };
                       else if (user && exercise.createdBy === user.id)
-                        owner = { label: "PRP", icon: User };
+                        owner = { label: tx("prp"), icon: User };
 
                       const isFavorited = favoritedIds.has(exercise.id);
                       const formatoLabel = exercise.formato
@@ -1438,8 +1463,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           <div className="flex items-center justify-between bg-[#050505] px-4 py-3 text-white sm:px-5">
                             <div className="flex items-center gap-2.5">
                               <span className="rounded-full bg-[#D6FF38] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[#050505]">
-                                {exercise.durationMinutes} min
-                              </span>
+                                {tx("v1Min", { v1: exercise.durationMinutes })}</span>
                               <LevelBalls
                                 size="sm"
                                 sport={exercise.sport}
@@ -1466,7 +1490,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                                     className="size-2.5"
                                     strokeWidth={1.8}
                                   />
-                                  {owner.label}
+                                  {term(owner.label)}
                                 </span>
                               )}
                               {exercise.videoUrl && (
@@ -1474,12 +1498,12 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                                   href={exercise.videoUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  title="Ver vídeo del ejercicio"
-                                  aria-label={`Ver vídeo de ${exercise.name}`}
+                                  title={tx("verVideoDelEjercicio")}
+                                  aria-label={tx("verVideoDeV1", { v1: exercise.name })}
                                   className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-0.5 text-[10px] font-semibold text-white/80 transition-colors hover:border-[#D6FF38] hover:text-[#D6FF38]"
                                 >
                                   <Play className="size-3" strokeWidth={2} />
-                                  Vídeo
+                                  {tx("video")}
                                 </a>
                               )}
                               {user && (
@@ -1512,7 +1536,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                             className="group block flex-1 px-4 pb-6 pt-5 transition-colors hover:bg-[#D6FF38]/[0.05] sm:px-6"
                           >
                             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6D7F00] dark:text-[#D6FF38]">
-                              {catLabel}
+                              {term(catLabel)}
                             </p>
                             <h3 className="mb-2 font-heading text-[19px] font-semibold leading-snug text-foreground transition-colors group-hover:text-[#6D7F00] dark:group-hover:text-[#D6FF38]">
                               {exercise.name}
@@ -1553,7 +1577,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               <div className="mb-3 flex flex-wrap gap-1">
                                 <span className="inline-flex items-center gap-1 rounded-full border border-[#D6FF38]/40 bg-[#D6FF38]/15 px-2 py-1 text-[10px] font-semibold text-[#5E6F00] dark:text-[#D6FF38]">
                                   <Heart className="size-3" strokeWidth={1.7} />
-                                  En {savedInLists} lista
+                                  {tx("en")}{" "}{savedInLists}{" "}{tx("lista")}
                                   {savedInLists !== 1 ? "s" : ""}
                                 </span>
                               </div>
@@ -1563,7 +1587,7 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                               <div className="flex items-center gap-3 font-sans text-[10px] tabular-nums text-foreground/50">
                                 <span className="inline-flex items-center gap-1">
                                   <Clock className="size-3" strokeWidth={1.6} />{" "}
-                                  {exercise.durationMinutes}&prime;
+                                  {exercise.durationMinutes}{tx("prime")}
                                 </span>
                                 {steps > 0 && (
                                   <span className="inline-flex items-center gap-1">
@@ -1596,10 +1620,9 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                 {(currentPage > 1 || hasNextPage) && (
                   <footer className="flex flex-col gap-3 rounded-lg border border-[#050505]/10 bg-white/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/[0.04]">
                     <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-foreground/45 tabular-nums">
-                      {filtered.length > 0
+                      {tx("v1PaginaV2", { v1: filtered.length > 0
                         ? `${offset + 1}–${offset + filtered.length}`
-                        : "0"}{" "}
-                      · Página {currentPage.toString().padStart(2, "0")}
+                        : "0", v2: currentPage.toString().padStart(2, "0") })}
                     </p>
                     <div className="flex items-center gap-5">
                       {currentPage > 1 ? (
@@ -1613,11 +1636,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           })}
                           className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-[#6D7F00] dark:hover:text-[#D6FF38]"
                         >
-                          <ArrowLeft className="size-3" /> Anterior
+                          <ArrowLeft className="size-3" />{" "}{tx("anterior")}
                         </Link>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          <ArrowLeft className="size-3" /> Anterior
+                          <ArrowLeft className="size-3" />{" "}{tx("anterior")}
                         </span>
                       )}
                       {hasNextPage ? (
@@ -1631,11 +1654,11 @@ export default async function ExercisesPage({ searchParams }: PageProps) {
                           })}
                           className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-[#6D7F00] dark:hover:text-[#D6FF38]"
                         >
-                          Siguiente <ArrowUpRight className="size-3" />
+                          {tx("siguiente")}{" "}<ArrowUpRight className="size-3" />
                         </Link>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/25">
-                          Siguiente <ArrowUpRight className="size-3" />
+                          {tx("siguiente")}{" "}<ArrowUpRight className="size-3" />
                         </span>
                       )}
                     </div>

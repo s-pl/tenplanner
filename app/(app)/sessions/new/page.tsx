@@ -12,12 +12,14 @@ import {
   groups,
   groupStudents,
   places,
+  students,
   users,
 } from "@/db/schema";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, inArray } from "drizzle-orm";
 import {
+  exerciseListableCondition,
   exerciseOwnOrClubCondition,
-  exerciseVisibleToUserCondition,
+  isPlatformAdmin,
 } from "@/lib/exercise-access";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
 import type {
@@ -26,7 +28,11 @@ import type {
   WizardSessionBlock,
 } from "@/components/app/session-wizard/types";
 import { getBooleanSetting } from "@/lib/app-settings";
-import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import {
+  getActiveWorkClubId,
+  getClubMembersDirectory,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { getActiveSport } from "@/lib/sports";
 import { canSeeClassDraft } from "@/lib/classes/visibility";
 import { loadSessionPlan } from "@/lib/sessions/plan";
@@ -38,13 +44,12 @@ import {
 } from "@/components/app/session-wizard/timeline";
 import { resolveItemKind, type StationItemJson } from "@/lib/block-items";
 import { FeatureLocked } from "@/components/app/feature-locked";
-import {
-  ArrowLeft,
-  BookOpen,
-  PencilLine,
-  RotateCcw,
-  Sparkles,
-} from "lucide-react";
+import { SessionTargetStep } from "@/components/app/session-wizard/session-target-step";
+import { TargetModeCards } from "@/components/app/session-wizard/target-mode-cards";
+import type { SessionTarget } from "@/lib/session-target";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 
 interface PageProps {
   searchParams: Promise<{
@@ -54,10 +59,28 @@ interface PageProps {
     fromClass?: string;
     group?: string;
     at?: string;
+    /** "Que la diseñe Ten Planner": la propuesta se prepara en el Paso 2. */
+    disenar?: string;
+    /** Respuestas de "Antes de la propuesta". */
+    dur?: string;
+    obj?: string;
+    lugar?: string;
+    /** pistas=2: la sesión usa dos pistas. */
+    pistas?: string;
+    /** rota=1: con dos pistas, los grupos rotan. */
+    rota?: string;
+    /** Destino ya elegido en el primer paso: alumnos sueltos, 2.º lugar… */
+    students?: string;
+    lugar2?: string;
+    target?: string;
+    modo?: string;
+    draft?: string;
   }>;
 }
 
 export default async function NewSessionPage({ searchParams }: PageProps) {
+  const intlLocale = (await getLocale()) === "en" ? "en-GB" : "es-ES";
+  const tx = await getTranslations("ui.s_new_page");
   const supabase = await createClient();
   const {
     data: { session },
@@ -72,8 +95,8 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
   if (!sessionCreationEnabled) {
     return (
       <FeatureLocked
-        title="Crear sesiones está bloqueado"
-        description="Un administrador ha desactivado temporalmente la creación manual de sesiones."
+        title={tx("crearSesionesEstaBloqueado")}
+        description={tx("unAdministradorHaDesactivado")}
         href="/sessions"
         cta="Volver a sesiones"
       />
@@ -97,6 +120,14 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     user.user_metadata?.full_name ||
     user.email ||
     "Monitor";
+  // En modo club se elige qué monitor imparte la sesión (por defecto, uno
+  // mismo).
+  const workClubId = await getActiveWorkClubId(user.id);
+  const clubCoaches = workClubId
+    ? (await getClubMembersDirectory([workClubId])).sort((a, b) =>
+        a.name.localeCompare(b.name, "es")
+      )
+    : [];
 
   // Todos los ejercicios del deporte activo (antes se cortaba en 200 por
   // orden alfabético y mezclando deportes). El paso de ejercicios solo pinta
@@ -122,7 +153,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     .where(
       and(
         publicExercisesEnabled
-          ? exerciseVisibleToUserCondition(user.id)
+          ? exerciseListableCondition(user.id, await isPlatformAdmin(user.id))
           : exerciseOwnOrClubCondition(user.id),
         eq(exercises.sport, sport)
       )
@@ -136,6 +167,18 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     fromClass: fromClassId,
     group: groupIdParam,
     at: atParam,
+    disenar: disenarParam,
+    dur: durParam,
+    obj: objParam,
+    lugar: lugarParam,
+    pistas: pistasParam,
+    rota: rotaParam,
+    students: studentsParam,
+    lugar2: lugar2Param,
+    target: targetParam,
+    modo: modoParam,
+    draft: draftParam,
+    step: stepParam,
   } = await searchParams;
 
   // Fecha/hora ya calculada por quien nos trae aquí (p. ej. el próximo día
@@ -148,12 +191,13 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
   // Preasignar un grupo (p. ej. desde "Asignar clase" en la ficha de grupo):
   // precarga el grupo y a sus alumnos, igual que si se eligieran a mano en
   // el paso de alumnos.
-  let fromGroup: { id: string; name: string } | null = null;
+  let fromGroup: { id: string; name: string; objetivos: string | null } | null =
+    null;
   let fromGroupStudentIds: string[] = [];
   if (groupIdParam) {
     const groupActiveClubId = await getActiveWorkClubId(user.id);
     const [grp] = await db
-      .select({ id: groups.id, name: groups.name })
+      .select({ id: groups.id, name: groups.name, objetivos: groups.objetivos })
       .from(groups)
       .where(
         and(
@@ -185,6 +229,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     material: string | null;
     observations: string | null;
     tags: string[] | null;
+    courts: number;
   } | null = null;
   const fromClassExercises: WizardExercise[] = [];
   let fromClassBlocks: WizardSessionBlock[] = [];
@@ -198,6 +243,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         material: classes.material,
         observations: classes.aspectosImportantes,
         tags: classes.tags,
+        courts: classes.courts,
         isLibrary: classes.isLibrary,
         createdBy: classes.createdBy,
         clubId: classes.clubId,
@@ -225,12 +271,14 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         material: cls.material,
         observations: cls.observations,
         tags: Array.isArray(cls.tags) ? cls.tags : null,
+        courts: cls.courts,
       };
       const items = await db
         .select({
           blockOrder: classBlocks.orderIndex,
           blockTitle: classBlocks.title,
           blockNotes: classBlocks.notes,
+          blockRotates: classBlocks.rotates,
           itemExerciseId: classBlockExercises.exerciseId,
           freeText: classBlockExercises.freeText,
           itemTitle: classBlockExercises.title,
@@ -238,6 +286,10 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           itemOrderIndex: classBlockExercises.orderIndex,
           itemKind: classBlockExercises.kind,
           itemStations: classBlockExercises.stations,
+          itemCourt: classBlockExercises.court,
+          itemLedBy: classBlockExercises.ledBy,
+          itemTurnMinutes: classBlockExercises.turnMinutes,
+          itemTurnSize: classBlockExercises.turnSize,
           exerciseId: exercises.id,
           name: exercises.name,
           category: exercises.category,
@@ -262,6 +314,14 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         return "main";
       }
 
+      // Pista y quién dirige cada elemento (plantillas con dos pistas).
+      let lane: Pick<
+        WizardExercise,
+        "court" | "ledBy" | "turnMinutes" | "turnSize"
+      > = {};
+      const pushItem = (item: WizardExercise) =>
+        fromClassExercises.push({ ...item, ...lane });
+
       for (const row of items) {
         const orderIndex =
           row.blockOrder === 1 || row.blockOrder === 3 ? row.blockOrder : 2;
@@ -277,10 +337,23 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
                   ? "Bloque final"
                   : "Bloque principal"),
             notes: row.blockNotes ?? "",
+            rotates: cls.courts === 2 && row.blockRotates === true,
             items: [],
           } satisfies WizardSessionBlock);
 
         blockMap.set(orderIndex, block);
+        lane =
+          cls.courts === 2
+            ? {
+                court: row.itemCourt === 2 ? 2 : 1,
+                ledBy:
+                  row.itemLedBy === "coach" || row.itemLedBy === "auto"
+                    ? row.itemLedBy
+                    : null,
+                turnMinutes: row.itemTurnMinutes ?? null,
+                turnSize: row.itemTurnSize ?? null,
+              }
+            : {};
 
         const itemKind = resolveItemKind({
           kind: row.itemKind,
@@ -289,7 +362,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         });
 
         if (itemKind === "warmup") {
-          fromClassExercises.push(
+          pushItem(
             createWarmupItem(
               phaseFromBlock(orderIndex),
               row.itemDuration ?? null
@@ -315,7 +388,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               durationMinutes: s.durationMinutes,
             }));
           }
-          fromClassExercises.push(stationsItem);
+          pushItem(stationsItem);
           continue;
         }
 
@@ -324,7 +397,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           !row.itemExerciseId &&
           (row.freeText?.trim() || row.itemTitle?.trim())
         ) {
-          fromClassExercises.push(
+          pushItem(
             createTextItem(
               row.freeText?.trim() ?? "",
               phaseFromBlock(orderIndex),
@@ -336,7 +409,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         }
 
         if (row.exerciseId && row.name && row.category) {
-          fromClassExercises.push({
+          pushItem({
             exerciseId: row.exerciseId,
             name: row.name,
             category: row.category,
@@ -375,6 +448,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
     observations: string | null;
     tags: string[];
     location: string | null;
+    courts: number;
   } | null = null;
   let fromExercises: WizardExercise[] = [];
 
@@ -388,6 +462,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         observations: sessions.observations,
         tags: sessions.tags,
         location: sessions.location,
+        courts: sessions.courts,
         userId: sessions.userId,
       })
       .from(sessions)
@@ -402,12 +477,31 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         observations: sourceSession.observations,
         tags: Array.isArray(sourceSession.tags) ? sourceSession.tags : [],
         location: sourceSession.location,
+        courts: sourceSession.courts,
       };
 
-      const plan = await loadSessionPlan(fromSessionId);
+      const plan = await loadSessionPlan(fromSessionId, user.id);
       fromExercises = planItemsToWizard(plan.items);
     }
   }
+
+  // Alumnos sueltos elegidos en el primer paso (clase suelta): solo los del
+  // monitor.
+  const targetStudentIds = (studentsParam ?? "")
+    .split(",")
+    .filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  const targetStudents =
+    targetStudentIds.length > 0
+      ? await db
+          .select({ id: students.id, name: students.name })
+          .from(students)
+          .where(
+            and(
+              eq(students.coachId, user.id),
+              inArray(students.id, targetStudentIds)
+            )
+          )
+      : [];
 
   const preSelectedIds = new Set(
     (exerciseParam ?? "").split(",").filter(Boolean)
@@ -433,9 +527,65 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
         : preSelected.length > 0
           ? preSelected
           : undefined;
+  // "Que la diseñe Ten Planner" (desde /sessions/new/montar): con grupo.
+  const disenar =
+    disenarParam === "1" && (!!fromGroup || targetStudents.length > 0);
+  const durNum = Number(durParam);
+  const disenarDuration =
+    Number.isFinite(durNum) && durNum >= 10 && durNum <= 240
+      ? Math.round(durNum)
+      : undefined;
   const allowDraftRestore =
-    !fromSession && !fromClass && preSelected.length === 0;
-  const noPreload = !fromSession && !fromClass && preSelected.length === 0;
+    !disenar && !fromSession && !fromClass && preSelected.length === 0;
+  const noPreload =
+    !disenar && !fromSession && !fromClass && preSelected.length === 0;
+  // Destino elegido en el primer paso (para quién, cuándo, pistas y lugares).
+  const hasTarget =
+    targetParam === "1" || !!groupIdParam || targetStudentIds.length > 0 || !!atParam;
+  const hasSource = !noPreload || !!draftParam;
+  const showTargetStep = !hasSource && !hasTarget;
+  const showModeCards = !hasSource && hasTarget && modoParam !== "cero";
+  const showWizard = !showTargetStep && !showModeCards;
+  const targetPlaceId =
+    lugarParam && coachPlaces.some((p) => p.id === lugarParam)
+      ? lugarParam
+      : null;
+  const targetPlaceId2 =
+    lugar2Param && coachPlaces.some((p) => p.id === lugar2Param)
+      ? lugar2Param
+      : null;
+  const targetCourts: 1 | 2 = pistasParam === "2" ? 2 : 1;
+  const targetAt = initialScheduledAt ?? "";
+  const targetInitial: SessionTarget = {
+    groupId: fromGroup?.id ?? null,
+    studentIds: targetStudents.map((st) => st.id),
+    at: targetAt,
+    courts: targetCourts,
+    placeId: targetPlaceId,
+    placeId2: targetPlaceId2,
+  };
+  const targetWho = fromGroup
+    ? fromGroup.name
+    : targetStudents.length > 0
+      ? targetStudents.map((st) => st.name).join(", ")
+      : tx("claseSueltaSinAlumnos");
+  const targetWhen = targetAt
+    ? new Intl.DateTimeFormat(intlLocale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "UTC",
+      }).format(new Date(`${targetAt}:00Z`))
+    : "";
+  const targetLabel = [
+    targetWho,
+    targetWhen,
+    targetCourts === 2 ? "dos pistas" : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
@@ -448,7 +598,7 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           <div className="relative flex items-center gap-4">
             <Link
               href="/sessions"
-              aria-label="Volver a sesiones"
+              aria-label={tx("volverASesiones")}
               className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-[#F4F4F1] text-[0px] text-foreground/60 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
             >
               <ArrowLeft className="size-4 text-foreground/60" />←
@@ -456,34 +606,31 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
             <div className="min-w-0">
               <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
                 <Sparkles className="size-3.5 text-brand" />
-                Wizard de sesión
+                {tx("wizardDeSesion")}
               </p>
               <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
                 {fromSession ? (
                   <>
-                    Reutilizando{" "}
+                    {tx("reutilizando")}{" "}
                     <em className="italic text-brand">
-                      &ldquo;{fromSession.title}&rdquo;
-                    </em>
+                      {tx("v1", { v1: fromSession.title })}</em>
                   </>
                 ) : fromClass ? (
                   <>
-                    Desde clase{" "}
+                    {tx("desdeClase")}{" "}
                     <em className="italic text-brand">
-                      &ldquo;{fromClass.name}&rdquo;
-                    </em>
+                      {tx("v1", { v1: fromClass.name })}</em>
                   </>
                 ) : preSelected.length > 0 ? (
                   <>
                     <em className="italic text-brand">
-                      {preSelected.length} ejercicio
-                      {preSelected.length !== 1 ? "s" : ""}
+                      {tx("v1EjercicioV2", { v1: preSelected.length, v2: preSelected.length !== 1 ? "s" : "" })}
                     </em>{" "}
-                    cargados
+                    {tx("cargados")}
                   </>
                 ) : (
                   <>
-                    Nueva <em className="italic text-brand">sesión</em>
+                    {tx("nueva")}{" "}<em className="italic text-brand">{tx("sesion")}</em>
                   </>
                 )}
               </h1>
@@ -491,63 +638,37 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
           </div>
         </header>
 
-        {noPreload && (
-          <div className="grid sm:grid-cols-3 gap-3 pt-6">
-            <Link
-              href="/classes"
-              className="group rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)] transition-colors hover:border-[#D6FF38]/70 hover:bg-[#D6FF38]/10 dark:border-white/10 dark:bg-white/[0.045]"
-            >
-              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38]/20 text-foreground [&>span]:hidden">
-                <BookOpen className="size-4 text-brand" />
-                <span className="text-lg">📖</span>
-              </div>
-              <p className="font-heading text-base text-foreground group-hover:text-brand">
-                Elegir del catálogo Ten Planner
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Importa una clase ya preparada y conviértela en sesión.
-              </p>
-            </Link>
-
-            <Link
-              href="/sessions?filter=past"
-              className="group rounded-lg border border-[#050505]/10 bg-white p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)] transition-colors hover:border-[#D6FF38]/70 hover:bg-[#D6FF38]/10 dark:border-white/10 dark:bg-white/[0.045]"
-            >
-              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38]/20 text-foreground [&>span]:hidden">
-                <RotateCcw className="size-4 text-brand" />
-                <span className="text-lg">🔄</span>
-              </div>
-              <p className="font-heading text-base text-foreground group-hover:text-brand">
-                Reutilizar clase pasada
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Copia una sesión que ya impartiste.
-              </p>
-            </Link>
-
-            <div className="rounded-lg border border-[#D6FF38]/60 bg-[#D6FF38]/15 p-5 shadow-[0_12px_36px_rgba(5,5,5,0.04)]">
-              <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505] [&>span]:hidden">
-                <PencilLine className="size-4" />
-                <span className="text-lg">✏️</span>
-              </div>
-              <p className="font-heading text-base text-brand">
-                Crear desde cero
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Sigue construyendo bloque a bloque abajo.
-              </p>
-            </div>
-          </div>
+        {/* Paso 1: para quién, cuándo y cuántas pistas */}
+        {showTargetStep && (
+          <SessionTargetStep
+            places={coachPlaces}
+            initial={targetInitial}
+          />
         )}
 
+        {/* Paso 2: cómo montarla (con el destino ya elegido) */}
+        {showModeCards && (
+          <TargetModeCards target={targetInitial} label={targetLabel} />
+        )}
+
+        {showWizard && (
         <div className="flex w-full flex-1 flex-col gap-6 pt-8">
           <Suspense fallback={null}>
             <SessionWizard
               availableExercises={allExercises}
               initialExercises={initialExercises}
-              initialTitle={fromSession?.title ?? fromClass?.name}
+              initialTitle={
+                // Con destino ya elegido, el nombre sale del grupo y la fecha.
+                targetParam === "1"
+                  ? undefined
+                  : (fromSession?.title ?? fromClass?.name)
+              }
               initialObjective={
-                fromSession?.objective ?? fromClass?.objetivos ?? undefined
+                fromSession?.objective ??
+                fromClass?.objetivos ??
+                (disenar
+                  ? ((objParam?.trim() || fromGroup?.objetivos) ?? undefined)
+                  : undefined)
               }
               initialMaterial={
                 fromSession?.material ?? fromClass?.material ?? undefined
@@ -560,17 +681,48 @@ export default async function NewSessionPage({ searchParams }: PageProps) {
               initialTags={fromSession?.tags ?? fromClass?.tags ?? undefined}
               initialSourceClassId={fromClass?.id ?? null}
               initialBlocks={fromClassBlocks}
+              initialRotation={
+                disenar && pistasParam === "2" && rotaParam === "1"
+              }
+              initialCourts={
+                fromSession?.courts === 2 ||
+                fromClass?.courts === 2 ||
+                pistasParam === "2"
+                  ? 2
+                  : 1
+              }
               initialLocation={fromSession?.location ?? undefined}
               initialGroupId={fromGroup?.id ?? null}
               initialGroupName={fromGroup?.name}
-              initialStudentIds={fromGroupStudentIds}
+              initialStudentIds={Array.from(
+                new Set([
+                  ...fromGroupStudentIds,
+                  ...targetStudents.map((st) => st.id),
+                ])
+              )}
               initialScheduledAt={initialScheduledAt}
+              initialPlaceId={targetPlaceId ?? undefined}
+              initialSecondPlaceId={targetPlaceId2 ?? undefined}
               places={coachPlaces}
               monitorName={monitorName}
+              coaches={clubCoaches}
+              initialCoachId={clubCoaches.length > 0 ? user.id : null}
               allowDraftRestore={allowDraftRestore}
+              initialDurationMinutes={disenar ? disenarDuration : undefined}
+              engine={
+                disenar && fromGroup
+                  ? { groupId: fromGroup.id, autoStart: stepParam === "2" }
+                  : disenar
+                    ? {
+                        studentIds: targetStudents.map((st) => st.id),
+                        autoStart: stepParam === "2",
+                      }
+                    : undefined
+              }
             />
           </Suspense>
         </div>
+        )}
       </div>
     </div>
   );

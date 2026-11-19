@@ -5,11 +5,14 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   WEEKDAY_LABELS,
+  formatScheduleTimes,
   sortSchedule,
   type GroupScheduleEntry,
 } from "@/lib/groups/schedule";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 
-const MONTH_FORMAT = new Intl.DateTimeFormat("es-ES", {
+const MONTH_FORMAT = (loc: string) => new Intl.DateTimeFormat(loc, {
   month: "long",
   year: "numeric",
 });
@@ -37,12 +40,20 @@ export function ClassDatesCalendar({
   busy,
   error,
   onConfirm,
+  single = false,
+  confirmLabel,
 }: {
   schedule: GroupScheduleEntry[];
   busy?: boolean;
   error?: string | null;
   onConfirm: (dates: Date[]) => void;
+  /** Solo se puede elegir un día (p. ej. "Que la diseñe Ten Planner"). */
+  single?: boolean;
+  /** Texto del botón (por defecto "Continuar" / "Crear sesiones"). */
+  confirmLabel?: string;
 }) {
+  const intlLocale = useLocale() === "en" ? "en-GB" : "es-ES";
+  const tx = useTranslations("ui.s_app_classdatescalendar");
   const today = startOfToday();
   const [viewMonth, setViewMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1)
@@ -53,9 +64,7 @@ export function ClassDatesCalendar({
     for (const entry of schedule) map.set(entry.weekday, entry.time);
     return map;
   }, [schedule]);
-  const [time, setTime] = useState(
-    () => schedule[0]?.time ?? "17:00"
-  );
+  const [time, setTime] = useState(() => schedule[0]?.time ?? "17:00");
 
   const weeks = useMemo(() => {
     const firstOfMonth = new Date(
@@ -82,6 +91,7 @@ export function ClassDatesCalendar({
   function toggleDay(d: Date) {
     const key = dateKey(d);
     setSelected((prev) => {
+      if (single) return prev.has(key) ? new Set() : new Set([key]);
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -90,7 +100,9 @@ export function ClassDatesCalendar({
   }
 
   function changeMonth(delta: number) {
-    setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+    setViewMonth(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1)
+    );
   }
 
   function confirm() {
@@ -112,18 +124,18 @@ export function ClassDatesCalendar({
         <button
           type="button"
           onClick={() => changeMonth(-1)}
-          aria-label="Mes anterior"
+          aria-label={tx("mesAnterior")}
           className="flex size-8 items-center justify-center rounded-lg text-foreground/50 hover:bg-foreground/10 hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
         </button>
         <p className="text-sm font-bold capitalize text-foreground">
-          {MONTH_FORMAT.format(viewMonth)}
+          {MONTH_FORMAT(intlLocale).format(viewMonth)}
         </p>
         <button
           type="button"
           onClick={() => changeMonth(1)}
-          aria-label="Mes siguiente"
+          aria-label={tx("mesSiguiente")}
           className="flex size-8 items-center justify-center rounded-lg text-foreground/50 hover:bg-foreground/10 hover:text-foreground"
         >
           <ChevronRight className="size-4" />
@@ -152,7 +164,9 @@ export function ClassDatesCalendar({
                 className={cn(
                   "relative flex aspect-square items-center justify-center rounded-lg text-sm font-semibold transition-colors",
                   !inMonth && "text-foreground/20",
-                  inMonth && !isSelected && "text-foreground/80 hover:bg-foreground/10",
+                  inMonth &&
+                    !isSelected &&
+                    "text-foreground/80 hover:bg-foreground/10",
                   isPast && inMonth && !isSelected && "text-foreground/35",
                   isSelected && "bg-[#D6FF38] text-[#050505]"
                 )}
@@ -170,7 +184,7 @@ export function ClassDatesCalendar({
       <div className="flex items-center justify-between gap-3 rounded-xl border border-foreground/10 px-3 py-2.5">
         <span className="text-sm font-semibold text-foreground">
           {selected.size === 0
-            ? "Ninguna fecha elegida"
+            ? tx("ningunaFechaElegida")
             : `${selected.size} fecha${selected.size !== 1 ? "s" : ""} elegida${selected.size !== 1 ? "s" : ""}`}
         </span>
         <input
@@ -186,7 +200,7 @@ export function ClassDatesCalendar({
           <span className="mr-1 inline-block size-1.5 rounded-full bg-brand" />
           Días habituales de este grupo:{" "}
           {sortSchedule(schedule)
-            .map((e) => `${WEEKDAY_LABELS[e.weekday]} ${e.time}`)
+            .map((e) => `${WEEKDAY_LABELS[e.weekday]} ${formatScheduleTimes(e)}`)
             .join(" · ")}
         </p>
       )}
@@ -200,7 +214,7 @@ export function ClassDatesCalendar({
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF38] py-2.5 text-sm font-bold text-[#050505] disabled:opacity-50"
       >
         {busy && <Loader2 className="size-4 animate-spin" />}
-        {selected.size > 1 ? "Crear sesiones" : "Continuar"}
+        {confirmLabel ?? (selected.size > 1 ? "Crear sesiones" : "Continuar")}
       </button>
     </div>
   );

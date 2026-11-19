@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ArrowLeft, Check, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestExercisePick, usePickParams } from "@/lib/exercise-pick-bridge";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 /**
  * Se muestra solo cuando la ficha se abrió desde una sesión o clase que se
@@ -11,6 +13,8 @@ import { requestExercisePick, usePickParams } from "@/lib/exercise-pick-bridge";
  * directamente a ese editor, sin salir de la ficha.
  */
 export function AddToOpenEditorButton({ exerciseId }: { exerciseId: string }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_addtoopeneditorbutton");
   const pick = usePickParams();
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
@@ -19,7 +23,7 @@ export function AddToOpenEditorButton({ exerciseId }: { exerciseId: string }) {
 
   if (!pick) return null;
   const { pickerId, kind } = pick;
-  const target = kind === "clase" ? "la clase" : "la sesión";
+  const target = term(kind === "clase" ? "la clase" : "la sesión");
 
   async function handleClick() {
     if (status === "sending") return;
@@ -55,8 +59,8 @@ export function AddToOpenEditorButton({ exerciseId }: { exerciseId: string }) {
       >
         <ArrowLeft className="size-4" />
         {kind === "clase"
-          ? "Seguir editando la clase"
-          : "Seguir editando la sesión"}
+          ? tx("seguirEditandoLaClase")
+          : tx("seguirEditandoLaSesion")}
       </button>
       <button
         type="button"
@@ -77,8 +81,8 @@ export function AddToOpenEditorButton({ exerciseId }: { exerciseId: string }) {
           <Plus className="size-4" />
         )}
         {status === "done"
-          ? `Añadido a ${target}`
-          : `Añadir a ${target} que estás creando`}
+          ? tx("anadidoAV1", { v1: target })
+          : tx("anadirAV1Que", { v1: target })}
       </button>
       {message && (
         <p

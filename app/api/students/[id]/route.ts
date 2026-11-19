@@ -1,11 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { joinFullName, splitFullName } from "@/lib/students/names";
 import { db } from "@/db";
 import { students } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { geocodeLocality } from "@/lib/geo/geocode";
 import {
+  rejectInvalidPlayerLevels,
   studentIdParamsSchema,
   updateStudentSchema,
   zodValidationErrorResponse,
@@ -79,11 +81,17 @@ export async function PUT(request: Request, context: StudentRouteContext) {
 
   const parsedBody = updateStudentSchema.safeParse(body);
   if (!parsedBody.success) return zodValidationErrorResponse(parsedBody.error);
+  const badLevel = await rejectInvalidPlayerLevels([
+    parsedBody.data.playerLevel,
+  ]);
+  if (badLevel) return badLevel;
 
   try {
     const [existing] = await db
       .select({
         id: students.id,
+        firstName: students.firstName,
+        lastName: students.lastName,
         locality: students.locality,
         localityLat: students.localityLat,
       })
@@ -98,8 +106,31 @@ export async function PUT(request: Request, context: StudentRouteContext) {
 
     const updateValues: Record<string, unknown> = {};
 
+    // Nombre: con firstName/lastName se recalcula el nombre completo; con
+    // solo name (p. ej. desde otras pantallas) se separa automáticamente.
+    if (d.firstName !== undefined || d.lastName !== undefined) {
+      const firstName = d.firstName ?? existing.firstName ?? "";
+      const lastName =
+        d.lastName !== undefined
+          ? d.lastName?.trim() || null
+          : existing.lastName;
+      if (!firstName) {
+        return NextResponse.json(
+          { error: "El nombre es obligatorio" },
+          { status: 400 }
+        );
+      }
+      updateValues.firstName = firstName;
+      updateValues.lastName = lastName;
+      updateValues.name = joinFullName(firstName, lastName);
+    } else if (d.name !== undefined) {
+      const split = splitFullName(d.name);
+      updateValues.name = d.name;
+      updateValues.firstName = split.firstName;
+      updateValues.lastName = split.lastName;
+    }
+
     const fields = [
-      "name",
       "gender",
       "birthDate",
       "heightCm",
@@ -110,6 +141,8 @@ export async function PUT(request: Request, context: StudentRouteContext) {
       "yearStartedTennis",
       "yearStartedRacketSports",
       "preferredSchedule",
+      "howFound",
+      "leftAt",
       "notes",
       "imageUrl",
     ] as const;
@@ -125,6 +158,22 @@ export async function PUT(request: Request, context: StudentRouteContext) {
     }
     if (d.phone !== undefined) {
       updateValues.phone = d.phone === "" ? null : d.phone;
+    }
+    // La fecha de alta no puede quedar vacía: un null se ignora.
+    if (d.joinedAt) updateValues.joinedAt = d.joinedAt;
+    if (d.howFoundDetail !== undefined) {
+      updateValues.howFoundDetail = d.howFoundDetail || null;
+    }
+    // El motivo de baja solo tiene sentido con fecha de baja: quitar la
+    // fecha (volver a activo) borra también el motivo.
+    if (d.leftAt === null) {
+      updateValues.leftReason = null;
+      updateValues.leftReasonDetail = null;
+    } else {
+      if (d.leftReason !== undefined) updateValues.leftReason = d.leftReason;
+      if (d.leftReasonDetail !== undefined) {
+        updateValues.leftReasonDetail = d.leftReasonDetail || null;
+      }
     }
     if (d.locality !== undefined) {
       const locality = d.locality ? d.locality : null;

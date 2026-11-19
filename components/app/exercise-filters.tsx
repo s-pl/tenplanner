@@ -1,90 +1,24 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import {
-  ASPECTO_JUEGO_LABELS,
-  AUTORIAS,
-  CARACTER,
-  FASES,
-  NUEVOS_TIPOS_ACTIVIDAD,
-  PELOTAS,
-  PELOTAS_LEGACY,
-  showsTipoPelota,
-  SITUACION_JUEGO,
-  TIPO_COMPETICION,
-  tipoEjercicioOptionLabel,
-} from "@/lib/exercise-taxonomy";
+  PRIMARY_FILTERS,
+  SECONDARY_FILTERS,
+  type FilterDef,
+  type Option,
+} from "@/lib/exercise-filter-options";
+import { showsTipoPelota } from "@/lib/exercise-taxonomy";
+import {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-const FORMATOS = [
-  { id: "individual", label: "Individual" },
-  { id: "parejas", label: "Parejas" },
-  { id: "grupal", label: "Grupal" },
-  { id: "multigrupo", label: "Multigrupo" },
-] as const;
-
-const ASPECTOS = [
-  { id: "tecnica", label: "Técnica" },
-  { id: "tactica", label: "Táctica" },
-  { id: "mental", label: ASPECTO_JUEGO_LABELS.mental },
-  { id: "fisico", label: ASPECTO_JUEGO_LABELS.fisico },
-] as const;
-
-const PARAMETROS = [
-  { id: "altura", label: "Altura" },
-  { id: "profundidad", label: "Profundidad" },
-  { id: "velocidad", label: "Velocidad" },
-  { id: "direccion", label: "Dirección" },
-  { id: "efecto", label: "Efecto" },
-] as const;
-
-const DURACION_RANGOS = [
-  { id: "1-5", label: "1-5 min" },
-  { id: "5-10", label: "5-10 min" },
-  { id: "10-15", label: "10-15 min" },
-  { id: "15-20", label: "15-20 min" },
-  { id: "+20", label: "+20 min" },
-] as const;
-
-// Incluye los tipos antiguos (marcados "antiguo") para poder encontrar los
-// ejercicios que aún no se han re-etiquetado.
-const TIPOS_ACTIVIDAD = NUEVOS_TIPOS_ACTIVIDAD.map((id) => ({
-  id,
-  label: tipoEjercicioOptionLabel(id),
-}));
-
-// Incluye las pelotas antiguas (marcadas) para encontrar los ejercicios
-// que aún no se han re-etiquetado.
-const TIPOS_PELOTA: { id: string; label: string; color?: string }[] = [
-  ...PELOTAS,
-  ...PELOTAS_LEGACY.map((p) => ({ id: p.id, label: `${p.label} (antigua)` })),
-];
-
-const GOLPES = [
-  { id: "derecha", label: "Derecha" },
-  { id: "reves", label: "Revés" },
-  { id: "saque", label: "Saque" },
-  { id: "volea", label: "Volea" },
-  { id: "remate", label: "Remate" },
-  { id: "globo", label: "Globo" },
-  { id: "dejada", label: "Dejada" },
-  { id: "resto", label: "Resto" },
-] as const;
-
-const EFECTOS = [
-  { id: "liftado", label: "Liftado" },
-  { id: "cortado", label: "Cortado" },
-  { id: "plano", label: "Plano" },
-] as const;
-
-const UBICACIONES = [
-  { id: "pista", label: "Pista" },
-  { id: "pared", label: "Pared" },
-  { id: "playa", label: "Playa" },
-  { id: "casa", label: "Casa" },
-] as const;
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 export interface ExerciseFiltersProps {
   currentFilters: {
@@ -105,6 +39,7 @@ export interface ExerciseFiltersProps {
     tipoCompeticion: string[];
     autoria: string[];
   };
+  sport?: string | null;
   preserved: {
     // El nivel se elige en la primera pantalla; aquí solo se conserva.
     nivel?: string[];
@@ -113,79 +48,170 @@ export interface ExerciseFiltersProps {
     category?: string;
     difficulty?: string;
   };
-  sport?: string | null;
 }
 
-function ChipButton({
-  active,
-  onClick,
-  children,
+const ALL_PARAMS = [...PRIMARY_FILTERS, ...SECONDARY_FILTERS].map(
+  (f) => f.param
+);
+
+const APPLY_DELAY_MS = 350;
+
+type Values = Record<string, string[]>;
+
+function valuesFromProps(
+  current: ExerciseFiltersProps["currentFilters"]
+): Values {
+  return {
+    formato: current.formato,
+    fase: current.fase,
+    caracter: current.caracter,
+    situacionJuego: current.situacionJuego,
+    tipoCompeticion: current.tipoCompeticion,
+    aspectoJuego: current.aspectoJuego,
+    parametro: current.parametro,
+    duracionRango: current.duracionRango,
+    numJugadores: current.numJugadores.map(String),
+    tipoPelota: current.tipoPelota,
+    tipoActividad: current.tipoActividad,
+    golpe: current.golpes,
+    efecto: current.efecto,
+    location: current.location,
+    autoria: current.autoria,
+  };
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span className="flex size-4 items-center justify-center rounded-full bg-[#050505] text-[9px] font-bold text-[#D6FF38]">
+      {count}
+    </span>
+  );
+}
+
+function CheckboxRow({
+  option,
+  checked,
+  onToggle,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
+  option: Option;
+  checked: boolean;
+  onToggle: () => void;
 }) {
+  const term = useTerm();
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 font-sans text-sm text-foreground/80 transition-colors hover:bg-muted">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="size-4 shrink-0 cursor-pointer accent-[#050505]"
+      />
+      {term(option.label)}
+    </label>
+  );
+}
+
+function SwatchButton({
+  option,
+  checked,
+  onToggle,
+}: {
+  option: Option;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const term = useTerm();
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={cn(
-        "whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-sans font-semibold tracking-[0.04em] transition-colors",
-        active
-          ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
-          : "border-foreground/15 text-foreground/55 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-      )}
+      onClick={onToggle}
+      aria-pressed={checked}
+      className="flex flex-col items-center gap-1.5 rounded-md px-1 py-1.5 font-sans text-xs text-foreground/80 transition-colors hover:bg-muted"
     >
-      {children}
+      <span
+        aria-hidden
+        className={cn(
+          "grid size-9 place-items-center rounded-full border border-black/10",
+          checked && "ring-2 ring-[#050505] ring-offset-2 ring-offset-popover"
+        )}
+        style={{ backgroundColor: option.color }}
+      >
+        {checked && (
+          <Check className="size-4 text-black/70" strokeWidth={2.5} />
+        )}
+      </span>
+      {term(option.label)}
     </button>
   );
 }
 
-function FilterGroup({
-  label,
-  children,
+function FilterDropdown({
+  def,
+  selected,
+  onToggle,
 }: {
-  label: string;
-  children: ReactNode;
+  def: FilterDef;
+  selected: string[];
+  onToggle: (param: string, id: string) => void;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_exercisefilters");
+  const count = selected.length;
   return (
-    <div className="space-y-2">
-      <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
+    <Popover>
+      <PopoverTrigger
+        className={cn(
+          "group inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 font-sans text-[11px] font-bold tracking-[0.08em] transition-colors",
+          count > 0
+            ? "border-[#050505] bg-[#D6FF38] text-[#050505]"
+            : "border-foreground/20 text-foreground/70 hover:border-foreground/40 hover:text-foreground"
+        )}
+      >
+        {term(def.label)}
+        {count > 0 && <CountBadge count={count} />}
+        <ChevronDown
+          className="size-3.5 transition-transform group-data-popup-open:rotate-180"
+          strokeWidth={1.8}
+        />
+      </PopoverTrigger>
+      <PopoverContent>
+        <div className="flex items-center justify-between pb-2">
+          <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-foreground/40">
+            {term(def.label)}
+          </p>
+          <PopoverClose
+            aria-label={tx("cerrar")}
+            className="grid size-7 place-items-center rounded-full text-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </PopoverClose>
+        </div>
+        {def.swatches ? (
+          <div className="grid grid-cols-3 gap-1">
+            {def.options.map((option) => (
+              <SwatchButton
+                key={option.id}
+                option={option}
+                checked={selected.includes(option.id)}
+                onToggle={() => onToggle(def.param, option.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-0.5">
+            {def.options.map((option) => (
+              <CheckboxRow
+                key={option.id}
+                option={option}
+                checked={selected.includes(option.id)}
+                onToggle={() => onToggle(def.param, option.id)}
+              />
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
-}
-
-function toggleString(
-  set: Set<string>,
-  setter: (next: Set<string>) => void,
-  value: string
-) {
-  const next = new Set(set);
-  if (next.has(value)) next.delete(value);
-  else next.add(value);
-  setter(next);
-}
-
-function toggleNumber(
-  set: Set<number>,
-  setter: (next: Set<number>) => void,
-  value: number
-) {
-  const next = new Set(set);
-  if (next.has(value)) next.delete(value);
-  else next.add(value);
-  setter(next);
-}
-
-function appendAll(
-  params: URLSearchParams,
-  key: string,
-  values: Iterable<string | number>
-) {
-  for (const value of values) params.append(key, String(value));
 }
 
 export function ExerciseFilters({
@@ -193,57 +219,33 @@ export function ExerciseFilters({
   preserved,
   sport,
 }: ExerciseFiltersProps) {
+  const tx = useTranslations("ui.s_app_exercisefilters");
   const router = useRouter();
-  const showPelota = showsTipoPelota(sport);
-  const [open, setOpen] = useState(false);
-  const [formato, setFormato] = useState(new Set(currentFilters.formato));
-  const [fase, setFase] = useState(new Set(currentFilters.fase));
-  const [caracter, setCaracter] = useState(new Set(currentFilters.caracter));
-  const [situacionJuego, setSituacionJuego] = useState(
-    new Set(currentFilters.situacionJuego)
+  const primaryFilters = showsTipoPelota(sport)
+    ? PRIMARY_FILTERS
+    : PRIMARY_FILTERS.filter((f) => f.param !== "tipoPelota");
+  const [isPending, startTransition] = useTransition();
+  const [values, setValues] = useState<Values>(() =>
+    valuesFromProps(currentFilters)
   );
-  const [tipoCompeticion, setTipoCompeticion] = useState(
-    new Set(currentFilters.tipoCompeticion)
-  );
-  const [aspectoJuego, setAspectoJuego] = useState(
-    new Set(currentFilters.aspectoJuego)
-  );
-  const [parametro, setParametro] = useState(new Set(currentFilters.parametro));
-  const [duracionRango, setDuracionRango] = useState(
-    new Set(currentFilters.duracionRango)
-  );
-  const [numJugadores, setNumJugadores] = useState(
-    new Set(currentFilters.numJugadores)
-  );
-  const [tipoPelota, setTipoPelota] = useState(
-    new Set(currentFilters.tipoPelota)
-  );
-  const [tipoActividad, setTipoActividad] = useState(
-    new Set(currentFilters.tipoActividad)
-  );
-  const [golpes, setGolpes] = useState(new Set(currentFilters.golpes));
-  const [efecto, setEfecto] = useState(new Set(currentFilters.efecto));
-  const [location, setLocation] = useState(new Set(currentFilters.location));
-  const [autoria, setAutoria] = useState(new Set(currentFilters.autoria));
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const activeCount =
-    formato.size +
-    fase.size +
-    caracter.size +
-    situacionJuego.size +
-    tipoCompeticion.size +
-    aspectoJuego.size +
-    parametro.size +
-    duracionRango.size +
-    numJugadores.size +
-    tipoPelota.size +
-    tipoActividad.size +
-    golpes.size +
-    efecto.size +
-    location.size +
-    autoria.size;
+  // Si la URL cambia desde fuera (p. ej. un enlace del resumen), se vuelve a
+  // leer. Mientras hay una navegación propia en curso se conserva lo marcado.
+  const serverKey = JSON.stringify(currentFilters);
+  const [prevServerKey, setPrevServerKey] = useState(serverKey);
+  if (prevServerKey !== serverKey) {
+    setPrevServerKey(serverKey);
+    if (!isPending) setValues(valuesFromProps(currentFilters));
+  }
 
-  function buildParams() {
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  function buildUrl(next: Values) {
     const p = new URLSearchParams();
     if (preserved.q) p.set("q", preserved.q);
     if (preserved.tab && preserved.tab !== "all") p.set("tab", preserved.tab);
@@ -253,350 +255,70 @@ export function ExerciseFilters({
     if (preserved.difficulty && preserved.difficulty !== "all") {
       p.set("difficulty", preserved.difficulty);
     }
-    appendAll(p, "formato", formato);
-    appendAll(p, "nivel", preserved.nivel ?? []);
-    appendAll(p, "fase", fase);
-    appendAll(p, "caracter", caracter);
-    appendAll(p, "situacionJuego", situacionJuego);
-    appendAll(p, "tipoCompeticion", tipoCompeticion);
-    appendAll(p, "aspectoJuego", aspectoJuego);
-    appendAll(p, "parametro", parametro);
-    appendAll(p, "duracionRango", duracionRango);
-    appendAll(p, "numJugadores", numJugadores);
-    appendAll(p, "tipoPelota", tipoPelota);
-    appendAll(p, "tipoActividad", tipoActividad);
-    appendAll(p, "golpe", golpes);
-    appendAll(p, "efecto", efecto);
-    appendAll(p, "location", location);
-    appendAll(p, "autoria", autoria);
-    return p;
-  }
-
-  function applyFilters() {
-    const p = buildParams();
-    router.push(`/exercises${p.toString() ? `?${p}` : ""}`);
-    setOpen(false);
-  }
-
-  function clearFilters() {
-    setFormato(new Set<string>());
-    setFase(new Set<string>());
-    setCaracter(new Set<string>());
-    setSituacionJuego(new Set<string>());
-    setTipoCompeticion(new Set<string>());
-    setAspectoJuego(new Set<string>());
-    setParametro(new Set<string>());
-    setDuracionRango(new Set<string>());
-    setNumJugadores(new Set<number>());
-    setTipoPelota(new Set<string>());
-    setTipoActividad(new Set<string>());
-    setGolpes(new Set<string>());
-    setEfecto(new Set<string>());
-    setLocation(new Set<string>());
-    setAutoria(new Set<string>());
-
-    const p = new URLSearchParams();
-    if (preserved.q) p.set("q", preserved.q);
-    if (preserved.tab && preserved.tab !== "all") p.set("tab", preserved.tab);
-    if (preserved.category && preserved.category !== "all") {
-      p.set("category", preserved.category);
+    for (const value of preserved.nivel ?? []) p.append("nivel", value);
+    for (const param of ALL_PARAMS) {
+      for (const value of next[param] ?? []) p.append(param, value);
     }
-    if (preserved.difficulty && preserved.difficulty !== "all") {
-      p.set("difficulty", preserved.difficulty);
-    }
-    appendAll(p, "nivel", preserved.nivel ?? []);
-    router.push(`/exercises${p.toString() ? `?${p}` : ""}`);
+    return `/exercises${p.toString() ? `?${p}` : ""}`;
   }
+
+  function navigate(next: Values, delay: number) {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      startTransition(() => {
+        router.replace(buildUrl(next), { scroll: false });
+      });
+    }, delay);
+  }
+
+  function toggle(param: string, id: string) {
+    const current = values[param] ?? [];
+    const next: Values = {
+      ...values,
+      [param]: current.includes(id)
+        ? current.filter((v) => v !== id)
+        : [...current, id],
+    };
+    setValues(next);
+    navigate(next, APPLY_DELAY_MS);
+  }
+
+  function clearAll() {
+    const next: Values = {};
+    setValues(next);
+    navigate(next, 0);
+  }
+
+  // Todos los filtros van visibles de entrada, en filas que se ajustan al ancho.
+  const visibleFilters = [...primaryFilters, ...SECONDARY_FILTERS];
+  const activeCount = visibleFilters.reduce(
+    (sum, f) => sum + (values[f.param]?.length ?? 0),
+    0
+  );
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-[11px] font-sans font-bold tracking-[0.08em] transition-colors",
-          open || activeCount > 0
-            ? "border-[#D6FF38] bg-[#D6FF38] text-[#050505]"
-            : "border-foreground/20 text-foreground/55 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-        )}
-      >
-        <SlidersHorizontal className="size-3.5" strokeWidth={1.6} />
-        Filtros
+    <div className={cn("transition-opacity", isPending && "opacity-70")}>
+      <div className="flex flex-wrap items-center gap-2">
+        {visibleFilters.map((def) => (
+          <FilterDropdown
+            key={def.param}
+            def={def}
+            selected={values[def.param] ?? []}
+            onToggle={toggle}
+          />
+        ))}
         {activeCount > 0 && (
-          <span className="flex size-4 items-center justify-center rounded-full bg-[#050505] text-[9px] font-bold text-[#D6FF38]">
-            {activeCount}
-          </span>
-        )}
-        {open ? (
-          <ChevronUp className="size-3" strokeWidth={1.6} />
-        ) : (
-          <ChevronDown className="size-3" strokeWidth={1.6} />
-        )}
-      </button>
-
-      {open && (
-        <div className="mt-3 space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
-          <div className="flex flex-wrap items-center gap-3 border-b border-foreground/10 pb-3">
-            <button
-              type="button"
-              onClick={applyFilters}
-              className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2 text-[12px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e]"
-            >
-              Aplicar filtros
-            </button>
-            {activeCount > 0 && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1.5 text-[11px] text-foreground/50 transition-colors hover:text-foreground"
-              >
-                <X className="size-3" />
-                Limpiar ({activeCount})
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FilterGroup label="Fase de la sesión">
-              {FASES.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={fase.has(id)}
-                  onClick={() => toggleString(fase, setFase, id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Aspectos del juego">
-              {ASPECTOS.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={aspectoJuego.has(id)}
-                  onClick={() =>
-                    toggleString(aspectoJuego, setAspectoJuego, id)
-                  }
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            <FilterGroup label="Parámetros">
-              {PARAMETROS.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={parametro.has(id)}
-                  onClick={() => toggleString(parametro, setParametro, id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Tipo de ejercicio">
-              {TIPOS_ACTIVIDAD.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={tipoActividad.has(id)}
-                  onClick={() =>
-                    toggleString(tipoActividad, setTipoActividad, id)
-                  }
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Carácter">
-              {CARACTER.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={caracter.has(id)}
-                  onClick={() => toggleString(caracter, setCaracter, id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Situación del juego">
-              {SITUACION_JUEGO.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={situacionJuego.has(id)}
-                  onClick={() =>
-                    toggleString(situacionJuego, setSituacionJuego, id)
-                  }
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Tipo de competición">
-              {TIPO_COMPETICION.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={tipoCompeticion.has(id)}
-                  onClick={() =>
-                    toggleString(tipoCompeticion, setTipoCompeticion, id)
-                  }
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Rango de duración">
-              {DURACION_RANGOS.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={duracionRango.has(id)}
-                  onClick={() =>
-                    toggleString(duracionRango, setDuracionRango, id)
-                  }
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FilterGroup label="Formato">
-              {FORMATOS.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={formato.has(id)}
-                  onClick={() => toggleString(formato, setFormato, id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="Jugadores">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <ChipButton
-                  key={n}
-                  active={numJugadores.has(n)}
-                  onClick={() => toggleNumber(numJugadores, setNumJugadores, n)}
-                >
-                  {n}
-                </ChipButton>
-              ))}
-              <ChipButton
-                active={numJugadores.has(7)}
-                onClick={() => toggleNumber(numJugadores, setNumJugadores, 7)}
-              >
-                +6
-              </ChipButton>
-            </FilterGroup>
-          </div>
-
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-5",
-              showPelota && "md:grid-cols-2"
-            )}
+          <button
+            type="button"
+            onClick={clearAll}
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap px-2 font-sans text-[11px] text-foreground/50 transition-colors hover:text-foreground"
           >
-            {showPelota && (
-              <FilterGroup label="Pelota">
-                {TIPOS_PELOTA.map(({ id, label, color }) => (
-                  <ChipButton
-                    key={id}
-                    active={tipoPelota.has(id)}
-                    onClick={() => toggleString(tipoPelota, setTipoPelota, id)}
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      {color && (
-                        <span
-                          aria-hidden
-                          className="size-2 shrink-0 rounded-full border border-black/10"
-                          style={{ backgroundColor: color }}
-                        />
-                      )}
-                      {label}
-                    </span>
-                  </ChipButton>
-                ))}
-              </FilterGroup>
-            )}
-
-            <FilterGroup label="Lugar">
-              {UBICACIONES.map(({ id, label }) => (
-                <ChipButton
-                  key={id}
-                  active={location.has(id)}
-                  onClick={() => toggleString(location, setLocation, id)}
-                >
-                  {label}
-                </ChipButton>
-              ))}
-            </FilterGroup>
-          </div>
-
-          <FilterGroup label="Autoría">
-            {AUTORIAS.map(({ id, label }) => (
-              <ChipButton
-                key={id}
-                active={autoria.has(id)}
-                onClick={() => toggleString(autoria, setAutoria, id)}
-              >
-                {label}
-              </ChipButton>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup label="Golpes">
-            {GOLPES.map(({ id, label }) => (
-              <ChipButton
-                key={id}
-                active={golpes.has(id)}
-                onClick={() => toggleString(golpes, setGolpes, id)}
-              >
-                {label}
-              </ChipButton>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup label="Efecto">
-            {EFECTOS.map(({ id, label }) => (
-              <ChipButton
-                key={id}
-                active={efecto.has(id)}
-                onClick={() => toggleString(efecto, setEfecto, id)}
-              >
-                {label}
-              </ChipButton>
-            ))}
-          </FilterGroup>
-
-          <div className="flex flex-wrap items-center gap-3 border-t border-foreground/10 pt-3">
-            <button
-              type="button"
-              onClick={applyFilters}
-              className="inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-4 py-2 text-[12px] font-bold text-[#050505] transition-colors hover:bg-[#c8f52e]"
-            >
-              Aplicar filtros
-            </button>
-            {activeCount > 0 && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1.5 text-[11px] text-foreground/50 transition-colors hover:text-foreground"
-              >
-                <X className="size-3" />
-                Limpiar ({activeCount})
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+            <X className="size-3" />
+            {tx("limpiar")}{activeCount})
+          </button>
+        )}
+      </div>
     </div>
   );
 }

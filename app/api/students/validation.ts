@@ -1,26 +1,35 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedImageUrl } from "@/lib/url-safety";
+import { HOW_FOUND_IDS, LEFT_REASON_IDS } from "@/lib/students/membership";
+import { invalidSkillLevelCodes } from "@/lib/skill-levels-repo";
 
 export const genderSchema = z.enum(["male", "female", "other"]);
 export const dominantHandSchema = z.enum(["left", "right"]);
-export const playerLevelSchema = z.enum([
-  // Legacy (compat con datos existentes)
-  "beginner",
-  "amateur",
-  "intermediate",
-  "advanced",
-  "competitive",
-  // PMV 260506 — niveles por edad
-  "descubrimiento",
-  "desarrollo",
-  "consolidacion",
-  "especializacion",
-  "precompeticion",
-  "competicion",
-  "adultos_iniciacion",
-  "adultos_medio_alto",
-]);
+// Código de nivel. Que exista se comprueba contra la tabla skill_levels con
+// rejectInvalidPlayerLevels (la columna tiene FK desde la migración 0094).
+export const playerLevelSchema = z.string().trim().min(1).max(30);
+
+/** 400 si algún nivel no existe en skill_levels; null si todos valen. */
+export async function rejectInvalidPlayerLevels(
+  codes: readonly (string | null | undefined)[]
+): Promise<NextResponse | null> {
+  const invalid = await invalidSkillLevelCodes(codes);
+  if (invalid.length === 0) return null;
+  return NextResponse.json(
+    {
+      error: "Validation failed",
+      details: [
+        {
+          path: "playerLevel",
+          message: `Nivel desconocido: ${invalid.join(", ")}`,
+          code: "invalid_level",
+        },
+      ],
+    },
+    { status: 400 }
+  );
+}
 
 export const studentIdParamsSchema = z.object({
   id: z.string().uuid("El ID del alumno debe ser un UUID válido"),
@@ -39,12 +48,19 @@ const optionalImageUrlSchema = z
       "La URL de foto debe ser http(s) y pertenecer a Supabase, Pexels, Google o GitHub.",
   });
 
-export const createStudentSchema = z.object({
+const studentFieldsSchema = z.object({
+  /** Nombre completo. Si llegan firstName/lastName, se recalcula con ellos. */
   name: z
     .string()
     .trim()
     .min(1, "El nombre es obligatorio")
     .max(255, "Máximo 255 caracteres"),
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "El nombre es obligatorio")
+    .max(255, "Máximo 255 caracteres"),
+  lastName: z.string().trim().max(255, "Máximo 255 caracteres").nullable(),
   email: z
     .string()
     .trim()
@@ -117,6 +133,32 @@ export const createStudentSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
+  joinedAt: dateStringSchema
+    .refine((v) => !isNaN(new Date(`${v}T00:00:00Z`).getTime()), {
+      message: "La fecha de alta parece incorrecta",
+    })
+    .optional()
+    .nullable(),
+  howFound: z.enum(HOW_FOUND_IDS).optional().nullable(),
+  howFoundDetail: z
+    .string()
+    .trim()
+    .max(255, "Máximo 255 caracteres")
+    .optional()
+    .nullable(),
+  leftAt: dateStringSchema
+    .refine((v) => !isNaN(new Date(`${v}T00:00:00Z`).getTime()), {
+      message: "La fecha de baja parece incorrecta",
+    })
+    .optional()
+    .nullable(),
+  leftReason: z.enum(LEFT_REASON_IDS).optional().nullable(),
+  leftReasonDetail: z
+    .string()
+    .trim()
+    .max(500, "Máximo 500 caracteres")
+    .optional()
+    .nullable(),
   notes: z
     .string()
     .trim()
@@ -126,7 +168,15 @@ export const createStudentSchema = z.object({
   imageUrl: optionalImageUrlSchema.optional().nullable(),
 });
 
-export const updateStudentSchema = createStudentSchema
+/** Alta: hace falta el nombre (firstName, o name con el nombre completo). */
+export const createStudentSchema = studentFieldsSchema
+  .partial({ name: true, firstName: true, lastName: true })
+  .refine((v) => !!v.firstName || !!v.name, {
+    message: "El nombre es obligatorio",
+    path: ["firstName"],
+  });
+
+export const updateStudentSchema = studentFieldsSchema
   .partial()
   .refine((payload) => Object.keys(payload).length > 0, {
     message: "At least one field is required for update",

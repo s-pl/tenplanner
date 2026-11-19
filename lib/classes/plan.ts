@@ -45,6 +45,7 @@ export async function loadClassPlan(classId: string): Promise<ClassPlan> {
       blockOrder: classBlocks.orderIndex,
       blockTitle: classBlocks.title,
       blockNotes: classBlocks.notes,
+      blockRotates: classBlocks.rotates,
       itemId: classBlockExercises.id,
       itemExerciseId: classBlockExercises.exerciseId,
       itemFreeText: classBlockExercises.freeText,
@@ -52,6 +53,10 @@ export async function loadClassPlan(classId: string): Promise<ClassPlan> {
       itemDuration: classBlockExercises.durationMinutes,
       itemKind: classBlockExercises.kind,
       itemStations: classBlockExercises.stations,
+      itemCourt: classBlockExercises.court,
+      itemLedBy: classBlockExercises.ledBy,
+      itemTurnMinutes: classBlockExercises.turnMinutes,
+      itemTurnSize: classBlockExercises.turnSize,
       exId: exercises.id,
       exName: exercises.name,
       exDescription: exercises.description,
@@ -79,6 +84,7 @@ export async function loadClassPlan(classId: string): Promise<ClassPlan> {
         orderIndex: order,
         title: row.blockTitle || BLOCK_TITLES[order],
         notes: row.blockNotes ?? null,
+        rotates: row.blockRotates === true,
       });
     }
   }
@@ -162,6 +168,32 @@ export async function loadClassPlan(classId: string): Promise<ClassPlan> {
       // solo está implementada en el creador de sesiones por ahora.
       aspecto: null,
     });
+  }
+
+  // Pista y quién dirige (plantillas con dos pistas), igual que en sesiones.
+  const laneByKey = new Map(
+    rows
+      .filter((row) => row.itemId !== null)
+      .map((row) => [
+        row.itemId as string,
+        {
+          court: (row.itemCourt === 2 ? 2 : 1) as 1 | 2,
+          ledBy: (row.itemLedBy === "coach" || row.itemLedBy === "auto"
+            ? row.itemLedBy
+            : null) as "coach" | "auto" | null,
+          turnMinutes: row.itemTurnMinutes ?? null,
+          turnSize: row.itemTurnSize ?? null,
+        },
+      ])
+  );
+  for (const item of items) {
+    const lane = laneByKey.get(item.key);
+    if (lane) {
+      item.court = lane.court;
+      item.ledBy = lane.ledBy;
+      item.turnMinutes = lane.turnMinutes;
+      item.turnSize = lane.turnSize;
+    }
   }
 
   return { blocks, items };

@@ -16,8 +16,12 @@ import {
   ExternalLink,
   Coffee,
   LayoutGrid,
+  Link2,
+  Replace,
+  Unlink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CourtsBoardView } from "@/components/app/session-wizard/courts-board";
 import { ExerciseQuickDescription } from "@/components/app/exercise-quick-description";
 import {
   pickExerciseHref,
@@ -52,6 +56,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 function nivelOptionsForSport(sport?: string | null) {
   return nivelesForSport(sport).map((n) => ({
@@ -79,6 +85,10 @@ const GOLPES = [
 
 const DURACIONES = [30, 45, 55, 60, 75, 90, 120];
 
+// Botones pequeños de cada actividad (vincular, cambiar, pasar a texto).
+const ITEM_ACTION_CLASS =
+  "inline-flex min-h-8 items-center gap-1 rounded-lg border border-foreground/15 px-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-[#D6FF38]/70 hover:text-foreground";
+
 const BLOCK_TITLES = [
   { idx: 1, label: "Bloque inicial" },
   { idx: 2, label: "Bloque principal" },
@@ -92,7 +102,17 @@ interface AvailableExercise extends PickerTaggedExercise {
   description?: string | null;
 }
 
-type BlockItem =
+/** Pista y quién dirige cada elemento (plantillas con dos pistas). */
+type BlockItemLane = {
+  court?: 1 | 2;
+  ledBy?: "coach" | "auto" | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
+};
+
+type BlockItem = BlockItemLane & BlockItemShape;
+
+type BlockItemShape =
   | {
       kind: "exercise";
       exerciseId: string;
@@ -114,7 +134,7 @@ type BlockItem =
       kind: "stations";
       introText: string;
       stations: StationDraftItem[];
-      /** Duración por estación (la misma para todas), no la suma. */
+      /** Duración total del bloque de estaciones (cuenta una vez en la clase). */
       durationMinutes: number | null;
     };
 
@@ -122,6 +142,8 @@ interface BlockState {
   orderIndex: number;
   title: string;
   notes: string;
+  /** Dos pistas con rotación: los dos grupos hacen ambas pistas. */
+  rotates?: boolean;
   items: BlockItem[];
 }
 
@@ -145,11 +167,14 @@ interface ClassAutosave {
   aspectosImportantes: string;
   isLibrary: boolean;
   autoria: string;
+  courts?: 1 | 2;
   blocks: BlockState[];
 }
 
 export interface ClassInitialData {
   name: string;
+  /** Pistas que usa la plantilla (1 o 2). */
+  courts?: 1 | 2;
   duracionMinutes: number;
   alumnosTipo: "individual" | "grupal" | null;
   numAlumnos: number | null;
@@ -170,6 +195,7 @@ export interface ClassInitialData {
     orderIndex: number;
     title: string | null;
     notes: string | null;
+    rotates?: boolean;
     items: BlockItem[];
   }[];
 }
@@ -195,6 +221,8 @@ export function ClassForm({
   initialData,
   sport,
 }: ClassFormProps) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_classform");
   const router = useRouter();
   const NIVELES = nivelOptionsForSport(sport);
   const [name, setName] = useState(initialData?.name ?? "");
@@ -237,6 +265,9 @@ export function ClassForm({
   );
   const isDraft = initialData?.status === "draft";
 
+  const [courts, setCourts] = useState<1 | 2>(
+    initialData?.courts === 2 ? 2 : 1
+  );
   const [blocks, setBlocks] = useState<BlockState[]>(() => {
     const base = BLOCK_TITLES.map((b) => ({
       orderIndex: b.idx,
@@ -255,6 +286,7 @@ export function ClassForm({
         ...b,
         title: found.title ?? b.title,
         notes: found.notes ?? "",
+        rotates: found.rotates === true,
         items: found.items,
       };
     });
@@ -308,6 +340,7 @@ export function ClassForm({
           if (typeof saved.isLibrary === "boolean")
             setIsLibrary(saved.isLibrary);
           if (typeof saved.autoria === "string") setAutoria(saved.autoria);
+          if (saved.courts === 2) setCourts(2);
           if (Array.isArray(saved.blocks) && saved.blocks.length > 0)
             setBlocks(saved.blocks);
           setRecoveredDraft(true);
@@ -359,6 +392,7 @@ export function ClassForm({
         aspectosImportantes,
         isLibrary,
         autoria,
+        courts,
         blocks,
       };
       window.sessionStorage.setItem(
@@ -398,7 +432,98 @@ export function ClassForm({
     );
   }
 
+  // Actividad que se va a sustituir por el ejercicio que se elija en el
+  // buscador (vincular un texto o cambiar el ejercicio). null = añadir.
+  const [replaceTarget, setReplaceTarget] = useState<{
+    blockIdx: number;
+    itemIdx: number;
+  } | null>(null);
+  useEffect(() => {
+    if (pickerOpen === null) setReplaceTarget(null);
+  }, [pickerOpen]);
+
+  function openReplacePicker(blockIdx: number, itemIdx: number) {
+    const item = blocks[blockIdx]?.items[itemIdx];
+    setReplaceTarget({ blockIdx, itemIdx });
+    setPickerOpen(blockIdx);
+    setPickerSourceTab("search");
+    // Se busca con el título de la actividad para empezar.
+    setSearch(
+      item?.kind === "text"
+        ? item.title || ""
+        : item?.kind === "exercise"
+          ? item.name
+          : ""
+    );
+  }
+
+  /** Convierte un ejercicio de la clase en texto libre (sin vínculo). */
+  function unlinkItem(blockIdx: number, itemIdx: number) {
+    setBlocks((prev) =>
+      prev.map((b, i) =>
+        i !== blockIdx
+          ? b
+          : {
+              ...b,
+              items: b.items.map((it, j) =>
+                j === itemIdx && it.kind === "exercise"
+                  ? {
+                      kind: "text" as const,
+                      title: it.name,
+                      freeText: it.freeText ?? "",
+                      notes: it.notes,
+                      durationMinutes: it.durationMinutes,
+                    }
+                  : it
+              ),
+            }
+      )
+    );
+  }
+
   function addExerciseToBlock(blockIdx: number, ex: AvailableExercise) {
+    const target =
+      replaceTarget && replaceTarget.blockIdx === blockIdx
+        ? replaceTarget
+        : null;
+    if (target) {
+      // Sustituye la actividad conservando su duración, su descripción
+      // propia y sus notas: el texto del monitor no se pierde.
+      setBlocks((prev) =>
+        prev.map((b, i) =>
+          i !== blockIdx
+            ? b
+            : {
+                ...b,
+                items: b.items.map((it, j) => {
+                  if (j !== target.itemIdx) return it;
+                  const prevText =
+                    it.kind === "text"
+                      ? [it.title, it.freeText].filter(Boolean).join(": ")
+                      : it.kind === "exercise"
+                        ? (it.freeText ?? "")
+                        : "";
+                  return {
+                    kind: "exercise" as const,
+                    exerciseId: ex.id,
+                    name: ex.name,
+                    durationMinutes:
+                      "durationMinutes" in it ? it.durationMinutes : null,
+                    freeText: prevText,
+                    notes:
+                      it.kind === "text" || it.kind === "exercise"
+                        ? it.notes
+                        : undefined,
+                  };
+                }),
+              }
+        )
+      );
+      setReplaceTarget(null);
+      setPickerOpen(null);
+      setSearch("");
+      return;
+    }
     setBlocks((prev) =>
       prev.map((b, i) =>
         i === blockIdx
@@ -577,7 +702,7 @@ export function ClassForm({
     if (!ex) {
       return {
         ok: false,
-        message: "Este ejercicio no está disponible para esta clase.",
+        message: tx("esteEjercicioNoEsta"),
       };
     }
     const target = pickTargetRef.current;
@@ -585,7 +710,7 @@ export function ClassForm({
       return {
         ok: false,
         message:
-          "Vuelve a la clase y abre el ejercicio desde el bloque donde lo quieres.",
+          tx("vuelveALaClase"),
       };
     }
     const blockName =
@@ -602,14 +727,14 @@ export function ClassForm({
         pickTargetRef.current = null;
         return {
           ok: true,
-          message: `Añadido a la estación (${blockName}). Ya puedes cerrar esta pestaña.`,
+          message: tx("anadidoALaEstacion", { v1: blockName }),
         };
       }
     }
     addExerciseToBlock(target.blockIdx, ex);
     return {
       ok: true,
-      message: `Añadido a ${blockName}. Ya puedes cerrar esta pestaña.`,
+      message: tx("anadidoAV1Ya", { v1: blockName }),
     };
   });
 
@@ -734,7 +859,7 @@ export function ClassForm({
         ? "draft"
         : "published";
     if (!name.trim()) {
-      setError("El nombre de la clase es obligatorio.");
+      setError(tx("elNombreDeLa"));
       return;
     }
 
@@ -757,12 +882,14 @@ export function ClassForm({
       isLibrary: isAdmin ? isLibrary : false,
       autoria: isAdmin ? autoria : undefined,
       status,
+      courts,
       blocks: blocks
         .filter((b) => b.items.length > 0 || b.notes.trim())
         .map((b) => ({
           orderIndex: b.orderIndex,
           title: b.title.trim() || null,
           notes: b.notes.trim() || null,
+          rotates: courts === 2 && !!b.rotates,
           items: b.items.map((item) => {
             if (item.kind === "exercise") {
               return {
@@ -812,7 +939,21 @@ export function ClassForm({
               notes: item.notes?.trim() || null,
               durationMinutes: item.durationMinutes,
             };
-          }),
+          })
+            // Pista y quién dirige: solo con dos pistas.
+            .map((out, i) => ({
+              ...out,
+              ...(courts === 2
+                ? {
+                    court: b.items[i].court === 2 ? (2 as const) : (1 as const),
+                    ledBy: b.items[i].ledBy ?? null,
+                    turnMinutes: b.items[i].turnMinutes ?? null,
+                    turnSize: b.items[i].turnMinutes
+                      ? (b.items[i].turnSize ?? 1)
+                      : null,
+                  }
+                : {}),
+            })),
         })),
     };
 
@@ -832,8 +973,8 @@ export function ClassForm({
         data.error?.formErrors?.[0] ??
           data.error ??
           (mode === "edit"
-            ? "No se pudo actualizar la clase."
-            : "No se pudo crear la clase.")
+            ? tx("noSePudoActualizar")
+            : tx("noSePudoCrear"))
       );
       setSubmitting(false);
       return;
@@ -905,10 +1046,9 @@ export function ClassForm({
       >
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Crear ejercicio rápido</DialogTitle>
+            <DialogTitle>{tx("crearEjercicioRapido")}</DialogTitle>
             <DialogDescription>
-              Crea un ejercicio mínimo sin salir de la clase. Se guarda en tu
-              Biblioteca y se añade automáticamente aquí.
+              {tx("creaUnEjercicioMinimo")}
             </DialogDescription>
           </DialogHeader>
           <ExerciseForm
@@ -926,7 +1066,7 @@ export function ClassForm({
       <form onSubmit={handleSubmit} className="space-y-5">
         {recoveredDraft ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand/30 bg-brand/10 px-4 py-2.5 text-sm text-foreground">
-            <span>Hemos recuperado la clase que estabas creando.</span>
+            <span>{tx("hemosRecuperadoLaClase")}</span>
             <button
               type="button"
               onClick={() => {
@@ -935,7 +1075,7 @@ export function ClassForm({
               }}
               className="text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
             >
-              Empezar de nuevo
+              {tx("empezarDeNuevo")}
             </button>
           </div>
         ) : null}
@@ -947,10 +1087,10 @@ export function ClassForm({
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
-                Datos de la clase
+                {tx("datosDeLaClase")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Identidad, nivel y duración
+                {tx("identidadNivelYDuracion")}
               </p>
             </div>
           </div>
@@ -960,7 +1100,7 @@ export function ClassForm({
               htmlFor="name"
               className="block text-sm font-semibold text-foreground"
             >
-              Nombre de la clase
+              {tx("nombreDeLaClase")}
             </label>
             <input
               id="name"
@@ -969,7 +1109,7 @@ export function ClassForm({
               maxLength={255}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ej: Derecha y revés verde"
+              placeholder={tx("ejDerechaYReves")}
               className="h-11 w-full rounded-lg border border-foreground/15 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
@@ -977,7 +1117,7 @@ export function ClassForm({
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold text-foreground">
-                Duración
+                {tx("duracion")}
               </label>
               <select
                 value={duracionMinutes}
@@ -986,7 +1126,7 @@ export function ClassForm({
               >
                 {DURACIONES.map((d) => (
                   <option key={d} value={d}>
-                    {d === 120 ? "Más de 90 min" : `${d} min`}
+                    {d === 120 ? tx("masDe90Min") : `${d} min`}
                   </option>
                 ))}
               </select>
@@ -994,7 +1134,7 @@ export function ClassForm({
 
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold text-foreground">
-                Tipo
+                {tx("tipo")}
               </label>
               <select
                 value={alumnosTipo}
@@ -1003,9 +1143,9 @@ export function ClassForm({
                 }
                 className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               >
-                <option value="">— Selecciona —</option>
-                <option value="individual">Individual</option>
-                <option value="grupal">Grupal</option>
+                <option value="">{tx("selecciona")}</option>
+                <option value="individual">{tx("individual")}</option>
+                <option value="grupal">{tx("grupal")}</option>
               </select>
             </div>
 
@@ -1014,7 +1154,7 @@ export function ClassForm({
                 htmlFor="numAlumnos"
                 className="block text-sm font-semibold text-foreground"
               >
-                Alumnos
+                {tx("alumnos")}
               </label>
               <input
                 id="numAlumnos"
@@ -1033,9 +1173,9 @@ export function ClassForm({
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Nivel{" "}
+              {tx("nivel")}{" "}
               <span className="font-normal text-muted-foreground">
-                (elige uno)
+                {tx("eligeUno")}
               </span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -1053,7 +1193,7 @@ export function ClassForm({
                         : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    {n.label}
+                    {term(n.label)}
                   </button>
                 );
               })}
@@ -1062,9 +1202,9 @@ export function ClassForm({
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Aspecto del juego{" "}
+              {tx("aspectoDelJuego")}{" "}
               <span className="font-normal text-muted-foreground">
-                (puedes elegir varios)
+                {tx("puedesElegirVarios")}
               </span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -1082,7 +1222,7 @@ export function ClassForm({
                         : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    {a.label}
+                    {term(a.label)}
                   </button>
                 );
               })}
@@ -1091,9 +1231,9 @@ export function ClassForm({
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-foreground">
-              Golpes{" "}
+              {tx("golpes")}{" "}
               <span className="font-normal text-muted-foreground">
-                (puedes elegir varios)
+                {tx("puedesElegirVarios")}
               </span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -1111,7 +1251,7 @@ export function ClassForm({
                         : "border-foreground/15 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    {g.label}
+                    {term(g.label)}
                   </button>
                 );
               })}
@@ -1126,7 +1266,7 @@ export function ClassForm({
                 className="size-4 rounded border-foreground/20 text-[#D6FF38] focus:ring-[#D6FF38]/30"
               />
               <span className="text-foreground/80">
-                Marcar como Biblioteca Ten Planner (visible para todos)
+                {tx("marcarComoBibliotecaTen")}
               </span>
             </label>
           )}
@@ -1134,10 +1274,10 @@ export function ClassForm({
           {isAdmin && (
             <div className="space-y-1.5 pt-1">
               <label className="block text-sm font-semibold text-foreground">
-                Autoría
+                {tx("autoria")}
               </label>
               <p className="text-xs text-muted-foreground">
-                De quién es esta clase dentro de la biblioteca pública.
+                {tx("deQuienEsEsta")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {AUTORIAS.map(({ id, label }) => {
@@ -1166,7 +1306,7 @@ export function ClassForm({
         {/* Objetivos / Material / Vídeo */}
         <section className="space-y-5 rounded-lg border border-foreground/10 bg-card p-4 shadow-sm shadow-black/5 sm:p-5">
           <p className="border-b border-foreground/10 pb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
-            Contenido
+            {tx("contenido")}
           </p>
 
           <div className="space-y-1.5">
@@ -1175,9 +1315,9 @@ export function ClassForm({
                 htmlFor="objetivos"
                 className="block text-sm font-semibold text-foreground"
               >
-                Objetivos{" "}
+                {tx("objetivos")}{" "}
                 <span className="font-normal text-muted-foreground">
-                  (numera con 1) 2)…)
+                  {tx("numeraCon12")}
                 </span>
               </label>
               <ObjectivesPicker
@@ -1199,7 +1339,7 @@ export function ClassForm({
               maxLength={4000}
               value={objetivos}
               onChange={(e) => setObjetivos(e.target.value)}
-              placeholder="1) preparar la raqueta antes del bote 2) terminar el golpe…"
+              placeholder={tx("1PrepararLaRaqueta")}
               className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
             />
           </div>
@@ -1210,9 +1350,9 @@ export function ClassForm({
                 htmlFor="material"
                 className="block text-sm font-semibold text-foreground"
               >
-                Material{" "}
+                {tx("material")}{" "}
                 <span className="font-normal text-muted-foreground">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <textarea
@@ -1221,7 +1361,7 @@ export function ClassForm({
                 maxLength={2000}
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
-                placeholder="Pelotas verdes, 9 aros, conos…"
+                placeholder={tx("pelotasVerdes9Aros")}
                 className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
             </div>
@@ -1231,9 +1371,9 @@ export function ClassForm({
                 htmlFor="videoUrl"
                 className="block text-sm font-semibold text-foreground"
               >
-                Vídeo{" "}
+                {tx("video")}{" "}
                 <span className="font-normal text-muted-foreground">
-                  (opcional)
+                  {tx("opcional")}
                 </span>
               </label>
               <input
@@ -1242,7 +1382,7 @@ export function ClassForm({
                 maxLength={500}
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://…"
+                placeholder={tx("https")}
                 className="h-10 w-full rounded-lg border border-foreground/15 bg-background/70 px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
               />
             </div>
@@ -1253,9 +1393,9 @@ export function ClassForm({
               htmlFor="class-tags"
               className="block text-sm font-semibold text-foreground"
             >
-              Etiquetas{" "}
+              {tx("etiquetas")}{" "}
               <span className="font-normal text-muted-foreground">
-                (opcional)
+                {tx("opcional")}
               </span>
             </label>
             <TagInput id="class-tags" value={tags} onChange={setTags} />
@@ -1265,8 +1405,74 @@ export function ClassForm({
         {/* Estructura por bloques */}
         <section className="space-y-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
-            Estructura por bloques
+            {tx("estructuraPorBloques")}
           </p>
+
+          <CourtsBoardView
+            rotates={Object.fromEntries(
+              blocks.map((b) => [
+                b.orderIndex === 1
+                  ? "activation"
+                  : b.orderIndex === 3
+                    ? "cooldown"
+                    : "main",
+                !!b.rotates,
+              ])
+            )}
+            onToggleRotate={(phase, on) => {
+              const order =
+                phase === "activation" ? 1 : phase === "cooldown" ? 3 : 2;
+              setBlocks((prev) =>
+                prev.map((b) =>
+                  b.orderIndex === order ? { ...b, rotates: on } : b
+                )
+              );
+            }}
+            twoCourts={courts === 2}
+            onSetTwoCourts={(on) => setCourts(on ? 2 : 1)}
+            items={blocks.flatMap((block, bi) =>
+              block.items.map((item, ii) => ({
+                id: `${bi}:${ii}`,
+                phase:
+                  block.orderIndex === 1
+                    ? ("activation" as const)
+                    : block.orderIndex === 3
+                      ? ("cooldown" as const)
+                      : ("main" as const),
+                label:
+                  item.kind === "exercise"
+                    ? item.name
+                    : item.kind === "text"
+                      ? item.title.trim() ||
+                        item.freeText.trim().slice(0, 40) ||
+                        "Actividad"
+                      : item.kind === "warmup"
+                        ? "Descanso"
+                        : "Estaciones",
+                minutes: item.durationMinutes,
+                court: item.court === 2 ? (2 as const) : (1 as const),
+                ledBy: item.ledBy ?? null,
+                kind: item.kind,
+                turnMinutes: item.turnMinutes ?? null,
+                turnSize: item.turnSize ?? null,
+              }))
+            )}
+            onPatchItem={(id, patch) => {
+              const [bi, ii] = id.split(":").map(Number);
+              setBlocks((prev) =>
+                prev.map((b, i) =>
+                  i !== bi
+                    ? b
+                    : {
+                        ...b,
+                        items: b.items.map((it, j) =>
+                          j === ii ? { ...it, ...patch } : it
+                        ),
+                      }
+                )
+              );
+            }}
+          />
 
           {blocks.map((block, blockIdx) => (
             <div
@@ -1330,7 +1536,7 @@ export function ClassForm({
                       >
                         <span
                           className="cursor-grab active:cursor-grabbing pt-1 text-muted-foreground/60 hover:text-foreground"
-                          title="Arrastrar"
+                          title={tx("arrastrar")}
                         >
                           <GripVertical className="size-3.5" />
                         </span>
@@ -1351,7 +1557,7 @@ export function ClassForm({
                                 open={!!(item.freeText || item.notes)}
                               >
                                 <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground hover:text-foreground">
-                                  Descripción y notas de la clase
+                                  {tx("descripcionYNotasDe")}
                                 </summary>
                                 <textarea
                                   rows={2}
@@ -1361,7 +1567,7 @@ export function ClassForm({
                                       freeText: e.target.value,
                                     } as Partial<BlockItem>)
                                   }
-                                  placeholder="Cómo se hace en esta clase (si se deja vacío, la de la biblioteca)…"
+                                  placeholder={tx("comoSeHaceEn")}
                                   className="mt-1.5 w-full resize-none rounded-lg border border-foreground/10 bg-background/60 px-2.5 py-1.5 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none placeholder:text-muted-foreground"
                                 />
                                 <textarea
@@ -1372,10 +1578,30 @@ export function ClassForm({
                                       notes: e.target.value,
                                     } as Partial<BlockItem>)
                                   }
-                                  placeholder="Notas (opcional)…"
+                                  placeholder={tx("notasOpcional")}
                                   className="mt-1 w-full resize-none rounded-lg border border-foreground/10 bg-background/60 px-2.5 py-1.5 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none placeholder:text-muted-foreground"
                                 />
                               </details>
+                              <div className="flex flex-wrap gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openReplacePicker(blockIdx, itemIdx)
+                                  }
+                                  className={ITEM_ACTION_CLASS}
+                                >
+                                  <Replace className="size-3" />
+                                  {tx("cambiarEjercicio")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => unlinkItem(blockIdx, itemIdx)}
+                                  className={ITEM_ACTION_CLASS}
+                                >
+                                  <Unlink className="size-3" />
+                                  {tx("pasarATexto")}
+                                </button>
+                              </div>
                             </div>
                           ) : item.kind === "text" ? (
                             <div className="flex items-start gap-2">
@@ -1391,7 +1617,7 @@ export function ClassForm({
                                     } as Partial<BlockItem>)
                                   }
                                   maxLength={120}
-                                  placeholder="Título (opcional)"
+                                  placeholder={tx("tituloOpcional")}
                                   className="w-full bg-transparent border-0 p-0 text-sm font-semibold text-foreground focus:outline-none placeholder:font-normal placeholder:text-muted-foreground"
                                 />
                                 <textarea
@@ -1403,16 +1629,27 @@ export function ClassForm({
                                       freeText: e.target.value,
                                     } as Partial<BlockItem>)
                                   }
-                                  placeholder="Describe la actividad…"
+                                  placeholder={tx("describeLaActividad")}
                                   className="w-full text-sm bg-transparent border-0 p-0 focus:outline-none text-foreground resize-none placeholder:text-muted-foreground"
                                 />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openReplacePicker(blockIdx, itemIdx)
+                                  }
+                                  className={ITEM_ACTION_CLASS}
+                                  title={tx("paraQueCuenteEn")}
+                                >
+                                  <Link2 className="size-3" />
+                                  {tx("vincularAUnEjercicio")}
+                                </button>
                               </div>
                             </div>
                           ) : item.kind === "warmup" ? (
                             <div className="flex items-center gap-2">
                               <Coffee className="size-3.5 text-sky-500 shrink-0" />
                               <span className="text-sm font-medium text-foreground">
-                                Descanso
+                                {tx("descanso")}
                               </span>
                             </div>
                           ) : (
@@ -1420,8 +1657,7 @@ export function ClassForm({
                               <div className="flex items-center gap-2">
                                 <LayoutGrid className="size-3.5 text-brand shrink-0" />
                                 <span className="text-sm font-medium text-foreground">
-                                  Estaciones ({item.stations.length})
-                                </span>
+                                  {tx("estacionesV1", { v1: item.stations.length })}</span>
                               </div>
                               <textarea
                                 rows={1}
@@ -1431,7 +1667,7 @@ export function ClassForm({
                                     introText: e.target.value,
                                   } as Partial<BlockItem>)
                                 }
-                                placeholder="Explica el ejercicio de estaciones (opcional)…"
+                                placeholder={tx("explicaElEjercicioDe")}
                                 className="w-full resize-none rounded-lg border border-foreground/10 bg-background/60 px-2.5 py-1.5 text-xs text-foreground focus:border-[#D6FF38]/70 focus:outline-none placeholder:text-muted-foreground"
                               />
                               <ul className="space-y-2">
@@ -1462,7 +1698,7 @@ export function ClassForm({
                                               : "border-foreground/15 text-muted-foreground hover:border-brand/40"
                                           )}
                                         >
-                                          Ejercicio
+                                          {tx("ejercicio")}
                                         </button>
                                         <button
                                           type="button"
@@ -1485,7 +1721,7 @@ export function ClassForm({
                                               : "border-foreground/15 text-muted-foreground hover:border-brand/40"
                                           )}
                                         >
-                                          Texto libre
+                                          {tx("textoLibre")}
                                         </button>
                                       </div>
                                       {station.kind === "exercise" ? (
@@ -1517,10 +1753,10 @@ export function ClassForm({
                                             itemIdx &&
                                           stationPickerTarget?.stationIdx ===
                                             stationIdx
-                                            ? "Elige en la Biblioteca ↓"
+                                            ? tx("eligeEnLaBiblioteca")
                                             : station.name || (
                                                 <span className="italic text-muted-foreground">
-                                                  Elige un ejercicio…
+                                                  {tx("eligeUnEjercicio")}
                                                 </span>
                                               )}
                                         </button>
@@ -1536,7 +1772,7 @@ export function ClassForm({
                                               { freeText: e.target.value }
                                             )
                                           }
-                                          placeholder="Describe la estación…"
+                                          placeholder={tx("describeLaEstacion")}
                                           className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
                                         />
                                       )}
@@ -1552,10 +1788,10 @@ export function ClassForm({
                             type="number"
                             min={1}
                             max={300}
-                            placeholder="min"
+                            placeholder={tx("min")}
                             title={
                               item.kind === "stations"
-                                ? "Duración de cada estación"
+                                ? tx("duracionTotalDeLas")
                                 : undefined
                             }
                             value={item.durationMinutes ?? ""}
@@ -1570,14 +1806,14 @@ export function ClassForm({
                           />
                           {item.kind === "stations" && (
                             <span className="text-[9px] text-muted-foreground">
-                              por estación
+                              {tx("enTotal")}
                             </span>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => removeItem(blockIdx, itemIdx)}
-                          aria-label="Quitar"
+                          aria-label={tx("quitar")}
                           className="size-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                         >
                           <X className="size-3.5" />
@@ -1595,7 +1831,7 @@ export function ClassForm({
                   onDrop={(e) => handleDropOnBlockEnd(e, blockIdx)}
                   className="rounded-lg border-2 border-dashed border-[#D6FF38]/50 bg-[#D6FF38]/10 px-4 py-6 text-center text-xs font-semibold text-foreground"
                 >
-                  Suelta aquí para mover al bloque {block.orderIndex}
+                  {tx("sueltaAquiParaMover", { v1: block.orderIndex })}
                 </div>
               )}
 
@@ -1603,8 +1839,7 @@ export function ClassForm({
                 <div className="space-y-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-foreground">
-                      Elige un ejercicio para la estación{" "}
-                      {stationPickerTarget.stationIdx + 1}
+                      {tx("eligeUnEjercicioPara", { v1: stationPickerTarget.stationIdx + 1 })}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -1613,7 +1848,7 @@ export function ClassForm({
                         className="inline-flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-1 text-[10px] font-bold text-brand transition-colors hover:bg-brand/20"
                       >
                         <Plus className="size-3" />
-                        Nuevo
+                        {tx("nuevo")}
                       </button>
                       <button
                         type="button"
@@ -1622,7 +1857,7 @@ export function ClassForm({
                           setSearch("");
                         }}
                         className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
-                        aria-label="Cerrar"
+                        aria-label={tx("cerrar")}
                       >
                         <X className="size-4" />
                       </button>
@@ -1633,7 +1868,7 @@ export function ClassForm({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     autoFocus
-                    placeholder="Buscar ejercicio…"
+                    placeholder={tx("buscarEjercicio")}
                     className="h-9 w-full rounded-lg border border-foreground/15 bg-background/80 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
                   />
                   <ExercisePickerFilters
@@ -1676,7 +1911,7 @@ export function ClassForm({
                                 ...stationPickerTarget,
                               };
                             }}
-                            title="Ver ficha completa del ejercicio"
+                            title={tx("verFichaCompletaDel")}
                             className="mt-2 mr-2 shrink-0 text-muted-foreground hover:text-brand"
                           >
                             <ExternalLink className="size-3.5" />
@@ -1689,13 +1924,17 @@ export function ClassForm({
                       ))}
                     {filteredExercises(search).length === 0 && (
                       <li className="text-xs text-muted-foreground italic px-3 py-2">
-                        Sin resultados.
+                        {tx("sinResultados")}
                       </li>
                     )}
                   </ul>
                 </div>
               ) : pickerOpen === blockIdx ? (
                 <div className="space-y-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
+                  {replaceTarget?.blockIdx === blockIdx ? (
+                    <p className="text-xs font-semibold text-foreground">
+                      {tx("eligeElEjercicioDe", { v1: String(replaceTarget.itemIdx + 1).padStart(2, "0") })}</p>
+                  ) : null}
                   <div className="flex items-center justify-between gap-2">
                     <div className="inline-flex rounded-full border border-foreground/15 bg-background p-0.5">
                       <button
@@ -1708,7 +1947,7 @@ export function ClassForm({
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        Buscar
+                        {tx("buscar")}
                       </button>
                       <button
                         type="button"
@@ -1720,7 +1959,7 @@ export function ClassForm({
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        Favoritos
+                        {tx("favoritos")}
                       </button>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1730,7 +1969,7 @@ export function ClassForm({
                         className="inline-flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-1 text-[10px] font-bold text-brand transition-colors hover:bg-brand/20"
                       >
                         <Plus className="size-3" />
-                        Nuevo
+                        {tx("nuevo")}
                       </button>
                       <button
                         type="button"
@@ -1740,7 +1979,7 @@ export function ClassForm({
                           setPickerSourceTab("search");
                         }}
                         className="size-8 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
-                        aria-label="Cerrar"
+                        aria-label={tx("cerrar")}
                       >
                         <X className="size-4" />
                       </button>
@@ -1773,7 +2012,7 @@ export function ClassForm({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         autoFocus
-                        placeholder="Buscar ejercicio…"
+                        placeholder={tx("buscarEjercicio")}
                         className="h-9 w-full rounded-lg border border-foreground/15 bg-background/80 px-3 text-sm text-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
                       />
                       <ExercisePickerFilters
@@ -1813,7 +2052,7 @@ export function ClassForm({
                                     blockIdx,
                                   };
                                 }}
-                                title="Ver ficha completa del ejercicio"
+                                title={tx("verFichaCompletaDel")}
                                 className="mt-2 mr-2 shrink-0 text-muted-foreground hover:text-brand"
                               >
                                 <ExternalLink className="size-3.5" />
@@ -1826,7 +2065,7 @@ export function ClassForm({
                           ))}
                         {filteredExercises(search).length === 0 && (
                           <li className="text-xs text-muted-foreground italic px-3 py-2">
-                            Sin resultados.
+                            {tx("sinResultados")}
                           </li>
                         )}
                       </ul>
@@ -1836,7 +2075,7 @@ export function ClassForm({
               ) : stationsDraftBlock === blockIdx ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#D6FF38]/35 bg-[#D6FF38]/10 p-3">
                   <label className="text-xs font-semibold text-foreground">
-                    ¿Cuántas estaciones?
+                    {tx("cuantasEstaciones")}
                   </label>
                   <input
                     type="number"
@@ -1849,21 +2088,20 @@ export function ClassForm({
                     className="h-8 w-16 rounded-lg border border-foreground/15 bg-background/80 px-2 text-xs tabular-nums text-foreground focus:border-[#D6FF38]/70 focus:outline-none"
                   />
                   <span className="text-xs text-muted-foreground">
-                    (de {STATION_COUNT_MIN} a {STATION_COUNT_MAX})
-                  </span>
+                    {tx("deV1AV2", { v1: STATION_COUNT_MIN, v2: STATION_COUNT_MAX })}</span>
                   <button
                     type="button"
                     onClick={confirmStationsDraft}
                     className="rounded-full bg-[#050505] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#D6FF38] hover:text-[#050505]"
                   >
-                    Crear estaciones
+                    {tx("crearEstaciones")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setStationsDraftBlock(null)}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Cancelar
+                    {tx("cancelar")}
                   </button>
                 </div>
               ) : (
@@ -1877,21 +2115,21 @@ export function ClassForm({
                     }}
                     className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                   >
-                    <Dumbbell className="size-3.5" /> Añadir ejercicio
+                    <Dumbbell className="size-3.5" />{" "}{tx("anadirEjercicio")}
                   </button>
                   <button
                     type="button"
                     onClick={() => addTextToBlock(blockIdx)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                   >
-                    <Type className="size-3.5" /> Texto libre
+                    <Type className="size-3.5" />{" "}{tx("textoLibre")}
                   </button>
                   <button
                     type="button"
                     onClick={() => addWarmupToBlock(blockIdx)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                   >
-                    <Coffee className="size-3.5" /> Descanso
+                    <Coffee className="size-3.5" />{" "}{tx("descanso")}
                   </button>
                   <button
                     type="button"
@@ -1901,14 +2139,14 @@ export function ClassForm({
                     }}
                     className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-[#D6FF38]/50 hover:bg-[#D6FF38]/10"
                   >
-                    <LayoutGrid className="size-3.5" /> Estaciones
+                    <LayoutGrid className="size-3.5" />{" "}{tx("estaciones")}
                   </button>
                 </div>
               )}
 
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
-                  <ChevronDown className="size-3" /> Notas del bloque
+                  <ChevronDown className="size-3" />{" "}{tx("notasDelBloque")}
                 </summary>
                 <textarea
                   rows={2}
@@ -1916,7 +2154,7 @@ export function ClassForm({
                   onChange={(e) =>
                     updateBlock(blockIdx, { notes: e.target.value })
                   }
-                  placeholder="Aspectos importantes de este bloque…"
+                  placeholder={tx("aspectosImportantesDeEste")}
                   className="mt-2 w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-1 focus:ring-[#D6FF38]/20"
                 />
               </details>
@@ -1930,9 +2168,9 @@ export function ClassForm({
             htmlFor="aspectos"
             className="block text-sm font-semibold text-foreground"
           >
-            Aspectos importantes y observaciones{" "}
+            {tx("aspectosImportantesYObservaciones")}{" "}
             <span className="font-normal text-muted-foreground">
-              (opcional)
+              {tx("opcional")}
             </span>
           </label>
           <textarea
@@ -1941,7 +2179,7 @@ export function ClassForm({
             maxLength={4000}
             value={aspectosImportantes}
             onChange={(e) => setAspectosImportantes(e.target.value)}
-            placeholder="Información extra valiosa para quien imparta esta clase…"
+            placeholder={tx("informacionExtraValiosaPara")}
             className="w-full resize-none rounded-lg border border-foreground/15 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-[#D6FF38]/70 focus:outline-none focus:ring-2 focus:ring-[#D6FF38]/20"
           />
         </section>
@@ -1969,7 +2207,7 @@ export function ClassForm({
               disabled={submitting}
               className="inline-flex items-center gap-2 rounded-full border border-foreground/15 px-5 py-2.5 text-sm font-semibold text-foreground/70 transition-all hover:border-foreground/30 hover:text-foreground active:scale-95 disabled:opacity-60"
             >
-              {isDraft ? "Guardar borrador" : "Guardar como borrador"}
+              {isDraft ? "Guardar borrador" : tx("guardarComoBorrador")}
             </button>
           )}
           <button

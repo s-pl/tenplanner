@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CalendarOff,
+  CheckCircle2,
+  Circle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +30,8 @@ import {
   type CalendarEventData,
 } from "@/components/app/event-dialog";
 import { HolidayDialog } from "@/components/app/holiday-dialog";
+import { TaskDialog } from "@/components/app/task-dialog";
+import type { ManagementTaskData } from "@/lib/management-tasks";
 import { DayAgenda } from "@/components/app/day-agenda";
 import {
   holidayAppliesTo,
@@ -36,6 +40,9 @@ import {
 import { retitleForDate } from "@/lib/sessions/retitle";
 import { useTouchDragSessions } from "@/lib/hooks/use-touch-drag-sessions";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 interface SessionData {
   id: string;
@@ -44,9 +51,11 @@ interface SessionData {
   durationMinutes: number;
   userId?: string;
   groupId?: string | null;
-  /** Nombre de quien la creó, solo cuando no es del usuario actual
+  /** Monitor que la imparte, solo cuando no es el usuario actual
    * (compartida vía club). */
   authorName?: string | null;
+  /** Puede moverla (la creó, la imparte o es el gestor del club). */
+  canEdit?: boolean;
 }
 
 interface CalendarClientProps {
@@ -58,7 +67,22 @@ interface CalendarClientProps {
   /** Id del usuario actual — una sesión/evento de otro monitor (compartido
    * vía club) no se puede arrastrar ni editar desde aquí, solo abrir. */
   currentUserId?: string;
+  /** Modo gestión: el calendario del club más las tareas y eventos del gestor. */
+  management?: boolean;
+  /** Tareas del Modo gestión (solo con `management`). */
+  tasks?: ManagementTaskData[];
+  /** Monitores del club, para elegir responsable de una tarea. */
+  coaches?: { id: string; name: string }[];
 }
+
+/** Qué calendario se ve en el Modo gestión. */
+type Scope = "club" | "gestion" | "both";
+
+const SCOPE_LABELS: Record<Scope, string> = {
+  club: "Calendario del club",
+  gestion: "Calendario de gestión",
+  both: "Ambos",
+};
 
 type DayItem =
   | { kind: "session"; time: Date; session: SessionData }
@@ -88,6 +112,15 @@ const MONTHS = [
   "Noviembre",
   "Diciembre",
 ];
+
+/** Azul: evento del club. Violeta: evento de gestión. Ámbar: tarea. */
+function eventColor(event: CalendarEventData) {
+  if (event.taskId)
+    return "bg-[#b45309]/15 text-[#92400e] hover:bg-[#b45309] hover:text-white dark:text-[#fbbf77]";
+  if (event.management)
+    return "bg-[#7c3aed]/15 text-[#6d28d9] hover:bg-[#7c3aed] hover:text-white dark:text-[#c4b5fd]";
+  return "bg-[#2563eb]/15 text-[#1d4ed8] hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]";
+}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -128,8 +161,8 @@ function isSameDate(a: Date, b: Date) {
   );
 }
 
-function formatDayTitle(d: Date) {
-  const s = new Intl.DateTimeFormat("es-ES", {
+function formatDayTitle(d: Date, loc: string = "es-ES") {
+  const s = new Intl.DateTimeFormat(loc, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -144,7 +177,13 @@ export function CalendarClient({
   holidays: initialHolidays = [],
   groups = [],
   currentUserId,
+  management = false,
+  tasks: initialTasks = [],
+  coaches = [],
 }: CalendarClientProps) {
+  const tx = useTranslations("ui.s_calendar_calendarclient");
+  const term = useTerm();
+  const intlLocale = useLocale() === "en" ? "en-GB" : "es-ES";
   const router = useRouter();
   const today = new Date();
   const todayMidnight = new Date(
@@ -191,6 +230,93 @@ export function CalendarClient({
   );
   const [holidayError, setHolidayError] = useState<string | null>(null);
 
+  // Tareas de gestión (ámbar) y qué calendario se ve en el Modo gestión.
+  const [tasks, setTasks] = useState(initialTasks);
+  const [taskDialog, setTaskDialog] = useState<{
+    task: ManagementTaskData | null;
+    date?: string | null;
+  } | null>(null);
+  const [scope, setScope] = useState<Scope>("both");
+
+  // En el Modo gestión se puede ver solo el calendario del club (sesiones,
+  // eventos del club y festivos), solo el de gestión (lo que el gestor
+  // añade: eventos y tareas) o ambos. Fuera de gestión todo es del club.
+  const showClub = !management || scope !== "gestion";
+  const showGestion = management && scope !== "club";
+  const scopedSessions = showClub ? sessions : [];
+  const scopedHolidays = showClub ? holidays : [];
+  const taskEvents: CalendarEventData[] = tasks
+    .filter((t) => t.dueDate)
+    .map((t) => {
+      const at = new Date(`${t.dueDate}T09:00:00`).toISOString();
+      return {
+        id: `task-${t.id}`,
+        taskId: t.id,
+        title: `${t.done ? "✓" : "☐"} ${t.title}`,
+        description: t.description,
+        startAt: at,
+        endAt: at,
+        userId: currentUserId,
+        management: true,
+        authorName: t.responsibleLabel,
+      };
+    });
+  const scopedEvents = [
+    ...events.filter((e) => (e.management ? showGestion : showClub)),
+    ...(showGestion ? taskEvents : []),
+  ];
+
+  function openEvent(event: CalendarEventData) {
+    if (event.taskId) {
+      setTaskDialog({ task: tasks.find((t) => t.id === event.taskId) ?? null });
+    } else {
+      setEventDialog({ event });
+    }
+  }
+
+  function requestDeleteEvent(event: CalendarEventData) {
+    // Las tareas se eliminan desde su diálogo.
+    if (event.taskId) openEvent(event);
+    else setEventToDelete(event);
+  }
+
+  function handleTaskSaved(saved: ManagementTaskData, jump = true) {
+    setTasks((prev) =>
+      prev.some((t) => t.id === saved.id)
+        ? prev.map((t) => (t.id === saved.id ? saved : t))
+        : [...prev, saved]
+    );
+    if (jump && saved.dueDate) {
+      const d = new Date(`${saved.dueDate}T00:00:00`);
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+      setSelectedDay(d.getDate());
+      setFocusDate(d);
+    }
+    router.refresh();
+  }
+
+  async function toggleTaskDone(task: ManagementTaskData) {
+    const res = await fetch(`/api/management-tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        notifyEmail: task.notifyEmail,
+        responsibleKind: task.responsibleKind,
+        responsibleUserId: task.responsibleUserId,
+        responsibleText: task.responsibleText,
+        done: !task.done,
+      }),
+    });
+    if (res.ok) {
+      const json = (await res.json()) as { data: ManagementTaskData };
+      handleTaskSaved(json.data, false);
+    }
+  }
+
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
@@ -199,13 +325,13 @@ export function CalendarClient({
   // no solo el mes visible, para poder alimentar las vistas de semana y
   // año sin volver a pedir datos al servidor.
   const sessionsByDateKey = new Map<string, SessionData[]>();
-  for (const s of sessions) {
+  for (const s of scopedSessions) {
     const k = dateKey(new Date(s.scheduledAt));
     if (!sessionsByDateKey.has(k)) sessionsByDateKey.set(k, []);
     sessionsByDateKey.get(k)!.push(s);
   }
   const eventsByDateKey = new Map<string, CalendarEventData[]>();
-  for (const e of events) {
+  for (const e of scopedEvents) {
     const k = dateKey(new Date(e.startAt));
     if (!eventsByDateKey.has(k)) eventsByDateKey.set(k, []);
     eventsByDateKey.get(k)!.push(e);
@@ -213,7 +339,7 @@ export function CalendarClient({
 
   // Cada festivo se expande a sus días (con tope por si el rango es absurdo).
   const holidaysByDateKey = new Map<string, CalendarHolidayData[]>();
-  for (const h of holidays) {
+  for (const h of scopedHolidays) {
     const cursor = new Date(`${h.startDate}T00:00:00`);
     const last = new Date(`${h.endDate}T00:00:00`);
     for (let i = 0; i < 400 && cursor <= last; i++) {
@@ -339,18 +465,18 @@ export function CalendarClient({
   }
 
   function headerLabel() {
-    if (view === "day") return formatDayTitle(focusDate);
+    if (view === "day") return formatDayTitle(focusDate, intlLocale);
     if (view === "week") {
       const start = startOfWeek(focusDate);
       const end = addDays(start, 6);
       const sameMonth = start.getMonth() === end.getMonth();
       const startLabel = sameMonth
         ? `${start.getDate()}`
-        : `${start.getDate()} ${MONTHS[start.getMonth()].slice(0, 3)}`;
-      return `${startLabel} – ${end.getDate()} ${MONTHS[end.getMonth()].slice(0, 3)} ${end.getFullYear()}`;
+        : `${start.getDate()} ${term(MONTHS[start.getMonth()]).slice(0, 3)}`;
+      return `${startLabel} – ${end.getDate()} ${term(MONTHS[end.getMonth()]).slice(0, 3)} ${end.getFullYear()}`;
     }
     if (view === "year") return `${viewYear}`;
-    return `${MONTHS[viewMonth]} ${viewYear}`;
+    return `${term(MONTHS[viewMonth])} ${viewYear}`;
   }
 
   function handleEventSaved(saved: CalendarEventData) {
@@ -377,13 +503,13 @@ export function CalendarClient({
         method: "DELETE",
       });
       if (!res.ok) {
-        setEventError("No se pudo eliminar el evento. Inténtalo de nuevo.");
+        setEventError(tx("noSePudoEliminar"));
         return;
       }
       setEvents((prev) => prev.filter((e) => e.id !== event.id));
       router.refresh();
     } catch {
-      setEventError("Error de red. Inténtalo de nuevo.");
+      setEventError(tx("errorDeRedIntentalo"));
     } finally {
       setDeletingEventId(null);
     }
@@ -413,13 +539,13 @@ export function CalendarClient({
         method: "DELETE",
       });
       if (!res.ok) {
-        setHolidayError("No se pudo eliminar el festivo. Inténtalo de nuevo.");
+        setHolidayError(tx("noSePudoEliminar2"));
         return;
       }
       setHolidays((prev) => prev.filter((h) => h.id !== holiday.id));
       router.refresh();
     } catch {
-      setHolidayError("Error de red. Inténtalo de nuevo.");
+      setHolidayError(tx("errorDeRedIntentalo"));
     } finally {
       setDeletingHolidayId(null);
     }
@@ -433,13 +559,13 @@ export function CalendarClient({
         method: "DELETE",
       });
       if (!res.ok) {
-        setDeleteError("No se pudo eliminar la sesión. Inténtalo de nuevo.");
+        setDeleteError(tx("noSePudoEliminar3"));
         return;
       }
       setSessions((prev) => prev.filter((s) => s.id !== session.id));
       router.refresh();
     } catch {
-      setDeleteError("Error de red. Inténtalo de nuevo.");
+      setDeleteError(tx("errorDeRedIntentalo"));
     } finally {
       setDeletingId(null);
     }
@@ -486,7 +612,7 @@ export function CalendarClient({
       router.refresh();
     } catch {
       setSessions(previous);
-      setActionError("No se pudo mover la sesión. Inténtalo de nuevo.");
+      setActionError(tx("noSePudoMover"));
     }
   }
 
@@ -584,7 +710,7 @@ export function CalendarClient({
           }}
           className="mb-2 block w-full text-center text-xs font-black uppercase text-foreground/70 hover:text-brand"
         >
-          {MONTHS[month]}
+          {term(MONTHS[month])}
         </button>
         <div className="grid grid-cols-7 gap-y-1">
           {Array.from({ length: cells }).map((_, idx) => {
@@ -635,13 +761,117 @@ export function CalendarClient({
 
   return (
     <div className="space-y-6">
+      {management && (
+        <>
+          <div
+            role="group"
+            aria-label={tx("queCalendarioVer")}
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-[#050505]/10 bg-white p-2 dark:border-white/10 dark:bg-white/[0.045]"
+          >
+            <span className="pl-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+              {tx("ver")}
+            </span>
+            {(["club", "gestion", "both"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={scope === s}
+                onClick={() => setScope(s)}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold transition-colors",
+                  scope === s
+                    ? "bg-[#050505] text-white dark:bg-[#D6FF38] dark:text-[#050505]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                )}
+              >
+                {term(SCOPE_LABELS[s])}
+              </button>
+            ))}
+          </div>
+
+          <section className="tp-panel space-y-3 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-black uppercase tracking-wide text-foreground/70">
+                {tx("tareasDeGestion")}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setTaskDialog({ task: null })}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#b45309] px-3.5 text-[13px] font-black text-white transition-colors hover:bg-[#92400e]"
+              >
+                <Plus className="size-3.5" />
+                {tx("nuevaTarea")}
+              </button>
+            </div>
+            {tasks.length === 0 ? (
+              <p className="text-sm text-foreground/55">
+                {tx("aunNoHayTareas")}
+              </p>
+            ) : (
+              <ul className="divide-y divide-[#050505]/10 dark:divide-white/10">
+                {[...tasks]
+                  .sort(
+                    (a, b) =>
+                      Number(a.done) - Number(b.done) ||
+                      (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")
+                  )
+                  .map((t) => (
+                    <li key={t.id} className="flex items-center gap-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => void toggleTaskDone(t)}
+                        aria-label={
+                          t.done ? tx("marcarComoPendiente") : tx("marcarComoHecha")
+                        }
+                        className="shrink-0 text-[#b45309]"
+                      >
+                        {t.done ? (
+                          <CheckCircle2 className="size-5" />
+                        ) : (
+                          <Circle className="size-5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaskDialog({ task: t })}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <p
+                          className={cn(
+                            "truncate text-sm font-bold text-foreground",
+                            t.done && "line-through opacity-55"
+                          )}
+                        >
+                          {t.title}
+                        </p>
+                        <p className="truncate text-xs text-foreground/55">
+                          {t.dueDate
+                            ? new Intl.DateTimeFormat(intlLocale, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }).format(new Date(`${t.dueDate}T00:00:00`))
+                            : "Sin fecha"}
+                          {" · "}
+                          {t.responsibleLabel}
+                          {t.notifyEmail ? tx("avisoPorCorreo") : ""}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
+
       {/* Calendar header */}
       <div className="tp-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center justify-between gap-3 sm:justify-start">
           <button
             onClick={goToPrev}
             className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
-            aria-label="Anterior"
+            aria-label={tx("anterior")}
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -651,7 +881,7 @@ export function CalendarClient({
           <button
             onClick={goToNext}
             className="flex size-10 items-center justify-center rounded-full border border-[#050505]/10 bg-white transition-colors hover:bg-brand dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-brand dark:hover:text-brand-foreground"
-            aria-label="Siguiente"
+            aria-label={tx("siguiente")}
           >
             <ChevronRight className="size-4" />
           </button>
@@ -670,7 +900,7 @@ export function CalendarClient({
                     : "text-foreground/60 hover:text-foreground"
                 )}
               >
-                {VIEW_LABELS[v]}
+                {term(VIEW_LABELS[v])}
               </button>
             ))}
           </div>
@@ -678,7 +908,7 @@ export function CalendarClient({
             onClick={goToToday}
             className="h-10 rounded-full border border-[#050505]/10 bg-white px-4 text-sm font-black text-foreground/62 transition-colors hover:bg-muted hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
-            Hoy
+            {tx("hoy")}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -690,23 +920,36 @@ export function CalendarClient({
               }
             >
               <Plus className="size-3.5" />
-              <span className="hidden sm:inline">Añadir</span>
+              <span className="hidden sm:inline">{tx("anadir")}</span>
               <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem render={<Link href="/sessions/new" />}>
                 <ClipboardList className="size-4" />
-                Nueva sesión
+                {tx("nuevaSesion")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEventDialog({ event: null })}>
                 <CalendarDays className="size-4 text-[#2563eb]" />
-                Nuevo evento
+                {tx("nuevoEvento")}
               </DropdownMenuItem>
+              {management && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    setTaskDialog({
+                      task: null,
+                      date: dateKey(defaultDateForNewEvent()),
+                    })
+                  }
+                >
+                  <CheckCircle2 className="size-4 text-[#b45309]" />
+                  {tx("nuevaTarea")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => setHolidayDialog({ holiday: null })}
               >
                 <CalendarOff className="size-4 text-[#e11d48]" />
-                Nuevo festivo
+                {tx("nuevoFestivo")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -724,7 +967,7 @@ export function CalendarClient({
                     key={d}
                     className="py-3 text-center text-xs font-black uppercase text-foreground/52"
                   >
-                    {d}
+                    {term(d)}
                   </div>
                 ))}
               </div>
@@ -834,8 +1077,7 @@ export function CalendarClient({
                               ))}
                               {dayHolidays.length > 1 && (
                                 <div className="px-1.5 text-[10px] text-[#be123c] dark:text-[#fda4af]">
-                                  +{dayHolidays.length - 1} festivo
-                                  {dayHolidays.length - 1 !== 1 ? "s" : ""}
+                                  {tx("v1FestivoV2", { v1: dayHolidays.length - 1, v2: dayHolidays.length - 1 !== 1 ? "s" : "" })}
                                 </div>
                               )}
                               {dayItems.slice(0, 2).map((item) =>
@@ -844,19 +1086,17 @@ export function CalendarClient({
                                     key={`s-${item.session.id}`}
                                     href={`/sessions/${item.session.id}`}
                                     draggable={
-                                      !currentUserId ||
-                                      item.session.userId === currentUserId
+                                      !currentUserId || !!item.session.canEdit
                                     }
                                     data-session-drag-id={
-                                      !currentUserId ||
-                                      item.session.userId === currentUserId
+                                      !currentUserId || !!item.session.canEdit
                                         ? item.session.id
                                         : undefined
                                     }
                                     onDragStart={(e) => {
                                       if (
                                         currentUserId &&
-                                        item.session.userId !== currentUserId
+                                        !item.session.canEdit
                                       ) {
                                         e.preventDefault();
                                         return;
@@ -899,14 +1139,17 @@ export function CalendarClient({
                                         item.event.userId !== currentUserId
                                       )
                                         return;
-                                      setEventDialog({ event: item.event });
+                                      openEvent(item.event);
                                     }}
                                     title={
                                       item.event.authorName
                                         ? `${item.event.title} · ${item.event.authorName}`
                                         : item.event.title
                                     }
-                                    className="block w-full truncate rounded-full bg-[#2563eb]/15 px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
+                                    className={cn(
+                                      "block w-full truncate rounded-full px-1.5 py-0.5 text-left text-[10px] font-bold leading-tight transition-colors",
+                                      eventColor(item.event)
+                                    )}
                                   >
                                     {item.event.title}
                                     {item.event.authorName && (
@@ -920,8 +1163,7 @@ export function CalendarClient({
                               )}
                               {dayItems.length > 2 && (
                                 <div className="text-[10px] text-muted-foreground px-1.5">
-                                  +{dayItems.length - 2} más
-                                </div>
+                                  {tx("v1Mas", { v1: dayItems.length - 2 })}</div>
                               )}
                             </div>
                           )}
@@ -936,7 +1178,7 @@ export function CalendarClient({
 
           {selectedDay !== null && (
             <DayAgenda
-              title={`${MONTHS[viewMonth]} ${selectedDay}`}
+              title={`${term(MONTHS[viewMonth])} ${selectedDay}`}
               items={selectedDayItems}
               sessionsForPdf={selectedSessions}
               pdfDayLabel={pdfLabelFor(
@@ -949,8 +1191,8 @@ export function CalendarClient({
               }
               onDeleteSession={(s) => setToDelete(s)}
               deletingSessionId={deletingId}
-              onEditEvent={(e) => setEventDialog({ event: e })}
-              onDeleteEvent={(e) => setEventToDelete(e)}
+              onEditEvent={openEvent}
+              onDeleteEvent={requestDeleteEvent}
               deletingEventId={deletingEventId}
               deleteError={deleteError}
               eventError={eventError}
@@ -972,7 +1214,7 @@ export function CalendarClient({
       {/* Vista diaria */}
       {view === "day" && (
         <DayAgenda
-          title={formatDayTitle(focusDate)}
+          title={formatDayTitle(focusDate, intlLocale)}
           items={focusDayItems}
           sessionsForPdf={focusDaySessions}
           pdfDayLabel={pdfLabelFor(focusDate)}
@@ -983,8 +1225,8 @@ export function CalendarClient({
           }
           onDeleteSession={(s) => setToDelete(s)}
           deletingSessionId={deletingId}
-          onEditEvent={(e) => setEventDialog({ event: e })}
-          onDeleteEvent={(e) => setEventToDelete(e)}
+          onEditEvent={openEvent}
+          onDeleteEvent={requestDeleteEvent}
           deletingEventId={deletingEventId}
           deleteError={deleteError}
           eventError={eventError}
@@ -1040,7 +1282,7 @@ export function CalendarClient({
                     className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left hover:bg-muted"
                   >
                     <span className="text-[11px] font-black uppercase text-foreground/52">
-                      {DAYS[(d.getDay() + 6) % 7]}
+                      {term(DAYS[(d.getDay() + 6) % 7])}
                     </span>
                     <span
                       className={cn(
@@ -1068,21 +1310,14 @@ export function CalendarClient({
                         <Link
                           key={`s-${item.session.id}`}
                           href={`/sessions/${item.session.id}`}
-                          draggable={
-                            !currentUserId ||
-                            item.session.userId === currentUserId
-                          }
+                          draggable={!currentUserId || !!item.session.canEdit}
                           data-session-drag-id={
-                            !currentUserId ||
-                            item.session.userId === currentUserId
+                            !currentUserId || !!item.session.canEdit
                               ? item.session.id
                               : undefined
                           }
                           onDragStart={(e) => {
-                            if (
-                              currentUserId &&
-                              item.session.userId !== currentUserId
-                            ) {
+                            if (currentUserId && !item.session.canEdit) {
                               e.preventDefault();
                               return;
                             }
@@ -1122,14 +1357,17 @@ export function CalendarClient({
                               item.event.userId !== currentUserId
                             )
                               return;
-                            setEventDialog({ event: item.event });
+                            openEvent(item.event);
                           }}
                           title={
                             item.event.authorName
                               ? `${item.event.title} · ${item.event.authorName}`
                               : item.event.title
                           }
-                          className="block w-full truncate rounded-full bg-[#2563eb]/15 px-2 py-1 text-left text-[11px] font-bold leading-tight text-[#1d4ed8] transition-colors hover:bg-[#2563eb] hover:text-white dark:text-[#93b9ff]"
+                          className={cn(
+                            "block w-full truncate rounded-full px-2 py-1 text-left text-[11px] font-bold leading-tight transition-colors",
+                            eventColor(item.event)
+                          )}
                         >
                           {item.event.title}
                           {item.event.authorName && (
@@ -1191,6 +1429,24 @@ export function CalendarClient({
         />
       )}
 
+      {taskDialog && (
+        <TaskDialog
+          key={taskDialog.task?.id ?? "new"}
+          task={taskDialog.task}
+          defaultDate={taskDialog.date}
+          coaches={coaches}
+          open
+          onOpenChange={(open) => {
+            if (!open) setTaskDialog(null);
+          }}
+          onSaved={(t) => handleTaskSaved(t)}
+          onDeleted={(id) => {
+            setTasks((prev) => prev.filter((t) => t.id !== id));
+            router.refresh();
+          }}
+        />
+      )}
+
       {holidayDialog && (
         <HolidayDialog
           key={holidayDialog.holiday?.id ?? "new"}
@@ -1210,13 +1466,13 @@ export function CalendarClient({
         onOpenChange={(open) => {
           if (!open) setHolidayToDelete(null);
         }}
-        title="¿Eliminar este festivo?"
+        title={tx("eliminarEsteFestivo")}
         description={
           holidayToDelete
-            ? `“${holidayToDelete.title}” dejará de aparecer en el calendario y las sesiones que marcaba como «no se imparte» volverán a la normalidad.`
+            ? tx("v1DejaraDeAparecer", { v1: holidayToDelete.title })
             : undefined
         }
-        confirmLabel="Eliminar"
+        confirmLabel={tx("eliminar")}
         destructive
         onConfirm={() => {
           if (holidayToDelete) void deleteHoliday(holidayToDelete);
@@ -1228,13 +1484,13 @@ export function CalendarClient({
         onOpenChange={(open) => {
           if (!open) setToDelete(null);
         }}
-        title="¿Eliminar esta sesión?"
+        title={tx("eliminarEstaSesion")}
         description={
           toDelete
-            ? `“${toDelete.title}” se borrará con su plan de ejercicios y sus notas. Esta acción no se puede deshacer.`
+            ? tx("v1SeBorraraCon", { v1: toDelete.title })
             : undefined
         }
-        confirmLabel="Eliminar"
+        confirmLabel={tx("eliminar")}
         destructive
         onConfirm={() => {
           if (toDelete) void deleteSession(toDelete);
@@ -1246,13 +1502,13 @@ export function CalendarClient({
         onOpenChange={(open) => {
           if (!open) setEventToDelete(null);
         }}
-        title="¿Eliminar este evento?"
+        title={tx("eliminarEsteEvento")}
         description={
           eventToDelete
-            ? `“${eventToDelete.title}” se eliminará del calendario. Esta acción no se puede deshacer.`
+            ? tx("v1SeEliminaraDel", { v1: eventToDelete.title })
             : undefined
         }
-        confirmLabel="Eliminar"
+        confirmLabel={tx("eliminar")}
         destructive
         onConfirm={() => {
           if (eventToDelete) void deleteEvent(eventToDelete);

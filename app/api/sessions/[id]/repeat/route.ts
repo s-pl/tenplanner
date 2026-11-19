@@ -4,6 +4,7 @@ import { and, eq, asc } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, sessionExercises } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { editableSessionCondition } from "@/lib/sessions/permissions";
 
 const schema = z.object({
   dates: z
@@ -41,7 +42,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const [original] = await db
     .select()
     .from(sessions)
-    .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
+    .where(and(eq(sessions.id, id), await editableSessionCondition(user.id)))
     .limit(1);
   if (!original)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -58,6 +59,7 @@ export async function POST(request: Request, ctx: Ctx) {
       const [created] = await tx
         .insert(sessions)
         .values({
+          createdVia: "repeat",
           title: original.title,
           description: original.description,
           scheduledAt: new Date(dateStr),
@@ -70,6 +72,13 @@ export async function POST(request: Request, ctx: Ctx) {
           tags: original.tags,
           location: original.location,
           placeId: original.placeId,
+          courts: original.courts,
+          secondPlaceId: original.secondPlaceId,
+          // Mismo espacio, grupo, deporte y monitor que la original.
+          clubId: original.clubId,
+          groupId: original.groupId,
+          sport: original.sport,
+          coachId: original.coachId,
           status: "scheduled",
         })
         .returning({ id: sessions.id });

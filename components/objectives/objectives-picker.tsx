@@ -19,6 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 export type CatalogObjective = {
   id: string;
@@ -88,6 +90,8 @@ export function ObjectivesPicker({
   label?: string;
   className?: string;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_objectives_objectivespicker");
   const [open, setOpen] = useState(false);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loading, setLoading] = useState(false);
@@ -106,7 +110,7 @@ export function ObjectivesPicker({
       setLoading(true);
       fetchCatalog()
         .then(setCatalog)
-        .catch(() => setError("No se pudieron cargar los objetivos."))
+        .catch(() => setError(tx("noSePudieronCargar")))
         .finally(() => setLoading(false));
     }
   }
@@ -172,13 +176,13 @@ export function ObjectivesPicker({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[85vh] flex-col gap-3 sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Cargar objetivos</DialogTitle>
+            <DialogTitle>{tx("cargarObjetivos")}</DialogTitle>
             <DialogDescription>
               {catalog?.scope === "club"
-                ? "Objetivos de tu club. Marca los que quieras añadir; después puedes editarlos o escribir otros."
+                ? tx("objetivosDeTuClub")
                 : catalog?.scope === "base"
-                  ? "Objetivos de Ten Planner. Marca los que quieras añadir; después puedes editarlos o escribir otros."
-                  : "Tus objetivos (los de Ten Planner con tus cambios). Marca los que quieras añadir; después puedes editarlos o escribir otros."}
+                  ? tx("objetivosDeTenPlanner")
+                  : tx("tusObjetivosLosDe")}
             </DialogDescription>
           </DialogHeader>
 
@@ -188,7 +192,7 @@ export function ObjectivesPicker({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en todas las bolas…"
+              placeholder={tx("buscarEnTodasLas")}
               className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-2 focus:ring-brand/40"
             />
           </div>
@@ -233,7 +237,7 @@ export function ObjectivesPicker({
               </p>
             ) : groups.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No hay objetivos con estos filtros.
+                {tx("noHayObjetivosCon")}
               </p>
             ) : (
               <div className="space-y-4">
@@ -249,7 +253,7 @@ export function ObjectivesPicker({
                           }}
                         />
                       )}
-                      {ASPECT_LABEL[g.aspect]} · {g.block}
+                      {term(ASPECT_LABEL[g.aspect])} · {g.block}
                     </p>
                     <ul className="divide-y divide-border rounded-xl border border-border">
                       {g.rows.map((item) => {
@@ -299,7 +303,7 @@ export function ObjectivesPicker({
                               </span>
                               {already ? (
                                 <span className="shrink-0 text-[10px] font-bold uppercase text-muted-foreground">
-                                  Ya añadido
+                                  {tx("yaAnadido")}
                                 </span>
                               ) : item.scope !== "base" ? (
                                 <span className="shrink-0 text-[10px] font-bold uppercase text-brand">
@@ -329,7 +333,7 @@ export function ObjectivesPicker({
                 onClick={() => setOpen(false)}
                 className="rounded-full border border-border px-4 py-2 text-sm font-bold text-foreground/70 transition-colors hover:bg-muted"
               >
-                Cancelar
+                {tx("cancelar")}
               </button>
               <button
                 type="button"
@@ -337,8 +341,7 @@ export function ObjectivesPicker({
                 disabled={selected.size === 0}
                 className="rounded-full bg-[#D6FF38] px-4 py-2 text-sm font-black text-[#050505] transition-colors hover:bg-[#c8ef2f] disabled:opacity-50"
               >
-                Añadir
-                {selected.size > 0 ? ` (${selected.size})` : ""}
+                {tx("anadirV1", { v1: selected.size > 0 ? ` (${selected.size})` : "" })}
               </button>
             </div>
           </DialogFooter>

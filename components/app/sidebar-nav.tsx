@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "./language-switcher";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -9,6 +11,7 @@ import {
   BookMarked,
   BookOpen,
   Building2,
+  CalendarCheck,
   CalendarDays,
   ChevronRight,
   ClipboardList,
@@ -41,6 +44,12 @@ import { ThemeToggle } from "./theme-toggle";
 import { WorkModeBadge } from "./work-mode-badge";
 import { spaceLabels } from "@/lib/space-labels";
 import { SportBadge } from "./sport-badge";
+
+/**
+ * Selector de deporte en la barra lateral. Oculto mientras solo haya tenis;
+ * poner a true cuando se abran pádel, pickleball, etc.
+ */
+const SHOW_SPORT_SELECTOR = false;
 import { formatUnread, useUnreadMessages } from "./use-unread-messages";
 import type { ClubOption } from "./club-context-select";
 import type { Sport } from "@/lib/sport-constants";
@@ -145,6 +154,11 @@ const navItems: NavItem[] = [
   { href: "/objetivos", label: "Objetivos", icon: Target },
   { href: "/mensajes", label: "Mensajes", icon: MessageSquare },
   { href: "/places", label: "Lugares", icon: MapPin },
+  {
+    href: "/reservas-pistas",
+    label: "Reservas de pistas",
+    icon: CalendarCheck,
+  },
   { href: "/resources", label: "Mis recursos", icon: BookMarked },
   { href: "/club", label: "Mi club", icon: Building2 },
   { href: "/profile", label: "Perfil", icon: UserCircle },
@@ -196,6 +210,7 @@ const platformNavItems: NavItem[] = [
 // clases, sesiones, objetivos, club ni lugares: para eso se cambia al modo
 // del club en el selector.
 const managementNavItems: NavItem[] = [
+  { href: "/gestion/panel", label: "Panel", icon: LayoutDashboard },
   { href: "/gestion", label: "Informes", icon: BarChart3 },
   { href: "/gestion/monitores", label: "Monitores", icon: Users2 },
   {
@@ -205,21 +220,30 @@ const managementNavItems: NavItem[] = [
     feature: "calendar",
   },
   { href: "/students", label: "Alumnos", icon: Users },
+  { href: "/groups", label: "Grupos", icon: Users2, feature: "groups" },
+  {
+    href: "/reservas-pistas",
+    label: "Reservas de pistas",
+    icon: CalendarCheck,
+  },
   { href: "/mensajes", label: "Mensajes", icon: MessageSquare },
-  { href: "/profile", label: "Perfil", icon: UserCircle },
   { href: "/ayuda", label: "Ayuda", icon: LifeBuoy, publicAccess: true },
 ];
 
+// Las etiquetas del menú se definen en español; se traducen al pintarlas.
+const NAV_LABEL_KEYS: Record<string, string> = {"Inicio":"home","Ejercicios":"exercises","Ver todos":"viewAllM","Biblioteca":"library","Mis ejercicios":"myExercises","Favoritos":"favorites","Borradores":"drafts","Nuevo ejercicio":"newExercise","Clases":"classes","Ver todas":"viewAllF","Mis clases":"myClasses","Mis listas":"myLists","Nueva clase":"newClass","Sesiones":"sessions","Mis sesiones":"mySessions","Listas":"lists","Canceladas":"cancelled","Nueva sesión":"newSession","Calendario":"calendar","Alumnos":"students","Lista de alumnos":"studentList","Grupos":"groups","Objetivos":"goals","Mensajes":"messages","Lugares":"places","Reservas de pistas":"courtBookings","Mis recursos":"myResources","Mi club":"myClub","Perfil":"profile","Ayuda":"help","Informes":"reports","Panel":"panel","Monitores":"coaches","Jugador":"player","Clases club":"clubClasses","Ejercicios club":"clubExercises","Favoritos club":"clubFavorites","Listas club":"clubLists","Recursos club":"clubResources","Sesiones club":"clubSessions"};
+
 /** Indicador fijo de la cuenta de la plataforma (no cambia de modo). */
 function PlatformBadge() {
+  const t = useTranslations("nav");
   return (
     <div className="flex items-center gap-2 rounded-lg border border-brand/50 bg-brand/10 px-3 py-2 text-[12px] font-bold text-foreground">
       <Globe2 className="size-3.5 shrink-0 text-brand" strokeWidth={2} />
       <span className="min-w-0 flex-1 truncate">
         <span className="mr-1 font-mono text-[9px] uppercase tracking-[0.14em] opacity-55">
-          Modo
+          {t("mode")}
         </span>
-        Administrador · público
+        {t("adminPublic")}
       </span>
     </div>
   );
@@ -236,26 +260,55 @@ const familyNavItems: NavItem[] = [
 
 // En modo club, los apartados propios se nombran como del club ("Clases
 // club"…) en vez de "Mis…" — ver lib/space-labels.ts.
-function navItemsForSpace(inClub: boolean): NavItem[] {
+// Apartados que solo existen en el modo del club: en el Modo monitor de un
+// monitor que pertenece a un club no aparecen (ver
+// getClubMonitorSpaceClubIds en lib/work-mode.ts).
+const CLUB_ONLY_HREFS = new Set([
+  "/students",
+  "/objetivos",
+  "/reservas-pistas",
+]);
+
+function navItemsForSpace(
+  inClub: boolean,
+  clubMonitorSpace = false,
+  /** Cuenta de un club: sin "Perfil" (los datos del club están en Mi club). */
+  clubAccount = false
+): NavItem[] {
   const labels = spaceLabels(inClub);
   const bySubHref: Record<string, string> = {
     "/exercises?tab=mine": labels.exercises,
     "/exercises?tab=favorites": labels.favorites,
     "/classes?tab=mine": labels.classes,
     "/classes?tab=favorites": labels.lists,
+    "/sessions": labels.sessions,
   };
-  return navItems.map((item) =>
-    item.href === "/resources"
-      ? { ...item, label: labels.resources }
-      : item.submenu
-        ? {
-            ...item,
-            submenu: item.submenu.map((sub) =>
-              bySubHref[sub.href] ? { ...sub, label: bySubHref[sub.href] } : sub
-            ),
-          }
-        : item
+  const items = navItems.filter(
+    (item) =>
+      !(clubMonitorSpace && CLUB_ONLY_HREFS.has(item.href)) &&
+      !(clubAccount && item.href === "/profile") &&
+      // Los mensajes del club se escriben solo desde el Modo gestión: hay
+      // mensajes que los monitores no deben leer.
+      !(clubAccount && item.href === "/mensajes")
   );
+  return items.map((item) => {
+    if (item.href === "/resources") return { ...item, label: labels.resources };
+    if (!item.submenu) return item;
+    const submenu = item.submenu.map((sub) =>
+      bySubHref[sub.href] ? { ...sub, label: bySubHref[sub.href] } : sub
+    );
+    // En modo club, "Mis sesiones" = las que imparte el usuario dentro del
+    // club, sin salir del espacio del club.
+    if (inClub && item.href === "/sessions") {
+      const at = submenu.findIndex((sub) => sub.href === "/sessions");
+      submenu.splice(at + 1, 0, {
+        href: "/sessions?mine=1",
+        label: "Mis sesiones",
+        icon: UserRound,
+      });
+    }
+    return { ...item, submenu };
+  });
 }
 
 /**
@@ -382,7 +435,13 @@ function NavContent({
       ? platformNavItems
       : managementMode
         ? managementNavItems
-        : navItemsForSpace(!!activeWorkClubId);
+        : navItemsForSpace(
+            !!activeWorkClubId,
+            // Modo monitor de un monitor de club (sin alumnos, objetivos ni
+            // reservas: eso va en el modo del club).
+            !activeWorkClubId && !clubAccountClubId && workModeClubs.length > 0,
+            !!clubAccountClubId
+          );
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Coach";
   const initials = displayName
@@ -391,6 +450,9 @@ function NavContent({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const tNav = useTranslations("nav");
+  const tr = (label: string) =>
+    NAV_LABEL_KEYS[label] ? tNav(NAV_LABEL_KEYS[label]) : label;
 
   const [submenuOpen, setSubmenuOpen] = useState<Record<string, boolean>>(
     () => {
@@ -419,7 +481,7 @@ function NavContent({
               : tenPlannerMode
                 ? "/informes"
                 : managementMode
-                  ? "/gestion"
+                  ? "/gestion/panel"
                   : "/dashboard"
           }
           className="group flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-sidebar-accent"
@@ -434,26 +496,31 @@ function NavContent({
         </Link>
       </div>
 
-      {user && !familyOnly && (
-        <div className="border-b border-sidebar-border px-3 py-3 space-y-2">
-          <SportBadge activeSport={activeSport} />
-          {platformAccount ? (
-            <PlatformBadge />
-          ) : (
-            (workModeClubs.length > 0 || isAdmin) && (
-              <WorkModeBadge
-                key={`${tenPlannerMode ? "admin" : managementMode ? "gestion" : (activeWorkClubId ?? "particular")}`}
-                clubs={workModeClubs}
-                activeClubId={activeWorkClubId}
-                canUseTenPlanner={isAdmin}
-                tenPlannerActive={tenPlannerMode}
-                clubAccountClubId={clubAccountClubId}
-                managementActive={managementMode}
-              />
-            )
-          )}
-        </div>
-      )}
+      {user &&
+        !familyOnly &&
+        (SHOW_SPORT_SELECTOR ||
+          platformAccount ||
+          workModeClubs.length > 0 ||
+          isAdmin) && (
+          <div className="border-b border-sidebar-border px-3 py-3 space-y-2">
+            {SHOW_SPORT_SELECTOR && <SportBadge activeSport={activeSport} />}
+            {platformAccount ? (
+              <PlatformBadge />
+            ) : (
+              (workModeClubs.length > 0 || isAdmin) && (
+                <WorkModeBadge
+                  key={`${tenPlannerMode ? "admin" : managementMode ? "gestion" : (activeWorkClubId ?? "particular")}`}
+                  clubs={workModeClubs}
+                  activeClubId={activeWorkClubId}
+                  canUseTenPlanner={isAdmin}
+                  tenPlannerActive={tenPlannerMode}
+                  clubAccountClubId={clubAccountClubId}
+                  managementActive={managementMode}
+                />
+              )
+            )}
+          </div>
+        )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="flex flex-col gap-1">
@@ -467,8 +534,18 @@ function NavContent({
               feature,
               allLabel,
             }) => {
+              // Solo el enlace más específico: /gestion/panel no marca
+              // también /gestion (Informes).
+              const matches = (h: string) =>
+                pathname === h || pathname.startsWith(h + "/");
               const isActive =
-                pathname === href || pathname.startsWith(href + "/");
+                matches(href) &&
+                !items.some(
+                  (other) =>
+                    other.href.length > href.length &&
+                    other.href.startsWith(href + "/") &&
+                    matches(other.href)
+                );
               const activeIdx = submenu
                 ? activeSubmenuIndex(
                     href,
@@ -491,7 +568,7 @@ function NavContent({
                     >
                       <Icon className="size-4" strokeWidth={1.6} />
                       <span className="flex-1 truncate text-[13px] font-semibold">
-                        {label}
+                        {tr(label)}
                       </span>
                       <Lock
                         className="size-3 text-sidebar-foreground/34"
@@ -508,7 +585,7 @@ function NavContent({
                     <span className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sidebar-foreground/38">
                       <Icon className="size-4" strokeWidth={1.6} />
                       <span className="flex-1 truncate text-[13px] font-semibold">
-                        {label}
+                        {tr(label)}
                       </span>
                       <Lock
                         className="size-3 text-sidebar-foreground/32"
@@ -545,7 +622,7 @@ function NavContent({
                           isActive && "text-sidebar-foreground"
                         )}
                       >
-                        {label}
+                        {tr(label)}
                       </span>
                       <ChevronRight
                         className={cn(
@@ -569,7 +646,7 @@ function NavContent({
                                 : "text-sidebar-foreground/58 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                             )}
                           >
-                            {allLabel ?? "Ver todas"}
+                            {tr(allLabel ?? "Ver todas")}
                           </Link>
                         </li>
                         {submenu.map(
@@ -592,7 +669,7 @@ function NavContent({
                               return (
                                 <li key={subHref}>
                                   <span className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/38">
-                                    <span>{subLabel}</span>
+                                    <span>{tr(subLabel)}</span>
                                     <Lock className="size-3 text-sidebar-foreground/32" />
                                   </span>
                                 </li>
@@ -619,7 +696,7 @@ function NavContent({
                                       strokeWidth={1.7}
                                     />
                                   )}
-                                  <span className="truncate">{subLabel}</span>
+                                  <span className="truncate">{tr(subLabel)}</span>
                                 </Link>
                               </li>
                             );
@@ -658,12 +735,12 @@ function NavContent({
                         isActive && "font-black text-brand-foreground"
                       )}
                     >
-                      {label}
+                      {tr(label)}
                     </span>
                     {href === "/mensajes" && unreadMessages > 0 && (
                       <span
                         className="grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1.5 text-[11px] font-black tabular-nums leading-none text-white"
-                        aria-label={`${unreadMessages} mensajes nuevos`}
+                        aria-label={tNav("newMessages", { n: unreadMessages })}
                       >
                         {formatUnread(unreadMessages)}
                       </span>
@@ -690,7 +767,7 @@ function NavContent({
               )}
             >
               <ShieldCheck className="size-3.5 shrink-0" strokeWidth={1.8} />
-              Panel de administración
+              {tNav("admin")}
             </Link>
           </div>
         )}
@@ -698,7 +775,7 @@ function NavContent({
           <>
             <div className="px-4 pt-4 pb-3">
               <p className="mb-2.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/40">
-                Cuenta
+                {tNav("account")}
               </p>
               <Link
                 href="/profile"
@@ -737,9 +814,12 @@ function NavContent({
                 className="group flex items-center gap-2 rounded-lg py-2 text-left text-[12px] font-semibold text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground"
               >
                 <LogOut className="size-3.5" strokeWidth={1.6} />
-                Cerrar sesión
+                {tNav("logout")}
               </button>
-              <ThemeToggle compact />
+              <div className="flex items-center gap-1.5">
+                <LanguageSwitcher compact />
+                <ThemeToggle compact />
+              </div>
             </div>
           </>
         ) : (
@@ -750,9 +830,12 @@ function NavContent({
               className="flex min-h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/70 px-3 text-[12px] font-bold text-sidebar-foreground transition-colors hover:border-sidebar-ring hover:bg-brand hover:text-brand-foreground"
             >
               <Lock className="size-3.5" strokeWidth={1.8} />
-              Iniciar sesión
+              {tNav("login")}
             </Link>
-            <ThemeToggle compact />
+            <div className="flex items-center gap-1.5">
+              <LanguageSwitcher compact />
+              <ThemeToggle compact />
+            </div>
           </div>
         )}
       </div>
@@ -804,7 +887,10 @@ function SidebarNavInner({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const prevOpenRef = useRef(false);
 
-  const activeLabel =
+  const tNav = useTranslations("nav");
+  const trLabel = (label: string) =>
+    NAV_LABEL_KEYS[label] ? tNav(NAV_LABEL_KEYS[label]) : label;
+  const activeLabelEs =
     navItems.find(
       (item) => pathname === item.href || pathname.startsWith(item.href + "/")
     )?.label ?? "TenPlanner";
@@ -901,7 +987,7 @@ function SidebarNavInner({
                   : tenPlannerMode
                     ? "/informes"
                     : managementMode
-                      ? "/gestion"
+                      ? "/gestion/panel"
                       : "/dashboard"
               }
               className="flex min-w-0 shrink items-center gap-2.5"
@@ -915,17 +1001,18 @@ function SidebarNavInner({
               /
             </span>
             <span className="truncate text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/54">
-              {activeLabel}
+              {trLabel(activeLabelEs)}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <LanguageSwitcher compact />
             <ThemeToggle compact />
             <button
               ref={triggerRef}
               type="button"
               onClick={() => setMobileOpen(true)}
               className="relative flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-              aria-label="Abrir menú"
+              aria-label={tNav("openMenu")}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-drawer"
             >
@@ -941,26 +1028,31 @@ function SidebarNavInner({
             </button>
           </div>
         </div>
-        {user && !familyOnly && (
-          <div className="px-4 pb-3 space-y-2">
-            <SportBadge activeSport={activeSport} />
-            {platformAccount ? (
-              <PlatformBadge />
-            ) : (
-              (workModeClubs.length > 0 || isAdmin) && (
-                <WorkModeBadge
-                  key={`${tenPlannerMode ? "admin" : managementMode ? "gestion" : (activeWorkClubId ?? "particular")}`}
-                  clubs={workModeClubs}
-                  activeClubId={activeWorkClubId}
-                  canUseTenPlanner={isAdmin}
-                  tenPlannerActive={tenPlannerMode}
-                  clubAccountClubId={clubAccountClubId}
-                  managementActive={managementMode}
-                />
-              )
-            )}
-          </div>
-        )}
+        {user &&
+          !familyOnly &&
+          (SHOW_SPORT_SELECTOR ||
+            platformAccount ||
+            workModeClubs.length > 0 ||
+            isAdmin) && (
+            <div className="px-4 pb-3 space-y-2">
+              {SHOW_SPORT_SELECTOR && <SportBadge activeSport={activeSport} />}
+              {platformAccount ? (
+                <PlatformBadge />
+              ) : (
+                (workModeClubs.length > 0 || isAdmin) && (
+                  <WorkModeBadge
+                    key={`${tenPlannerMode ? "admin" : managementMode ? "gestion" : (activeWorkClubId ?? "particular")}`}
+                    clubs={workModeClubs}
+                    activeClubId={activeWorkClubId}
+                    canUseTenPlanner={isAdmin}
+                    tenPlannerActive={tenPlannerMode}
+                    clubAccountClubId={clubAccountClubId}
+                    managementActive={managementMode}
+                  />
+                )
+              )}
+            </div>
+          )}
       </header>
 
       {mobileOpen && (
@@ -969,14 +1061,14 @@ function SidebarNavInner({
           id="mobile-nav-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Menú de navegación"
+          aria-label={tNav("navMenu")}
           className="fixed inset-0 z-50 flex md:hidden"
         >
           <button
             type="button"
             className="absolute inset-0 cursor-default bg-[#050505]/68 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            aria-label="Cerrar menú de navegación"
+            aria-label={tNav("closeNavMenu")}
             tabIndex={-1}
           />
           <aside className="relative flex h-full w-[min(20rem,calc(100vw-2rem))] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[24px_0_80px_rgba(0,0,0,0.32)]">
@@ -986,7 +1078,7 @@ function SidebarNavInner({
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/68 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                aria-label="Cerrar menú"
+                aria-label={tNav("closeMenu")}
               >
                 <X className="size-4" strokeWidth={1.8} />
               </button>

@@ -27,6 +27,8 @@ import {
   type EditorState,
   type EditorValues,
 } from "@/components/objectives/objective-editor";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 type BallFilter = BallId | "todas";
 type AspectFilter = AspectId | "todos";
@@ -111,6 +113,8 @@ export function ObjectivesManager({
   scope: ManagerScope;
   actions: ObjectiveActions;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_objectives_objectivesmanager");
   const copy = COPY[scope];
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -160,7 +164,7 @@ export function ObjectivesManager({
         if (!res.ok) throw new Error("failed");
         router.refresh();
       } catch {
-        setError("No se pudo guardar el cambio. Inténtalo de nuevo.");
+        setError(tx("noSePudoGuardar"));
       } finally {
         setBusyId(null);
       }
@@ -247,7 +251,7 @@ export function ObjectivesManager({
       >
         {!isHidden && group && (
           <span
-            title="Arrastrar para mover"
+            title={tx("arrastrarParaMover")}
             aria-hidden
             className="ml-1 mt-3 flex shrink-0 cursor-grab items-center text-foreground/30 hover:text-brand active:cursor-grabbing"
           >
@@ -285,8 +289,8 @@ export function ObjectivesManager({
           ) : isHidden ? (
             <button
               type="button"
-              title="Restaurar"
-              aria-label="Restaurar objetivo"
+              title={tx("restaurar")}
+              aria-label={tx("restaurarObjetivo")}
               className={iconBtn}
               onClick={() => run(item.id, () => actions.restore(item.id))}
             >
@@ -296,8 +300,8 @@ export function ObjectivesManager({
             <>
               <button
                 type="button"
-                title="Subir"
-                aria-label="Subir objetivo"
+                title={tx("subir")}
+                aria-label={tx("subirObjetivo")}
                 className={iconBtn}
                 disabled={pos.first}
                 onClick={() => run(item.id, () => actions.move(item.id, "up"))}
@@ -306,8 +310,8 @@ export function ObjectivesManager({
               </button>
               <button
                 type="button"
-                title="Bajar"
-                aria-label="Bajar objetivo"
+                title={tx("bajar")}
+                aria-label={tx("bajarObjetivo")}
                 className={iconBtn}
                 disabled={pos.last}
                 onClick={() =>
@@ -318,8 +322,8 @@ export function ObjectivesManager({
               </button>
               <button
                 type="button"
-                title="Duplicar"
-                aria-label="Duplicar objetivo"
+                title={tx("duplicar")}
+                aria-label={tx("duplicarObjetivo")}
                 className={iconBtn}
                 onClick={() => run(item.id, () => actions.duplicate(item.id))}
               >
@@ -327,8 +331,8 @@ export function ObjectivesManager({
               </button>
               <button
                 type="button"
-                title="Editar"
-                aria-label="Editar objetivo"
+                title={tx("editar")}
+                aria-label={tx("editarObjetivo")}
                 className={iconBtn}
                 onClick={() => setEditor({ mode: "edit", item })}
               >
@@ -339,8 +343,8 @@ export function ObjectivesManager({
                 item.scope === "base" && (
                   <button
                     type="button"
-                    title="Volver al original"
-                    aria-label="Volver al objetivo original"
+                    title={tx("volverAlOriginal")}
+                    aria-label={tx("volverAlObjetivoOriginal")}
                     className={iconBtn}
                     onClick={() => run(item.id, () => actions.restore(item.id))}
                   >
@@ -349,8 +353,8 @@ export function ObjectivesManager({
                 )}
               <button
                 type="button"
-                title="Quitar"
-                aria-label="Quitar objetivo"
+                title={tx("quitar")}
+                aria-label={tx("quitarObjetivo")}
                 className={iconBtn}
                 onClick={() => run(item.id, () => actions.remove(item.id))}
               >
@@ -378,7 +382,7 @@ export function ObjectivesManager({
                 className="size-2.5 rounded-full"
                 style={{ backgroundColor: b.color }}
               />
-              {b.label} · {b.stage}
+              {term(b.label)} · {term(b.stage)}
               <span className="tabular-nums text-foreground/45">
                 {countFor(b.id)}
               </span>
@@ -389,7 +393,7 @@ export function ObjectivesManager({
             onClick={() => setBall("todas")}
             className={chipClass(ball === "todas")}
           >
-            Todas
+            {tx("todas")}
             <span className="tabular-nums text-foreground/45">
               {countFor("todas")}
             </span>
@@ -401,7 +405,7 @@ export function ObjectivesManager({
           className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-[11px] font-black uppercase text-brand-foreground hover:bg-brand/90"
         >
           <Plus className="size-3.5" />
-          Añadir objetivo
+          {tx("anadirObjetivo")}
         </button>
       </div>
 
@@ -411,7 +415,7 @@ export function ObjectivesManager({
           onClick={() => setAspect("todos")}
           className={chipClass(aspect === "todos")}
         >
-          Todos los aspectos
+          {tx("todosLosAspectos")}
         </button>
         {ASPECTS.map((a) => (
           <button
@@ -420,15 +424,14 @@ export function ObjectivesManager({
             onClick={() => setAspect(a.id)}
             className={chipClass(aspect === a.id)}
           >
-            {a.label}
+            {term(a.label)}
           </button>
         ))}
       </div>
 
       <p className="flex items-center gap-1.5 text-[12px] text-foreground/55">
         <GripVertical className="size-3.5 shrink-0" />
-        Arrastra un objetivo para cambiarlo de sitio, también a otro bloque. Con
-        «Todas» y «Todos los aspectos» puedes llevarlo a otra bola o aspecto.
+        {tx("arrastraUnObjetivoPara")}
       </p>
 
       {error && (
@@ -439,7 +442,7 @@ export function ObjectivesManager({
 
       {groups.length === 0 ? (
         <p className="text-[13px] text-foreground/55">
-          No hay objetivos para este filtro.
+          {tx("noHayObjetivosPara")}
         </p>
       ) : (
         <div className="space-y-6">
@@ -456,7 +459,7 @@ export function ObjectivesManager({
                   />
                   {first.block}
                   <span className="text-foreground/35">
-                    · {aspectLabel} · {ballName(first.ball)}
+                    · {term(aspectLabel)} · {term(ballName(first.ball))}
                   </span>
                 </h3>
                 <ul

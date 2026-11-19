@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, useState, DragEvent, useEffect } from "react";
+import {
+  useRef,
+  useState,
+  DragEvent,
+  useEffect,
+  type ReactNode,
+} from "react";
 import NextLink from "next/link";
 import {
   BookOpen,
@@ -10,6 +16,8 @@ import {
   Coffee,
   Dumbbell,
   ExternalLink,
+  RefreshCw,
+  Shuffle,
   Filter,
   GripVertical,
   LayoutGrid,
@@ -34,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { CourtsBoard } from "./courts-board";
 import {
   EMPTY_PICKER_FILTERS,
   ExercisePickerFilters,
@@ -62,6 +71,7 @@ import {
   type WizardState,
 } from "./types";
 import {
+  computeTimelineDuration,
   createStationsItem,
   createTextItem,
   createWarmupItem,
@@ -69,6 +79,8 @@ import {
   isTextItem,
   isWarmupItem,
 } from "./timeline";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 const CATEGORY_COLORS: Record<string, string> = {
   technique: "text-blue-400 bg-blue-400/10",
@@ -108,8 +120,18 @@ interface StepExercisesProps {
   state: WizardState;
   update: (patch: Partial<WizardState>) => void;
   availableExercises: AvailableExercise[];
+  /** Mis lugares: para elegir en qué lugar está cada pista. */
+  places?: { id: string; name: string }[];
   /** Se llama justo antes de abrir la ficha de un ejercicio (guardar borrador). */
   onBeforeLeave?: () => void;
+  /**
+   * "Que la diseñe Ten Planner": cambia automáticamente un ejercicio de la
+   * propuesta por otro adecuado para ese hueco. Solo se muestra en los
+   * items para los que canAutoChange devuelve true.
+   */
+  onAutoChange?: (flatIdx: number) => void;
+  canAutoChange?: (ex: WizardExercise) => boolean;
+  autoChangingIdx?: number | null;
 }
 
 function formatMinutes(minutes: number) {
@@ -142,12 +164,43 @@ function groupByPhase(
   return groups;
 }
 
+/**
+ * Con dos pistas el tablero es el editor principal; la lista por bloques
+ * (notas, estaciones, ajustes de cada elemento) queda plegada debajo.
+ */
+function DetailsWhen({
+  when,
+  children,
+}: {
+  when: boolean;
+  children: ReactNode;
+}) {
+  const tx = useTranslations("ui.s_sessionwizard_stepexercises");
+  if (!when) return <>{children}</>;
+  return (
+    <details className="rounded-lg border border-dashed border-foreground/20 bg-card/50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-foreground">
+        {tx("edicionDetalladaNotasEstaciones")}
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}
+
+const ITEM_KIND_FALLBACK_NAME = "este elemento";
+
 export function StepExercises({
   state,
   update,
   availableExercises,
+  places = [],
   onBeforeLeave,
+  onAutoChange,
+  canAutoChange,
+  autoChangingIdx = null,
 }: StepExercisesProps) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_sessionwizard_stepexercises");
   const [libraryExercises, setLibraryExercises] = useState(availableExercises);
   const [sourceTab, setSourceTab] = useState<"library" | "lists">("library");
   const [search, setSearch] = useState("");
@@ -197,8 +250,33 @@ export function StepExercises({
   } | null>(null);
   /** Bloque en el que está abierto el buscador de ejercicios (como en Clases). */
   const [pickerPhase, setPickerPhase] = useState<TrainingPhase | null>(null);
+  // Dos pistas: lo que se añade desde una pista se queda en ella mientras el
+  // buscador siga abierto en ese bloque.
+  const pendingCourtRef = useRef<1 | 2 | null>(null);
+  /** Elemento con el menú "Sustituir por…" abierto (índice en la sesión). */
+  const [replaceMenuIdx, setReplaceMenuIdx] = useState<number | null>(null);
+  /** Elemento que se está sustituyendo por un ejercicio de la biblioteca o
+   * por unas estaciones: lo elegido ocupa su lugar en vez de añadirse. */
+  const replacePanelRef = useRef<HTMLDivElement>(null);
+  const [replacing, setReplacing] = useState<{
+    idx: number;
+    name: string;
+    target: "exercise" | "stations";
+  } | null>(null);
 
   const selected = state.exercises;
+
+  // Al sustituir, el buscador se abre bajo el elemento: llevarlo a la vista.
+  useEffect(() => {
+    if (!replacing) return;
+    const frame = requestAnimationFrame(() =>
+      replacePanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [replacing]);
 
   // Las sesiones creadas antes de que los 3 bloques fueran explícitos tienen
   // items con phase=null; al cargarlos aquí se normalizan a "main" (igual que
@@ -216,10 +294,12 @@ export function StepExercises({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totalDuration = selected.reduce(
-    (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
-    0
-  );
+  // Con dos pistas lo de cada pista ocurre a la vez (ver timeline.ts).
+  const totalDuration = computeTimelineDuration({
+    exercises: selected,
+    courts: state.courts,
+    blocks: state.blocks,
+  });
   const selectedIds = new Set(selected.map((e) => e.exerciseId));
   // Sumatorio del tiempo por tipo de elemento (ejercicios, descansos...).
   const minutesByKind = { exercise: 0, rest: 0, text: 0, stations: 0 };
@@ -231,10 +311,10 @@ export function StepExercises({
     else minutesByKind.exercise += minutes;
   }
   const timeParts = [
-    { label: "Ejercicios", minutes: minutesByKind.exercise },
-    { label: "Estaciones", minutes: minutesByKind.stations },
-    { label: "Textos/actividades", minutes: minutesByKind.text },
-    { label: "Descansos", minutes: minutesByKind.rest },
+    { label: tx("ejercicios"), minutes: minutesByKind.exercise },
+    { label: tx("estaciones"), minutes: minutesByKind.stations },
+    { label: tx("textosActividades"), minutes: minutesByKind.text },
+    { label: tx("descansos"), minutes: minutesByKind.rest },
   ].filter((p) => p.minutes > 0);
   const availableCategories = Array.from(
     new Set(libraryExercises.map((e) => e.category))
@@ -263,6 +343,11 @@ export function StepExercises({
     if (editingDurationIdx !== null) durationInputRef.current?.focus();
   }, [editingDurationIdx]);
 
+  useEffect(() => {
+    // Al cerrar el buscador, lo siguiente que se añada vuelve a la pista 1.
+    if (pickerPhase === null) pendingCourtRef.current = null;
+  }, [pickerPhase]);
+
   function setExercises(next: WizardExercise[]) {
     update({ exercises: next });
   }
@@ -277,8 +362,92 @@ export function StepExercises({
       notes: "",
       phase,
       intensity: null,
+      // Dos pistas: se queda en la pista desde la que se abrió el buscador.
+      ...(pendingCourtRef.current ? { court: pendingCourtRef.current } : {}),
     };
     setExercises([...selected, item]);
+  }
+
+  /**
+   * Pone `next` en el lugar del elemento `idx` (mismo bloque y posición). Se
+   * conserva el tiempo que tenía ese hueco si era distinto del nuevo, para
+   * que la duración de la sesión no cambie sin querer.
+   */
+  function replaceAt(idx: number, next: WizardExercise) {
+    const old = selected[idx];
+    if (!old) return;
+    const oldMinutes = old.overrideDuration ?? old.durationMinutes;
+    const keepTime =
+      !isStationsItem(next) &&
+      !isStationsItem(old) &&
+      oldMinutes != null &&
+      oldMinutes !== next.durationMinutes;
+    const item: WizardExercise = {
+      ...next,
+      phase: old.phase,
+      overrideDuration: keepTime ? oldMinutes : next.overrideDuration,
+      // Con dos pistas, lo que sustituye se queda en su pista, con quien lo
+      // dirige y sus turnos.
+      court: old.court,
+      ledBy: old.ledBy,
+      turnMinutes: old.turnMinutes,
+      turnSize: old.turnSize,
+    };
+    setExercises(selected.map((e, i) => (i === idx ? item : e)));
+    setReplacing(null);
+    setReplaceMenuIdx(null);
+    setExpandedIdx(null);
+  }
+
+  function exerciseItemFrom(
+    ex: AvailableExercise,
+    phase: TrainingPhase
+  ): WizardExercise {
+    return {
+      exerciseId: ex.id,
+      name: ex.name,
+      category: ex.category,
+      durationMinutes: ex.durationMinutes,
+      overrideDuration: null,
+      notes: "",
+      phase,
+      intensity: null,
+    };
+  }
+
+  /** "Sustituir por…": Ejercicio abre el buscador; Texto y Descanso
+   * sustituyen al momento; Estaciones pide cuántas. */
+  function startReplace(
+    idx: number,
+    kind: "exercise" | "text" | "warmup" | "stations"
+  ) {
+    const old = selected[idx];
+    if (!old) return;
+    const phase = old.phase ?? "main";
+    const name = old.name || ITEM_KIND_FALLBACK_NAME;
+    setReplaceMenuIdx(null);
+    if (kind === "text") {
+      replaceAt(idx, createTextItem("", phase));
+      return;
+    }
+    if (kind === "warmup") {
+      replaceAt(idx, createWarmupItem(phase));
+      return;
+    }
+    if (kind === "stations") {
+      setReplacing({ idx, name, target: "stations" });
+      setPickerPhase(null);
+      setStationsDraftPhase(phase);
+      setStationsDraftCount(4);
+      return;
+    }
+    setReplacing({ idx, name, target: "exercise" });
+    setAddPhaseOverride(phase);
+    setPickingStation(null);
+    setStationsDraftPhase(null);
+    setSourceTab("library");
+    setSearch("");
+    setPickerPhase(phase);
   }
 
   /** Sustituye un item de texto libre (por su clave local) por un ejercicio
@@ -337,6 +506,7 @@ export function StepExercises({
         notes: "",
         phase,
         intensity: null,
+        ...(pendingCourtRef.current ? { court: pendingCourtRef.current } : {}),
       }));
 
     if (nextItems.length === 0) return;
@@ -357,7 +527,12 @@ export function StepExercises({
       STATION_COUNT_MAX,
       Math.max(STATION_COUNT_MIN, stationsDraftCount || STATION_COUNT_MIN)
     );
-    setExercises([...selected, createStationsItem(stationsDraftPhase, n, "")]);
+    const stationsItem = createStationsItem(stationsDraftPhase, n, "");
+    if (replacing?.target === "stations") {
+      replaceAt(replacing.idx, stationsItem);
+    } else {
+      setExercises([...selected, stationsItem]);
+    }
     setStationsDraftPhase(null);
     setStationsDraftCount(4);
   }
@@ -450,7 +625,7 @@ export function StepExercises({
     if (!ex) {
       return {
         ok: false,
-        message: "Este ejercicio no está disponible para esta sesión.",
+        message: tx("esteEjercicioNoEsta"),
       };
     }
     const target = pickTargetRef.current ?? {
@@ -465,20 +640,31 @@ export function StepExercises({
       pickTargetRef.current = null;
       return {
         ok: true,
-        message: "Añadido a la estación. Ya puedes cerrar esta pestaña.",
+        message: tx("anadidoALaEstacion"),
       };
     }
     if (selectedIds.has(ex.id)) {
-      return { ok: false, message: "Este ejercicio ya está en la sesión." };
+      return { ok: false, message: tx("esteEjercicioYaEsta") };
+    }
+    if (replacing?.target === "exercise") {
+      replaceAt(replacing.idx, exerciseItemFrom(ex, target.phase));
+      setPickerPhase(null);
+      return {
+        ok: true,
+        message: tx("ejercicioSustituidoYaPuedes"),
+      };
     }
     addExercise(ex, target.phase);
     return {
       ok: true,
-      message: `Añadido a ${PHASE_LABELS[target.phase]}. Ya puedes cerrar esta pestaña.`,
+      message: tx("anadidoAV1Ya", { v1: PHASE_LABELS[target.phase] }),
     };
   });
 
   function removeExercise(id: string) {
+    // Cambian las posiciones: se anula una sustitución a medias.
+    setReplacing(null);
+    setReplaceMenuIdx(null);
     setExercises(selected.filter((e) => e.exerciseId !== id));
   }
 
@@ -496,6 +682,8 @@ export function StepExercises({
   ) {
     const item = selected[sourceFlatIdx];
     if (!item) return;
+    setReplacing(null);
+    setReplaceMenuIdx(null);
     const groups = groupByPhase(selected);
     // Mapa mutable fase -> array de ejercicios, para hacer el splice/insert
     // y luego aplanar en el orden fijo de los 3 bloques.
@@ -751,6 +939,41 @@ export function StepExercises({
   // en el que se pulsa "Añadir ejercicio" (o al elegir el ejercicio de una
   // estación), como en el formulario de clases, en vez de ocupar una columna
   // fija con toda la biblioteca.
+  const stationsDraftPanel = (
+    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-2 py-1.5">
+      <span className="text-[10px] font-semibold text-foreground whitespace-nowrap">
+        {replacing?.target === "stations"
+          ? tx("sustituirV1PorEstaciones", { v1: replacing.name })
+          : "¿Cuántas?"}
+      </span>
+      <input
+        type="number"
+        min={STATION_COUNT_MIN}
+        max={STATION_COUNT_MAX}
+        value={stationsDraftCount}
+        onChange={(e) => setStationsDraftCount(Number(e.target.value))}
+        className="h-6 w-12 rounded-md border border-border bg-background px-1 text-xs text-center tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-brand/40"
+      />
+      <button
+        type="button"
+        onClick={confirmStationsDraft}
+        className="rounded-md bg-foreground px-2 py-1 text-[10px] font-bold text-background transition-colors hover:bg-foreground/90"
+      >
+        {replacing?.target === "stations" ? "Sustituir" : "Crear"}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setStationsDraftPhase(null);
+          setReplacing(null);
+        }}
+        className="text-[10px] text-muted-foreground hover:text-foreground"
+      >
+        {tx("cancelar")}
+      </button>
+    </div>
+  );
+
   const sourcesPanel = (
     <div className="mt-3 flex flex-col rounded-xl border border-border overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
@@ -766,7 +989,7 @@ export function StepExercises({
             )}
           >
             <BookOpen className="size-3.5" />
-            Biblioteca
+            {tx("biblioteca")}
           </button>
           <button
             type="button"
@@ -779,14 +1002,13 @@ export function StepExercises({
             )}
           >
             <CalendarDays className="size-3.5" />
-            Listas
+            {tx("listas")}
           </button>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {sourceTab === "library" && filteredAvailable.length > 0 ? (
             <span className="text-xs text-muted-foreground hidden sm:block">
-              {filteredAvailable.length} disponibles
-            </span>
+              {tx("v1Disponibles", { v1: filteredAvailable.length })}</span>
           ) : null}
           <button
             type="button"
@@ -794,16 +1016,17 @@ export function StepExercises({
             className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 hover:bg-brand/20 px-2 py-1 rounded-lg transition-colors"
           >
             <Plus className="size-3" />
-            Nuevo
+            {tx("nuevo")}
           </button>
           <button
             type="button"
             onClick={() => {
               setPickerPhase(null);
               setPickingStation(null);
+              setReplacing(null);
             }}
-            aria-label="Cerrar buscador de ejercicios"
-            title="Cerrar"
+            aria-label={tx("cerrarBuscadorDeEjercicios")}
+            title={tx("cerrar")}
             className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-3.5" />
@@ -811,11 +1034,29 @@ export function StepExercises({
         </div>
       </div>
 
+      {replacing?.target === "exercise" && !pickingStation && (
+        <div className="flex items-center gap-2 border-b border-brand/30 bg-brand/10 px-3 py-2">
+          <RefreshCw className="size-3.5 text-brand shrink-0" />
+          <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+            {tx("eligeElEjercicioQue", { v1: replacing.name })}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setReplacing(null);
+              setPickerPhase(null);
+            }}
+            className="ml-auto text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {tx("cancelar")}
+          </button>
+        </div>
+      )}
+
       {pickingStation && (
         <div className="flex items-center gap-2 border-b border-brand/30 bg-brand/10 px-3 py-2">
           <LayoutGrid className="size-3.5 text-brand shrink-0" />
           <span className="text-xs font-semibold text-foreground">
-            Elige un ejercicio para la estación {pickingStation.stationIdx + 1}
+            {tx("eligeUnEjercicioPara", { v1: pickingStation.stationIdx + 1 })}
           </span>
           <button
             type="button"
@@ -825,7 +1066,7 @@ export function StepExercises({
             }}
             className="ml-auto text-xs font-semibold text-muted-foreground hover:text-foreground"
           >
-            Cancelar
+            {tx("cancelar")}
           </button>
         </div>
       )}
@@ -846,7 +1087,7 @@ export function StepExercises({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar ejercicios…"
+                placeholder={tx("buscarEjercicios")}
                 className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground"
               />
             </div>
@@ -882,10 +1123,10 @@ export function StepExercises({
                   {search ||
                   libCategoryFilter !== "all" ||
                   hasPickerFilters(pickerFilters)
-                    ? "Sin resultados para ese filtro"
+                    ? tx("sinResultadosParaEse")
                     : libraryExercises.length === 0
-                      ? "No hay ejercicios en la biblioteca"
-                      : "Todos los ejercicios están en la sesión"}
+                      ? tx("noHayEjerciciosEn")
+                      : tx("todosLosEjerciciosEstan")}
                 </p>
                 <div className="mt-4 flex flex-col items-center gap-2">
                   <button
@@ -894,12 +1135,12 @@ export function StepExercises({
                     className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
                   >
                     <Plus className="size-3.5" />
-                    Crear ejercicio rápido
+                    {tx("crearEjercicioRapido")}
                   </button>
                   {refreshingLibrary ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <Loader2 className="size-3 animate-spin" />
-                      Actualizando biblioteca…
+                      {tx("actualizandoBiblioteca")}
                     </span>
                   ) : null}
                 </div>
@@ -927,7 +1168,7 @@ export function StepExercises({
                         rel="noopener noreferrer"
                         onClick={rememberPickTarget}
                         draggable={false}
-                        title="Ver la ficha del ejercicio"
+                        title={tx("verLaFichaDel")}
                         className="min-w-0 break-words hover:text-brand hover:underline"
                       >
                         {ex.name}
@@ -947,7 +1188,7 @@ export function StepExercises({
                   </div>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                     <Clock className="size-3" />
-                    {ex.durationMinutes} min
+                    {ex.durationMinutes}{" "}{tx("min")}
                   </span>
                   <NextLink
                     href={pickExerciseHref(ex.id, pickerId, "sesion")}
@@ -957,26 +1198,34 @@ export function StepExercises({
                       e.stopPropagation();
                       rememberPickTarget();
                     }}
-                    title="Ver ficha completa del ejercicio"
+                    title={tx("verFichaCompletaDel")}
                     className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <ExternalLink className="size-3.5" />
                   </NextLink>
                   <button
                     type="button"
-                    onClick={() =>
-                      pickingStation
-                        ? setStationExercise(
-                            pickingStation.itemIdx,
-                            pickingStation.stationIdx,
-                            ex
-                          )
-                        : addExercise(ex, activeAddPhase)
-                    }
+                    onClick={() => {
+                      if (pickingStation) {
+                        setStationExercise(
+                          pickingStation.itemIdx,
+                          pickingStation.stationIdx,
+                          ex
+                        );
+                      } else if (replacing?.target === "exercise") {
+                        replaceAt(
+                          replacing.idx,
+                          exerciseItemFrom(ex, activeAddPhase)
+                        );
+                        setPickerPhase(null);
+                      } else {
+                        addExercise(ex, activeAddPhase);
+                      }
+                    }}
                     title={
                       pickingStation
-                        ? "Añadir a esta estación"
-                        : `Añadir a ${PHASE_LABELS[activeAddPhase]}`
+                        ? tx("anadirAEstaEstacion")
+                        : tx("anadirAV1", { v1: PHASE_LABELS[activeAddPhase] })
                     }
                     className={cn(
                       "flex size-6 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand transition-colors hover:bg-brand/20",
@@ -993,9 +1242,7 @@ export function StepExercises({
           </div>
           {filteredAvailable.length > VISIBLE_RESULTS && (
             <p className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-              Mostrando {VISIBLE_RESULTS} de {filteredAvailable.length}. Escribe
-              en el buscador para encontrar el resto.
-            </p>
+              {tx("mostrandoV1DeV2", { v1: VISIBLE_RESULTS, v2: filteredAvailable.length })}</p>
           )}
         </>
       )}
@@ -1014,13 +1261,13 @@ export function StepExercises({
           <DialogHeader>
             <DialogTitle>
               {convertingItemKey
-                ? "Convertir en ficha de ejercicio"
-                : "Crear ejercicio rápido"}
+                ? tx("convertirEnFichaDe")
+                : tx("crearEjercicioRapido")}
             </DialogTitle>
             <DialogDescription>
               {convertingItemKey
-                ? "Completa la ficha a partir de tu texto libre. Al guardar, sustituye al texto en esta sesión y queda disponible en tu biblioteca."
-                : "Crea un ejercicio mínimo sin salir de la sesión y añádelo automáticamente a esta sesión."}
+                ? tx("completaLaFichaA")
+                : tx("creaUnEjercicioMinimo")}
             </DialogDescription>
           </DialogHeader>
           <ExerciseForm
@@ -1037,12 +1284,30 @@ export function StepExercises({
       </Dialog>
 
       <div className="space-y-4">
+        <CourtsBoard
+          state={state}
+          update={update}
+          places={places}
+          onReplace={(idx) => startReplace(idx, "exercise")}
+          phasePanel={(phase) =>
+            pickerPhase === phase && !pickingStation ? sourcesPanel : null
+          }
+          onPickExercise={(phase, court) => {
+            pendingCourtRef.current = court;
+            setAddPhaseOverride(phase);
+            setPickingStation(null);
+            setReplacing(null);
+            setSourceTab("library");
+            setSearch("");
+            setPickerPhase(phase);
+          }}
+        />
         {selected.length > 0 && (
           <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border border-border bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
             <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               {timeParts.map((part) => (
                 <span key={part.label}>
-                  {part.label}{" "}
+                  {term(part.label)}{" "}
                   <strong className="font-semibold text-foreground">
                     {formatMinutes(part.minutes)}
                   </strong>
@@ -1050,11 +1315,12 @@ export function StepExercises({
               ))}
             </span>
             <span className="text-sm font-bold text-foreground">
-              Total: {formatMinutes(totalDuration)}
+              {tx("totalV1", { v1: formatMinutes(totalDuration) })}
             </span>
           </div>
         )}
 
+        <DetailsWhen when={state.courts === 2}>
         <div>
           {/* Los 3 bloques predefinidos */}
           <div className="flex flex-col gap-3">
@@ -1076,7 +1342,7 @@ export function StepExercises({
                       {String(PHASE_ORDER.indexOf(phase) + 1).padStart(2, "0")}
                     </span>
                     <span className="font-heading text-lg text-foreground">
-                      {PHASE_LABELS[phase]}
+                      {term(PHASE_LABELS[phase])}
                     </span>
                     {blockDuration > 0 && (
                       <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-lg">
@@ -1096,7 +1362,7 @@ export function StepExercises({
                     {blockEntries.length === 0 ? (
                       dragSrcIdx !== null ? (
                         <div className="w-full rounded-xl border-2 border-dashed border-brand bg-brand/5 py-4 text-center text-xs text-muted-foreground">
-                          Suelta aquí para moverlo a este bloque
+                          {tx("sueltaAquiParaMoverlo")}
                         </div>
                       ) : null
                     ) : (
@@ -1122,11 +1388,13 @@ export function StepExercises({
                               <div
                                 draggable={
                                   !isEditingDuration &&
-                                  focusedTextIdx !== flatIdx
+                                  focusedTextIdx !== flatIdx &&
+                                  replacing?.idx !== flatIdx
                                 }
                                 onDragStart={(e) =>
                                   !isEditingDuration &&
                                   focusedTextIdx !== flatIdx &&
+                                  replacing?.idx !== flatIdx &&
                                   onTimelineDragStart(e, flatIdx)
                                 }
                                 onDragEnd={() => {
@@ -1149,7 +1417,9 @@ export function StepExercises({
                                     : "border-border hover:border-brand/30 cursor-grab active:cursor-grabbing"
                                 )}
                               >
-                                <div className="flex items-center gap-2 px-3 py-2.5">
+                                {/* En el móvil: título y descripción a todo el ancho y
+                                    los botones en una fila debajo. */}
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2.5 sm:flex-nowrap">
                                   <div
                                     className={cn(
                                       "w-0.5 h-8 rounded-full shrink-0",
@@ -1157,7 +1427,7 @@ export function StepExercises({
                                     )}
                                   />
                                   <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 transition-colors" />
-                                  <div className="flex-1 min-w-0">
+                                  <div className="min-w-0 flex-[1_1_calc(100%-3rem)] sm:flex-1">
                                     {isTextItem(ex) ? (
                                       <div className="space-y-1">
                                         <input
@@ -1169,7 +1439,7 @@ export function StepExercises({
                                             })
                                           }
                                           maxLength={120}
-                                          placeholder="Título (opcional)"
+                                          placeholder={tx("tituloOpcional")}
                                           className="w-full cursor-text rounded-lg border border-transparent bg-transparent px-0.5 text-sm font-semibold leading-snug text-foreground placeholder:font-normal placeholder:text-muted-foreground/60 focus:border-brand/50 focus:bg-background focus:px-2 focus:py-1 focus:outline-none focus:ring-1 focus:ring-brand/40"
                                         />
                                         <textarea
@@ -1187,22 +1457,22 @@ export function StepExercises({
                                           autoFocus={!ex.freeText && !ex.title}
                                           rows={2}
                                           maxLength={2000}
-                                          placeholder="Escribe aquí: explicación, juego, consigna, descanso…"
+                                          placeholder={tx("escribeAquiExplicacionJuego")}
                                           className="field-sizing-content min-h-[2.75rem] w-full cursor-text resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-sm leading-snug text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
                                         />
                                       </div>
                                     ) : isWarmupItem(ex) ? (
                                       <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
                                         <Coffee className="size-3.5 text-sky-400 shrink-0" />
-                                        Descanso
+                                        {tx("descanso")}
                                       </p>
                                     ) : isStationsItem(ex) ? (
                                       <p className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate leading-snug">
                                         <LayoutGrid className="size-3.5 text-emerald-500 shrink-0" />
-                                        Estaciones ({ex.stations?.length ?? 0})
+                                        {tx("estaciones2")}{ex.stations?.length ?? 0})
                                       </p>
                                     ) : (
-                                      <p className="text-sm font-medium text-foreground truncate leading-snug">
+                                      <p className="text-sm font-medium text-foreground line-clamp-2 break-words leading-snug">
                                         {ex.name}
                                       </p>
                                     )}
@@ -1224,115 +1494,241 @@ export function StepExercises({
                                             ex.category)}
                                       </span>
                                     </div>
+                                    {!isTextItem(ex) &&
+                                      !isWarmupItem(ex) &&
+                                      !isStationsItem(ex) && (
+                                        <ExerciseQuickDescription
+                                          className="mt-1"
+                                          text={
+                                            libraryExercises.find(
+                                              (lib) => lib.id === ex.exerciseId
+                                            )?.description
+                                          }
+                                        />
+                                      )}
                                   </div>
 
-                                  {isEditingDuration ? (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <input
-                                        ref={durationInputRef}
-                                        type="number"
-                                        min={1}
-                                        max={300}
-                                        value={durationEditValue}
-                                        onChange={(e) =>
-                                          setDurationEditValue(e.target.value)
-                                        }
-                                        onBlur={() =>
-                                          commitDurationEdit(flatIdx)
-                                        }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            commitDurationEdit(flatIdx);
+                                  <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0">
+                                    {isEditingDuration ? (
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <input
+                                          ref={durationInputRef}
+                                          type="number"
+                                          min={1}
+                                          max={300}
+                                          value={durationEditValue}
+                                          onChange={(e) =>
+                                            setDurationEditValue(e.target.value)
                                           }
-                                          if (e.key === "Escape")
-                                            setEditingDurationIdx(null);
-                                        }}
-                                        className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
-                                      />
-                                      <span className="text-xs text-muted-foreground">
-                                        min
-                                      </span>
-                                    </div>
-                                  ) : isTextItem(ex) &&
-                                    ex.overrideDuration === null ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => startEditDuration(flatIdx)}
-                                      title="Poner duración (se convierte en actividad)"
-                                      className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted"
-                                    >
-                                      <Clock className="size-3" />
-                                      <span>Sin duración</span>
-                                    </button>
-                                  ) : (
-                                    <div className="flex items-center gap-0.5 shrink-0">
+                                          onBlur={() =>
+                                            commitDurationEdit(flatIdx)
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              commitDurationEdit(flatIdx);
+                                            }
+                                            if (e.key === "Escape")
+                                              setEditingDurationIdx(null);
+                                          }}
+                                          className="w-14 h-7 text-xs text-center bg-background border border-brand/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand/40"
+                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                          {tx("min")}
+                                        </span>
+                                      </div>
+                                    ) : isTextItem(ex) &&
+                                      ex.overrideDuration === null ? (
                                       <button
                                         type="button"
                                         onClick={() =>
                                           startEditDuration(flatIdx)
                                         }
-                                        title={
-                                          isStationsItem(ex)
-                                            ? "Duración de cada estación"
-                                            : "Editar duración"
-                                        }
-                                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
+                                        title={tx("ponerDuracionSeConvierte")}
+                                        className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors shrink-0 px-1.5 py-1 rounded-lg hover:bg-muted"
                                       >
                                         <Clock className="size-3" />
-                                        <span>
-                                          {effectiveDuration} min
-                                          {isStationsItem(ex)
-                                            ? "/estación"
-                                            : ""}
-                                        </span>
-                                        <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
+                                        <span>{tx("sinDuracion")}</span>
                                       </button>
-                                      {isTextItem(ex) && (
+                                    ) : (
+                                      <div className="flex items-center gap-0.5 shrink-0">
                                         <button
                                           type="button"
                                           onClick={() =>
-                                            patchItem(flatIdx, {
-                                              overrideDuration: null,
-                                            })
+                                            startEditDuration(flatIdx)
                                           }
-                                          title="Quitar duración (queda como anotación)"
-                                          className="flex size-5 items-center justify-center rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                          title={
+                                            isStationsItem(ex)
+                                              ? tx("duracionTotalDeLas")
+                                              : "Editar duración"
+                                          }
+                                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-lg hover:bg-muted group/dur"
                                         >
-                                          <X className="size-3" />
+                                          <Clock className="size-3" />
+                                          <span>
+                                            {tx("v1MinV2", { v1: effectiveDuration, v2: isStationsItem(ex)
+                                              ? tx("inTotalSuffix")
+                                              : "" })}
+                                          </span>
+                                          <ChevronDown className="size-2.5 opacity-0 group-hover/dur:opacity-100 transition-opacity" />
                                         </button>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setExpandedIdx(
-                                        isExpanded ? null : flatIdx
-                                      )
-                                    }
-                                    title="Ajustes"
-                                    className={cn(
-                                      "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
-                                      isExpanded || ex.notes || ex.aspecto
-                                        ? "text-brand bg-brand/10"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
+                                        {isTextItem(ex) && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              patchItem(flatIdx, {
+                                                overrideDuration: null,
+                                              })
+                                            }
+                                            title={tx("quitarDuracionQuedaComo")}
+                                            className="flex size-5 items-center justify-center rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                          >
+                                            <X className="size-3" />
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
-                                  >
-                                    <StickyNote className="size-3.5" />
-                                  </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeExercise(ex.exerciseId)
-                                    }
-                                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
-                                  >
-                                    <X className="size-3.5" />
-                                  </button>
+                                    {!isTextItem(ex) &&
+                                      !isWarmupItem(ex) &&
+                                      !isStationsItem(ex) && (
+                                        <NextLink
+                                          href={`/exercises/${ex.exerciseId}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          draggable={false}
+                                          onClick={(e) => e.stopPropagation()}
+                                          title={tx("verLaFichaCompleta")}
+                                          aria-label={tx("verLaFichaCompleta2")}
+                                          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        >
+                                          <ExternalLink className="size-3.5" />
+                                        </NextLink>
+                                      )}
+
+                                    {onAutoChange && canAutoChange?.(ex) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onAutoChange(flatIdx)}
+                                        disabled={autoChangingIdx !== null}
+                                        title={tx("cambiarPorOtroEjercicio")}
+                                        className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                      >
+                                        {autoChangingIdx === flatIdx ? (
+                                          <Loader2 className="size-3 animate-spin" />
+                                        ) : (
+                                          <Shuffle className="size-3" />
+                                        )}
+                                        <span className="hidden sm:inline">
+                                          {tx("cambiar")}
+                                        </span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setReplaceMenuIdx(
+                                          replaceMenuIdx === flatIdx
+                                            ? null
+                                            : flatIdx
+                                        )
+                                      }
+                                      aria-expanded={replaceMenuIdx === flatIdx}
+                                      title={tx("sustituirPorOtroEjercicio")}
+                                      className={cn(
+                                        "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold transition-colors",
+                                        replaceMenuIdx === flatIdx ||
+                                          replacing?.idx === flatIdx
+                                          ? "bg-brand/15 text-foreground"
+                                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                      )}
+                                    >
+                                      <RefreshCw className="size-3" />
+                                      <span className="hidden sm:inline">
+                                        {tx("sustituir")}
+                                      </span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setExpandedIdx(
+                                          isExpanded ? null : flatIdx
+                                        )
+                                      }
+                                      title={tx("ajustes")}
+                                      className={cn(
+                                        "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
+                                        isExpanded || ex.notes || ex.aspecto
+                                          ? "text-brand bg-brand/10"
+                                          : "text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100"
+                                      )}
+                                    >
+                                      <StickyNote className="size-3.5" />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeExercise(ex.exerciseId)
+                                      }
+                                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
+                                    >
+                                      <X className="size-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
+
+                                {replacing?.idx === flatIdx && (
+                                  <div
+                                    ref={replacePanelRef}
+                                    className="scroll-mt-24 border-t border-border/40 px-3 pb-3 pt-2"
+                                  >
+                                    {replacing.target === "exercise"
+                                      ? state.courts === 2
+                                        ? null
+                                        : sourcesPanel
+                                      : stationsDraftPhase
+                                        ? stationsDraftPanel
+                                        : null}
+                                  </div>
+                                )}
+
+                                {replaceMenuIdx === flatIdx && (
+                                  <div className="flex flex-wrap items-center gap-1.5 border-t border-border/40 px-3 py-2">
+                                    <span className="text-[11px] font-semibold text-muted-foreground">
+                                      {tx("sustituirPor")}
+                                    </span>
+                                    {(
+                                      [
+                                        ["exercise", "Ejercicio", Dumbbell],
+                                        ["text", "Texto", Type],
+                                        ["warmup", "Descanso", Coffee],
+                                        ["stations", "Estaciones", LayoutGrid],
+                                      ] as const
+                                    ).map(([kind, label, Icon]) => (
+                                      <button
+                                        key={kind}
+                                        type="button"
+                                        onClick={() =>
+                                          startReplace(flatIdx, kind)
+                                        }
+                                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
+                                      >
+                                        <Icon className="size-3" />
+                                        {label}
+                                      </button>
+                                    ))}
+                                    <button
+                                      type="button"
+                                      onClick={() => setReplaceMenuIdx(null)}
+                                      className="ml-auto text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                                    >
+                                      {tx("cancelar")}
+                                    </button>
+                                  </div>
+                                )}
 
                                 {isStationsItem(ex) && (
                                   <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-2.5">
@@ -1344,7 +1740,7 @@ export function StepExercises({
                                           freeText: e.target.value,
                                         })
                                       }
-                                      placeholder="Explica el ejercicio de estaciones (opcional)…"
+                                      placeholder={tx("explicaElEjercicioDe")}
                                       className="field-sizing-content w-full resize-none rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand/40"
                                     />
                                     <ul className="space-y-2">
@@ -1422,7 +1818,7 @@ export function StepExercises({
                                                         : "border-border text-muted-foreground hover:border-brand/40"
                                                     )}
                                                   >
-                                                    Ejercicio
+                                                    {tx("ejercicio")}
                                                   </button>
                                                   <button
                                                     type="button"
@@ -1444,7 +1840,7 @@ export function StepExercises({
                                                         : "border-border text-muted-foreground hover:border-brand/40"
                                                     )}
                                                   >
-                                                    Texto libre
+                                                    {tx("textoLibre")}
                                                   </button>
                                                 </div>
                                                 {station.kind === "exercise" ? (
@@ -1473,11 +1869,10 @@ export function StepExercises({
                                                         flatIdx &&
                                                       pickingStation?.stationIdx ===
                                                         stationIdx
-                                                        ? "Elige en la Biblioteca →"
+                                                        ? tx("eligeEnLaBiblioteca")
                                                         : station.name || (
                                                             <span className="italic text-muted-foreground">
-                                                              Elige un
-                                                              ejercicio…
+                                                              {tx("eligeUnEjercicio")}
                                                             </span>
                                                           )}
                                                     </button>
@@ -1489,7 +1884,7 @@ export function StepExercises({
                                                         onClick={(e) =>
                                                           e.stopPropagation()
                                                         }
-                                                        title="Ver ficha completa del ejercicio"
+                                                        title={tx("verFichaCompletaDel")}
                                                         className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                                       >
                                                         <ExternalLink className="size-3" />
@@ -1510,7 +1905,7 @@ export function StepExercises({
                                                         }
                                                       )
                                                     }
-                                                    placeholder="Describe la estación…"
+                                                    placeholder={tx("describeLaEstacion")}
                                                     className="w-full resize-none rounded-lg border-0 bg-transparent text-xs text-foreground focus:outline-none placeholder:text-muted-foreground"
                                                   />
                                                 )}
@@ -1530,7 +1925,7 @@ export function StepExercises({
                                                 title={
                                                   stationsCount <=
                                                   STATION_COUNT_MIN
-                                                    ? `Mínimo ${STATION_COUNT_MIN} estaciones`
+                                                    ? tx("minimoV1Estaciones", { v1: STATION_COUNT_MIN })
                                                     : "Quitar estación"
                                                 }
                                                 className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
@@ -1552,7 +1947,7 @@ export function StepExercises({
                                       className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand hover:text-brand/80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand"
                                     >
                                       <Plus className="size-3" />
-                                      Añadir estación
+                                      {tx("anadirEstacion")}
                                       {(ex.stations?.length ?? 0) >=
                                         STATION_COUNT_MAX &&
                                         ` (máximo ${STATION_COUNT_MAX})`}
@@ -1564,7 +1959,7 @@ export function StepExercises({
                                   <div className="px-3 pb-3 border-t border-border/40 pt-3 space-y-3">
                                     <div className="space-y-1.5">
                                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                        Bloque
+                                        {tx("bloque")}
                                       </label>
                                       <div className="flex flex-wrap gap-1.5">
                                         {PHASE_ORDER.map((p) => (
@@ -1581,7 +1976,7 @@ export function StepExercises({
                                                 : "bg-background border-border text-muted-foreground hover:text-foreground"
                                             )}
                                           >
-                                            {PHASE_LABELS[p]}
+                                            {term(PHASE_LABELS[p])}
                                           </button>
                                         ))}
                                       </div>
@@ -1591,7 +1986,7 @@ export function StepExercises({
                                       <div className="space-y-1.5 rounded-lg border border-border/60 bg-muted/20 p-2.5">
                                         <div className="flex items-center justify-between gap-2">
                                           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                            ¿Es un ejercicio?
+                                            {tx("esUnEjercicio")}
                                           </label>
                                           <button
                                             type="button"
@@ -1605,12 +2000,11 @@ export function StepExercises({
                                             className="inline-flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-1 text-[10px] font-bold text-brand transition-colors hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-40"
                                           >
                                             <Plus className="size-3" />
-                                            Crear ficha de ejercicio
+                                            {tx("crearFichaDeEjercicio")}
                                           </button>
                                         </div>
                                         <p className="text-[10px] text-muted-foreground">
-                                          Si no, dinos al menos de qué tipo es
-                                          para que cuente en las estadísticas:
+                                          {tx("siNoDinosAl")}
                                         </p>
                                         <div className="flex flex-wrap gap-1.5">
                                           {ASPECTO_JUEGO_VALUES.map((a) => (
@@ -1630,7 +2024,7 @@ export function StepExercises({
                                                   : "bg-background border-border text-muted-foreground hover:text-foreground"
                                               )}
                                             >
-                                              {ASPECTO_JUEGO_LABELS[a]}
+                                              {term(ASPECTO_JUEGO_LABELS[a])}
                                             </button>
                                           ))}
                                         </div>
@@ -1647,7 +2041,7 @@ export function StepExercises({
                                       placeholder={
                                         isTextItem(ex)
                                           ? "Notas…"
-                                          : "Notas para este ejercicio…"
+                                          : tx("notasParaEsteEjercicio")
                                       }
                                       rows={2}
                                       className="w-full text-xs bg-muted/40 border border-border/50 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-brand/40 focus:border-brand/50 transition-colors text-foreground placeholder:text-muted-foreground resize-none"
@@ -1662,43 +2056,18 @@ export function StepExercises({
                     )}
 
                     {/* Acciones para añadir directamente a este bloque */}
-                    {stationsDraftPhase === phase ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-2 py-1.5">
-                        <span className="text-[10px] font-semibold text-foreground whitespace-nowrap">
-                          ¿Cuántas?
-                        </span>
-                        <input
-                          type="number"
-                          min={STATION_COUNT_MIN}
-                          max={STATION_COUNT_MAX}
-                          value={stationsDraftCount}
-                          onChange={(e) =>
-                            setStationsDraftCount(Number(e.target.value))
-                          }
-                          className="h-6 w-12 rounded-md border border-border bg-background px-1 text-xs text-center tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-brand/40"
-                        />
-                        <button
-                          type="button"
-                          onClick={confirmStationsDraft}
-                          className="rounded-md bg-foreground px-2 py-1 text-[10px] font-bold text-background transition-colors hover:bg-foreground/90"
-                        >
-                          Crear
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setStationsDraftPhase(null)}
-                          className="text-[10px] text-muted-foreground hover:text-foreground"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
+                    {stationsDraftPhase === phase &&
+                    replacing?.target !== "stations" ? (
+                      stationsDraftPanel
                     ) : (
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => {
+                            pendingCourtRef.current = null;
                             setAddPhaseOverride(phase);
                             setPickingStation(null);
+                            setReplacing(null);
                             setSourceTab("library");
                             setSearch("");
                             setPickerPhase((current) =>
@@ -1713,7 +2082,7 @@ export function StepExercises({
                           )}
                         >
                           <Dumbbell className="size-3" />
-                          Añadir ejercicio
+                          {tx("anadirEjercicio")}
                         </button>
                         <button
                           type="button"
@@ -1721,7 +2090,7 @@ export function StepExercises({
                           className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
                         >
                           <Type className="size-3" />
-                          Texto libre
+                          {tx("textoLibre")}
                         </button>
                         <button
                           type="button"
@@ -1729,7 +2098,7 @@ export function StepExercises({
                           className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
                         >
                           <Coffee className="size-3" />
-                          Descanso
+                          {tx("descanso")}
                         </button>
                         <button
                           type="button"
@@ -1740,18 +2109,22 @@ export function StepExercises({
                           className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/10"
                         >
                           <LayoutGrid className="size-3" />
-                          Estaciones
+                          {tx("estaciones")}
                         </button>
                       </div>
                     )}
 
-                    {pickerPhase === phase && sourcesPanel}
+                    {state.courts !== 2 &&
+                      pickerPhase === phase &&
+                      replacing?.target !== "exercise" &&
+                      sourcesPanel}
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+        </DetailsWhen>
       </div>
     </>
   );

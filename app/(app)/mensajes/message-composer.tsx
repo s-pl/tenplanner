@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { RecipientOptions } from "@/lib/messages";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 type Target = "coach" | "coaches" | "group" | "student";
 
@@ -37,6 +39,8 @@ export function MessageComposer({
   options: RecipientOptions;
   sportLabel: string;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_mensajes_messagecomposer");
   const router = useRouter();
   const [target, setTarget] = useState<Target>("coach");
   const [recipientId, setRecipientId] = useState("");
@@ -60,25 +64,25 @@ export function MessageComposer({
     if (target === "coaches") {
       return options.coaches.length === 0
         ? `No hay monitores de ${sportLabel} en el club.`
-        : `Lo recibirán los ${options.coaches.length} monitores de ${sportLabel} del club.`;
+        : tx("loRecibiranLosV1", { v1: options.coaches.length, v2: sportLabel });
     }
     if (!recipientId) return null;
     if (target === "group") {
       const g = options.groups.find((x) => x.id === recipientId);
       if (!g) return null;
       return g.contacts === 0
-        ? `El grupo tiene ${g.students} alumnos, pero ninguna familia tiene cuenta todavía: nadie recibirá el mensaje.`
-        : `Lo recibirán las familias del grupo (${g.contacts} contactos con cuenta).`;
+        ? tx("elGrupoTieneV1", { v1: g.students })
+        : tx("loRecibiranLasFamilias", { v1: g.contacts });
     }
     if (target === "student") {
       const s = options.students.find((x) => x.id === recipientId);
       if (!s) return null;
       const who = s.adult
-        ? "al alumno (es mayor de edad)"
-        : "a sus padres o tutores (es menor de edad o no consta su fecha de nacimiento)";
+        ? tx("alAlumnoEsMayor")
+        : tx("aSusPadresO");
       return s.contacts === 0
-        ? `Se enviaría ${who}, pero aún no tiene contactos con cuenta: nadie lo recibirá.`
-        : `Se enviará ${who}.`;
+        ? tx("seEnviariaV1Pero", { v1: who })
+        : tx("seEnviaraV1", { v1: who });
     }
     return null;
   }, [target, recipientId, options, sportLabel]);
@@ -95,11 +99,11 @@ export function MessageComposer({
     setError(null);
     setSent(null);
     if (target !== "coaches" && !recipientId) {
-      setError("Elige el destinatario.");
+      setError(tx("eligeElDestinatario"));
       return;
     }
     if (!title.trim() || !body.trim()) {
-      setError("Escribe el asunto y el mensaje.");
+      setError(tx("escribeElAsuntoY"));
       return;
     }
     setSending(true);
@@ -123,7 +127,7 @@ export function MessageComposer({
         setError(
           typeof data?.error === "string"
             ? data.error
-            : "No se pudo enviar el mensaje."
+            : tx("noSePudoEnviar")
         );
         return;
       }
@@ -139,15 +143,15 @@ export function MessageComposer({
 
   const placeholder =
     target === "coach"
-      ? "Elige un monitor"
+      ? tx("eligeUnMonitor")
       : target === "group"
-        ? "Elige un grupo"
-        : "Elige un alumno";
+        ? tx("eligeUnGrupo")
+        : tx("eligeUnAlumno");
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <p className="mb-2 text-sm font-black text-foreground">Para</p>
+        <p className="mb-2 text-sm font-black text-foreground">{tx("para")}</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TARGETS.map(({ id, label, icon: Icon }) => (
             <button
@@ -163,7 +167,7 @@ export function MessageComposer({
               )}
             >
               <Icon className="size-4 shrink-0" strokeWidth={1.7} />
-              <span className="leading-tight">{label}</span>
+              <span className="leading-tight">{term(label)}</span>
             </button>
           ))}
         </div>
@@ -200,7 +204,7 @@ export function MessageComposer({
                 ? `No hay monitores de ${sportLabel} en el club.`
                 : target === "group"
                   ? `No hay grupos de ${sportLabel} en el club.`
-                  : "No hay alumnos en el club."}
+                  : tx("noHayAlumnosEn")}
             </p>
           )}
         </div>
@@ -213,7 +217,7 @@ export function MessageComposer({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="msg-title">Asunto</Label>
+        <Label htmlFor="msg-title">{tx("asunto")}</Label>
         <Input
           id="msg-title"
           value={title}
@@ -223,7 +227,7 @@ export function MessageComposer({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="msg-body">Mensaje</Label>
+        <Label htmlFor="msg-body">{tx("mensaje")}</Label>
         <Textarea
           id="msg-body"
           value={body}
@@ -241,7 +245,7 @@ export function MessageComposer({
             onChange={(e) => setAllowReplies(e.target.checked)}
             className="size-4 accent-[var(--brand)]"
           />
-          Permitir que las familias respondan
+          {tx("permitirQueLasFamilias")}
         </label>
       )}
 
@@ -262,7 +266,7 @@ export function MessageComposer({
         ) : (
           <Send className="size-4" />
         )}
-        Enviar
+        {tx("enviar")}
       </Button>
     </form>
   );

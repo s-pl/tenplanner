@@ -7,11 +7,15 @@ import { createClient } from "@/lib/supabase/server";
 import { getBooleanSetting } from "@/lib/app-settings";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { getActiveSport } from "@/lib/sports";
-import type { GroupScheduleEntry } from "@/lib/groups/schedule";
+import { sortSchedule, type GroupScheduleEntry } from "@/lib/groups/schedule";
+import { weeklyScheduleSchema } from "@/lib/groups/schedule-schema";
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
+  // Días de la semana con hora de inicio y de finalización: al crear un grupo
+  // hace falta al menos un día (sin repetir).
+  weeklySchedule: weeklyScheduleSchema,
 });
 
 export async function GET(request: Request) {
@@ -176,6 +180,7 @@ export async function POST(request: Request) {
       coachId: user.id,
       name: parsed.data.name,
       description: parsed.data.description ?? null,
+      weeklySchedule: sortSchedule(parsed.data.weeklySchedule),
       clubId,
       sport,
     })

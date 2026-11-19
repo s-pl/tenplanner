@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CalendarDays, Copy, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { retitleForDate, titleForCopy } from "@/lib/sessions/retitle";
+import { useTranslations } from "next-intl";
 
 export interface DialogSession {
   id: string;
@@ -36,7 +38,8 @@ function toLocalInput(date: Date) {
  * Diálogo para mover una sesión a otra fecha/hora o duplicarla.
  * - "move": cambia la fecha; si el nombre es un código AAMMDD_Grupo, se actualiza.
  * - "duplicate": copia completa (plan, textos libres, alumnos) en la fecha elegida;
- *   por defecto, una semana después.
+ *   por defecto, una semana después. Desde aquí también se puede abrir el
+ *   asistente con la sesión cargada para cambiarla antes de guardar.
  */
 export function SessionDateDialog({
   mode,
@@ -51,6 +54,7 @@ export function SessionDateDialog({
   onOpenChange: (open: boolean) => void;
   onDone: (result: DialogResult) => void;
 }) {
+  const tx = useTranslations("ui.s_app_sessiondatedialog");
   const original = new Date(session.scheduledAt);
   const initial = new Date(original);
   if (mode === "duplicate") initial.setDate(initial.getDate() + 7);
@@ -103,7 +107,7 @@ export function SessionDateDialog({
               }),
             });
       if (!res.ok) {
-        setError("No se pudo guardar. Inténtalo de nuevo.");
+        setError(tx("noSePudoGuardar"));
         return;
       }
       const json = (await res.json()) as { data: { id: string } };
@@ -117,7 +121,7 @@ export function SessionDateDialog({
         scheduledAt,
       });
     } catch {
-      setError("Error de red. Inténtalo de nuevo.");
+      setError(tx("errorDeRedIntentalo"));
     } finally {
       setSaving(false);
     }
@@ -142,8 +146,8 @@ export function SessionDateDialog({
               className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
             >
               {mode === "move"
-                ? "Nueva fecha y hora"
-                : "Fecha y hora de la copia"}
+                ? tx("nuevaFechaYHora")
+                : tx("fechaYHoraDe")}
             </label>
             <input
               id="session-date-input"
@@ -160,7 +164,7 @@ export function SessionDateDialog({
                 htmlFor="session-copy-title"
                 className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
               >
-                Nombre de la copia
+                {tx("nombreDeLaCopia")}
               </label>
               <input
                 id="session-copy-title"
@@ -173,20 +177,31 @@ export function SessionDateDialog({
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-[#D6FF38] focus:outline-none"
               />
               <p className="text-xs text-muted-foreground">
-                Se copia el plan completo y los alumnos. No se copian las notas
-                ni la asistencia de la sesión original.
+                {tx("seCopiaElPlan")}
               </p>
             </div>
           )}
 
           {movedTitle && (
             <p className="text-xs text-muted-foreground">
-              El nombre pasará a <strong>{movedTitle}</strong>.
+              {tx("elNombrePasaraA")}{" "}<strong>{movedTitle}</strong>.
             </p>
           )}
 
           {error && (
             <p className="text-sm font-medium text-destructive">{error}</p>
+          )}
+
+          {mode === "duplicate" && (
+            <p className="text-xs text-muted-foreground">
+              ¿Quieres cambiar ejercicios, grupo o repetirla varias semanas?{" "}
+              <Link
+                href={`/sessions/new?from=${session.id}`}
+                className="font-semibold text-foreground underline underline-offset-2"
+              >
+                {tx("editarAntesDeGuardar")}
+              </Link>
+            </p>
           )}
 
           <div className="flex justify-end gap-2">
@@ -195,7 +210,7 @@ export function SessionDateDialog({
               onClick={() => onOpenChange(false)}
               className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
-              Cancelar
+              {tx("cancelar")}
             </button>
             <button
               type="button"

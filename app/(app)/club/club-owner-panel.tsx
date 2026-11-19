@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { SPORT_LABELS, SPORT_OPTIONS, type Sport } from "@/lib/sport-constants";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 interface Member {
   id: string;
@@ -49,6 +51,8 @@ export function ClubOwnerPanel({
   initialInvites: Invite[];
   defaultSport?: Sport;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_club_clubownerpanel");
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
   const [editingMembers, setEditingMembers] = useState(false);
@@ -85,7 +89,7 @@ export function ClubOwnerPanel({
         setError(
           typeof body?.error === "string"
             ? body.error
-            : "No se pudo crear la invitación."
+            : tx("noSePudoCrear")
         );
         return;
       }
@@ -94,8 +98,8 @@ export function ClubOwnerPanel({
         ...prev.filter((i) => i.id !== body.data.id),
       ]);
       const sent = body.emailSent
-        ? `Invitación enviada a ${body.data.email}.`
-        : "No hemos podido enviar el correo. Copia el enlace de la lista y envíaselo tú.";
+        ? tx("invitacionEnviadaAV1", { v1: body.data.email })
+        : tx("noHemosPodidoEnviar");
       setNotice(
         body.profileCreated
           ? `${sent} Se ha creado su ficha (pendiente de rellenar) en Fichas de monitores.`
@@ -119,7 +123,7 @@ export function ClubOwnerPanel({
   async function removeMember(member: Member) {
     if (
       !window.confirm(
-        `¿Desvincular a ${member.name} del club? Dejará de ver el contenido del club.`
+        tx("desvincularAV1Del", { v1: member.name })
       )
     )
       return;
@@ -129,7 +133,7 @@ export function ClubOwnerPanel({
         method: "DELETE",
       });
       if (!res.ok) {
-        setError("No se pudo desvincular al monitor.");
+        setError(tx("noSePudoDesvincular"));
         return;
       }
       setMembers((prev) => prev.filter((m) => m.id !== member.id));
@@ -155,17 +159,17 @@ export function ClubOwnerPanel({
       <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
         <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-foreground/70">
           <Mail className="size-4" />
-          Invitar monitor
+          {tx("invitarMonitor")}
         </h2>
         <form onSubmit={onInvite} className="mt-3 space-y-2">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="flex-1 space-y-1">
               <Label htmlFor="invite-name" className="sr-only">
-                Nombre del monitor
+                {tx("nombreDelMonitor")}
               </Label>
               <Input
                 id="invite-name"
-                placeholder="Nombre"
+                placeholder={tx("nombre")}
                 value={inviteeName}
                 onChange={(e) => setInviteeName(e.target.value)}
                 autoComplete="off"
@@ -174,12 +178,12 @@ export function ClubOwnerPanel({
             </div>
             <div className="flex-1 space-y-1">
               <Label htmlFor="invite-email" className="sr-only">
-                Email del monitor
+                {tx("emailDelMonitor")}
               </Label>
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="monitor@email.com"
+                placeholder={tx("monitorEmailCom")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -190,7 +194,7 @@ export function ClubOwnerPanel({
               className="h-11 shrink-0 rounded-full font-black"
             >
               {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Invitar
+              {tx("invitar")}
             </Button>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -206,7 +210,7 @@ export function ClubOwnerPanel({
                     : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
-                {option.label}
+                {term(option.label)}
               </button>
             ))}
           </div>
@@ -214,12 +218,11 @@ export function ClubOwnerPanel({
         {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
         {notice && <p className="mt-2 text-xs text-foreground/70">{notice}</p>}
         <p className="mt-2 text-xs text-foreground/50">
-          Enviamos la invitación por email. Si prefieres, también puedes copiar
-          el enlace de la lista y mandárselo tú.
+          {tx("enviamosLaInvitacionPor")}
         </p>
         {typeof seatCount === "number" && (
           <p className="mt-1 text-xs text-foreground/50">
-            Monitores previstos: {seatCount} · vinculados: {members.length}
+            {tx("monitoresPrevistosV1Vinculados", { v1: seatCount, v2: members.length })}
           </p>
         )}
       </div>
@@ -227,7 +230,7 @@ export function ClubOwnerPanel({
       {invites.length > 0 && (
         <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
           <h2 className="text-sm font-black uppercase tracking-wide text-foreground/70">
-            Invitaciones pendientes
+            {tx("invitacionesPendientes")}
           </h2>
           <ul className="mt-3 space-y-2">
             {invites.map((invite) => (
@@ -240,7 +243,7 @@ export function ClubOwnerPanel({
                     ? `${invite.inviteeName} · ${invite.email}`
                     : invite.email}
                   <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70">
-                    {SPORT_LABELS[invite.sport]}
+                    {term(SPORT_LABELS[invite.sport])}
                   </span>
                 </span>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -248,7 +251,7 @@ export function ClubOwnerPanel({
                     type="button"
                     onClick={() => copyLink(invite)}
                     className="flex size-8 items-center justify-center rounded-full text-foreground/60 transition-colors hover:bg-[#F4F4F1] hover:text-foreground"
-                    aria-label="Copiar enlace de invitación"
+                    aria-label={tx("copiarEnlaceDeInvitacion")}
                   >
                     {copiedId === invite.id ? (
                       <Check className="size-4 text-brand" />
@@ -260,7 +263,7 @@ export function ClubOwnerPanel({
                     type="button"
                     onClick={() => revoke(invite.id)}
                     className="flex size-8 items-center justify-center rounded-full text-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Anular invitación"
+                    aria-label={tx("anularInvitacion")}
                   >
                     <X className="size-4" />
                   </button>
@@ -274,7 +277,7 @@ export function ClubOwnerPanel({
       <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-black uppercase tracking-wide text-foreground/70">
-            Monitores vinculados
+            {tx("monitoresVinculados")}
           </h2>
           {members.length > 0 && (
             <Button
@@ -289,7 +292,7 @@ export function ClubOwnerPanel({
         </div>
         {members.length === 0 ? (
           <p className="mt-2 text-sm text-foreground/50">
-            Todavía no hay monitores vinculados a este club.
+            {tx("todaviaNoHayMonitores")}
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -308,7 +311,7 @@ export function ClubOwnerPanel({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70">
-                    {SPORT_LABELS[member.sport]}
+                    {term(SPORT_LABELS[member.sport])}
                   </span>
                   {editingMembers && (
                     <button

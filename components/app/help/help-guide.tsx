@@ -23,6 +23,8 @@ import {
   Users2,
   Wrench,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 interface Step {
   title: string;
@@ -31,6 +33,7 @@ interface Step {
 }
 
 function StepList({ steps }: { steps: Step[] }) {
+  const term = useTerm();
   return (
     <ol className="space-y-3">
       {steps.map((step, i) => (
@@ -47,10 +50,10 @@ function StepList({ steps }: { steps: Step[] }) {
                 className="size-4 shrink-0 text-foreground/50"
                 strokeWidth={1.8}
               />
-              <p className="text-sm font-black text-foreground">{step.title}</p>
+              <p className="text-sm font-black text-foreground">{term(step.title)}</p>
             </div>
             <p className="mt-1 text-sm leading-6 text-foreground/66">
-              {step.description}
+              {term(step.description)}
             </p>
           </div>
         </li>
@@ -67,6 +70,7 @@ interface Section {
 }
 
 function SectionList({ sections }: { sections: Section[] }) {
+  const term = useTerm();
   return (
     <div className="space-y-3">
       {sections.map((section) => (
@@ -80,7 +84,7 @@ function SectionList({ sections }: { sections: Section[] }) {
               <section.icon className="size-4" strokeWidth={1.8} />
             </span>
             <span className="flex-1 text-sm font-black text-foreground">
-              {section.title}
+              {term(section.title)}
             </span>
             <span className="text-foreground/40 transition-transform group-open:rotate-90">
               ›
@@ -92,7 +96,7 @@ function SectionList({ sections }: { sections: Section[] }) {
                 key={i}
                 className="list-disc text-sm leading-6 text-foreground/66 marker:text-brand"
               >
-                {item}
+                {term(item)}
               </li>
             ))}
           </ul>
@@ -437,7 +441,9 @@ export function HelpGuide({
   defaultTab: string;
   defaultLevel?: "quick" | "full";
 }) {
-  const [tab, setTab] = useState(defaultTab);
+  const tx = useTranslations("ui.s_help_helpguide");
+  // La pestaña de administradores ya no se muestra en el centro de ayuda.
+  const [tab, setTab] = useState(defaultTab === "admin" ? "coach" : defaultTab);
   const [level, setLevel] = useState<"quick" | "full">(defaultLevel);
 
   const stepsByTab: Record<string, Step[]> = {
@@ -464,7 +470,7 @@ export function HelpGuide({
               : "text-foreground/60 hover:text-foreground"
           )}
         >
-          Guía rápida
+          {tx("guiaRapida")}
         </button>
         <button
           type="button"
@@ -476,18 +482,17 @@ export function HelpGuide({
               : "text-foreground/60 hover:text-foreground"
           )}
         >
-          Guía completa
+          {tx("guiaCompleta")}
         </button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="items-start">
         <TabsList className="rounded-lg border border-foreground/12 bg-card/90">
-          <TabsTrigger value="coach">Monitores</TabsTrigger>
-          <TabsTrigger value="admin">Administradores</TabsTrigger>
-          <TabsTrigger value="club">Clubs patrocinadores</TabsTrigger>
+          <TabsTrigger value="coach">{tx("monitores")}</TabsTrigger>
+          <TabsTrigger value="club">{tx("clubes")}</TabsTrigger>
         </TabsList>
 
-        {(["coach", "admin", "club"] as const).map((key) => (
+        {(["coach", "club"] as const).map((key) => (
           <TabsContent key={key} value={key} className="mt-4 w-full">
             {level === "quick" ? (
               <StepList steps={stepsByTab[key]} />

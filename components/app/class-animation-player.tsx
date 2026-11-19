@@ -47,6 +47,8 @@ import {
   type AnimationStep,
   type AnimationTimeline,
 } from "@/lib/classes/animation";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 // ---------------------------------------------------------------------
 // Botón de play (ficha de presentación y ficha de la clase)
@@ -135,6 +137,7 @@ export function ClassAnimationButton({
   variant?: "icon" | "hero";
   className?: string;
 }) {
+  const tx = useTranslations("ui.s_app_classanimationplayer");
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<ClassData | null>(null);
   const [error, setError] = useState(false);
@@ -198,14 +201,14 @@ export function ClassAnimationButton({
           <span className="flex size-8 items-center justify-center rounded-full bg-[#050505] text-[#D6FF38] transition-transform group-hover:scale-105">
             <Play className="size-3.5 translate-x-px fill-current" />
           </span>
-          Ver animación
+          {tx("verAnimacion")}
         </button>
       ) : (
         <button
           type="button"
           onClick={openPlayer}
-          aria-label="Ver animación de la clase"
-          title="Ver animación de la clase"
+          aria-label={tx("verAnimacionDeLa")}
+          title={tx("verAnimacionDeLa")}
           className={cn(
             "flex size-10 items-center justify-center rounded-full bg-[#D6FF38] text-[#050505] shadow-[0_6px_18px_rgba(5,5,5,0.25)] ring-4 ring-white transition hover:scale-105 dark:ring-[#050505]",
             className
@@ -221,7 +224,7 @@ export function ClassAnimationButton({
           className="max-h-[calc(100dvh-1rem)] gap-0 overflow-y-auto border-white/10 bg-[#050505] p-0 text-white sm:max-w-5xl"
         >
           <DialogTitle className="sr-only">
-            Animación de la clase {data?.name ?? ""}
+            {tx("animacionDeLaClase", { v1: data?.name ?? "" })}
           </DialogTitle>
           {data ? (
             <ClassAnimationPlayer
@@ -235,7 +238,7 @@ export function ClassAnimationButton({
                   : `/classes/${classId}?animacion=${classId}`
               }
               kindLabel={
-                sessionId ? "Animación de la sesión" : "Animación de la clase"
+                sessionId ? tx("animacionDeLaSesion") : tx("animacionDeLaClase2")
               }
             />
           ) : (
@@ -248,7 +251,7 @@ export function ClassAnimationButton({
                     onClick={() => setOpen(false)}
                     className="rounded-full border border-white/20 px-4 py-1.5 font-semibold text-white"
                   >
-                    Cerrar
+                    {tx("cerrar")}
                   </button>
                 </>
               ) : (
@@ -303,6 +306,8 @@ export function ClassAnimationPlayer({
   sharePath?: string;
   kindLabel?: string;
 }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_classanimationplayer");
   const timeline = useMemo(
     () => buildAnimationTimeline(blocks, { objectives }),
     [blocks, objectives]
@@ -389,13 +394,13 @@ export function ClassAnimationPlayer({
         <div className="flex shrink-0 items-center gap-2">
           <span
             className="hidden rounded-full border border-white/10 px-2.5 py-1 font-mono text-[11px] tabular-nums text-white/55 sm:inline"
-            title="Minuto de la clase real"
+            title={tx("minutoDeLaClase")}
           >
-            Min {Math.floor(clockMin)} de {timeline.totalClassMinutes}
+            {tx("minV1DeV2", { v1: Math.floor(clockMin), v2: timeline.totalClassMinutes })}
           </span>
           <span
             className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1 font-mono text-xs tabular-nums text-white/80"
-            title="Duración del vídeo"
+            title={tx("duracionDelVideo")}
           >
             {formatClock(t / 60)}
             <span className="text-white/40">
@@ -406,7 +411,7 @@ export function ClassAnimationPlayer({
           {sharePath && (
             <ShareButton
               title={`${kindLabel}: ${name}`}
-              text={`Mira la animación de «${name}» en TenPlanner`}
+              text={tx("miraLaAnimacionDe", { v1: name })}
               path={sharePath}
               iconOnly
               className="flex size-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
@@ -416,7 +421,7 @@ export function ClassAnimationPlayer({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Cerrar"
+              aria-label={tx("cerrar")}
               className="flex size-8 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
             >
               <X className="size-4" />
@@ -446,7 +451,7 @@ export function ClassAnimationPlayer({
                 className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#050505]/75 text-center backdrop-blur-[2px]"
               >
                 <p className="font-heading text-2xl font-semibold text-[#D6FF38] sm:text-3xl">
-                  ¡Clase completada!
+                  {tx("claseCompletada")}
                 </p>
                 {ended && (
                   <button
@@ -454,7 +459,7 @@ export function ClassAnimationPlayer({
                     onClick={restart}
                     className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-1.5 text-sm font-semibold hover:border-[#D6FF38] hover:text-[#D6FF38]"
                   >
-                    <RotateCcw className="size-3.5" /> Repetir
+                    <RotateCcw className="size-3.5" />{" "}{tx("repetir")}
                   </button>
                 )}
               </motion.div>
@@ -466,7 +471,7 @@ export function ClassAnimationPlayer({
                 ? null
                 : step.diagram
                   ? diagramCaption(step.diagram, t - step.start)
-                  : (SCENE_LEGEND[step.scene] ?? null)
+                  : (SCENE_LEGEND[step.scene] ? term(SCENE_LEGEND[step.scene] as string) : null)
             }
           />
         </div>
@@ -486,13 +491,11 @@ export function ClassAnimationPlayer({
                   {name}
                 </p>
                 <p className="mt-1.5 text-sm text-white/60">
-                  {timeline.totalClassMinutes} min · {blockCount} bloques ·{" "}
-                  {steps.filter((s) => !s.isRest).length} actividades
-                </p>
+                  {tx("v1MinV2Bloques", { v1: timeline.totalClassMinutes, v2: blockCount, v3: steps.filter((s) => !s.isRest).length })}</p>
                 {timeline.intro.length > 0 && (
                   <>
                     <p className="mt-5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-[#D6FF38]">
-                      <Target className="size-3.5" /> Objetivos de la clase
+                      <Target className="size-3.5" />{" "}{tx("objetivosDeLaClase")}
                     </p>
                     <Sentences
                       sentences={timeline.intro}
@@ -520,8 +523,7 @@ export function ClassAnimationPlayer({
                     {step.blockTitle}
                   </span>
                   <span className="font-mono text-[11px] tabular-nums text-white/50">
-                    {step.minutes} min · minuto {Math.round(step.classStartMin)}
-                    –{Math.round(step.classStartMin + step.minutes)}
+                    {tx("v1MinMinutoV2", { v1: step.minutes, v2: Math.round(step.classStartMin), v3: Math.round(step.classStartMin + step.minutes) })}
                   </span>
                 </div>
                 <p className="mt-2.5 flex items-center gap-2 font-heading text-2xl font-semibold leading-tight">
@@ -546,7 +548,7 @@ export function ClassAnimationPlayer({
                 exit={{ opacity: 0 }}
               >
                 <p className="font-heading text-2xl font-semibold leading-tight">
-                  Resumen de la clase
+                  {tx("resumenDeLaClase")}
                 </p>
                 <BlockSummary timeline={timeline} />
               </motion.div>
@@ -560,8 +562,8 @@ export function ClassAnimationPlayer({
         <button
           type="button"
           onClick={goPrev}
-          aria-label="Actividad anterior"
-          title="Actividad anterior"
+          aria-label={tx("actividadAnterior")}
+          title={tx("actividadAnterior")}
           className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
         >
           <SkipBack className="size-4" />
@@ -583,8 +585,8 @@ export function ClassAnimationPlayer({
         <button
           type="button"
           onClick={goNext}
-          aria-label="Actividad siguiente"
-          title="Actividad siguiente"
+          aria-label={tx("actividadSiguiente")}
+          title={tx("actividadSiguiente")}
           disabled={phase === "outro"}
           className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30"
         >
@@ -611,6 +613,7 @@ function Sentences({
   t: number;
   reduceMotion: boolean;
 }) {
+  const term = useTerm();
   const visible = sentences.filter((s) => t >= s.at);
   const current = visible.length - 1;
   const listRef = useRef<HTMLUListElement>(null);
@@ -641,7 +644,7 @@ function Sentences({
         >
           {s.label && (
             <span className="mr-1.5 inline-block rounded bg-[#D6FF38]/15 px-1.5 py-px align-[1px] text-[10px] font-bold uppercase tracking-wider text-[#D6FF38]">
-              {s.label}
+              {term(s.label)}
             </span>
           )}
           {s.text}
@@ -652,6 +655,7 @@ function Sentences({
 }
 
 function BlockSummary({ timeline }: { timeline: AnimationTimeline }) {
+  const tx = useTranslations("ui.s_app_classanimationplayer");
   const byBlock = new Map<
     number,
     { title: string; minutes: number; activities: string[] }
@@ -676,7 +680,7 @@ function BlockSummary({ timeline }: { timeline: AnimationTimeline }) {
         >
           <p className="text-sm font-semibold">
             {b.title}{" "}
-            <span className="font-normal text-white/50">· {b.minutes} min</span>
+            <span className="font-normal text-white/50">{tx("v1Min", { v1: b.minutes })}</span>
           </p>
           <p className="text-[13px] leading-5 text-white/60">
             {b.activities.join(" · ")}

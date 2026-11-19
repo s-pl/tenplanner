@@ -19,6 +19,8 @@ import type {
   TrainingPhase,
 } from "@/lib/sessions/analytics";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { useTerm } from "@/lib/i18n-terms";
 
 const PHASE_LABELS: Record<TrainingPhase, string> = {
   activation: "Activación",
@@ -91,16 +93,18 @@ function EmptyState({ text }: { text: string }) {
 }
 
 function PhaseTargetsCard({ analytics }: { analytics: SessionAnalytics }) {
+  const term = useTerm();
+  const tx = useTranslations("ui.s_app_sessionanalytics");
   if (analytics.totalMinutes === 0) {
     return (
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-border/50">
           <h3 className="font-semibold text-sm text-foreground">
-            Distribución por fases
+            {tx("distribucionPorFases")}
           </h3>
         </div>
         <div className="p-5">
-          <EmptyState text="Sin duración asignada a los ejercicios." />
+          <EmptyState text={tx("sinDuracionAsignadaA")} />
         </div>
       </div>
     );
@@ -110,10 +114,10 @@ function PhaseTargetsCard({ analytics }: { analytics: SessionAnalytics }) {
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="px-5 py-3 border-b border-border/50 flex items-center justify-between">
         <h3 className="font-semibold text-sm text-foreground">
-          Distribución por fases
+          {tx("distribucionPorFases")}
         </h3>
         <span className="text-[11px] text-muted-foreground">
-          real vs. objetivo
+          {tx("realVsObjetivo")}
         </span>
       </div>
       <div className="p-5 space-y-4">
@@ -144,14 +148,13 @@ function PhaseTargetsCard({ analytics }: { analytics: SessionAnalytics }) {
                       className={cn("size-2.5 rounded-sm", PHASE_BG[t.phase])}
                     />
                     <span className="font-medium text-foreground">
-                      {PHASE_LABELS[t.phase]}
+                      {term(PHASE_LABELS[t.phase])}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-muted-foreground">
                     <span>{Math.round(t.actualPct)}%</span>
                     <span className="text-muted-foreground/50">
-                      objetivo {t.targetPct}%
-                    </span>
+                      {tx("objetivoV1", { v1: t.targetPct })}</span>
                     <span
                       className={cn(
                         "font-semibold tabular-nums",
@@ -191,6 +194,7 @@ function PhaseTargetsCard({ analytics }: { analytics: SessionAnalytics }) {
 }
 
 function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
+  const tx = useTranslations("ui.s_app_sessionanalytics");
   const data = analytics.phaseBreakdown
     .filter((p) => p.minutes > 0)
     .map((p) => ({
@@ -203,7 +207,7 @@ function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="px-5 py-3 border-b border-border/50">
         <h3 className="font-semibold text-sm text-foreground">
-          Proporción de fases
+          {tx("proporcionDeFases")}
         </h3>
       </div>
       <div className="p-5">
@@ -244,7 +248,7 @@ function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
                   {analytics.totalMinutes}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-1">
-                  min totales
+                  {tx("minTotales")}
                 </span>
               </div>
             </div>
@@ -264,7 +268,7 @@ function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
             </div>
           </div>
         ) : (
-          <EmptyState text="Sin fases registradas." />
+          <EmptyState text={tx("sinFasesRegistradas")} />
         )}
       </div>
     </div>
@@ -272,6 +276,7 @@ function PhaseDonutCard({ analytics }: { analytics: SessionAnalytics }) {
 }
 
 function AspectCard({ analytics }: { analytics: SessionAnalytics }) {
+  const tx = useTranslations("ui.s_app_sessionanalytics");
   const data = analytics.aspectBreakdown.map((a) => ({
     name: ASPECT_LABELS[a.aspect],
     minutes: a.minutes,
@@ -283,10 +288,10 @@ function AspectCard({ analytics }: { analytics: SessionAnalytics }) {
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="px-5 py-3 border-b border-border/50">
         <h3 className="font-semibold text-sm text-foreground">
-          Minutos por categoría
+          {tx("minutosPorCategoria")}
         </h3>
         <p className="text-[11px] text-muted-foreground">
-          Según las etiquetas de los ejercicios (aspecto del juego)
+          {tx("segunLasEtiquetasDe")}
         </p>
       </div>
       <div className="p-5">
@@ -337,7 +342,7 @@ function AspectCard({ analytics }: { analytics: SessionAnalytics }) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <EmptyState text="Sin datos de categorías." />
+          <EmptyState text={tx("sinDatosDeCategorias")} />
         )}
       </div>
     </div>
@@ -349,6 +354,7 @@ export function SessionAnalyticsView({
 }: {
   analytics: SessionAnalytics;
 }) {
+  const tx = useTranslations("ui.s_app_sessionanalytics");
   const hasExercises = analytics.exerciseCount > 0;
 
   return (
@@ -357,23 +363,23 @@ export function SessionAnalyticsView({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           icon={Dumbbell}
-          label="Ejercicios"
+          label={tx("ejercicios")}
           value={String(analytics.exerciseCount)}
         />
         <StatCard
           icon={Target}
-          label="Fases"
+          label={tx("fases")}
           value={`${analytics.phasesCovered}/3`}
           hint="cubiertas"
         />
         <StatCard
           icon={Users}
-          label="Alumnos"
+          label={tx("alumnos")}
           value={String(analytics.studentCount)}
         />
         <StatCard
           icon={Tag}
-          label="Etiquetas"
+          label={tx("etiquetas")}
           value={String(analytics.tagCount)}
         />
       </div>
@@ -384,7 +390,7 @@ export function SessionAnalyticsView({
             <Layers className="size-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            Añade ejercicios para ver el análisis de la sesión.
+            {tx("anadeEjerciciosParaVer")}
           </p>
         </div>
       ) : (

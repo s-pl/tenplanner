@@ -50,6 +50,11 @@ const blockExerciseSchema = z
       .max(STATION_COUNT_MAX)
       .optional()
       .nullable(),
+    // Plantillas con dos pistas: pista del elemento y quién lo dirige.
+    court: z.union([z.literal(1), z.literal(2)]).optional(),
+    ledBy: z.enum(["coach", "auto"]).optional().nullable(),
+    turnMinutes: z.number().int().min(1).max(120).optional().nullable(),
+    turnSize: z.number().int().min(1).max(8).optional().nullable(),
   })
   .refine(
     (item) => {
@@ -64,6 +69,7 @@ const blockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),
   title: z.string().trim().max(120).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
+  rotates: z.boolean().optional(),
   items: z.array(blockExerciseSchema).default([]),
 });
 
@@ -94,6 +100,8 @@ const createSchema = z.object({
   isLibrary: z.boolean().optional().default(false),
   autoria: z.enum(AUTORIA_VALUES).optional().nullable(),
   blocks: z.array(blockSchema).max(3).default([]),
+  /** Pistas que usa la plantilla (1 o 2). */
+  courts: z.union([z.literal(1), z.literal(2)]).optional(),
   status: z.enum(CLASS_STATUSES).optional().default("published"),
 });
 
@@ -366,6 +374,7 @@ export async function POST(request: Request) {
           autoria: isAdmin ? (d.autoria ?? "ten_planner") : "libre",
           clubId,
           sport,
+          courts: d.courts === 2 ? 2 : 1,
           status: d.status,
         })
         .returning();
@@ -378,6 +387,7 @@ export async function POST(request: Request) {
             orderIndex: block.orderIndex,
             title: block.title ?? null,
             notes: block.notes ?? null,
+            rotates: d.courts === 2 && block.rotates === true,
           })
           .returning({ id: classBlocks.id });
 
@@ -394,6 +404,12 @@ export async function POST(request: Request) {
               kind: item.kind ?? null,
               stations:
                 item.kind === "stations" ? buildStations(item.stations) : null,
+              // Sin dos pistas todo va en la pista 1, sin "quién dirige".
+              court: d.courts === 2 && item.court === 2 ? 2 : 1,
+              ledBy: d.courts === 2 ? (item.ledBy ?? null) : null,
+              turnMinutes: d.courts === 2 ? (item.turnMinutes ?? null) : null,
+              turnSize:
+                d.courts === 2 && item.turnMinutes ? (item.turnSize ?? 1) : null,
             }))
           );
         }

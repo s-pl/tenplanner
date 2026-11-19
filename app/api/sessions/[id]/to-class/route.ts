@@ -16,6 +16,7 @@ import { getActiveWorkClubId } from "@/lib/clubs";
 import { normalizeTags } from "@/lib/tags";
 import { DEFAULT_BLOCK_ITEM_DURATION } from "@/lib/block-items";
 import { hasSessionAnimation } from "@/lib/classes/animation";
+import { editableSessionCondition } from "@/lib/sessions/permissions";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -35,7 +36,7 @@ export async function POST(_request: Request, ctx: Ctx) {
   const [session] = await db
     .select()
     .from(sessions)
-    .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
+    .where(and(eq(sessions.id, id), await editableSessionCondition(user.id)))
     .limit(1);
   if (!session)
     return NextResponse.json(
@@ -96,6 +97,7 @@ export async function POST(_request: Request, ctx: Ctx) {
         autoria: "libre",
         clubId,
         sport: session.sport,
+        courts: session.courts === 2 ? 2 : 1,
         status: "published",
       })
       .returning({ id: classes.id });
@@ -108,6 +110,7 @@ export async function POST(_request: Request, ctx: Ctx) {
           orderIndex: block.orderIndex,
           title: block.title,
           notes: block.notes,
+          rotates: block.rotates,
         })
         .returning({ id: classBlocks.id });
 
@@ -138,6 +141,10 @@ export async function POST(_request: Request, ctx: Ctx) {
             kind: item.kind,
             stations: item.stations,
             aspectoJuego: item.aspectoJuego,
+            court: item.court,
+            ledBy: item.ledBy,
+            turnMinutes: item.turnMinutes,
+            turnSize: item.turnSize,
           };
         })
       );

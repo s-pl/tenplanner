@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   exercises,
@@ -11,6 +11,7 @@ import {
   type AspectoJuego,
   type StationItemJson,
 } from "@/lib/block-items";
+import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 
 export type SessionPlanPhase = "activation" | "main" | "cooldown";
 
@@ -26,7 +27,17 @@ type ExerciseDetails = {
   materials: string[];
 };
 
-export type SessionPlanItem =
+/** Pista y quién dirige cada item (sesiones con dos pistas). */
+export type SessionPlanLane = {
+  court?: 1 | 2;
+  ledBy?: "coach" | "auto" | null;
+  /** Por turnos: minutos de cada alumno y de cuántos en cuántos pasan. */
+  turnMinutes?: number | null;
+  turnSize?: number | null;
+};
+
+export type SessionPlanItem = SessionPlanLane &
+  (
   | ({
       kind: "exercise";
       key: string;
@@ -66,12 +77,15 @@ export type SessionPlanItem =
       stations: StationItemJson[];
       durationMinutes: number | null;
       notes: string | null;
-    };
+    }
+  );
 
 export type SessionPlanBlock = {
   orderIndex: 1 | 2 | 3;
   title: string;
   notes: string | null;
+  /** Dos pistas con rotación: los dos grupos hacen ambas pistas. */
+  rotates?: boolean;
 };
 
 export type SessionPlan = {
@@ -122,12 +136,16 @@ function toStrings(value: unknown): string[] {
  * ejercicios de la biblioteca y textos libres tal como los ordenó el monitor.
  * Para sesiones antiguas sin bloques, se reconstruye desde session_exercises.
  */
-export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
+export async function loadSessionPlan(
+  sessionId: string,
+  viewerId: string
+): Promise<SessionPlan> {
   const rows = await db
     .select({
       blockOrder: sessionBlocks.orderIndex,
       blockTitle: sessionBlocks.title,
       blockNotes: sessionBlocks.notes,
+      blockRotates: sessionBlocks.rotates,
       itemId: sessionBlockItems.id,
       itemOrder: sessionBlockItems.orderIndex,
       itemExerciseId: sessionBlockItems.exerciseId,
@@ -140,6 +158,10 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       itemKind: sessionBlockItems.kind,
       itemStations: sessionBlockItems.stations,
       itemAspectoJuego: sessionBlockItems.aspectoJuego,
+      itemCourt: sessionBlockItems.court,
+      itemLedBy: sessionBlockItems.ledBy,
+      itemTurnMinutes: sessionBlockItems.turnMinutes,
+      itemTurnSize: sessionBlockItems.turnSize,
       exId: exercises.id,
       exName: exercises.name,
       exDescription: exercises.description,
@@ -155,7 +177,13 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       sessionBlockItems,
       eq(sessionBlockItems.blockId, sessionBlocks.id)
     )
-    .leftJoin(exercises, eq(exercises.id, sessionBlockItems.exerciseId))
+    .leftJoin(
+      exercises,
+      and(
+        eq(exercises.id, sessionBlockItems.exerciseId),
+        exerciseVisibleToUserCondition(viewerId)
+      )
+    )
     .where(eq(sessionBlocks.sessionId, sessionId))
     .orderBy(asc(sessionBlocks.orderIndex), asc(sessionBlockItems.orderIndex));
 
@@ -169,6 +197,7 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
         orderIndex: order,
         title: row.blockTitle || BLOCK_TITLES[order],
         notes: row.blockNotes ?? null,
+        rotates: row.blockRotates === true,
       });
     }
   }
@@ -246,13 +275,39 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
         blockOrder: order,
         text: text ?? "",
         title,
-        description: row.itemFreeText
-          ? null
-          : (row.itemExerciseDescription ?? null),
+        description:
+          row.itemFreeText || row.itemExerciseId
+            ? null
+            : (row.itemExerciseDescription ?? null),
         durationMinutes: row.itemDuration ?? null,
         notes: row.itemNotes ?? null,
         aspecto: (row.itemAspectoJuego as AspectoJuego | null) ?? null,
       });
+    }
+    // Pista y quién dirige: se añaden al final para no repetirlo en cada tipo.
+    const laneByKey = new Map(
+      rows
+        .filter((row) => row.itemId !== null)
+        .map((row) => [
+          row.itemId as string,
+          {
+            court: (row.itemCourt === 2 ? 2 : 1) as 1 | 2,
+            ledBy: (row.itemLedBy === "coach" || row.itemLedBy === "auto"
+              ? row.itemLedBy
+              : null) as "coach" | "auto" | null,
+            turnMinutes: row.itemTurnMinutes ?? null,
+            turnSize: row.itemTurnSize ?? null,
+          },
+        ])
+    );
+    for (const item of items) {
+      const lane = laneByKey.get(item.key);
+      if (lane) {
+        item.court = lane.court;
+        item.ledBy = lane.ledBy;
+        item.turnMinutes = lane.turnMinutes;
+        item.turnSize = lane.turnSize;
+      }
     }
     return { blocks, items };
   }
@@ -275,7 +330,13 @@ export async function loadSessionPlan(sessionId: string): Promise<SessionPlan> {
       exMaterials: exercises.materials,
     })
     .from(sessionExercises)
-    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .innerJoin(
+      exercises,
+      and(
+        eq(exercises.id, sessionExercises.exerciseId),
+        exerciseVisibleToUserCondition(viewerId)
+      )
+    )
     .where(eq(sessionExercises.sessionId, sessionId))
     .orderBy(asc(sessionExercises.orderIndex));
 

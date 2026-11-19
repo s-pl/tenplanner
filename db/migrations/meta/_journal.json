@@ -594,7 +594,84 @@
       "idx": 84,
       "version": "7",
       "when": 1795000000000,
-      "tag": "0084_session_plan_followed",
+      "tag": "0084_session_coach_rating",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1795100000000,
+      "tag": "0085_session_plan_followed",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795200000000,
+      "tag": "0086_court_bookings",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795300000000,
+      "tag": "0087_court_bookings_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795400000000,
+      "tag": "0088_session_coach",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795500000000,
+      "tag": "0089_club_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1795600000000,
+      "tag": "0090_student_alta_baja",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1795700000000,
+      "tag": "0091_student_joined_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1795800000000,
+      "tag": "0092_report_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1795900000000,
+      "tag": "0093_student_first_last_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1796000000000,
+      "tag": "0094_skill_levels",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1796100000000,
+      "tag": "0095_session_generation",
       "breakpoints": true
     }
   ]

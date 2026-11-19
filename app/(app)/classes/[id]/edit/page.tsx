@@ -17,13 +17,18 @@ import {
   resolveItemKind,
   type StationItemJson,
 } from "@/lib/block-items";
-import { exerciseOwnOrClubCondition } from "@/lib/exercise-access";
+import {
+  exerciseListableCondition,
+  isPlatformAdmin,
+} from "@/lib/exercise-access";
+import { getTranslations } from "next-intl/server";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function EditClassPage({ params }: PageProps) {
+  const tx = await getTranslations("ui.s_edit_page");
   const { id } = await params;
   const supabase = await createClient();
   const {
@@ -63,6 +68,10 @@ export default async function EditClassPage({ params }: PageProps) {
           durationMinutes: classBlockExercises.durationMinutes,
           kind: classBlockExercises.kind,
           stations: classBlockExercises.stations,
+          court: classBlockExercises.court,
+          ledBy: classBlockExercises.ledBy,
+          turnMinutes: classBlockExercises.turnMinutes,
+          turnSize: classBlockExercises.turnSize,
           exerciseName: exercises.name,
         })
         .from(classBlockExercises)
@@ -91,7 +100,7 @@ export default async function EditClassPage({ params }: PageProps) {
     .from(exercises)
     .where(
       and(
-        or(eq(exercises.isGlobal, true), exerciseOwnOrClubCondition(user.id)),
+        exerciseListableCondition(user.id, await isPlatformAdmin(user.id)),
         eq(exercises.sport, cls.sport)
       )
     )
@@ -100,6 +109,7 @@ export default async function EditClassPage({ params }: PageProps) {
 
   const initialData = {
     name: cls.name,
+    courts: (cls.courts === 2 ? 2 : 1) as 1 | 2,
     duracionMinutes: cls.duracionMinutes,
     alumnosTipo: cls.alumnosTipo as "individual" | "grupal" | null,
     numAlumnos: cls.numAlumnos,
@@ -132,12 +142,22 @@ export default async function EditClassPage({ params }: PageProps) {
       orderIndex: b.orderIndex,
       title: b.title,
       notes: b.notes,
+      rotates: b.rotates,
       items: items
         .filter((it) => it.blockId === b.id)
         .map((it) => {
+          const lane = {
+            court: (it.court === 2 ? 2 : 1) as 1 | 2,
+            ledBy: (it.ledBy === "coach" || it.ledBy === "auto"
+              ? it.ledBy
+              : null) as "coach" | "auto" | null,
+            turnMinutes: it.turnMinutes ?? null,
+            turnSize: it.turnSize ?? null,
+          };
           const itemKind = resolveItemKind(it);
           if (itemKind === "warmup") {
             return {
+              ...lane,
               kind: "warmup" as const,
               durationMinutes:
                 it.durationMinutes ?? DEFAULT_BLOCK_ITEM_DURATION,
@@ -146,6 +166,7 @@ export default async function EditClassPage({ params }: PageProps) {
           if (itemKind === "stations") {
             const stations = (it.stations as StationItemJson[] | null) ?? [];
             return {
+              ...lane,
               kind: "stations" as const,
               introText: it.freeText ?? "",
               durationMinutes: it.durationMinutes,
@@ -160,6 +181,7 @@ export default async function EditClassPage({ params }: PageProps) {
           }
           return it.exerciseId && it.exerciseName
             ? {
+                ...lane,
                 kind: "exercise" as const,
                 exerciseId: it.exerciseId,
                 name: it.exerciseName,
@@ -169,6 +191,7 @@ export default async function EditClassPage({ params }: PageProps) {
                 notes: it.notes ?? "",
               }
             : {
+                ...lane,
                 kind: "text" as const,
                 freeText: it.freeText ?? "",
                 title: it.title ?? "",
@@ -185,17 +208,17 @@ export default async function EditClassPage({ params }: PageProps) {
         <Link
           href={`/classes/${cls.id}`}
           className="flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-muted-foreground transition-colors hover:border-[#D6FF38] hover:bg-[#D6FF38] hover:text-[#050505]"
-          aria-label="Volver a la clase"
+          aria-label={tx("volverALaClase")}
         >
           <ArrowLeft className="size-4" />
         </Link>
 
         <div>
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#D6FF38]">
-            Plantilla de clase
+            {tx("plantillaDeClase")}
           </p>
           <h1 className="font-heading text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            Editar clase
+            {tx("editarClase")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{cls.name}</p>
         </div>

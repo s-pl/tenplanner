@@ -37,6 +37,8 @@ import {
   getFilteredSessionIds,
   sessionNavQueryString,
 } from "@/lib/nav/session-nav";
+import { canEditSession } from "@/lib/sessions/permissions";
+import { getClubMonitorSpaceClubs } from "@/lib/work-mode";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -130,6 +132,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         blockOrderIndex: sessionBlocks.orderIndex,
         blockTitle: sessionBlocks.title,
         blockNotes: sessionBlocks.notes,
+        blockRotates: sessionBlocks.rotates,
         itemId: sessionBlockItems.id,
         itemOrderIndex: sessionBlockItems.orderIndex,
         itemExerciseId: sessionBlockItems.exerciseId,
@@ -142,6 +145,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         itemKind: sessionBlockItems.kind,
         itemStations: sessionBlockItems.stations,
         itemAspectoJuego: sessionBlockItems.aspectoJuego,
+        itemCourt: sessionBlockItems.court,
+        itemLedBy: sessionBlockItems.ledBy,
+        itemTurnMinutes: sessionBlockItems.turnMinutes,
+        itemTurnSize: sessionBlockItems.turnSize,
         itemCoachComment: sessionBlockItems.coachComment,
         itemCoachAudioPath: sessionBlockItems.coachAudioPath,
         itemCoachAudioSeconds: sessionBlockItems.coachAudioSeconds,
@@ -160,7 +167,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
 
   const session = sessionRow;
   if (!session) notFound();
-  const isOwner = session.userId === user.id;
+  // Pueden editarla quien la creó, el monitor que la imparte y el gestor
+  // del club; el resto de monitores del club solo la ven (y la duplican).
+  const isOwner = await canEditSession(user.id, session);
+  const sessionCoachId = session.coachId ?? session.userId;
   const [placeRow] = session.placeId
     ? await db
         .select({ name: places.name })
@@ -168,21 +178,42 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         .where(eq(places.id, session.placeId))
         .limit(1)
     : [];
+  // Sesión de dos pistas: se muestran los dos lugares ("A · B").
+  const [secondPlaceRow] =
+    session.courts === 2 && session.secondPlaceId
+      ? await db
+          .select({ name: places.name })
+          .from(places)
+          .where(eq(places.id, session.secondPlaceId))
+          .limit(1)
+      : [];
+  const placeLabel =
+    placeRow && secondPlaceRow
+      ? `${placeRow.name} · ${secondPlaceRow.name}`
+      : (placeRow?.name ?? secondPlaceRow?.name ?? null);
   if (!isOwner) {
     const activeClubId = session.clubId
       ? await getActiveWorkClubId(user.id)
       : null;
     if (!session.clubId || session.clubId !== activeClubId) notFound();
   }
-  const authorName = isOwner
-    ? null
-    : ((
-        await db
-          .select({ name: users.name })
-          .from(users)
-          .where(eq(users.id, session.userId))
-          .limit(1)
-      )[0]?.name ?? null);
+  // Monitor que imparte la sesión, si no es quien la está viendo.
+  const authorName =
+    sessionCoachId === user.id
+      ? null
+      : ((
+          await db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, sessionCoachId))
+            .limit(1)
+        )[0]?.name ?? null);
+
+  // "Enviar al club": una sesión de su espacio propio, en el Modo monitor.
+  const sendClubs =
+    session.userId === user.id && !session.clubId
+      ? ((await getClubMonitorSpaceClubs(user.id)) ?? [])
+      : [];
 
   const favoritedIds = new Set(favRows.map((f) => f.exerciseId));
 
@@ -236,6 +267,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
       orderIndex: number;
       title: string | null;
       notes: string | null;
+      rotates: boolean;
       items: Array<{
         id: string;
         orderIndex: number;
@@ -249,6 +281,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         kind: "exercise" | "text" | "warmup" | "stations";
         stations: StationItemJson[];
         aspectoJuego: string | null;
+        court: number;
+        ledBy: string | null;
+        turnMinutes: number | null;
+        turnSize: number | null;
         coachComment: string | null;
         coachAudioPath: string | null;
         coachAudioSeconds: number | null;
@@ -262,6 +298,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         orderIndex: row.blockOrderIndex,
         title: row.blockTitle,
         notes: row.blockNotes,
+        rotates: row.blockRotates === true,
         items: [],
       };
       blocks.push(block);
@@ -284,6 +321,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         }),
         stations: (row.itemStations as StationItemJson[] | null) ?? [],
         aspectoJuego: row.itemAspectoJuego,
+        court: row.itemCourt ?? 1,
+        ledBy: row.itemLedBy,
+        turnMinutes: row.itemTurnMinutes ?? null,
+        turnSize: row.itemTurnSize ?? null,
         coachComment: row.itemCoachComment,
         coachAudioPath: row.itemCoachAudioPath,
         coachAudioSeconds: row.itemCoachAudioSeconds,
@@ -415,6 +456,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
       backToSearchHref={backToSearchHref}
       isOwner={isOwner}
       authorName={authorName}
+      sendClubs={sendClubs}
       session={{
         id: session.id,
         title: session.title,
@@ -428,6 +470,10 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         material: session.material,
         observations: session.observations,
         coachComment: session.coachComment,
+        coachRating: session.coachRating,
+        planFollowed: session.planFollowed,
+        planChangeReason: session.planChangeReason,
+        statusNote: session.statusNote,
         coachAudioUrl: session.coachAudioPath
           ? (audioUrls.get(session.coachAudioPath) ?? null)
           : null,
@@ -436,12 +482,9 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
         intensity: session.intensity,
         tags,
         location: session.location,
-        placeName: placeRow?.name ?? null,
+        placeName: placeLabel,
+        courts: session.courts === 2 ? 2 : 1,
         status: session.status,
-        statusNote: session.statusNote,
-        planFollowed: session.planFollowed,
-        planChangeReason: session.planChangeReason,
-        sessionRating: session.sessionRating,
       }}
       sessionExercises={resolvedExercises}
       diagrams={getExerciseDiagrams(resolvedExercises.map((e) => e.exerciseId))}

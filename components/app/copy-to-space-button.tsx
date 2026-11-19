@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { spaceLabels } from "@/lib/space-labels";
+import { useTranslations } from "next-intl";
 
 export type CopyTarget = "active" | "particular";
 
@@ -17,6 +18,10 @@ export type CopyTarget = "active" | "particular";
  * - target "particular": una ficha que el propio monitor creó en el
  *   espacio de un club, a su espacio particular (solo él la verá).
  *
+ * Además, con `sendClubs` ("Enviar al club"): una ficha del espacio propio
+ * del monitor (Modo monitor) se envía como copia a cada club del que es
+ * monitor; el original se queda en su espacio.
+ *
  * La copia es independiente y editable; al terminar se abre la copia.
  */
 export function CopyToSpaceButton({
@@ -25,20 +30,24 @@ export function CopyToSpaceButton({
   targets,
   tone = "light",
   inClub = false,
+  sendClubs = [],
   className,
 }: {
   kind: "exercise" | "class";
   id: string;
   targets: CopyTarget[];
+  /** Clubes a los que se puede enviar (Modo monitor de un monitor de club). */
+  sendClubs?: { id: string; name: string }[];
   tone?: "light" | "dark";
   /** Trabajando como un club: el destino es "Clases club"/"Ejercicios club". */
   inClub?: boolean;
   className?: string;
 }) {
+  const tx = useTranslations("ui.s_app_copytospacebutton");
   const router = useRouter();
-  const [busy, setBusy] = useState<CopyTarget | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  if (targets.length === 0) return null;
+  if (targets.length === 0 && sendClubs.length === 0) return null;
   const labels = spaceLabels(inClub);
   const activeDest = kind === "exercise" ? labels.exercises : labels.classes;
 
@@ -56,12 +65,12 @@ export function CopyToSpaceButton({
         error?: string;
       };
       if (!res.ok || !json.data?.id) {
-        toast.error(json.error ?? "No se pudo copiar. Inténtalo de nuevo.");
+        toast.error(json.error ?? tx("noSePudoCopiar"));
         return;
       }
       const what = kind === "exercise" ? "Ejercicio copiado" : "Clase copiada";
       const where =
-        target === "particular" ? "a tu espacio particular" : `a ${activeDest}`;
+        target === "particular" ? tx("aTuEspacioParticular") : `a ${activeDest}`;
       toast.success(`${what} ${where}`);
       if (target === "active") {
         router.push(
@@ -70,6 +79,31 @@ export function CopyToSpaceButton({
             : `/classes/${json.data.id}`
         );
       }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function sendToClub(club: { id: string; name: string }) {
+    setBusy(`club:${club.id}`);
+    try {
+      const base = kind === "exercise" ? "/api/exercises" : "/api/classes";
+      const res = await fetch(`${base}/${id}/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "club", clubId: club.id }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        data?: { id: string };
+        error?: string;
+      };
+      if (!res.ok || !json.data?.id) {
+        toast.error(json.error ?? tx("noSePudoEnviar"));
+        return;
+      }
+      toast.success(
+        `${kind === "exercise" ? "Ejercicio enviado" : "Clase enviada"} a ${club.name}`
+      );
     } finally {
       setBusy(null);
     }
@@ -100,8 +134,29 @@ export function CopyToSpaceButton({
             <Copy className="size-3.5" />
           )}
           {target === "particular"
-            ? "Copiar a mi espacio particular"
+            ? tx("copiarAMiEspacio")
             : `Copiar a ${activeDest}`}
+        </button>
+      ))}
+      {sendClubs.map((club) => (
+        <button
+          key={club.id}
+          type="button"
+          onClick={() => sendToClub(club)}
+          disabled={busy !== null}
+          title={tx("seEnviaUnaCopia")}
+          className={cn(
+            "inline-flex items-center justify-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60",
+            base,
+            className
+          )}
+        >
+          {busy === `club:${club.id}` ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Send className="size-3.5" />
+          )}
+          {tx("enviarA")}{" "}{club.name}
         </button>
       ))}
     </>

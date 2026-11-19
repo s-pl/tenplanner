@@ -18,8 +18,15 @@ import {
 import { defaultScheduledAt } from "./defaults";
 import { ProgressIndicator } from "./progress-indicator";
 import { StepConfiguration } from "./step-configuration";
+import {
+  EngineProposalBanner,
+  useEngineProposal,
+  type EngineConfig,
+} from "./engine-proposal";
 import { StepExercises } from "./step-exercises";
 import { computeSessionDates, sessionCode } from "./recurrence";
+import { fetchSgNumbers } from "./sg-number";
+import { clearTarget } from "@/lib/session-target";
 import {
   buildBlocksPayload,
   buildExercisesPayload,
@@ -35,6 +42,8 @@ import type {
   WizardSessionBlock,
   WizardState,
 } from "./types";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 
 const STEP_LABELS = ["Configuración", "Ejercicios"];
 const TOTAL_STEPS = STEP_LABELS.length;
@@ -50,15 +59,32 @@ interface SessionWizardProps {
   initialBlocks?: WizardSessionBlock[];
   initialLocation?: string;
   initialPlaceId?: string | null;
+  /** Lugar de la segunda pista (con dos pistas). */
+  initialSecondPlaceId?: string | null;
+  /** Sesión que parte de una plantilla/sesión de dos pistas. */
+  initialCourts?: 1 | 2;
+  /** Con dos pistas, el bloque principal rota entre dos grupos. */
+  initialRotation?: boolean;
   /** Grupo al que se preasigna la sesión (p. ej. desde "Asignar clase" en la ficha de grupo). */
   initialGroupId?: string | null;
   initialGroupName?: string;
   initialStudentIds?: string[];
   /** "YYYY-MM-DDTHH:mm" ya calculado (p. ej. próximo día habitual del grupo). */
   initialScheduledAt?: string;
+  /** Duración ya decidida (p. ej. en "Antes de la propuesta"). */
+  initialDurationMinutes?: number;
   places?: { id: string; name: string }[];
   monitorName?: string;
+  /** Monitores del club (modo club): se elige quién imparte la sesión. */
+  coaches?: { id: string; name: string }[];
+  /** Monitor preseleccionado (al crear, el propio usuario). */
+  initialCoachId?: string | null;
   allowDraftRestore?: boolean;
+  /**
+   * "Que la diseñe Ten Planner": al pasar al Paso 2 el motor rellena los
+   * ejercicios con el nivel y el historial del grupo y los objetivos.
+   */
+  engine?: EngineConfig;
   /** Editar una sesión existente (también las pasadas). */
   edit?: {
     sessionId: string;
@@ -157,10 +183,14 @@ function createInitialState({
   initialBlocks,
   initialLocation,
   initialPlaceId,
+  initialSecondPlaceId,
+  initialCourts,
+  initialRotation,
   initialGroupId,
   initialGroupName,
   initialStudentIds,
   initialScheduledAt,
+  initialDurationMinutes,
 }: Pick<
   SessionWizardProps,
   | "initialExercises"
@@ -173,24 +203,30 @@ function createInitialState({
   | "initialBlocks"
   | "initialLocation"
   | "initialPlaceId"
+  | "initialSecondPlaceId"
+  | "initialCourts"
+  | "initialRotation"
   | "initialGroupId"
   | "initialGroupName"
   | "initialStudentIds"
   | "initialScheduledAt"
+  | "initialDurationMinutes"
 >): WizardState {
   const scheduledAt = initialScheduledAt ?? defaultScheduledAt();
-  // Si la sesión viene preasignada a un grupo (p. ej. "Asignar clase" desde
-  // la ficha de grupo), se activa el mismo nombre automático AAMMDD_Grupo
-  // que usa el paso de alumnos al elegir un grupo manualmente.
-  const useCodeTitle = !!initialGroupId && !initialTitle;
+  // Toda sesión nueva sin nombre propio parte con el nombre automático:
+  // AAMMDD_Grupo, o AAMMDD_SG si es una clase suelta (sin grupo). Se
+  // recalcula solo al elegir grupo o fecha, y se puede escribir otro.
+  const useCodeTitle = !initialTitle;
   return {
     title: useCodeTitle
       ? sessionCode(new Date(scheduledAt), initialGroupName ?? "")
       : (initialTitle ?? ""),
     scheduledAt,
-    durationMinutes: 60,
+    durationMinutes: initialDurationMinutes ?? 60,
     location: initialLocation ?? "",
     placeId: initialPlaceId ?? null,
+    secondPlaceId: initialSecondPlaceId ?? null,
+    courts: initialCourts === 2 ? 2 : 1,
     objective: initialObjective ?? "",
     material: initialMaterial ?? "",
     observations: initialObservations ?? "",
@@ -202,7 +238,11 @@ function createInitialState({
       ...(initialExercises ?? []),
       ...textItemsFromBlocks(initialBlocks),
     ],
-    blocks: normalizeBlocks(initialBlocks),
+    blocks: normalizeBlocks(initialBlocks).map((b) =>
+      initialRotation && initialCourts === 2 && b.orderIndex === 2
+        ? { ...b, rotates: true }
+        : b
+    ),
     recurrence: {
       enabled: false,
       frequency: "weekly",
@@ -224,6 +264,12 @@ function toDraftPayload(state: WizardState): SessionDraftPayload {
     durationMinutes: state.durationMinutes,
     location: state.location,
     placeId: state.placeId,
+    courts: state.courts === 2 ? 2 : 1,
+    secondPlaceId: state.secondPlaceId ?? null,
+    groupId: state.groupId ?? null,
+    groupName: state.groupName ?? "",
+    selectedGroupIds: state.selectedGroupIds ?? [],
+    useCodeTitle: !!state.useCodeTitle,
     objective: state.objective,
     material: state.material,
     observations: state.observations,
@@ -262,6 +308,12 @@ function sanitizeDraftPayload(
       typeof payload.placeId === "string" || payload.placeId === null
         ? payload.placeId
         : fallback.placeId,
+    courts: payload.courts === 2 ? 2 : fallback.courts,
+    secondPlaceId:
+      typeof payload.secondPlaceId === "string" ||
+      payload.secondPlaceId === null
+        ? payload.secondPlaceId
+        : fallback.secondPlaceId,
     objective:
       typeof payload.objective === "string"
         ? payload.objective
@@ -310,6 +362,25 @@ function sanitizeDraftPayload(
       ? normalizeBlocks(payload.blocks.filter(isWizardSessionBlock))
       : fallback.blocks,
     recurrence: fallback.recurrence,
+    // El grupo y el nombre automático: los del borrador si los trae; si no,
+    // los que vienen de la URL (grupo ya elegido en el primer paso).
+    groupId:
+      typeof payload.groupId === "string" || payload.groupId === null
+        ? payload.groupId
+        : fallback.groupId,
+    groupName:
+      typeof payload.groupName === "string"
+        ? payload.groupName
+        : fallback.groupName,
+    selectedGroupIds: Array.isArray(payload.selectedGroupIds)
+      ? payload.selectedGroupIds.filter(
+          (id): id is string => typeof id === "string"
+        )
+      : fallback.selectedGroupIds,
+    useCodeTitle:
+      typeof payload.useCodeTitle === "boolean"
+        ? payload.useCodeTitle
+        : fallback.useCodeTitle,
   };
 }
 
@@ -325,15 +396,24 @@ export function SessionWizard({
   initialBlocks,
   initialLocation,
   initialPlaceId,
+  initialSecondPlaceId,
+  initialCourts,
+  initialRotation,
   initialGroupId,
   initialGroupName,
   initialStudentIds,
   initialScheduledAt,
+  initialDurationMinutes,
   places = [],
   monitorName,
+  coaches = [],
+  initialCoachId = null,
   allowDraftRestore = true,
   edit,
+  engine,
 }: SessionWizardProps) {
+  const intlLocale = useLocale() === "en" ? "en-GB" : "es-ES";
+  const tx = useTranslations("ui.s_sessionwizard_sessionwizard");
   const isEdit = !!edit;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -359,12 +439,16 @@ export function SessionWizard({
       initialBlocks,
       initialLocation,
       initialPlaceId,
+      initialSecondPlaceId,
+      initialCourts,
+      initialRotation,
       initialGroupId,
       initialGroupName,
       initialStudentIds,
       initialScheduledAt,
+      initialDurationMinutes,
     });
-    if (!edit) return base;
+    if (!edit) return { ...base, coachId: initialCoachId };
     const merged = { ...base, ...edit.initialState };
     // Una duración guardada distinta de la del plan se fijó a mano.
     const planMinutes = hasPlanContent(merged)
@@ -411,6 +495,16 @@ export function SessionWizard({
     total: number;
   } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  // Aviso de choque: otra sesión en la misma pista a la misma hora.
+  const [conflictWarning, setConflictWarning] = useState<{
+    placeName: string;
+    conflicts: {
+      id: string;
+      title: string;
+      scheduledAt: string;
+      durationMinutes: number;
+    }[];
+  } | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [, setHasDraft] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
@@ -490,6 +584,21 @@ export function SessionWizard({
     setState((prev) => ({ ...prev, ...patch }));
   }
 
+  const proposal = useEngineProposal({
+    engine,
+    state,
+    update,
+    availableExercises,
+  });
+
+  // Viniendo de "Antes de la propuesta" se entra directo en el Paso 2: la
+  // propuesta se prepara al abrir.
+  useEffect(() => {
+    if (engine?.autoStart && step === 2) void proposal.ensure();
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSaveDraft() {
     if (!draftReadyRef.current || submittedRef.current) return;
 
@@ -534,7 +643,7 @@ export function SessionWizard({
     try {
       await upsertSessionDraft({
         id: nextDraftId,
-        title: draftPayload.title.trim() || "Sesión sin título",
+        title: draftPayload.title.trim() || tx("sesionSinTitulo"),
         updatedAt: new Date().toISOString(),
         payload: draftPayload,
       });
@@ -588,10 +697,15 @@ export function SessionWizard({
     setShowErrors(false);
   }
 
-  function onNext() {
+  async function onNext() {
     if (!canProceed) {
       setShowErrors(true);
       return;
+    }
+    // "Que la diseñe Ten Planner": la propuesta se prepara con lo del Paso 1.
+    if (step === 1 && engine) {
+      const ok = await proposal.ensure();
+      if (!ok) return;
     }
 
     goToStep(step + 1);
@@ -601,7 +715,12 @@ export function SessionWizard({
     goToStep(step - 1);
   }
 
-  async function onSubmit() {
+  function onSubmit() {
+    void submitSession(false);
+  }
+
+  async function submitSession(ignoreConflicts: boolean) {
+    setConflictWarning(null);
     const allErrors = validateStep(1, state);
     if (Object.keys(allErrors).length > 0) {
       setShowErrors(true);
@@ -620,9 +739,14 @@ export function SessionWizard({
       const sessionDates = edit
         ? [scheduledDate]
         : computeSessionDates(scheduledDate, state.recurrence).dates;
-      const titleFor = (date: Date) =>
+      // Sin grupo, cada día lleva su número: SG, SG2, SG3…
+      const sgNumbers =
+        !edit && state.useCodeTitle && !(state.groupName ?? "").trim()
+          ? await fetchSgNumbers(sessionDates)
+          : null;
+      const titleFor = (date: Date, index: number) =>
         !edit && state.useCodeTitle
-          ? sessionCode(date, state.groupName ?? "")
+          ? sessionCode(date, state.groupName ?? "", sgNumbers?.[index] ?? 1)
           : state.title.trim();
 
       const exercisesPayload = buildExercisesPayload(state);
@@ -636,15 +760,65 @@ export function SessionWizard({
           ? computeTimelineDuration(state)
           : state.durationMinutes;
 
+      // ¿Coincide con otra sesión en la misma pista? Solo avisa: se puede
+      // guardar igualmente. Si la comprobación falla, no bloquea.
+      // Con dos pistas se comprueban los dos lugares.
+      const placesToCheck = [
+        state.placeId,
+        state.courts === 2 ? (state.secondPlaceId ?? null) : null,
+      ].filter((id, i, all): id is string => !!id && all.indexOf(id) === i);
+      if (!ignoreConflicts && placesToCheck.length > 0) {
+        try {
+          for (const placeId of placesToCheck) {
+            const check = await fetch("/api/sessions/conflicts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                placeId,
+                excludeSessionId: edit?.sessionId ?? null,
+                slots: sessionDates.slice(0, 60).map((date) => ({
+                  start: date.toISOString(),
+                  durationMinutes,
+                })),
+              }),
+            });
+            if (!check.ok) continue;
+            const json = (await check.json()) as {
+              data: {
+                placeName?: string;
+                conflicts: {
+                  id: string;
+                  title: string;
+                  scheduledAt: string;
+                  durationMinutes: number;
+                }[];
+              };
+            };
+            if (json.data.conflicts.length > 0) {
+              setConflictWarning({
+                placeName: json.data.placeName ?? "la pista",
+                conflicts: json.data.conflicts,
+              });
+              setSubmitting(false);
+              return;
+            }
+          }
+        } catch {
+          // Sin conexión para comprobarlo: se sigue guardando.
+        }
+      }
+
       if (edit) {
         const res = await fetch(`/api/sessions/${edit.sessionId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            reopenIfCompleted: !closingAfterChange,
             title: state.title.trim(),
             scheduledAt: scheduledIso,
             durationMinutes,
             durationManual: !!state.durationManual,
+            courts: state.courts === 2 ? 2 : 1,
             objective: state.objective.trim() || null,
             material: state.material.trim() || null,
             observations: state.observations.trim() || null,
@@ -652,10 +826,16 @@ export function SessionWizard({
             tags: state.tags.length > 0 ? state.tags : null,
             location: state.location.trim() || null,
             placeId: state.placeId,
+            secondPlaceId:
+              state.courts === 2 ? (state.secondPlaceId ?? null) : null,
             groupId: state.groupId ?? null,
+            ...(coaches.length > 0 ? { coachId: state.coachId ?? null } : {}),
             studentIds: state.studentIds,
             exercises: exercisesPayload,
             blocks: blocksPayload,
+            ...(proposal.generation()
+              ? { generation: proposal.generation() }
+              : {}),
           }),
         });
         if (!res.ok) {
@@ -666,7 +846,7 @@ export function SessionWizard({
           setServerError(
             data.details?.map((d) => d.message).join(". ") ??
               data.error ??
-              "No se pudieron guardar los cambios."
+              tx("noSePudieronGuardar")
           );
           return;
         }
@@ -682,7 +862,7 @@ export function SessionWizard({
       // Submit all sessions sequentially. If any fails we stop and report.
       let res: Response | null = null;
       let createdCount = 0;
-      for (const date of sessionDates) {
+      for (const [dateIndex, date] of sessionDates.entries()) {
         if (sessionDates.length > 1) {
           setProgress({ done: createdCount, total: sessionDates.length });
         }
@@ -690,11 +870,12 @@ export function SessionWizard({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: titleFor(date),
+            title: titleFor(date, dateIndex),
             description: null,
             scheduledAt: date.toISOString(),
             durationMinutes,
             durationManual: !!state.durationManual,
+            courts: state.courts === 2 ? 2 : 1,
             objective: state.objective.trim() || null,
             material: state.material.trim() || null,
             observations: state.observations.trim() || null,
@@ -703,10 +884,16 @@ export function SessionWizard({
             tags: state.tags.length > 0 ? state.tags : null,
             location: state.location.trim() || null,
             placeId: state.placeId,
+            secondPlaceId:
+              state.courts === 2 ? (state.secondPlaceId ?? null) : null,
             groupId: state.groupId ?? null,
+            ...(coaches.length > 0 ? { coachId: state.coachId ?? null } : {}),
             studentIds: state.studentIds,
             exercises: exercisesPayload,
             blocks: blocksPayload,
+            ...(proposal.generation()
+              ? { createdVia: "engine", generation: proposal.generation() }
+              : {}),
           }),
         });
         if (!res.ok) break;
@@ -716,7 +903,7 @@ export function SessionWizard({
 
       // Use the last response for downstream handling so failures bubble up.
       if (!res) {
-        setServerError("No se pudo crear la sesión.");
+        setServerError(tx("noSePudoCrear"));
         return;
       }
 
@@ -740,7 +927,7 @@ export function SessionWizard({
           }));
           setShowErrors(true);
           setServerError(
-            "Se quitaron ejercicios que ya no existen o a los que no tienes acceso. Revisa el plan y vuelve a intentarlo."
+            tx("seQuitaronEjerciciosQue")
           );
           return;
         }
@@ -750,16 +937,22 @@ export function SessionWizard({
             ?.map((detail: { message: string }) => detail.message)
             .join(". ") ??
           data.error ??
-          "Ha ocurrido un error.";
+          tx("haOcurridoUnError");
         setServerError(
           createdCount > 0
-            ? `Se crearon ${createdCount} de ${sessionDates.length} sesiones; el resto falló: ${msg}`
+            ? tx("seCrearonV1De", { v1: createdCount, v2: sessionDates.length, v3: msg })
             : msg
         );
         return;
       }
 
       submittedRef.current = true;
+
+
+      // La sesión ya está creada: se acaba el «preparando una sesión».
+
+
+      clearTarget();
       if (draftIdRef.current) {
         void removeSessionDraft(draftIdRef.current);
         draftIdRef.current = null;
@@ -773,7 +966,7 @@ export function SessionWizard({
       router.push(state.groupId ? `/groups/${state.groupId}` : "/sessions");
       router.refresh();
     } catch {
-      setServerError("Error de red. Inténtalo de nuevo.");
+      setServerError(tx("errorDeRedIntentalo"));
     } finally {
       setSubmitting(false);
       setProgress(null);
@@ -784,14 +977,84 @@ export function SessionWizard({
 
   return (
     <div className="flex w-full flex-col gap-8 rounded-lg border border-[#050505]/10 bg-white p-4 pb-28 shadow-[0_18px_60px_rgba(5,5,5,0.05)] dark:border-white/10 dark:bg-white/[0.045] sm:p-5 md:pb-6">
+      {conflictWarning && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setConflictWarning(null)}
+          />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="conflict-title"
+            className="relative max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-[28px] border border-border bg-card p-6 text-foreground shadow-2xl"
+          >
+            <h2
+              id="conflict-title"
+              className="text-lg font-black leading-tight"
+            >
+              {tx("yaHayOtraSesion", { v1: conflictWarning.placeName })}</h2>
+            <ul className="my-4 space-y-2">
+              {conflictWarning.conflicts.slice(0, 6).map((c) => {
+                const start = new Date(c.scheduledAt);
+                const end = new Date(
+                  start.getTime() + c.durationMinutes * 60_000
+                );
+                const day = start.toLocaleDateString(intlLocale, {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                });
+                const hm = (d: Date) =>
+                  d.toLocaleTimeString(intlLocale, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                return (
+                  <li
+                    key={c.id}
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm"
+                  >
+                    <span className="font-semibold">{c.title}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {day} · {hm(start)}–{hm(end)}
+                    </span>
+                  </li>
+                );
+              })}
+              {conflictWarning.conflicts.length > 6 && (
+                <li className="text-xs text-muted-foreground">
+                  {tx("yV1Mas", { v1: conflictWarning.conflicts.length - 6 })}</li>
+              )}
+            </ul>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConflictWarning(null)}
+                className="flex-1 rounded-full border border-border px-4 py-2.5 text-sm font-black text-muted-foreground transition-colors hover:bg-muted"
+              >
+                {tx("cambiar")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitSession(true)}
+                disabled={submitting}
+                className="inline-flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-brand-foreground transition-all hover:bg-brand/90 disabled:opacity-60"
+              >
+                {submitting && <Loader2 className="size-4 animate-spin" />}
+                {tx("guardarIgualmente")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {closingAfterChange && (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
           <p className="font-semibold">
-            Ajusta la sesión a lo que se hizo de verdad
+            {tx("ajustaLaSesionA")}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Cambia, quita o añade ejercicios y tiempos, y pulsa Guardar. Después
-            te pediremos la valoración final.
+            {tx("cambiaQuitaOAnade")}
           </p>
         </div>
       )}
@@ -816,7 +1079,7 @@ export function SessionWizard({
             {saveStatus === "saving" ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : null}
-            Borrador
+            {tx("borrador")}
           </button>
           <DraftStatusPill
             status={saveStatus}
@@ -828,7 +1091,7 @@ export function SessionWizard({
 
       <div className="rounded-lg border border-foreground/10 bg-[#F4F4F1] px-4 py-3 dark:bg-[#050505]/70">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/45">
-          Paso {step} de {TOTAL_STEPS}
+          {tx("pasoV1DeV2", { v1: step, v2: TOTAL_STEPS })}
         </p>
         <h2 className="font-heading text-2xl font-semibold text-foreground">
           {step === 1 ? "Configuración" : "Ejercicios"}
@@ -843,15 +1106,33 @@ export function SessionWizard({
             errors={visibleErrors}
             places={places}
             monitorName={monitorName}
+            coaches={coaches}
             hideRecurrence={isEdit}
           />
         ) : (
-          <StepExercises
-            state={state}
-            update={update}
-            availableExercises={availableExercises}
-            onBeforeLeave={() => void saveDraftRef.current()}
-          />
+          <div className="space-y-4">
+            {engine && (proposal.info || proposal.busy || proposal.error) && (
+              <EngineProposalBanner
+                explanations={proposal.info?.explanations ?? []}
+                busy={proposal.busy}
+                error={proposal.error}
+                replacesCount={engine.replacesCount}
+                onRegenerate={proposal.regenerate}
+              />
+            )}
+            <StepExercises
+              state={state}
+              update={update}
+              availableExercises={availableExercises}
+              places={places}
+              onBeforeLeave={() => void saveDraftRef.current()}
+              onAutoChange={
+                engine ? (idx) => void proposal.changeItem(idx) : undefined
+              }
+              canAutoChange={proposal.canChange}
+              autoChangingIdx={proposal.changingIdx}
+            />
+          </div>
         )}
       </div>
 
@@ -888,7 +1169,7 @@ export function SessionWizard({
             }
             className="px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Cancelar
+            {tx("cancelar")}
           </Link>
         ) : (
           <button
@@ -897,7 +1178,7 @@ export function SessionWizard({
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronLeft className="size-4" />
-            Atrás
+            {tx("atras")}
           </button>
         )}
 
@@ -916,8 +1197,8 @@ export function SessionWizard({
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : null}
-                <span className="sm:hidden">Guardar</span>
-                <span className="hidden sm:inline">Guardar cambios</span>
+                <span className="sm:hidden">{tx("guardar")}</span>
+                <span className="hidden sm:inline">{tx("guardarCambios")}</span>
               </button>
             )}
             <button
@@ -931,7 +1212,7 @@ export function SessionWizard({
                   : "opacity-55 cursor-not-allowed"
               )}
             >
-              Siguiente
+              {tx("siguiente")}
               <ChevronRight className="size-4" />
             </button>
           </div>
@@ -939,15 +1220,10 @@ export function SessionWizard({
           <div className="flex items-center gap-3">
             {state.exercises.length > 0 && (
               <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
-                {state.exercises.length} elemento
-                {state.exercises.length !== 1 ? "s" : ""}
-                {" · "}
-                {state.exercises.reduce(
+                {tx("v1ElementoV2V3", { v1: state.exercises.length, v2: state.exercises.length !== 1 ? "s" : "", v3: state.exercises.reduce(
                   (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
                   0
-                )}{" "}
-                min
-              </span>
+                ) })}</span>
             )}
             <button
               type="button"
@@ -962,7 +1238,7 @@ export function SessionWizard({
               {isEdit
                 ? "Guardar cambios"
                 : progress
-                  ? `Creando ${progress.done + 1} de ${progress.total}…`
+                  ? tx("creandoV1DeV2", { v1: progress.done + 1, v2: progress.total })
                   : state.recurrence.enabled
                     ? "Crear sesiones"
                     : "Crear sesión"}

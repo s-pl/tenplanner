@@ -80,7 +80,7 @@ export async function GET(_request: Request, context: RouteContext) {
     .where(eq(users.id, user.id))
     .limit(1);
 
-  const plan = await loadSessionPlan(id);
+  const plan = await loadSessionPlan(id, user.id);
   const blockTitles = new Map(
     plan.blocks.map((block) => [block.orderIndex, block.title])
   );
@@ -181,6 +181,22 @@ export async function GET(_request: Request, context: RouteContext) {
     }),
     students: studentRows,
   };
+
+  // Dos pistas: cada ejercicio indica su pista, quién lo dirige y turnos.
+  if (session.courts === 2) {
+    const rotatingBlocks = new Set(
+      plan.blocks.filter((b) => b.rotates).map((b) => b.orderIndex)
+    );
+    data.exercises.forEach((ex, i) => {
+      const item = plan.items[i];
+      if (!item) return;
+      ex.court = item.court === 2 ? 2 : 1;
+      ex.ledBy = item.ledBy ?? null;
+      ex.turnMinutes = item.turnMinutes ?? null;
+      ex.turnSize = item.turnSize ?? null;
+      ex.blockRotates = rotatingBlocks.has(item.blockOrder);
+    });
+  }
 
   try {
     const element = createElement(SessionPdf, {

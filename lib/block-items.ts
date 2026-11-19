@@ -121,23 +121,34 @@ export function resolveBlockItemDuration(
  */
 export function sumBlocksDuration(
   blocks: Array<{
+    /** Dos pistas con rotación: los minutos son por grupo y rotan. */
+    rotates?: boolean;
     items: Array<{
       kind?: string | null;
       exerciseId?: string | null;
       freeText?: string | null;
       durationMinutes?: number | null;
+      court?: number | null;
     }>;
   }>,
   exerciseDurationById: Map<string, number>
 ): number {
-  return blocks.reduce(
-    (sum, block) =>
-      sum +
-      block.items.reduce(
-        (blockSum, item) =>
-          blockSum + resolveBlockItemDuration(item, exerciseDurationById),
-        0
-      ),
-    0
-  );
+  // Con dos pistas, lo de cada pista ocurre a la vez: un bloque dura lo que
+  // dure la pista más larga. Sin pistas (todo en la 1) es la suma de siempre.
+  return blocks.reduce((sum, block) => {
+    const byCourt = new Map<number, number>();
+    for (const item of block.items) {
+      const court = item.court === 2 ? 2 : 1;
+      byCourt.set(
+        court,
+        (byCourt.get(court) ?? 0) +
+          resolveBlockItemDuration(item, exerciseDurationById)
+      );
+    }
+    // Con rotación cada grupo hace las dos pistas, una tras otra: el bloque
+    // dura el doble de la pista más larga.
+    return (
+      sum + Math.max(0, ...byCourt.values()) * (block.rotates ? 2 : 1)
+    );
+  }, 0);
 }

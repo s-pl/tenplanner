@@ -3,39 +3,43 @@ import {
   canUserCreateClub,
   getOwnedClub,
   getCoachMemberships,
-  listClubRoster,
 } from "@/lib/clubs";
-import { getActiveSport } from "@/lib/sports";
 import { SPORT_LABELS } from "@/lib/sport-constants";
 import { redirect } from "next/navigation";
-import { ClubOwnerPanel } from "./club-owner-panel";
+import { ClubIdentityForm } from "@/components/app/club-identity-form";
+import { clubIdentityFromRow, getClubStats } from "@/lib/club-profile";
 import { NewClubForm } from "./new-club-form";
 import { BookOpen, Users2 } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { getTerm } from "@/lib/i18n-terms";
 
 function ObjectivesLink({ clubId }: { clubId: string }) {
+  const tx = useTranslations("ui.s_club_page");
   return (
     <Link
       href={`/club/${clubId}/objetivos`}
       className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#050505]/15 px-3 py-1.5 text-[11px] font-black uppercase text-foreground/70 transition-colors hover:border-brand hover:text-brand dark:border-white/15"
     >
       <BookOpen className="size-3.5" />
-      Objetivos
+      {tx("objetivos")}
     </Link>
   );
 }
 
 export default async function ClubPage() {
+  const term = await getTerm();
+  const tx = await getTranslations("ui.s_club_page");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [ownedClub, coachOf, activeSport] = await Promise.all([
+  const [ownedClub, coachOf] = await Promise.all([
     getOwnedClub(user.id),
     getCoachMemberships(user.id),
-    getActiveSport(user.id),
   ]);
 
   // Un club se crea con su propia cuenta ("Como Club" al registrarse); un
@@ -43,43 +47,31 @@ export default async function ClubPage() {
   const canCreateClub = await canUserCreateClub(user.id, user.user_metadata);
 
   if (ownedClub) {
-    const { members, invites } = await listClubRoster(ownedClub.id);
+    const stats = await getClubStats(ownedClub.id);
     return (
       <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
         <div>
-          <p className="tp-kicker">Mi club</p>
+          <p className="tp-kicker">{tx("miClub")}</p>
           <h1 className="mt-2 text-3xl font-black text-foreground">
             {ownedClub.name}
           </h1>
           <p className="mt-2 text-sm leading-6 text-foreground/62">
-            Invita monitores por email. Cuando acepten, tendrás acceso
-            compartido a sus sesiones, alumnos, grupos y calendario de ese
-            deporte — cada uno conserva su propio panel.
+            {tx("datosFotosEInstalaciones")}
           </p>
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-wide text-foreground/70">
-              Objetivos del club
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-foreground/62">
-              Adapta los objetivos de tenis a la metodología del club. Lo ven
-              todos los alumnos del club.
-            </p>
-          </div>
-          <ObjectivesLink clubId={ownedClub.id} />
-        </div>
-        <ClubOwnerPanel
-          club={ownedClub}
-          initialMembers={members}
-          initialInvites={invites}
-          defaultSport={activeSport}
+        <ClubIdentityForm
+          key={ownedClub.updatedAt.toISOString()}
+          clubId={ownedClub.id}
+          userId={user.id}
+          canEdit
+          stats={stats}
+          initial={clubIdentityFromRow(ownedClub, user.email)}
         />
         {coachOf.length > 0 && (
           <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
             <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-foreground/70">
               <Users2 className="size-4" />
-              También eres monitor en
+              {tx("tambienEresMonitorEn")}
             </h2>
             <ul className="mt-3 space-y-2">
               {coachOf.map(({ club, sports }) => (
@@ -103,12 +95,19 @@ export default async function ClubPage() {
     );
   }
 
+  const clubProfiles = await Promise.all(
+    coachOf.map(async ({ club }) => ({
+      club,
+      stats: await getClubStats(club.id),
+    }))
+  );
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <div>
-        <p className="tp-kicker">Mi club</p>
+        <p className="tp-kicker">{tx("miClub")}</p>
         <h1 className="mt-2 text-3xl font-black text-foreground">
-          Monitores y clubs
+          {tx("monitoresYClubs")}
         </h1>
       </div>
 
@@ -116,7 +115,7 @@ export default async function ClubPage() {
         <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
           <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-foreground/70">
             <Users2 className="size-4" />
-            Formas parte de
+            {tx("formasParteDe")}
           </h2>
           <ul className="mt-3 space-y-2">
             {coachOf.map(({ club, sports }) => (
@@ -132,7 +131,7 @@ export default async function ClubPage() {
                       key={sport}
                       className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70"
                     >
-                      {SPORT_LABELS[sport]}
+                      {term(SPORT_LABELS[sport])}
                     </span>
                   ))}
                 </span>
@@ -140,20 +139,31 @@ export default async function ClubPage() {
             ))}
           </ul>
           <p className="mt-3 text-xs leading-5 text-foreground/50">
-            Ese club tiene acceso compartido a tus sesiones, alumnos, grupos y
-            calendario.
+            {tx("loQueHacesEn")}
           </p>
         </div>
       )}
 
+      {/* Ficha de cada club del que es monitor (solo lectura). */}
+      {clubProfiles.map(({ club, stats }) => (
+        <ClubIdentityForm
+          key={club.id}
+          clubId={club.id}
+          userId={user.id}
+          canEdit={false}
+          stats={stats}
+          initial={clubIdentityFromRow(club)}
+        />
+      ))}
+
       <div className="rounded-[28px] border border-[#050505]/10 bg-white p-5 dark:border-white/10 dark:bg-[#10100e]">
         <h2 className="text-sm font-black uppercase tracking-wide text-foreground/70">
-          ¿Diriges un club?
+          {tx("dirigesUnClub")}
         </h2>
         <p className="mt-2 text-sm leading-6 text-foreground/62">
           {canCreateClub
-            ? "Regístralo para invitar a tus monitores y gestionar su espacio desde una cuenta común. Es solo informativo por ahora, sin facturación."
-            : "Un club se da de alta con su propia cuenta: cierra sesión y crea una cuenta nueva eligiendo «Como Club», con otro correo. Desde esa cuenta invitarás a tus monitores (también a ti) y tendrás el Modo gestión con los informes del club."}
+            ? tx("registraloParaInvitarA")
+            : tx("unClubSeDa")}
         </p>
         {canCreateClub && (
           <div className="mt-4">

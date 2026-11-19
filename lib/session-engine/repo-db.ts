@@ -1,0 +1,354 @@
+// Acceso a datos del motor: carga en pocas consultas todo lo que
+// generateSession necesita. El motor en sí no toca la base.
+
+import {
+  and,
+  asc,
+  avg,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import { db } from "@/db";
+import { normalizeSearchText } from "@/lib/exercises/search-text";
+import {
+  exerciseRatings,
+  exercises,
+  groupStudents,
+  groups,
+  sessionBlockItems,
+  sessionBlocks,
+  sessionExercises,
+  sessions,
+  students,
+} from "@/db/schema";
+import { sharedWithClubCondition } from "@/lib/clubs";
+import { exerciseOwnOrClubCondition } from "@/lib/exercise-access";
+import { loadSkillLevels } from "@/lib/skill-levels-repo";
+import type { GroupScheduleEntry } from "@/lib/groups/schedule";
+import {
+  GOLPES,
+  type EngineData,
+  type EngineExercise,
+  type Golpe,
+} from "./types";
+
+export type EngineGroup = {
+  id: string;
+  name: string;
+  sport: string;
+  clubId: string | null;
+  coachId: string;
+  defaultLevel: string | null;
+  weeklySchedule: GroupScheduleEntry[] | null;
+  students: { id: string; name: string; playerLevel: string | null }[];
+  /** Clase suelta (alumnos sin grupo): sin histórico del grupo. */
+  adHoc?: boolean;
+};
+
+/** Prefijo del id de una clase suelta (no es un grupo guardado). */
+export const AD_HOC_PREFIX = "suelta:";
+
+/**
+ * Clase suelta: unos alumnos del monitor sin grupo. Se trata como un grupo
+ * virtual (con sus niveles, para elegir los ejercicios) pero sin histórico
+ * de sesiones: el motor se apoya entonces en los objetivos que indique el
+ * monitor.
+ */
+export async function loadAdHocGroup(
+  userId: string,
+  studentIds: string[],
+  sport: string
+): Promise<EngineGroup | null> {
+  const ids = Array.from(new Set(studentIds));
+  if (ids.length === 0) return null;
+  const rows = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      playerLevel: students.playerLevel,
+    })
+    .from(students)
+    .where(and(eq(students.coachId, userId), inArray(students.id, ids)))
+    .orderBy(asc(students.name));
+  if (rows.length === 0) return null;
+  return {
+    id: `${AD_HOC_PREFIX}${rows.map((r) => r.id).sort().join(",")}`,
+    name: rows.map((r) => r.name).join(", "),
+    sport,
+    clubId: null,
+    coachId: userId,
+    defaultLevel: null,
+    weeklySchedule: null,
+    students: rows,
+    adHoc: true,
+  };
+}
+
+/** Grupo accesible para el usuario en su espacio activo, con sus alumnos. */
+export async function loadEngineGroup(
+  userId: string,
+  activeClubId: string | null,
+  groupId: string
+): Promise<EngineGroup | null> {
+  const [g] = await db
+    .select({
+      id: groups.id,
+      name: groups.name,
+      sport: groups.sport,
+      clubId: groups.clubId,
+      coachId: groups.coachId,
+      defaultLevel: groups.defaultLevel,
+      weeklySchedule: groups.weeklySchedule,
+    })
+    .from(groups)
+    .where(
+      and(
+        eq(groups.id, groupId),
+        sharedWithClubCondition(
+          groups.coachId,
+          groups.clubId,
+          userId,
+          activeClubId
+        )
+      )
+    )
+    .limit(1);
+  if (!g) return null;
+  const members = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      playerLevel: students.playerLevel,
+    })
+    .from(groupStudents)
+    .innerJoin(students, eq(groupStudents.studentId, students.id))
+    .where(eq(groupStudents.groupId, groupId))
+    .orderBy(asc(students.name));
+  return { ...g, students: members };
+}
+
+type PoolRow = Omit<EngineExercise, "ratingAvg">;
+
+/** Cuánto se guarda en memoria la parte común (ejercicios públicos y valoraciones). */
+const POOL_TTL_MS = 10 * 60_000;
+const publicPoolCache = new Map<
+  string,
+  { at: number; rows: Promise<PoolRow[]> }
+>();
+let ratingsCache: {
+  at: number;
+  byId: Promise<Map<string, number | null>>;
+} | null = null;
+
+function cached(
+  entry: { at: number } | null | undefined,
+  now: number
+): boolean {
+  return !!entry && now - entry.at < POOL_TTL_MS;
+}
+
+const arr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+
+async function queryPool(where: SQL): Promise<PoolRow[]> {
+  const rows = await db
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      durationMinutes: exercises.durationMinutes,
+      fases: exercises.fases,
+      phase: exercises.phase,
+      niveles: exercises.niveles,
+      golpes: exercises.golpes,
+      caracter: exercises.caracter,
+      aspectos: exercises.aspectosJuego,
+      parametros: exercises.parametros,
+      situaciones: exercises.situacionJuego,
+      objectivesText: exercises.objectives,
+      tipoActividad: exercises.tipoActividad,
+      tipoPelota: exercises.tipoPelota,
+      numJugadores: exercises.numJugadores,
+      hasSteps: sql<boolean>`coalesce(json_typeof(${exercises.steps}) = 'array' and json_array_length(${exercises.steps}) > 0, false)`,
+      hasVariantes: sql<boolean>`coalesce(length(trim(${exercises.variantes})) > 0, false)`,
+      hasMedia: sql<boolean>`(${exercises.imageUrl} is not null or ${exercises.animationScene} is not null or coalesce(json_typeof(${exercises.imageUrls}) = 'array' and json_array_length(${exercises.imageUrls}) > 0, false))`,
+    })
+    .from(exercises)
+    .where(where);
+  return rows.map((r) => {
+    const fases = arr(r.fases);
+    return {
+      id: r.id,
+      name: r.name,
+      durationMinutes: r.durationMinutes,
+      fases: fases.length > 0 ? fases : r.phase ? [r.phase] : [],
+      niveles: arr(r.niveles),
+      golpes: arr(r.golpes),
+      caracter: arr(r.caracter),
+      aspectos: arr(r.aspectos),
+      tipoActividad: r.tipoActividad ?? null,
+      tipoPelota: r.tipoPelota ?? null,
+      numJugadores: r.numJugadores ?? null,
+      hasSteps: !!r.hasSteps,
+      hasVariantes: !!r.hasVariantes,
+      hasMedia: !!r.hasMedia,
+      parametros: arr(r.parametros),
+      situaciones: arr(r.situaciones),
+      text: normalizeSearchText(`${r.name} ${r.objectivesText ?? ""}`),
+    };
+  });
+}
+
+/** Ejercicios públicos (biblioteca global) de un deporte, en memoria 10 min. */
+function publicPool(sport: string, now: number): Promise<PoolRow[]> {
+  const hit = publicPoolCache.get(sport);
+  if (hit && cached(hit, now)) return hit.rows;
+  const rows = queryPool(
+    and(
+      eq(exercises.sport, sport as "tenis"),
+      or(eq(exercises.isGlobal, true), isNull(exercises.createdBy)),
+      eq(exercises.isPublished, true)
+    )!
+  );
+  publicPoolCache.set(sport, { at: now, rows });
+  // Si falla, que no se quede guardado el error.
+  rows.catch(() => publicPoolCache.delete(sport));
+  return rows;
+}
+
+function ratingsById(now: number): Promise<Map<string, number | null>> {
+  if (ratingsCache && cached(ratingsCache, now)) return ratingsCache.byId;
+  const byId = db
+    .select({
+      id: exerciseRatings.exerciseId,
+      avg: avg(exerciseRatings.rating),
+    })
+    .from(exerciseRatings)
+    .groupBy(exerciseRatings.exerciseId)
+    .then(
+      (rows) =>
+        new Map(rows.map((r) => [r.id, r.avg === null ? null : Number(r.avg)]))
+    );
+  ratingsCache = { at: now, byId };
+  byId.catch(() => {
+    ratingsCache = null;
+  });
+  return byId;
+}
+
+/**
+ * Ejercicios del deporte que el usuario puede usar, ya resumidos. La
+ * biblioteca pública (la gran mayoría) se guarda en memoria unos minutos;
+ * los propios y los de sus clubes se leen siempre.
+ */
+export async function loadEnginePool(
+  userId: string,
+  sport: string
+): Promise<EngineExercise[]> {
+  const now = Date.now();
+  const [pub, own, ratings] = await Promise.all([
+    publicPool(sport, now),
+    queryPool(
+      and(
+        eq(exercises.sport, sport as "tenis"),
+        exerciseOwnOrClubCondition(userId)
+      )!
+    ),
+    ratingsById(now),
+  ]);
+  const byId = new Map<string, PoolRow>();
+  for (const r of pub) byId.set(r.id, r);
+  for (const r of own) byId.set(r.id, r);
+  return [...byId.values()].map((r) => ({
+    ...r,
+    ratingAvg: ratings.get(r.id) ?? null,
+  }));
+}
+
+/** Ejercicios de las últimas sesiones completadas del grupo (más reciente primero). */
+export async function loadRecentGroupSessions(
+  groupId: string,
+  limit = 8
+): Promise<string[][]> {
+  const recent = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(eq(sessions.groupId, groupId), eq(sessions.status, "completed")))
+    .orderBy(desc(sessions.scheduledAt))
+    .limit(limit);
+  if (recent.length === 0) return [];
+  const ids = recent.map((r) => r.id);
+  const [blockRows, legacyRows] = await Promise.all([
+    db
+      .select({
+        sessionId: sessionBlocks.sessionId,
+        exerciseId: sessionBlockItems.exerciseId,
+      })
+      .from(sessionBlockItems)
+      .innerJoin(sessionBlocks, eq(sessionBlockItems.blockId, sessionBlocks.id))
+      .where(
+        and(
+          inArray(sessionBlocks.sessionId, ids),
+          isNotNull(sessionBlockItems.exerciseId)
+        )
+      ),
+    db
+      .select({
+        sessionId: sessionExercises.sessionId,
+        exerciseId: sessionExercises.exerciseId,
+      })
+      .from(sessionExercises)
+      .where(inArray(sessionExercises.sessionId, ids)),
+  ]);
+  const bySession = new Map<string, Set<string>>(
+    ids.map((id) => [id, new Set()])
+  );
+  for (const r of [...blockRows, ...legacyRows]) {
+    if (r.exerciseId) bySession.get(r.sessionId)?.add(r.exerciseId);
+  }
+  return ids.map((id) => [...(bySession.get(id) ?? [])]);
+}
+
+/** Todo lo que el motor necesita para un grupo y unos asistentes. */
+export async function loadEngineData(
+  userId: string,
+  group: EngineGroup,
+  attendeeIds: string[]
+): Promise<EngineData> {
+  const [levels, pool, recentSessions] = await Promise.all([
+    loadSkillLevels(),
+    loadEnginePool(userId, group.sport),
+    // Una clase suelta no tiene histórico de grupo.
+    group.adHoc ? Promise.resolve([] as string[][]) : loadRecentGroupSessions(group.id),
+  ]);
+  const wanted = new Set(attendeeIds);
+  const attendeeLevels = group.students
+    .filter((s) => wanted.has(s.id))
+    .map((s) => s.playerLevel);
+
+  const golpesById = new Map(pool.map((e) => [e.id, e.golpes]));
+  const recentGolpeCounts: Partial<Record<Golpe, number>> = {};
+  for (const id of recentSessions.flat()) {
+    for (const g of golpesById.get(id) ?? []) {
+      if ((GOLPES as readonly string[]).includes(g)) {
+        recentGolpeCounts[g as Golpe] =
+          (recentGolpeCounts[g as Golpe] ?? 0) + 1;
+      }
+    }
+  }
+
+  return {
+    sport: group.sport,
+    levels,
+    attendeeLevels,
+    groupDefaultLevel: group.defaultLevel,
+    exercises: pool,
+    recentSessions,
+    recentGolpeCounts,
+  };
+}

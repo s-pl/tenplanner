@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isTenPlannerMode } from "@/lib/work-mode";
+import { getClubMonitorSpaceClubs, isTenPlannerMode } from "@/lib/work-mode";
 import { notFound } from "next/navigation";
 import { and, asc, avg, count, desc, eq, inArray, ne, or } from "drizzle-orm";
 import {
@@ -15,6 +15,8 @@ import {
   Dumbbell,
 } from "lucide-react";
 import { AddClassMenuButton } from "@/components/app/add-class-menu-button";
+import { AddToPendingSessionButton } from "@/components/app/pending-session-target";
+import { PendingTargetBanner } from "@/components/app/pending-session-target";
 import {
   CopyToSpaceButton,
   type CopyTarget,
@@ -39,11 +41,18 @@ import { BackToSearchLink } from "@/components/app/back-to-search-link";
 import { classNavQueryString, getFilteredClassIds } from "@/lib/nav/class-nav";
 import { autoriaLabel, nivelLabel } from "@/lib/exercise-taxonomy";
 import { getActiveWorkClubId } from "@/lib/clubs";
-import { classListSpaceCondition } from "@/lib/classes/lists";
+import {
+  classListSpaceCondition,
+  getClassListNavIds,
+} from "@/lib/classes/lists";
 import { canSeeClassDraft } from "@/lib/classes/visibility";
 import { hasClassAnimation } from "@/lib/classes/animation";
 import { LevelBalls } from "@/components/app/level-balls";
 import { ClassAnimationButton } from "@/components/app/class-animation-player";
+import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
+import { getTerm } from "@/lib/i18n-terms";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -58,18 +67,107 @@ function classValues(values: string[] | null, fallback: string | null) {
       : [];
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  technique: "Técnica",
-  tactics: "Táctica",
-  fitness: "Físico",
-  "warm-up": "Calentamiento",
-  "trucos-tecnicos": "Trucos técnicos",
+/** Fase de la clase según el orden del bloque (1 = inicio, 3 = final). */
+const PHASE_LABELS: Record<number, string> = {
+  1: "Calentamiento",
+  2: "Bloque principal",
+  3: "Vuelta a la calma",
 };
+
+function phaseLabel(orderIndex: number): string {
+  return PHASE_LABELS[orderIndex] ?? "Bloque";
+}
+
+/** Tarjeta de un ejercicio de la clase, con enlace a su ficha. */
+function ExerciseCard({
+  exercise: ex,
+  number,
+  numberLabel,
+  durationMinutes,
+  phase,
+  classId,
+}: {
+  exercise: {
+    id: string;
+    name: string;
+    description: string | null;
+    materials: string[] | null;
+    videoUrl: string | null;
+  };
+  number: number;
+  /** "Estación" en las estaciones; sin etiqueta, solo el número. */
+  numberLabel?: string;
+  /** Minutos del ejercicio en la clase (si los tiene). */
+  durationMinutes?: number | null;
+  /** Fase de la clase en la que está el ejercicio. */
+  phase: string;
+  classId: string;
+}) {
+  const tx = useTranslations("ui.s_id_page");
+  return (
+    <Link
+      href={`/exercises/${ex.id}?fromClass=${classId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex h-full gap-3 rounded-lg border border-border/80 bg-background px-4 py-3 shadow-sm transition-colors hover:border-brand/40"
+    >
+      <span
+        className={
+          numberLabel
+            ? "shrink-0 pt-0.5 font-mono text-[10px] uppercase text-muted-foreground/60"
+            : "w-5 shrink-0 pt-0.5 text-right font-mono text-xs text-muted-foreground/60"
+        }
+      >
+        {numberLabel ? `${numberLabel} ${number}` : number}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground">
+          {ex.name}
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {phase}
+          </span>
+          {durationMinutes ? (
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
+              {tx("v1Min", { v1: durationMinutes })}</span>
+          ) : null}
+          {ex.videoUrl && (
+            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
+              {tx("video")}
+            </span>
+          )}
+        </span>
+        {ex.description && (
+          <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground line-clamp-2">
+            {ex.description}
+          </span>
+        )}
+        {ex.materials && ex.materials.length > 0 && (
+          <span className="mt-1.5 flex flex-wrap gap-1">
+            {ex.materials.map((m) => (
+              <span
+                key={m}
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+              >
+                <Package className="size-2.5 opacity-60" />
+                {m}
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+    </Link>
+  );
+}
 
 export default async function ClassDetailPage({
   params,
   searchParams,
 }: PageProps) {
+  const term = await getTerm();
+  const intlLocale = (await getLocale()) === "en" ? "en-GB" : "es-ES";
+  const tx = await getTranslations("ui.s_id_page");
   const { id } = await params;
   const navParams = await searchParams;
   const supabase = await createClient();
@@ -101,22 +199,16 @@ export default async function ClassDetailPage({
   const copyTargets: CopyTarget[] = [];
   if (user && !inTenPlanner && cls.isLibrary && cls.status === "published")
     copyTargets.push("active");
-  // Para una clase de la Biblioteca ya existe "Copiar a Mis clases": el botón
-  // al espacio particular solo aplica a clases propias del club.
-  if (
-    user &&
-    !inTenPlanner &&
-    isOwner &&
-    !cls.isLibrary &&
-    cls.clubId &&
-    cls.status === "published"
-  )
-    copyTargets.push("particular");
+  // Las clases del club no se ofrecen para copiar al espacio particular: el
+  // contenido del club se queda en el club.
+  // "Enviar al club": en el Modo monitor, una clase de su espacio.
+  const sendClubs =
+    user && isOwner && !cls.isLibrary && !cls.clubId
+      ? ((await getClubMonitorSpaceClubs(user.id)) ?? [])
+      : [];
   // La Biblioteca pública solo se edita y se borra en Modo Ten Planner.
   // (la de la plataforma la edita sea quien sea quien la creó).
-  const canEditClass = cls.isLibrary
-    ? !!user && inTenPlanner
-    : isOwner;
+  const canEditClass = cls.isLibrary ? !!user && inTenPlanner : isOwner;
 
   const blocks = await db
     .select()
@@ -127,6 +219,7 @@ export default async function ClassDetailPage({
   const items = blocks.length
     ? await db
         .select({
+          id: classBlockExercises.id,
           blockId: classBlockExercises.blockId,
           exerciseId: classBlockExercises.exerciseId,
           freeText: classBlockExercises.freeText,
@@ -136,6 +229,8 @@ export default async function ClassDetailPage({
           durationMinutes: classBlockExercises.durationMinutes,
           kind: classBlockExercises.kind,
           stations: classBlockExercises.stations,
+          court: classBlockExercises.court,
+          ledBy: classBlockExercises.ledBy,
           exerciseName: exercises.name,
           exerciseDescription: exercises.description,
         })
@@ -165,7 +260,6 @@ export default async function ClassDetailPage({
           id: exercises.id,
           name: exercises.name,
           description: exercises.description,
-          category: exercises.category,
           materials: exercises.materials,
           videoUrl: exercises.videoUrl,
         })
@@ -173,9 +267,76 @@ export default async function ClassDetailPage({
         .where(inArray(exercises.id, uniqueLinkedIds))
     : [];
   const linkedById = new Map(linkedRows.map((r) => [r.id, r]));
-  const classExercises = uniqueLinkedIds
-    .map((exId) => linkedById.get(exId))
-    .filter((r): r is (typeof linkedRows)[number] => !!r);
+  type LinkedExercise = (typeof linkedRows)[number];
+  // Lista de "Ejercicios" en el orden de la clase: cada ejercicio suelto una
+  // vez, y cada bloque de estaciones junto, como "Ejercicio estaciones" con
+  // sus estaciones dentro.
+  type ExerciseEntry =
+    | {
+        kind: "exercise";
+        exercise: LinkedExercise;
+        durationMinutes: number | null;
+        phase: string;
+      }
+    | {
+        kind: "stations";
+        key: string;
+        durationMinutes: number | null;
+        phase: string;
+        stations: Array<
+          | { kind: "exercise"; exercise: LinkedExercise }
+          | { kind: "text"; text: string }
+        >;
+      };
+  const classExercises: ExerciseEntry[] = [];
+  const listedExerciseIds = new Set<string>();
+  for (const block of blocks)
+    for (const it of items.filter((i) => i.blockId === block.id)) {
+      const stations = (it.stations as StationItemJson[] | null) ?? [];
+      if (resolveItemKind(it) === "stations") {
+        type StationEntry = Extract<
+          ExerciseEntry,
+          { kind: "stations" }
+        >["stations"][number];
+        const group = stations.flatMap((st): StationEntry[] => {
+          const exercise =
+            st.kind === "exercise" && st.exerciseId
+              ? linkedById.get(st.exerciseId)
+              : undefined;
+          if (exercise) return [{ kind: "exercise", exercise }];
+          return st.freeText?.trim()
+            ? [{ kind: "text", text: st.freeText.trim() }]
+            : [];
+        });
+        if (group.length > 0)
+          classExercises.push({
+            kind: "stations",
+            key: it.id,
+            durationMinutes: it.durationMinutes,
+            phase: phaseLabel(block.orderIndex),
+            stations: group,
+          });
+        continue;
+      }
+      const exercise = it.exerciseId ? linkedById.get(it.exerciseId) : null;
+      if (exercise && !listedExerciseIds.has(exercise.id)) {
+        listedExerciseIds.add(exercise.id);
+        classExercises.push({
+          kind: "exercise",
+          exercise,
+          durationMinutes: it.durationMinutes,
+          phase: phaseLabel(block.orderIndex),
+        });
+      }
+    }
+  const classExerciseCount = classExercises.reduce(
+    (n, e) =>
+      n +
+      (e.kind === "exercise"
+        ? 1
+        : e.stations.filter((st) => st.kind === "exercise").length),
+    0
+  );
 
   // Favorito = la clase está en al menos una de las listas del monitor
   // (el corazón de la ficha abre ese selector; ver ClassFavoriteToggle).
@@ -266,11 +427,26 @@ export default async function ClassDetailPage({
   const classNiveles = classValues(cls.niveles, cls.nivel);
   const classAspectos = classValues(cls.aspectosJuego, cls.aspectoJuego);
 
-  const navIds = await getFilteredClassIds(navParams, {
-    userId: user?.id ?? null,
-  });
+  // Desde una lista de clases (?desdeLista=<id>): las flechas recorren esa
+  // lista y se vuelve a las listas. Si no, la búsqueda/filtros de la
+  // Biblioteca o de Mis clases.
+  const fromListRaw = navParams.desdeLista;
+  const fromListId =
+    typeof fromListRaw === "string" && /^[0-9a-f-]{36}$/i.test(fromListRaw)
+      ? fromListRaw
+      : null;
+  const listNavIds = fromListId
+    ? await getClassListNavIds(fromListId, user?.id ?? null)
+    : null;
+  const navIds =
+    listNavIds ??
+    (await getFilteredClassIds(navParams, {
+      userId: user?.id ?? null,
+    }));
   const navIdx = navIds.indexOf(id);
-  const navQs = classNavQueryString(navParams);
+  const navQs = listNavIds
+    ? `desdeLista=${fromListId}`
+    : classNavQueryString(navParams);
   const navSuffix = navQs ? `?${navQs}` : "";
   const prevHref =
     navIdx > 0 ? `/classes/${navIds[navIdx - 1]}${navSuffix}` : null;
@@ -278,21 +454,29 @@ export default async function ClassDetailPage({
     navIdx >= 0 && navIdx < navIds.length - 1
       ? `/classes/${navIds[navIdx + 1]}${navSuffix}`
       : null;
-  const backToSearchHref = navQs ? `/classes?${navQs}` : null;
+  const backToSearchHref = listNavIds
+    ? "/classes?tab=favorites"
+    : navQs
+      ? `/classes?${navQs}`
+      : null;
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#F4F4F1] px-4 py-6 text-[#050505] dark:bg-[#050505] dark:text-[#F4F4F1] sm:px-6 md:px-10 lg:px-12">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.22),transparent_34%),linear-gradient(180deg,rgba(5,5,5,0.06),transparent)] dark:bg-[radial-gradient(circle_at_78%_18%,rgba(214,255,56,0.16),transparent_34%)]" />
+      <PendingTargetBanner className="relative mb-4" />
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/classes"
-            title="Volver a todas las clases"
+            title={tx("volverATodasLas")}
             className="inline-flex items-center gap-2 rounded-full border border-[#050505]/12 bg-white px-3 py-2 text-sm font-semibold text-muted-foreground shadow-sm transition-colors hover:border-[#D6FF38] hover:text-foreground dark:border-white/10 dark:bg-white/[0.04]"
           >
-            <ArrowLeft className="size-4" /> Volver a clases
+            <ArrowLeft className="size-4" />{" "}{tx("volverAClases")}
           </Link>
-          <BackToSearchLink href={backToSearchHref} />
+          <BackToSearchLink
+            href={backToSearchHref}
+            label={listNavIds ? tx("volverALasListas") : undefined}
+          />
         </div>
         <PrevNextNav
           prevHref={prevHref}
@@ -314,17 +498,17 @@ export default async function ClassDetailPage({
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 {cls.status === "draft" && (
                   <span className="rounded-full border border-amber-300/60 bg-amber-300/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-200">
-                    Borrador
+                    {tx("borrador")}
                   </span>
                 )}
                 {cls.isLibrary && (
                   <span className="rounded-full bg-[#D6FF38] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#050505]">
-                    Biblioteca
+                    {tx("biblioteca")}
                   </span>
                 )}
                 {cls.autoria && cls.autoria !== "libre" && (
                   <span className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62">
-                    {autoriaLabel(cls.autoria)}
+                    {term(autoriaLabel(cls.autoria))}
                   </span>
                 )}
                 {classNiveles.map((nivel) => (
@@ -332,7 +516,7 @@ export default async function ClassDetailPage({
                     key={nivel}
                     className="rounded-full border border-white/14 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/62"
                   >
-                    {nivelLabel(nivel)}
+                    {term(nivelLabel(nivel))}
                   </span>
                 ))}
                 {classAspectos.map((aspecto) => (
@@ -349,7 +533,7 @@ export default async function ClassDetailPage({
               </h1>
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/68">
                 <span className="inline-flex items-center gap-1.5">
-                  <Clock className="size-3.5" /> {cls.duracionMinutes} min
+                  <Clock className="size-3.5" /> {cls.duracionMinutes}{" "}{tx("min")}
                 </span>
                 {cls.alumnosTipo && (
                   <span className="inline-flex items-center gap-1.5 capitalize">
@@ -375,13 +559,14 @@ export default async function ClassDetailPage({
                   href={`/classes/${cls.id}/edit`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-white/16 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-[#D6FF38] hover:text-[#D6FF38]"
                 >
-                  {cls.status === "draft" ? "Terminar y publicar" : "Editar"}
+                  {cls.status === "draft" ? tx("terminarYPublicar") : "Editar"}
                 </Link>
               )}
               <CopyToSpaceButton
                 kind="class"
                 id={cls.id}
                 targets={copyTargets}
+                sendClubs={sendClubs}
                 tone="dark"
                 inClub={!!activeWorkClubId}
               />
@@ -408,16 +593,18 @@ export default async function ClassDetailPage({
             <div className="flex items-center gap-2">
               <BarChart3 className="size-4 text-brand" />
               <h2 className="font-heading text-base text-foreground">
-                Uso en tus sesiones
+                {tx("usoEnTusSesiones")}
               </h2>
             </div>
-            <AddClassMenuButton classId={cls.id} />
+            <div className="flex flex-wrap items-center gap-2">
+              <AddToPendingSessionButton classId={cls.id} />
+              <AddClassMenuButton classId={cls.id} />
+            </div>
           </div>
 
           {classUsageSessions.length === 0 ? (
             <p className="text-sm text-foreground/55">
-              Aún no has dado esta clase en ninguna sesión. Créala desde el
-              botón de arriba para empezar a ver aquí cómo te va con ella.
+              {tx("aunNoHasDado")}
             </p>
           ) : (
             <>
@@ -426,7 +613,7 @@ export default async function ClassDetailPage({
                   <strong className="text-foreground">
                     {classUsageSessions.length}
                   </strong>{" "}
-                  sesión{classUsageSessions.length !== 1 ? "es" : ""}
+                  {tx("sesion")}{classUsageSessions.length !== 1 ? "es" : ""}
                   {completedCount > 0 &&
                     ` · ${completedCount} completada${completedCount !== 1 ? "s" : ""}`}
                 </span>
@@ -436,8 +623,8 @@ export default async function ClassDetailPage({
                     <strong className="text-foreground">
                       {avgRating.toFixed(1)}
                     </strong>
-                    /5 · {ratingCount} valoración
-                    {ratingCount !== 1 ? "es" : ""} de alumnos
+                    /5 · {ratingCount}{" "}{tx("valoracion")}
+                    {ratingCount !== 1 ? "es" : ""}{" "}{tx("deAlumnos")}
                   </span>
                 )}
               </div>
@@ -456,10 +643,9 @@ export default async function ClassDetailPage({
                         {g.name}
                       </Link>
                       <span className="text-foreground/50 text-xs">
-                        {g.count} vez{g.count !== 1 ? "es" : ""} · última el{" "}
-                        {new Intl.DateTimeFormat("es-ES", {
+                        {tx("v1VezV2Ultima", { v1: g.count, v2: g.count !== 1 ? "es" : "", v3: new Intl.DateTimeFormat(intlLocale, {
                           dateStyle: "medium",
-                        }).format(g.lastAt)}
+                        }).format(g.lastAt) })}
                       </span>
                     </li>
                   ))}
@@ -492,7 +678,7 @@ export default async function ClassDetailPage({
             <div className="flex items-center gap-2 mb-3">
               <Target className="size-4 text-brand" />
               <h2 className="font-heading text-base text-foreground">
-                Objetivos
+                {tx("objetivos")}
               </h2>
             </div>
             <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
@@ -505,7 +691,7 @@ export default async function ClassDetailPage({
             <div className="flex items-center gap-2 mb-3">
               <Package className="size-4 text-brand" />
               <h2 className="font-heading text-base text-foreground">
-                Material
+                {tx("material")}
               </h2>
             </div>
             <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
@@ -519,7 +705,7 @@ export default async function ClassDetailPage({
       {blocks.length > 0 && (
         <div className="rounded-lg border border-[#050505]/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-6">
           <h2 className="font-heading text-xl text-foreground mb-4">
-            Índice de actividades
+            {tx("indiceDeActividades")}
           </h2>
           <ol className="space-y-4">
             {blocks.map((block, idx) => {
@@ -535,10 +721,19 @@ export default async function ClassDetailPage({
                       blockTitles[block.orderIndex - 1] ??
                       "Bloque"}
                   </p>
+                  {cls.courts === 2 && block.rotates && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">
+                        {tx("losGruposRotan")}
+                      </span>{" "}
+                      dos grupos, cada uno hace las dos pistas (los minutos son
+                      por grupo).
+                    </p>
+                  )}
                   <ul className="space-y-1.5">
                     {blockItems.length === 0 ? (
                       <li className="text-sm text-muted-foreground italic">
-                        (sin ejercicios)
+                        {tx("sinEjercicios")}
                       </li>
                     ) : (
                       blockItems.map((item, i) => {
@@ -554,16 +749,13 @@ export default async function ClassDetailPage({
                             <span className="flex-1">
                               {itemKind === "warmup" ? (
                                 <span className="font-medium text-foreground">
-                                  Descanso
+                                  {tx("descanso")}
                                 </span>
                               ) : itemKind === "stations" ? (
                                 <>
                                   <span className="font-medium text-foreground">
-                                    Estaciones (
-                                    {(item.stations as StationItemJson[])
-                                      ?.length ?? 0}
-                                    )
-                                  </span>
+                                    {tx("estacionesV1", { v1: (item.stations as StationItemJson[])
+                                      ?.length ?? 0 })}</span>
                                   {item.freeText && (
                                     <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                                       {item.freeText}
@@ -612,10 +804,24 @@ export default async function ClassDetailPage({
                               ) : (
                                 (item.freeText ?? "-")
                               )}
+                              {cls.courts === 2 && (
+                                <span className="ml-2 inline-flex items-center gap-1 align-middle">
+                                  <span className="rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand">
+                                    {tx("pistaV1", { v1: item.court === 2 ? 2 : 1 })}
+                                  </span>
+                                  {(item.ledBy === "coach" ||
+                                    item.ledBy === "auto") && (
+                                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                      {item.ledBy === "coach"
+                                        ? "Con monitor"
+                                        : "Autónomo"}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
                               {item.durationMinutes && (
                                 <span className="text-muted-foreground ml-2 text-xs">
-                                  · {item.durationMinutes} min
-                                  {itemKind === "stations" ? "/estación" : ""}
+                                  {tx("v1MinV2", { v1: item.durationMinutes, v2: itemKind === "stations" ? tx("inTotalSuffix2") : "" })}
                                 </span>
                               )}
                               {itemKind === "exercise" &&
@@ -633,7 +839,7 @@ export default async function ClassDetailPage({
                                 )}
                               {item.notes && (
                                 <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                                  <span className="font-semibold">Notas:</span>{" "}
+                                  <span className="font-semibold">{tx("notas")}</span>{" "}
                                   {item.notes}
                                 </span>
                               )}
@@ -659,59 +865,68 @@ export default async function ClassDetailPage({
         <div className="rounded-lg border border-[#050505]/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <Dumbbell className="size-4 text-brand" />
-            <h2 className="font-heading text-xl text-foreground">Ejercicios</h2>
+            <h2 className="font-heading text-xl text-foreground">{tx("ejercicios")}</h2>
             <span className="text-xs text-muted-foreground">
-              {classExercises.length}
+              {classExerciseCount}
             </span>
           </div>
           <ol className="grid gap-3 sm:grid-cols-2">
-            {classExercises.map((ex, idx) => (
-              <li key={ex.id}>
-                <Link
-                  href={`/exercises/${ex.id}?fromClass=${cls.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-full gap-3 rounded-lg border border-border/80 bg-background px-4 py-3 shadow-sm transition-colors hover:border-brand/40"
+            {classExercises.map((entry, idx) =>
+              entry.kind === "exercise" ? (
+                <li key={entry.exercise.id}>
+                  <ExerciseCard
+                    exercise={entry.exercise}
+                    number={idx + 1}
+                    durationMinutes={entry.durationMinutes}
+                    phase={entry.phase}
+                    classId={cls.id}
+                  />
+                </li>
+              ) : (
+                <li
+                  key={entry.key}
+                  className="rounded-lg border border-brand/30 bg-brand/[0.04] p-3 shadow-sm sm:col-span-2"
                 >
-                  <span className="w-5 shrink-0 pt-0.5 text-right font-mono text-xs text-muted-foreground/60">
-                    {idx + 1}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-foreground">
-                      {ex.name}
+                  <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 px-1">
+                    <span className="w-5 shrink-0 text-right font-mono text-xs text-muted-foreground/60">
+                      {idx + 1}
                     </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        {CATEGORY_LABELS[ex.category] ?? ex.category}
-                      </span>
-                      {ex.videoUrl && (
-                        <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
-                          Vídeo
-                        </span>
-                      )}
+                    <span className="text-sm font-semibold text-foreground">
+                      {tx("ejercicioEstaciones")}
                     </span>
-                    {ex.description && (
-                      <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground line-clamp-2">
-                        {ex.description}
-                      </span>
-                    )}
-                    {ex.materials && ex.materials.length > 0 && (
-                      <span className="mt-1.5 flex flex-wrap gap-1">
-                        {ex.materials.map((m) => (
-                          <span
-                            key={m}
-                            className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                          >
-                            <Package className="size-2.5 opacity-60" />
-                            {m}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                    <span className="text-xs text-muted-foreground">
+                      {tx("v1EstacionesV2", { v1: entry.stations.length, v2: entry.durationMinutes
+                        ? tx("minTotalSuffix", { n: entry.durationMinutes })
+                        : "" })}
+                    </span>
+                  </div>
+                  <ol className="grid gap-2 sm:grid-cols-2">
+                    {entry.stations.map((st, si) => (
+                      <li key={si}>
+                        {st.kind === "exercise" ? (
+                          <ExerciseCard
+                            exercise={st.exercise}
+                            number={si + 1}
+                            numberLabel="Estación"
+                            phase={entry.phase}
+                            classId={cls.id}
+                          />
+                        ) : (
+                          <div className="flex h-full gap-3 rounded-lg border border-border/80 bg-background px-4 py-3">
+                            <span className="shrink-0 pt-0.5 font-mono text-[10px] uppercase text-muted-foreground/60">
+                              {tx("estacionV1", { v1: si + 1 })}
+                            </span>
+                            <span className="text-xs leading-relaxed text-foreground/80">
+                              {st.text}
+                            </span>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </li>
+              )
+            )}
           </ol>
         </div>
       )}
@@ -719,7 +934,7 @@ export default async function ClassDetailPage({
       {cls.aspectosImportantes && (
         <div className="rounded-lg border border-[#050505]/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
           <h2 className="font-heading text-base text-foreground mb-3">
-            Aspectos importantes
+            {tx("aspectosImportantes")}
           </h2>
           <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
             {cls.aspectosImportantes}
@@ -738,7 +953,7 @@ export default async function ClassDetailPage({
               href="/register"
               className="text-brand font-semibold hover:underline"
             >
-              Crea una cuenta gratis
+              {tx("creaUnaCuentaGratis")}
             </Link>{" "}
             para añadir esta clase a tus sesiones y a tus favoritos.
           </p>

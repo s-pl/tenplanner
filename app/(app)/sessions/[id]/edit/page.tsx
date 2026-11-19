@@ -7,25 +7,44 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import {
   exercises,
+  groups,
   places,
   sessionStudents,
   sessions,
   users,
 } from "@/db/schema";
 import {
+  exerciseListableCondition,
   exerciseOwnOrClubCondition,
-  exerciseVisibleToUserCondition,
+  isPlatformAdmin,
 } from "@/lib/exercise-access";
 import { getBooleanSetting } from "@/lib/app-settings";
 import { loadSessionPlan } from "@/lib/sessions/plan";
 import { SessionWizard } from "@/components/app/session-wizard/session-wizard";
 import { planItemsToWizard } from "@/components/app/session-wizard/timeline";
+import { canEditSession } from "@/lib/sessions/permissions";
+import { getClubMembersDirectory } from "@/lib/clubs";
+import { getTranslations } from "next-intl/server";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  /** disenar=1: "Que la diseñe Ten Planner" sobre esta sesión. */
+  searchParams: Promise<{
+    disenar?: string;
+    dur?: string;
+    obj?: string;
+    lugar?: string;
+    pistas?: string;
+    rota?: string;
+    step?: string;
+  }>;
 }
 
-export default async function EditSessionPage({ params }: PageProps) {
+export default async function EditSessionPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const tx = await getTranslations("ui.s_edit_page");
   const supabase = await createClient();
   const {
     data: { session: authSession },
@@ -33,14 +52,25 @@ export default async function EditSessionPage({ params }: PageProps) {
   const user = authSession?.user ?? null;
   if (!user) redirect("/login");
 
-  const { id } = await params;
+  const [
+    { id },
+    {
+      disenar: disenarParam,
+      dur: durParam,
+      obj: objParam,
+      lugar: lugarParam,
+      pistas: pistasParam,
+      rota: rotaParam,
+      step: stepParam,
+    },
+  ] = await Promise.all([params, searchParams]);
 
   const [sessionRow] = await db
     .select()
     .from(sessions)
     .where(eq(sessions.id, id))
     .limit(1);
-  if (!sessionRow || sessionRow.userId !== user.id) notFound();
+  if (!sessionRow || !(await canEditSession(user.id, sessionRow))) notFound();
 
   const publicExercisesEnabled = await getBooleanSetting(
     "feature.public_exercises_enabled"
@@ -48,7 +78,7 @@ export default async function EditSessionPage({ params }: PageProps) {
 
   const [plan, studentRows, coachPlaces, userRow, allExercises] =
     await Promise.all([
-      loadSessionPlan(id),
+      loadSessionPlan(id, user.id),
       db
         .select({ studentId: sessionStudents.studentId })
         .from(sessionStudents)
@@ -83,7 +113,10 @@ export default async function EditSessionPage({ params }: PageProps) {
         .where(
           and(
             publicExercisesEnabled
-              ? exerciseVisibleToUserCondition(user.id)
+              ? exerciseListableCondition(
+                  user.id,
+                  await isPlatformAdmin(user.id)
+                )
               : exerciseOwnOrClubCondition(user.id),
             eq(exercises.sport, sessionRow.sport)
           )
@@ -92,11 +125,31 @@ export default async function EditSessionPage({ params }: PageProps) {
         .limit(2000),
     ]);
 
+  // "Que la diseñe Ten Planner": solo en sesiones de un grupo. Si la sesión
+  // no tiene objetivos, se proponen los del grupo.
+  const disenar = disenarParam === "1" && !!sessionRow.groupId;
+  const groupObjetivos =
+    disenar && !objParam?.trim() && !sessionRow.objective?.trim()
+      ? ((
+          await db
+            .select({ objetivos: groups.objetivos })
+            .from(groups)
+            .where(eq(groups.id, sessionRow.groupId!))
+            .limit(1)
+        )[0]?.objetivos ?? "")
+      : null;
+
   const monitorName =
     userRow[0]?.name ||
     user.user_metadata?.full_name ||
     user.email ||
     "Monitor";
+  // Sesión del club: se puede cambiar el monitor que la imparte.
+  const clubCoaches = sessionRow.clubId
+    ? (await getClubMembersDirectory([sessionRow.clubId])).sort((a, b) =>
+        a.name.localeCompare(b.name, "es")
+      )
+    : [];
 
   return (
     <div className="relative min-h-full w-full bg-[#F4F4F1] dark:bg-[#050505]">
@@ -109,7 +162,7 @@ export default async function EditSessionPage({ params }: PageProps) {
           <div className="relative flex items-center gap-4">
             <Link
               href={`/sessions/${id}`}
-              aria-label="Volver a la sesión"
+              aria-label={tx("volverALaSesion")}
               className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-[#F4F4F1] text-foreground/60 transition-colors hover:border-[#D6FF38]/70 hover:text-foreground dark:bg-[#050505]/70"
             >
               <ArrowLeft className="size-4" />
@@ -117,12 +170,11 @@ export default async function EditSessionPage({ params }: PageProps) {
             <div className="min-w-0">
               <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-[#F4F4F1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/60 dark:bg-[#050505]/70">
                 <Pencil className="size-3.5 text-brand" />
-                Editar sesión
+                {tx("editarSesion")}
               </p>
               <h1 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
                 <em className="italic text-brand">
-                  &ldquo;{sessionRow.title}&rdquo;
-                </em>
+                  {tx("v1", { v1: sessionRow.title })}</em>
               </h1>
             </div>
           </div>
@@ -134,28 +186,62 @@ export default async function EditSessionPage({ params }: PageProps) {
               availableExercises={allExercises}
               places={coachPlaces}
               monitorName={monitorName}
+              coaches={clubCoaches}
               allowDraftRestore={false}
+              engine={
+                disenar && sessionRow.groupId
+                  ? {
+                      groupId: sessionRow.groupId,
+                      replacesCount: plan.items.length,
+                      autoStart: stepParam === "2",
+                    }
+                  : undefined
+              }
               edit={{
                 sessionId: id,
                 initialState: {
                   title: sessionRow.title,
                   scheduledAt: sessionRow.scheduledAt.toISOString(),
-                  durationMinutes: sessionRow.durationMinutes,
+                  durationMinutes:
+                    disenar && Number(durParam) >= 10 && Number(durParam) <= 240
+                      ? Math.round(Number(durParam))
+                      : sessionRow.durationMinutes,
                   location: sessionRow.location ?? "",
-                  placeId: sessionRow.placeId ?? null,
+                  placeId:
+                    disenar && lugarParam !== undefined
+                      ? coachPlaces.some((p) => p.id === lugarParam)
+                        ? lugarParam
+                        : null
+                      : (sessionRow.placeId ?? null),
                   groupId: sessionRow.groupId ?? null,
-                  objective: sessionRow.objective ?? "",
+                  coachId: sessionRow.coachId ?? sessionRow.userId,
+                  objective:
+                    (disenar && objParam?.trim()) ||
+                    groupObjetivos ||
+                    sessionRow.objective ||
+                    "",
                   material: sessionRow.material ?? "",
                   observations: sessionRow.observations ?? "",
                   sourceClassId: sessionRow.sourceClassId ?? null,
                   intensity: sessionRow.intensity ?? null,
                   tags: Array.isArray(sessionRow.tags) ? sessionRow.tags : [],
                   studentIds: studentRows.map((row) => row.studentId),
+                  courts:
+                    sessionRow.courts === 2 || (disenar && pistasParam === "2")
+                      ? 2
+                      : 1,
+                  secondPlaceId: sessionRow.secondPlaceId ?? null,
                   exercises: planItemsToWizard(plan.items),
                   blocks: plan.blocks.map((block) => ({
                     orderIndex: block.orderIndex,
                     title: block.title,
                     notes: block.notes ?? "",
+                    rotates:
+                      block.rotates === true ||
+                      (disenar &&
+                        pistasParam === "2" &&
+                        rotaParam === "1" &&
+                        block.orderIndex === 2),
                     items: [],
                   })),
                 },

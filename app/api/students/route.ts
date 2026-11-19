@@ -1,11 +1,16 @@
 import { asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { joinFullName, splitFullName } from "@/lib/students/names";
 import { db } from "@/db";
 import { students, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
 import { geocodeLocality } from "@/lib/geo/geocode";
-import { createStudentSchema, zodValidationErrorResponse } from "./validation";
+import {
+  createStudentSchema,
+  rejectInvalidPlayerLevels,
+  zodValidationErrorResponse,
+} from "./validation";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -82,6 +87,9 @@ export async function POST(request: Request) {
 
   const d = parsed.data;
 
+  const badLevel = await rejectInvalidPlayerLevels([d.playerLevel]);
+  if (badLevel) return badLevel;
+
   try {
     await ensureUser(user);
 
@@ -96,7 +104,7 @@ export async function POST(request: Request) {
       .insert(students)
       .values({
         coachId: user.id,
-        name: d.name,
+        ...studentNames(d),
         email: d.email ? d.email : null,
         gender: d.gender ?? null,
         birthDate: d.birthDate ?? null,
@@ -114,6 +122,13 @@ export async function POST(request: Request) {
         locality,
         localityLat: geo?.lat ?? null,
         localityLng: geo?.lng ?? null,
+        // Sin fecha de alta, la base de datos pone la de hoy.
+        ...(d.joinedAt ? { joinedAt: d.joinedAt } : {}),
+        howFound: d.howFound ?? null,
+        howFoundDetail: d.howFoundDetail || null,
+        leftAt: d.leftAt ?? null,
+        leftReason: d.leftAt ? (d.leftReason ?? null) : null,
+        leftReasonDetail: d.leftAt ? d.leftReasonDetail || null : null,
         notes: d.notes ?? null,
         imageUrl: d.imageUrl ?? null,
         clubId,
@@ -124,4 +139,26 @@ export async function POST(request: Request) {
   } catch {
     return internalServerError();
   }
+}
+
+/** Nombre, apellidos y nombre completo a partir de lo que llegue. */
+function studentNames(d: {
+  name?: string;
+  firstName?: string;
+  lastName?: string | null;
+}) {
+  if (d.firstName) {
+    const lastName = d.lastName?.trim() || null;
+    return {
+      firstName: d.firstName,
+      lastName,
+      name: joinFullName(d.firstName, lastName),
+    };
+  }
+  const split = splitFullName(d.name);
+  return {
+    name: d.name!,
+    firstName: split.firstName,
+    lastName: split.lastName,
+  };
 }

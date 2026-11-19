@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -22,9 +22,17 @@ import {
 } from "../validation";
 import { exerciseVisibleToUserCondition } from "@/lib/exercise-access";
 import { embedSession } from "@/lib/ai/semantic-search";
-import { getActiveWorkClubId, sharedWithClubCondition } from "@/lib/clubs";
+import {
+  canTagWithClub,
+  getActiveWorkClubId,
+  sharedWithClubCondition,
+} from "@/lib/clubs";
 import { classDraftVisibility } from "@/lib/classes/visibility";
 import { sumBlocksDuration, type StationItemJson } from "@/lib/block-items";
+import {
+  canEditSession,
+  editableSessionCondition,
+} from "@/lib/sessions/permissions";
 
 function internalServerError() {
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -44,12 +52,18 @@ type SessionBlockInputItem = {
     durationMinutes?: number | null;
   }> | null;
   aspecto?: string | null;
+  court?: number;
+  ledBy?: string | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
 };
 
 type SessionBlockInput = {
   orderIndex: number;
   title?: string | null;
   notes?: string | null;
+  /** Dos pistas con rotación (solo con courts = 2). */
+  rotates?: boolean;
   items: SessionBlockInputItem[];
 };
 
@@ -154,6 +168,7 @@ function normalizeBlocks(
     existing.title =
       block.title ?? existing.title ?? BLOCK_TITLE_BY_PHASE[orderIndex];
     existing.notes = block.notes ?? existing.notes ?? null;
+    existing.rotates = block.rotates ?? existing.rotates;
     existing.items.push(...block.items);
     byOrder.set(orderIndex, existing);
   }
@@ -265,7 +280,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const [session] = await db
       .select()
       .from(sessions)
-      .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
+      .where(and(eq(sessions.id, id), await editableSessionCondition(user.id)))
       .limit(1);
 
     if (!session) {
@@ -490,7 +505,14 @@ export async function PUT(request: Request, context: RouteContext) {
 
   try {
     const [existing] = await db
-      .select({ userId: sessions.userId })
+      .select({
+        userId: sessions.userId,
+        coachId: sessions.coachId,
+        clubId: sessions.clubId,
+        status: sessions.status,
+        courts: sessions.courts,
+        secondPlaceId: sessions.secondPlaceId,
+      })
       .from(sessions)
       .where(eq(sessions.id, id))
       .limit(1);
@@ -499,18 +521,23 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (existing.userId !== user.id) {
+    if (!(await canEditSession(user.id, existing))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const {
+      reopenIfCompleted,
       exercises: exerciseItems,
       blocks,
       studentIds,
       tags,
       durationManual,
+      courts: requestedCourts,
+      generation,
+      absentStudentIds,
       ...sessionFields
     } = parsedBody.data;
+    const courts = (requestedCourts ?? existing.courts) === 2 ? 2 : 1;
 
     if (studentIds !== undefined) {
       const unique = Array.from(new Set(studentIds));
@@ -589,6 +616,14 @@ export async function PUT(request: Request, context: RouteContext) {
     const normalizedBlocks = replacesPlan
       ? normalizeBlocks(blocks, exerciseItems ?? [])
       : [];
+    // Sin dos pistas todo va en la pista 1 (aunque el cliente mande otra cosa).
+    for (const block of normalizedBlocks) {
+      // La rotación solo existe con dos pistas.
+      block.rotates = courts === 2 && block.rotates === true;
+      for (const item of block.items) {
+        item.court = courts === 2 && item.court === 2 ? 2 : 1;
+      }
+    }
     const compatibilityExercises = replacesPlan
       ? buildCompatibilityExercises(normalizedBlocks, exerciseItems ?? [])
       : [];
@@ -611,6 +646,21 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const updateValues: Record<string, unknown> = {};
+    // Las pistas solo cambian junto con el plan (los items llevan su pista).
+    if (replacesPlan) updateValues.courts = courts;
+    // Plan diseñado por Ten Planner (motor F1) sobre una sesión existente.
+    if (generation) {
+      updateValues.generatedBy = "auto_v1";
+      updateValues.generationInput = generation.input;
+      updateValues.generationTrace = generation.trace ?? null;
+    }
+    // Una sesión completada que se edita vuelve a "pendiente": se marcará
+    // otra vez como completada (con su cierre) cuando corresponda.
+    if (reopenIfCompleted && existing.status === "completed") {
+      updateValues.status = "scheduled";
+      updateValues.planFollowed = null;
+      updateValues.planChangeReason = null;
+    }
     if (sessionFields.title !== undefined)
       updateValues.title = sessionFields.title;
     if (sessionFields.description !== undefined)
@@ -631,8 +681,33 @@ export async function PUT(request: Request, context: RouteContext) {
       updateValues.location = sessionFields.location;
     if (sessionFields.placeId !== undefined)
       updateValues.placeId = sessionFields.placeId;
+    // Segundo lugar: solo con dos pistas; con una se vacía.
+    if (replacesPlan || sessionFields.secondPlaceId !== undefined) {
+      updateValues.secondPlaceId =
+        courts === 2
+          ? (sessionFields.secondPlaceId ?? existing.secondPlaceId ?? null)
+          : null;
+    }
     if (sessionFields.groupId !== undefined)
       updateValues.groupId = sessionFields.groupId;
+    if (
+      sessionFields.coachId !== undefined &&
+      sessionFields.coachId !== (existing.coachId ?? existing.userId)
+    ) {
+      // Solo en sesiones del club y con un monitor activo de ese club.
+      const coachId = sessionFields.coachId;
+      if (!coachId) updateValues.coachId = null;
+      else if (
+        existing.clubId &&
+        (await canTagWithClub(coachId, existing.clubId))
+      )
+        updateValues.coachId = coachId === existing.userId ? null : coachId;
+      else
+        return NextResponse.json(
+          { error: "El monitor no pertenece al club" },
+          { status: 400 }
+        );
+    }
     if (tags !== undefined) {
       updateValues.tags =
         tags && tags.length > 0
@@ -672,7 +747,9 @@ export async function PUT(request: Request, context: RouteContext) {
       const [session] = await tx
         .update(sessions)
         .set(updateValues)
-        .where(and(eq(sessions.id, id), eq(sessions.userId, user.id)))
+        .where(
+          and(eq(sessions.id, id), await editableSessionCondition(user.id))
+        )
         .returning();
 
       if (replacesPlan) {
@@ -828,6 +905,7 @@ export async function PUT(request: Request, context: RouteContext) {
               orderIndex: block.orderIndex,
               title: block.title ?? BLOCK_TITLE_BY_PHASE[block.orderIndex],
               notes: block.notes ?? null,
+              rotates: block.rotates === true,
             })
             .returning({ id: sessionBlocks.id });
 
@@ -866,6 +944,11 @@ export async function PUT(request: Request, context: RouteContext) {
                       ? buildStations(item.stations)
                       : null,
                   aspectoJuego: item.exerciseId ? null : (item.aspecto ?? null),
+                  court: item.court ?? 1,
+                  ledBy: courts === 2 ? (item.ledBy ?? null) : null,
+                  turnMinutes: courts === 2 ? (item.turnMinutes ?? null) : null,
+                  turnSize:
+                    courts === 2 && item.turnMinutes ? (item.turnSize ?? 1) : null,
                 };
               })
             );
@@ -881,15 +964,49 @@ export async function PUT(request: Request, context: RouteContext) {
       }
 
       if (studentIds !== undefined) {
+        // Solo se quitan los alumnos que ya no están y se añaden los nuevos:
+        // así no se pierde la asistencia, la valoración ni los comentarios
+        // de quien sigue en la sesión (antes se borraba todo y se recreaba).
         const unique = Array.from(new Set(studentIds));
-        await tx
-          .delete(sessionStudents)
+        const current = await tx
+          .select({ studentId: sessionStudents.studentId })
+          .from(sessionStudents)
           .where(eq(sessionStudents.sessionId, id));
-        if (unique.length > 0) {
+        const currentIds = new Set(current.map((r) => r.studentId));
+        const keep = new Set(unique);
+        const toRemove = [...currentIds].filter((sid) => !keep.has(sid));
+        const toAdd = unique.filter((sid) => !currentIds.has(sid));
+        if (toRemove.length > 0) {
+          await tx
+            .delete(sessionStudents)
+            .where(
+              and(
+                eq(sessionStudents.sessionId, id),
+                inArray(sessionStudents.studentId, toRemove)
+              )
+            );
+        }
+        if (toAdd.length > 0) {
           await tx
             .insert(sessionStudents)
-            .values(unique.map((studentId) => ({ sessionId: id, studentId })));
+            .values(toAdd.map((studentId) => ({ sessionId: id, studentId })));
         }
+      }
+
+      // "No vienen" previstos al diseñar la clase con Ten Planner: solo se
+      // marcan los que aún no tenían asistencia anotada. Solo cuentan como
+      // falta si la sesión llega a completarse (lib/sessions/attendance.ts).
+      if (session && absentStudentIds && absentStudentIds.length > 0) {
+        await tx
+          .update(sessionStudents)
+          .set({ attended: false })
+          .where(
+            and(
+              eq(sessionStudents.sessionId, id),
+              inArray(sessionStudents.studentId, absentStudentIds),
+              isNull(sessionStudents.attended)
+            )
+          );
       }
 
       return session;
@@ -933,6 +1050,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const [existing] = await db
       .select({
         userId: sessions.userId,
+        coachId: sessions.coachId,
+        clubId: sessions.clubId,
         coachAudioPath: sessions.coachAudioPath,
       })
       .from(sessions)
@@ -943,7 +1062,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (existing.userId !== user.id) {
+    if (!(await canEditSession(user.id, existing))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

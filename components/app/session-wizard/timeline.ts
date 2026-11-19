@@ -91,7 +91,7 @@ export function createStationsItem(
   phase: TrainingPhase | null = null,
   stationCount = 4,
   introText = "",
-  /** Duración por estación (la misma para todas), no la suma. */
+  /** Duración total del bloque de estaciones (no la de cada estación). */
   durationMinutes: number | null = null
 ): WizardExercise {
   return {
@@ -131,6 +131,7 @@ export function normalizeBlocks(
       orderIndex: fallback.orderIndex,
       title: block?.title || fallback.title,
       notes: block?.notes ?? "",
+      rotates: block?.rotates === true,
       // Los items viven en la línea de tiempo (state.exercises).
       items: [],
     };
@@ -189,18 +190,24 @@ export type BlockPayloadItem = {
   notes: string | null;
   stations?: StationDraftItem[];
   aspecto?: AspectoJuego | null;
+  court?: 1 | 2;
+  ledBy?: "coach" | "auto" | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
 };
 
 export type BlockPayload = {
   orderIndex: 1 | 2 | 3;
   title: string;
   notes: string | null;
+  /** Dos pistas con rotación (solo se envía con dos pistas). */
+  rotates?: boolean;
   items: BlockPayloadItem[];
 };
 
 /** Bloques para el servidor, respetando el orden de la línea de tiempo. */
 export function buildBlocksPayload(
-  state: Pick<WizardState, "blocks" | "exercises">
+  state: Pick<WizardState, "blocks" | "exercises" | "courts">
 ): BlockPayload[] {
   const blocks = normalizeBlocks(state.blocks);
   const byOrder = new Map<1 | 2 | 3, BlockPayload>(
@@ -210,6 +217,7 @@ export function buildBlocksPayload(
         orderIndex: block.orderIndex,
         title: block.title,
         notes: block.notes.trim() || null,
+        ...(state.courts === 2 && block.rotates ? { rotates: true } : {}),
         items: [],
       },
     ])
@@ -217,14 +225,29 @@ export function buildBlocksPayload(
 
   for (const item of state.exercises) {
     const block = byOrder.get(phaseToBlockOrder(item.phase))!;
+    // Pista y quién dirige: solo se envían con dos pistas.
+    const lane: Pick<
+      BlockPayloadItem,
+      "court" | "ledBy" | "turnMinutes" | "turnSize"
+    > =
+      state.courts === 2
+        ? {
+            court: item.court === 2 ? 2 : 1,
+            ledBy: item.ledBy ?? null,
+            turnMinutes: item.turnMinutes ?? null,
+            turnSize: item.turnMinutes ? (item.turnSize ?? 1) : null,
+          }
+        : {};
     if (isWarmupItem(item)) {
       block.items.push({
+        ...lane,
         kind: "warmup",
         durationMinutes: item.overrideDuration ?? null,
         notes: item.notes.trim() || null,
       });
     } else if (isStationsItem(item)) {
       block.items.push({
+        ...lane,
         kind: "stations",
         freeText: item.freeText?.trim() || null,
         stations: item.stations ?? [],
@@ -236,6 +259,7 @@ export function buildBlocksPayload(
       const title = item.title?.trim() || null;
       if (!text && !title) continue;
       block.items.push({
+        ...lane,
         kind: "text",
         freeText: text,
         title,
@@ -245,6 +269,7 @@ export function buildBlocksPayload(
       });
     } else {
       block.items.push({
+        ...lane,
         kind: "exercise",
         exerciseId: item.exerciseId,
         durationMinutes: item.overrideDuration ?? null,
@@ -277,12 +302,40 @@ export function buildExercisesPayload(state: Pick<WizardState, "exercises">) {
  * cuanto hay contenido, para que nunca se quede desactualizado.
  */
 export function computeTimelineDuration(
-  state: Pick<WizardState, "exercises">
+  state: Pick<WizardState, "exercises" | "courts"> & {
+    blocks?: WizardState["blocks"];
+  }
 ): number {
-  return state.exercises.reduce(
-    (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
-    0
-  );
+  if (state.courts !== 2) {
+    return state.exercises.reduce(
+      (sum, e) => sum + (e.overrideDuration ?? e.durationMinutes),
+      0
+    );
+  }
+  // Dos pistas: lo de cada pista ocurre a la vez, así que cada bloque dura
+  // lo que dure su pista más larga (igual que en el servidor).
+  const perBlockCourt = new Map<string, number>();
+  for (const e of state.exercises) {
+    const key = `${phaseToBlockOrder(e.phase)}-${e.court === 2 ? 2 : 1}`;
+    perBlockCourt.set(
+      key,
+      (perBlockCourt.get(key) ?? 0) + (e.overrideDuration ?? e.durationMinutes)
+    );
+  }
+  let total = 0;
+  for (const block of [1, 2, 3]) {
+    const longest = Math.max(
+      perBlockCourt.get(`${block}-1`) ?? 0,
+      perBlockCourt.get(`${block}-2`) ?? 0
+    );
+    // Con rotación los minutos son por grupo y cada grupo hace las dos
+    // pistas: el bloque dura el doble de la pista más larga.
+    const rotates = state.blocks?.some(
+      (b) => b.orderIndex === block && b.rotates
+    );
+    total += longest * (rotates ? 2 : 1);
+  }
+  return total;
 }
 
 export function hasPlanContent(state: Pick<WizardState, "exercises">) {
@@ -296,7 +349,14 @@ export function hasPlanContent(state: Pick<WizardState, "exercises">) {
   );
 }
 
-type PlanItemLike =
+type PlanItemLike = {
+  court?: 1 | 2;
+  ledBy?: "coach" | "auto" | null;
+  turnMinutes?: number | null;
+  turnSize?: number | null;
+} & PlanItemShape;
+
+type PlanItemShape =
   | {
       kind: "exercise";
       exerciseId: string;
@@ -340,6 +400,21 @@ type PlanItemLike =
 /** Plan guardado de una sesión → línea de tiempo del creador. */
 export function planItemsToWizard(items: PlanItemLike[]): WizardExercise[] {
   return items.map((item) => {
+    const exercise = planItemToWizard(item);
+    return item.court === 2 || item.ledBy || item.turnMinutes
+      ? {
+          ...exercise,
+          court: item.court,
+          ledBy: item.ledBy ?? null,
+          turnMinutes: item.turnMinutes ?? null,
+          turnSize: item.turnSize ?? null,
+        }
+      : exercise;
+  });
+}
+
+function planItemToWizard(item: PlanItemLike): WizardExercise {
+  {
     if (item.kind === "text") {
       return createTextItem(
         item.text,
@@ -382,5 +457,5 @@ export function planItemsToWizard(items: PlanItemLike[]): WizardExercise[] {
       phase: item.phase,
       intensity: null,
     };
-  });
+  }
 }

@@ -51,6 +51,11 @@ const blockExerciseSchema = z
       .max(STATION_COUNT_MAX)
       .optional()
       .nullable(),
+    // Plantillas con dos pistas: pista del elemento y quién lo dirige.
+    court: z.union([z.literal(1), z.literal(2)]).optional(),
+    ledBy: z.enum(["coach", "auto"]).optional().nullable(),
+    turnMinutes: z.number().int().min(1).max(120).optional().nullable(),
+    turnSize: z.number().int().min(1).max(8).optional().nullable(),
   })
   .refine(
     (item) => {
@@ -65,6 +70,7 @@ const blockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),
   title: z.string().trim().max(120).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
+  rotates: z.boolean().optional(),
   items: z.array(blockExerciseSchema).default([]),
 });
 
@@ -95,6 +101,8 @@ const updateSchema = z.object({
   isLibrary: z.boolean().optional(),
   autoria: z.enum(AUTORIA_VALUES).nullable().optional(),
   blocks: z.array(blockSchema).max(3).optional(),
+  /** Pistas que usa la plantilla (1 o 2). */
+  courts: z.union([z.literal(1), z.literal(2)]).optional(),
   status: z.enum(CLASS_STATUSES).optional(),
 });
 
@@ -160,6 +168,10 @@ export async function GET(_req: Request, ctx: Ctx) {
           durationMinutes: classBlockExercises.durationMinutes,
           kind: classBlockExercises.kind,
           stations: classBlockExercises.stations,
+          court: classBlockExercises.court,
+          ledBy: classBlockExercises.ledBy,
+          turnMinutes: classBlockExercises.turnMinutes,
+          turnSize: classBlockExercises.turnSize,
           exerciseName: exercises.name,
           exerciseCategory: exercises.category,
           exerciseDescription: exercises.description,
@@ -210,7 +222,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
     );
 
   const [existing] = await db
-    .select({ createdBy: classes.createdBy, isLibrary: classes.isLibrary })
+    .select({
+      createdBy: classes.createdBy,
+      isLibrary: classes.isLibrary,
+      courts: classes.courts,
+    })
     .from(classes)
     .where(eq(classes.id, id))
     .limit(1);
@@ -324,6 +340,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
       if (isAdmin && d.autoria !== undefined)
         updateValues.autoria = d.autoria ?? "libre";
       if (d.status !== undefined) updateValues.status = d.status;
+      // Las pistas cambian junto con el plan (los elementos llevan su pista).
+      const courts = (d.courts ?? existing.courts) === 2 ? 2 : 1;
+      if (d.blocks !== undefined) updateValues.courts = courts;
 
       if (Object.keys(updateValues).length > 0) {
         await tx.update(classes).set(updateValues).where(eq(classes.id, id));
@@ -340,6 +359,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
               orderIndex: block.orderIndex,
               title: block.title ?? null,
               notes: block.notes ?? null,
+              rotates: courts === 2 && block.rotates === true,
             })
             .returning({ id: classBlocks.id });
           if (block.items.length > 0) {
@@ -357,6 +377,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
                   item.kind === "stations"
                     ? buildStations(item.stations)
                     : null,
+                // Sin dos pistas todo va en la pista 1, sin "quién dirige".
+                court: courts === 2 && item.court === 2 ? 2 : 1,
+                ledBy: courts === 2 ? (item.ledBy ?? null) : null,
+                turnMinutes: courts === 2 ? (item.turnMinutes ?? null) : null,
+                turnSize:
+                  courts === 2 && item.turnMinutes ? (item.turnSize ?? 1) : null,
               }))
             );
           }

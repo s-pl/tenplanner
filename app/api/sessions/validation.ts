@@ -46,6 +46,10 @@ const exerciseItemSchema = z.object({
     .nullable(),
 });
 
+export const LED_BY_VALUES = ["coach", "auto"] as const;
+
+const courtsSchema = z.union([z.literal(1), z.literal(2)]).optional();
+
 const sessionBlockItemSchema = z
   .object({
     kind: z.enum(BLOCK_ITEM_KINDS).optional(),
@@ -67,6 +71,13 @@ const sessionBlockItemSchema = z
     // Aspecto del juego (técnica/táctica/física/mental) para items de texto
     // sin ejercicio de biblioteca asociado; opcional.
     aspecto: z.enum(ASPECTO_JUEGO_VALUES).optional().nullable(),
+    // Sesiones con dos pistas: pista del item y quién lo dirige. Se ignoran
+    // (pista 1) si la sesión no tiene courts = 2.
+    court: z.union([z.literal(1), z.literal(2)]).optional(),
+    ledBy: z.enum(LED_BY_VALUES).optional().nullable(),
+    // Por turnos: minutos de cada alumno y de cuántos en cuántos pasan.
+    turnMinutes: z.number().int().min(1).max(120).optional().nullable(),
+    turnSize: z.number().int().min(1).max(8).optional().nullable(),
   })
   .refine(
     (item) => {
@@ -86,6 +97,7 @@ const sessionBlockSchema = z.object({
   orderIndex: z.number().int().min(1).max(3),
   title: z.string().trim().max(120).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
+  rotates: z.boolean().optional(),
   items: z.array(sessionBlockItemSchema).default([]),
 });
 
@@ -151,6 +163,8 @@ export const createSessionSchema = z.object({
     .optional(),
   /** La duración la fijó el monitor: no se recalcula a partir del plan. */
   durationManual: z.boolean().optional(),
+  /** Pistas que usa la sesión (1 o 2). */
+  courts: courtsSchema,
   objective: z
     .string()
     .trim()
@@ -164,10 +178,30 @@ export const createSessionSchema = z.object({
   tags: tagsSchema,
   location: locationSchema,
   placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
+  secondPlaceId: z
+    .string()
+    .uuid("ID de lugar inválido")
+    .nullable()
+    .optional(),
   groupId: z.string().uuid("ID de grupo inválido").nullable().optional(),
+  // Monitor que imparte la sesión (solo en modo club; null = quien la crea).
+  coachId: z.string().uuid("ID de monitor inválido").nullable().optional(),
   studentIds: studentIdsSchema,
   exercises: z.array(exerciseItemSchema).default([]),
   blocks: z.array(sessionBlockSchema).max(3).optional().nullable(),
+  // Vía de creación (medición del motor). Por defecto, el asistente.
+  createdVia: z.enum(["wizard", "quick", "engine"]).optional(),
+  // Alumnos del grupo que el monitor marcó como "no vienen" al montar la
+  // clase: se guardan con attended = false. Solo cuentan como falta si la
+  // sesión llega a completarse (ver docs/f1-plan.md, decisión 7).
+  absentStudentIds: z.array(z.string().uuid()).max(100).optional().default([]),
+  // Entrada y traza del motor, solo con createdVia = "engine".
+  generation: z
+    .object({
+      input: z.record(z.string(), z.unknown()),
+      trace: z.unknown(),
+    })
+    .optional(),
 });
 
 export const updateSessionSchema = z
@@ -195,6 +229,7 @@ export const updateSessionSchema = z
       .max(600, "Máximo 600 minutos")
       .optional(),
     durationManual: z.boolean().optional(),
+    courts: courtsSchema,
     objective: z
       .string()
       .trim()
@@ -212,10 +247,29 @@ export const updateSessionSchema = z
     tags: tagsSchema,
     location: locationSchema,
     placeId: z.string().uuid("ID de lugar inválido").nullable().optional(),
+    secondPlaceId: z
+      .string()
+      .uuid("ID de lugar inválido")
+      .nullable()
+      .optional(),
     groupId: z.string().uuid("ID de grupo inválido").nullable().optional(),
+    coachId: z.string().uuid("ID de monitor inválido").nullable().optional(),
     studentIds: z.array(z.string().uuid("ID de alumno inválido")).optional(),
     exercises: z.array(exerciseItemSchema).optional(),
     blocks: z.array(sessionBlockSchema).max(3).optional().nullable(),
+    // Editar desde el asistente una sesión ya completada la devuelve a
+    // pendiente (salvo al editarla justo al cerrarla porque cambió).
+    reopenIfCompleted: z.boolean().optional(),
+    // "Que la diseñe Ten Planner" sobre una sesión ya programada: traza del
+    // motor y alumnos marcados como "no vienen" (attended = false si aún no
+    // estaban anotados).
+    generation: z
+      .object({
+        input: z.record(z.string(), z.unknown()),
+        trace: z.unknown(),
+      })
+      .optional(),
+    absentStudentIds: z.array(z.string().uuid()).max(100).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required for update",

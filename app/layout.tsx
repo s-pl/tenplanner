@@ -1,67 +1,77 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import { CookieBanner } from "@/components/app/cookie-banner";
 import { ServiceWorkerRegister } from "@/components/app/sw-register";
 import { Toaster } from "@/components/ui/sonner";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+// Fuentes alojadas en el proyecto (app/fonts, licencia OFL): así la
+// compilación no depende de descargarlas de Google, que fallaba a veces.
+// Son fuentes variables, solo el alfabeto latino (cubre el español).
+const plusJakartaSans = localFont({
+  src: "./fonts/plus-jakarta-sans-latin-wght-normal.woff2",
   variable: "--font-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700", // como antes: 400-700 (un 900 se queda en 700)
+  display: "swap",
 });
 
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: [
+    {
+      path: "./fonts/fraunces-latin-wght-normal.woff2",
+      style: "normal",
+      weight: "300 700",
+    },
+    {
+      path: "./fonts/fraunces-latin-wght-italic.woff2",
+      style: "italic",
+      weight: "300 700",
+    },
+  ],
   variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["300", "400", "600", "700"],
-  style: ["normal", "italic"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin-wght-normal.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-  "https://tenplanner.app";
 const isProd = process.env.NODE_ENV === "production";
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  const locale = await getLocale();
+  return {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "TenPlanner - Planificador para Deportes de Raqueta",
+    default: t("title"),
     template: "%s - TenPlanner",
   },
-  description:
-    "Planifica sesiones, gestiona alumnos y organiza biblioteca para deportes de raqueta.",
-  keywords: [
-    "deportes de raqueta",
-    "entrenamiento",
-    "planificador",
-    "entrenador",
-    "sesiones",
-    "TenPlanner",
-  ],
+  description: t("description"),
+  keywords: t("keywords").split(","),
   applicationName: "TenPlanner",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "TenPlanner",
-    title: "TenPlanner - Planificador para Deportes de Raqueta",
-    description:
-      "Diseña sesiones, gestiona alumnos y mide progreso en pista o cancha.",
+    title: t("title"),
+    description: t("ogDescription"),
     url: "/",
-    locale: "es_ES",
+    locale: locale === "en" ? "en_US" : "es_ES",
   },
   twitter: {
     card: "summary_large_image",
     title: "TenPlanner",
-    description: "Planificador de entrenamiento para deportes de raqueta.",
+    description: t("twitterDescription"),
   },
   robots: {
     index: true,
@@ -77,7 +87,8 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "TenPlanner",
   },
-};
+  };
+}
 
 export const viewport = {
   themeColor: "#050505",
@@ -90,10 +101,12 @@ export default async function RootLayout({
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const scriptNonce = isProd ? nonce : undefined;
+  const locale = await getLocale();
+  const t = await getTranslations("common");
 
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${plusJakartaSans.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
@@ -102,7 +115,7 @@ export default async function RootLayout({
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-brand focus:outline-none"
         >
-          Ir al contenido principal
+          {t("skipToContent")}
         </a>
         <Script
           id="theme-init"
@@ -132,9 +145,11 @@ export default async function RootLayout({
         `,
           }}
         />
-        {children}
-        <CookieBanner />
-        <Toaster />
+        <NextIntlClientProvider>
+          {children}
+          <CookieBanner />
+          <Toaster />
+        </NextIntlClientProvider>
         <ServiceWorkerRegister />
         <Analytics />
       </body>

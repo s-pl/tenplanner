@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -13,24 +14,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
-const loginSchema = z.object({
-  email: z.string().trim().email("Introduce un email válido"),
-  password: z.string().min(1, "La contraseña es obligatoria"),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
-
-const GENERIC_LOGIN_ERROR =
-  "No hay una cuenta confirmada con ese correo o la contraseña no es correcta.";
-
-const CALLBACK_ERRORS: Record<string, string> = {
-  missing_email:
-    "No hemos podido leer el email de tu proveedor. Prueba con otro método de acceso.",
-  auth_callback_failed:
-    "No hemos podido completar la verificación. Vuelve a intentarlo desde el correo recibido.",
-};
+type LoginValues = { email: string; password: string };
 
 function LoginForm() {
+  const tx = useTranslations("ui.s_login_page");
+  const t = useTranslations("auth.login");
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().trim().email(t("emailInvalid")),
+        password: z.string().min(1, t("passwordRequired")),
+      }),
+    [t]
+  );
+  const callbackErrors: Record<string, string> = {
+    missing_email: t("errMissingEmail"),
+    auth_callback_failed: t("errCallbackFailed"),
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailJustRegistered =
@@ -47,6 +47,11 @@ function LoginForm() {
   const [resendError, setResendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // El formulario de email se abre al pulsar "Continuar con email", o ya
+  // abierto si venimos de registrarnos o de un error de verificación.
+  const [showEmailForm, setShowEmailForm] = useState(
+    emailJustRegistered || !!registeredEmail || !!callbackError
+  );
 
   const {
     register,
@@ -78,7 +83,7 @@ function LoginForm() {
       if (message.includes("email not confirmed")) {
         setNeedsConfirmation(true);
       } else {
-        setServerError(GENERIC_LOGIN_ERROR);
+        setServerError(t("errGeneric"));
       }
       setLoading(false);
       return;
@@ -112,9 +117,7 @@ function LoginForm() {
     });
 
     if (error) {
-      setResendError(
-        "No se pudo reenviar el correo. Prueba de nuevo en unos minutos."
-      );
+      setResendError(t("errResend"));
     } else {
       setResendSent(true);
     }
@@ -133,12 +136,11 @@ function LoginForm() {
     <div className="rounded-[32px] border border-[#050505]/10 bg-white p-5 shadow-[0_28px_90px_-50px_rgba(5,5,5,0.65)] dark:border-white/10 dark:bg-[#10100e] sm:p-7">
       <div className="space-y-6">
         <div>
-          <p className="tp-kicker">Acceso de entrenador</p>
-          <h1 className="mt-3 text-3xl font-black leading-tight text-foreground">
-            Bienvenido de nuevo
+          <h1 className="text-3xl font-black leading-tight text-foreground">
+            {t("title")}
           </h1>
           <p className="mt-2 text-sm leading-6 text-foreground/62">
-            Inicia sesión en tu cuenta de entrenamiento.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -150,30 +152,29 @@ function LoginForm() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-black text-foreground">
-                  Correo de confirmación enviado
+                  {t("confirmSentTitle")}
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  Hemos enviado un enlace de verificación
-                  {registeredEmail && (
-                    <>
-                      {" "}
-                      a{" "}
-                      <span className="break-all font-medium text-foreground">
-                        {registeredEmail}
-                      </span>
-                    </>
-                  )}
-                  . Confirma tu cuenta para poder iniciar sesión.
+                  {registeredEmail
+                    ? t.rich("confirmSentTo", {
+                        email: registeredEmail,
+                        b: (chunks) => (
+                          <span className="break-all font-medium text-foreground">
+                            {chunks}
+                          </span>
+                        ),
+                      })
+                    : t("confirmSent")}
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {callbackError && CALLBACK_ERRORS[callbackError] && (
+        {callbackError && callbackErrors[callbackError] && (
           <div className="rounded-[22px] border border-destructive/20 bg-destructive/10 px-4 py-3">
             <p className="text-sm text-destructive">
-              {CALLBACK_ERRORS[callbackError]}
+              {callbackErrors[callbackError]}
             </p>
           </div>
         )}
@@ -202,26 +203,38 @@ function LoginForm() {
               fill="#EA4335"
             />
           </svg>
-          Continuar con Google
+          {t("google")}
         </Button>
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">o</span>
+          <span className="text-xs text-muted-foreground">{t("or")}</span>
           <Separator className="flex-1" />
         </div>
+
+        {!showEmailForm && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-full"
+            onClick={() => setShowEmailForm(true)}
+          >
+            <Mail className="mr-2 size-4" />
+            {t("email")}
+          </Button>
+        )}
 
         <form
           method="post"
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4"
+          className={showEmailForm ? "space-y-4" : "hidden"}
         >
           <div className="space-y-1.5">
-            <Label htmlFor="email">Correo electrónico</Label>
+            <Label htmlFor="email">{t("emailLabel")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={tx("youExampleCom")}
               autoComplete="email"
               className="h-10"
               aria-invalid={!!errors.email}
@@ -240,12 +253,12 @@ function LoginForm() {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Contraseña</Label>
+              <Label htmlFor="password">{t("passwordLabel")}</Label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-muted-foreground transition-colors hover:text-brand"
               >
-                Olvidaste la contraseña?
+                {t("forgot")}
               </Link>
             </div>
             <div className="relative">
@@ -269,7 +282,7 @@ function LoginForm() {
                 className="absolute inset-y-0 right-1 flex items-center rounded-full px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 tabIndex={-1}
                 aria-label={
-                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  showPassword ? t("hidePassword") : t("showPassword")
                 }
               >
                 {showPassword ? (
@@ -300,15 +313,17 @@ function LoginForm() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-foreground">
-                    Tu email aún no está confirmado
+                    {t("unconfirmedTitle")}
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Revisa tu bandeja de entrada o pide otro enlace de
-                    confirmación para{" "}
-                    <span className="break-all font-semibold text-foreground">
-                      {lastLoginEmail}
-                    </span>
-                    .
+                    {t.rich("unconfirmedText", {
+                      email: lastLoginEmail,
+                      b: (chunks) => (
+                        <span className="break-all font-semibold text-foreground">
+                          {chunks}
+                        </span>
+                      ),
+                    })}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
@@ -322,12 +337,12 @@ function LoginForm() {
                       ) : (
                         <Mail className="size-3.5" />
                       )}
-                      Reenviar correo
+                      {t("resend")}
                     </button>
                     {resendSent && (
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-foreground/70">
                         <CheckCircle2 className="size-3.5 text-brand" />
-                        Enviado
+                        {t("sent")}
                       </span>
                     )}
                   </div>
@@ -349,21 +364,21 @@ function LoginForm() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                Iniciando sesión...
+                {t("loggingIn")}
               </>
             ) : (
-              "Iniciar sesión"
+              t("login")
             )}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          No tienes cuenta?{" "}
+          {t("noAccount")}{" "}
           <Link
             href="/register"
             className="font-medium text-foreground transition-colors hover:text-brand"
           >
-            Crea una gratis
+            {t("createOne")}
           </Link>
         </p>
       </div>

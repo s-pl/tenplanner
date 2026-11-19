@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getYouTubeEmbedUrl } from "@/lib/video-embed";
+import { useTranslations } from "next-intl";
 
 export interface QuickViewExercise {
   id: string;
@@ -59,6 +60,7 @@ export function ExerciseQuickViewDialog({
   onAddToSession?: (exercise: QuickViewExercise) => void;
   onAddToClass?: (exercise: QuickViewExercise) => void;
 }) {
+  const tx = useTranslations("ui.s_app_exercisequickviewdialog");
   const videoEmbedUrl = getYouTubeEmbedUrl(exercise?.videoUrl);
   const description = exercise?.description?.trim();
   const objectives = exercise?.objectives?.trim();
@@ -78,7 +80,7 @@ export function ExerciseQuickViewDialog({
                 </span>
                 <span className="inline-flex items-center gap-1 tabular-nums">
                   <Clock className="size-3" />
-                  {exercise.durationMinutes} min
+                  {exercise.durationMinutes}{" "}{tx("min")}
                 </span>
               </DialogDescription>
             </DialogHeader>
@@ -99,7 +101,7 @@ export function ExerciseQuickViewDialog({
                   className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand/80"
                 >
                   <Video className="size-4" />
-                  {videoEmbedUrl ? "Ver en YouTube" : "Ver vídeo"}
+                  {videoEmbedUrl ? tx("verEnYoutube") : "Ver vídeo"}
                   <ExternalLink className="size-3" />
                 </a>
               </div>
@@ -108,7 +110,7 @@ export function ExerciseQuickViewDialog({
             {description ? (
               <div>
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Descripción
+                  {tx("descripcion")}
                 </p>
                 <p className="whitespace-pre-line break-words text-sm leading-relaxed text-foreground">
                   {description}
@@ -119,7 +121,7 @@ export function ExerciseQuickViewDialog({
             {objectives ? (
               <div>
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Objetivos
+                  {tx("objetivos")}
                 </p>
                 <p className="whitespace-pre-line break-words text-sm leading-relaxed text-foreground">
                   {objectives}
@@ -129,8 +131,7 @@ export function ExerciseQuickViewDialog({
 
             {!description && !objectives && !exercise.videoUrl ? (
               <p className="text-sm text-muted-foreground">
-                Este ejercicio aún no tiene descripción. Abre la ficha completa
-                para ver todo lo que tiene.
+                {tx("esteEjercicioAunNo")}
               </p>
             ) : null}
 
@@ -142,7 +143,7 @@ export function ExerciseQuickViewDialog({
                   className="inline-flex h-10 items-center gap-2 rounded-full border border-brand/40 px-4 text-sm font-semibold text-brand transition-colors hover:bg-brand/10"
                 >
                   <CalendarPlus className="size-4" />
-                  Añadir a sesión
+                  {tx("anadirASesion")}
                 </button>
               ) : null}
               {onAddToClass ? (
@@ -152,7 +153,7 @@ export function ExerciseQuickViewDialog({
                   className="inline-flex h-10 items-center gap-2 rounded-full border border-brand/40 px-4 text-sm font-semibold text-brand transition-colors hover:bg-brand/10"
                 >
                   <GraduationCap className="size-4" />
-                  Añadir a clase
+                  {tx("anadirAClase")}
                 </button>
               ) : null}
             </div>
@@ -163,7 +164,7 @@ export function ExerciseQuickViewDialog({
               }`}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
             >
-              Ver ficha completa
+              {tx("verFichaCompleta")}
               <ArrowRight className="size-4" />
             </Link>
           </>
@@ -178,6 +179,7 @@ export function ExerciseQuickViewDialog({
  * que el usuario lo pulsa, y entonces arranca dentro de la propia vista.
  */
 function VideoEmbed({ embedUrl, title }: { embedUrl: string; title: string }) {
+  const tx = useTranslations("ui.s_app_exercisequickviewdialog");
   const [playing, setPlaying] = useState(false);
   const videoId = embedUrl.match(/\/embed\/([A-Za-z0-9_-]{11})/)?.[1];
 
@@ -190,7 +192,7 @@ function VideoEmbed({ embedUrl, title }: { embedUrl: string; title: string }) {
             u.searchParams.set("autoplay", "1");
             return u.toString();
           })()}
-          title={`Vídeo: ${title}`}
+          title={tx("videoV1", { v1: title })}
           className="absolute inset-0 size-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           referrerPolicy="strict-origin-when-cross-origin"
@@ -200,7 +202,7 @@ function VideoEmbed({ embedUrl, title }: { embedUrl: string; title: string }) {
         <button
           type="button"
           onClick={() => setPlaying(true)}
-          aria-label={`Reproducir vídeo: ${title}`}
+          aria-label={tx("reproducirVideoV1", { v1: title })}
           className="group absolute inset-0 size-full"
         >
           {videoId ? (

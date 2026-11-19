@@ -8,6 +8,7 @@ import {
 } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { splitFullName } from "@/lib/students/names";
 import { db } from "@/db";
 import {
   users,
@@ -657,7 +658,12 @@ export async function POST(request: Request) {
     db
       .select({ total: count() })
       .from(exercises)
-      .where(or(eq(exercises.isGlobal, true), isNull(exercises.createdBy))),
+      .where(
+        and(
+          or(eq(exercises.isGlobal, true), isNull(exercises.createdBy)),
+          eq(exercises.isPublished, true)
+        )
+      ),
     db
       .select({
         id: students.id,
@@ -1176,6 +1182,7 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
             const [session] = await db
               .insert(sessions)
               .values({
+                createdVia: "dr_planner",
                 title,
                 description: description ?? null,
                 scheduledAt: parsedScheduledAt,
@@ -1268,13 +1275,18 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
           "Crea un perfil de alumno rápido con nombre y nivel. Usar solo cuando el entrenador confirme que quiere crear un alumno.",
         inputSchema: z.object({
           name: z.string().describe("Nombre del alumno"),
+          // Códigos de skill_levels (antes solo admitía la escala antigua,
+          // que la FK de la migración 0094 ya no acepta).
           playerLevel: z
             .enum([
-              "beginner",
-              "amateur",
-              "intermediate",
-              "advanced",
-              "competitive",
+              "descubrimiento",
+              "desarrollo",
+              "consolidacion",
+              "especializacion",
+              "precompeticion",
+              "competicion",
+              "adultos_iniciacion",
+              "adultos_medio_alto",
             ])
             .optional(),
           notes: z.string().optional(),
@@ -1286,6 +1298,7 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
               .values({
                 coachId: user.id,
                 name,
+                ...splitFullName(name),
                 playerLevel: playerLevel ?? null,
                 notes: notes ?? null,
               })
@@ -1372,8 +1385,13 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
                   publicExercisesEnabled
                     ? or(
                         eq(exercises.createdBy, user.id),
-                        eq(exercises.isGlobal, true),
-                        isNull(exercises.createdBy)
+                        and(
+                          or(
+                            eq(exercises.isGlobal, true),
+                            isNull(exercises.createdBy)
+                          ),
+                          eq(exercises.isPublished, true)
+                        )!
                       )
                     : eq(exercises.createdBy, user.id)
                 )
@@ -1434,8 +1452,13 @@ ${profile ? buildUserContext(profile, sessionCount) : "Sin datos"}
                 publicExercisesEnabled
                   ? or(
                       eq(exercises.createdBy, user.id),
-                      eq(exercises.isGlobal, true),
-                      isNull(exercises.createdBy)
+                      and(
+                        or(
+                          eq(exercises.isGlobal, true),
+                          isNull(exercises.createdBy)
+                        ),
+                        eq(exercises.isPublished, true)
+                      )!
                     )
                   : eq(exercises.createdBy, user.id)
               )
@@ -1761,8 +1784,13 @@ En 2 frases (máx 40 palabras), por qué esta propuesta tiene sentido ahora. Sin
             : publicExercisesEnabled
               ? or(
                   eq(exercises.createdBy, user.id),
-                  eq(exercises.isGlobal, true),
-                  isNull(exercises.createdBy)
+                  and(
+                    or(
+                      eq(exercises.isGlobal, true),
+                      isNull(exercises.createdBy)
+                    ),
+                    eq(exercises.isPublished, true)
+                  )!
                 )
               : eq(exercises.createdBy, user.id);
 

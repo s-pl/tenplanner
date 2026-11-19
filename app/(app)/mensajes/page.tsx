@@ -9,6 +9,8 @@ import {
   Users2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getClubAccountClubId } from "@/lib/clubs";
+import { getWorkMode } from "@/lib/work-mode";
 import {
   getMessagingContext,
   listRecipientOptions,
@@ -21,11 +23,14 @@ import { MessageComposer } from "./message-composer";
 import { MarkMessagesRead } from "./mark-read";
 import { isFamilyOnlyUser } from "@/lib/family";
 import { isFamilyAccountType } from "@/lib/family-account";
+import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
+import { getTerm } from "@/lib/i18n-terms";
 
 // Mensajes del club. Quién envía y quién lee lo deciden las funciones de
 // la base de datos (migraciones 0054 y 0055), vía lib/messages.ts.
 
-const dateFormatter = new Intl.DateTimeFormat("es-ES", {
+const dateFormatter = (loc: string) => new Intl.DateTimeFormat(loc, {
   day: "numeric",
   month: "short",
   hour: "2-digit",
@@ -52,11 +57,23 @@ async function loadMessages(userId: string): Promise<MessageListItem[]> {
 }
 
 export default async function MensajesPage() {
+  const term = await getTerm();
+  const intlLocale = (await getLocale()) === "en" ? "en-GB" : "es-ES";
+  const tx = await getTranslations("ui.s_mensajes_page");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // La cuenta del club lee y envía mensajes solo desde el Modo gestión.
+  const [accountClubId, mode] = await Promise.all([
+    getClubAccountClubId(user.id),
+    getWorkMode(user.id),
+  ]);
+  if (accountClubId && mode.kind === "club" && !mode.management) {
+    redirect("/dashboard");
+  }
 
   const [ctx, familyOnly] = await Promise.all([
     getMessagingContext(user.id).catch(() => null),
@@ -78,15 +95,15 @@ export default async function MensajesPage() {
         <header className="tp-hero-panel p-6 text-white sm:p-8">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
             <MessageSquare className="size-3.5" />
-            Comunicación del club
+            {tx("comunicacionDelClub")}
           </div>
           <h1 className="text-4xl font-black leading-tight sm:text-5xl">
-            Mensajes
+            {tx("mensajes")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/62">
             {familyOnly
-              ? "Los avisos del club: cambios de horario, sesiones canceladas e información de tu grupo."
-              : "Mensajes del club a sus monitores, a los grupos y a cada alumno. Con los alumnos menores, la comunicación es siempre con sus padres o tutores."}
+              ? tx("losAvisosDelClub")
+              : tx("mensajesDelClubA")}
           </p>
         </header>
 
@@ -94,19 +111,18 @@ export default async function MensajesPage() {
           <section className="tp-panel p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-foreground/70">
               <Send className="size-4" />
-              Nuevo mensaje
+              {tx("nuevoMensaje")}
             </h2>
             <MessageComposer
               options={options}
-              sportLabel={SPORT_LABELS[ctx!.sport]}
+              sportLabel={term(SPORT_LABELS[ctx!.sport])}
             />
           </section>
         )}
 
         {!ctx?.clubId && !familyOnly && (
           <p className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm text-foreground/65 dark:border-white/10">
-            Para enviar mensajes del club, cambia a modo club desde el selector
-            de modo de trabajo.
+            {tx("paraEnviarMensajesDel")}
           </p>
         )}
 
@@ -120,11 +136,10 @@ export default async function MensajesPage() {
                 <Megaphone className="size-5 text-foreground/60" />
               </span>
               <p className="text-base font-black text-foreground">
-                Aún no hay mensajes
+                {tx("aunNoHayMensajes")}
               </p>
               <p className="max-w-sm text-sm leading-6 text-foreground/60">
-                Aquí aparecerán los mensajes que envíes y los que recibas del
-                club.
+                {tx("aquiApareceranLosMensajes")}
               </p>
             </div>
           ) : (
@@ -143,7 +158,7 @@ export default async function MensajesPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       {m.unread && (
                         <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
-                          Nuevo
+                          {tx("nuevo")}
                         </span>
                       )}
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground/70">
@@ -152,14 +167,14 @@ export default async function MensajesPage() {
                       </span>
                       {!m.sentByMe && m.authorName && (
                         <span className="text-[11px] font-semibold text-foreground/60">
-                          De {m.authorName}
+                          {tx("deV1", { v1: m.authorName })}
                         </span>
                       )}
                       <time
                         dateTime={m.createdAt.toISOString()}
                         className="text-[11px] font-semibold tabular-nums text-foreground/50"
                       >
-                        {dateFormatter.format(m.createdAt)}
+                        {dateFormatter(intlLocale).format(m.createdAt)}
                       </time>
                     </div>
                     <h3 className="mt-2 text-base font-black text-foreground">

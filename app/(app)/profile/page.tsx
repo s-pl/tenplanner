@@ -10,8 +10,11 @@ import {
 } from "@/db/schema";
 import { and, eq, count, or, sql } from "drizzle-orm";
 import { ProfileClient } from "./profile-client";
+import { OwnCoachProfile } from "./own-coach-profile";
+import { getOwnCoachProfiles } from "@/lib/club-coach-profiles";
 import { WorkModeSwitcher } from "@/components/app/work-mode-switcher";
-import { ClubIdentityForm } from "@/components/app/club-identity-form";
+import Link from "next/link";
+import { Building2, ChevronRight } from "lucide-react";
 import { SportSwitcher } from "@/components/app/sport-switcher";
 import {
   getActiveWorkClubId,
@@ -20,8 +23,10 @@ import {
   sharedWithClubCondition,
 } from "@/lib/clubs";
 import { getActiveSport } from "@/lib/sports";
+import { getTranslations } from "next-intl/server";
 
 export default async function ProfilePage() {
+  const tx = await getTranslations("ui.s_profile_page");
   const supabase = await createClient();
   const {
     data: { session },
@@ -57,7 +62,10 @@ export default async function ProfilePage() {
       .from(exercisesTable)
       .where(
         or(
-          eq(exercisesTable.isGlobal, true),
+          and(
+            eq(exercisesTable.isGlobal, true),
+            eq(exercisesTable.isPublished, true)
+          )!,
           eq(exercisesTable.createdBy, user.id)
         )
       ),
@@ -75,6 +83,36 @@ export default async function ProfilePage() {
   ]);
 
   const clubAccountClubId = await getClubAccountClubId(user.id);
+
+  // Perfil de monitor (su ficha): solo si es monitor de algún club y no es
+  // la cuenta de un club. Lo controla él; el gestor lo ve en Gestión.
+  const coachClubs = clubAccountClubId ? [] : clubOptions;
+  const ownCoachProfile =
+    coachClubs.length > 0 && user.email
+      ? await (async () => {
+          const { rows } = await getOwnCoachProfiles(user.id, user.email!);
+          const latest = rows[0];
+          return {
+            clubNames: coachClubs.map((c) => c.name),
+            initial: latest
+              ? {
+                  fullName: latest.fullName,
+                  email: user.email!,
+                  phone: latest.phone,
+                  academicTraining: latest.academicTraining,
+                  tennisTraining: latest.tennisTraining,
+                  availability: latest.availability ?? null,
+                  startedTeachingYear: latest.startedTeachingYear,
+                  experience: latest.experience ?? [],
+                }
+              : {
+                  fullName:
+                    (user.user_metadata?.full_name as string | undefined) ?? "",
+                  email: user.email!,
+                },
+          };
+        })()
+      : null;
 
   // Ficha de identificación del club con el que se trabaja (modo club).
   const [activeClub] = activeClubId
@@ -107,14 +145,13 @@ export default async function ProfilePage() {
       <div className="tp-page-pad space-y-6">
         <header className="tp-hero-panel p-6 text-white sm:p-8">
           <div className="mb-5 inline-flex rounded-full bg-[#D6FF38] px-3 py-1 text-[11px] font-black uppercase text-[#050505]">
-            Cuenta
+            {tx("cuenta")}
           </div>
           <h1 className="text-4xl font-black leading-tight sm:text-5xl">
-            Perfil
+            {tx("perfil")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/62">
-            Ajusta tus datos, apariencia, exportación y actividad desde un solo
-            panel de trabajo.
+            {tx("ajustaTusDatosApariencia")}
           </p>
         </header>
 
@@ -138,20 +175,32 @@ export default async function ProfilePage() {
           />
         )}
 
-        {/* La ficha del club es del modo del club; el Espacio gestión solo
+        {/* La ficha del club está en "Mi club"; el Espacio gestión solo
             muestra los datos de la persona gestora. */}
         {activeClub && !(clubAccountClubId && dbUser[0]?.managementMode) && (
-          <ClubIdentityForm
-            key={activeClub.updatedAt.toISOString()}
-            clubId={activeClub.id}
-            canEdit={activeClubIsOwner}
-            initial={{
-              name: activeClub.name,
-              fullName: activeClub.fullName,
-              address: activeClub.address,
-              courts: activeClub.courts ?? null,
-              foundedYear: activeClub.foundedYear,
-            }}
+          <Link
+            href="/club"
+            className="tp-panel flex items-center gap-3 p-5 transition-colors hover:border-brand/50"
+          >
+            <Building2 className="size-5 shrink-0 text-brand" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black uppercase text-foreground">
+                {tx("fichaDelClubV1", { v1: activeClub.name })}
+              </span>
+              <span className="mt-1 block text-xs text-foreground/55">
+                {activeClubIsOwner
+                  ? tx("datosFotosVideosE")
+                  : tx("datosFotosVideosE2")}
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-foreground/40" />
+          </Link>
+        )}
+
+        {ownCoachProfile && (
+          <OwnCoachProfile
+            initial={ownCoachProfile.initial}
+            clubNames={ownCoachProfile.clubNames}
           />
         )}
 
